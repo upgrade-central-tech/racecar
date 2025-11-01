@@ -1,0 +1,6 @@
+{
+  "dependencies": [
+    "glm",
+    "vulkan-memory-allocator"
+  ]
+}
