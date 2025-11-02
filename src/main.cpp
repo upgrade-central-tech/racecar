@@ -1,9 +1,11 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+#include <chrono>
 #include <cstdlib>
 #include <optional>
 #include <string>
+#include <thread>
 
 constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
@@ -46,8 +48,17 @@ bool load_bryce(Context* ctx) {
   return true;
 }
 
+void draw(Context* ctx) {
+  // Clear screen to white
+  SDL_FillSurfaceRect(ctx->screen_surface, nullptr,
+                      SDL_MapSurfaceRGB(ctx->screen_surface, 0xff, 0xff, 0xff));
+
+  // Render image to screen
+  SDL_BlitSurface(ctx->bryce, nullptr, ctx->screen_surface, nullptr);
+}
+
 /// Frees everything and shuts down SDL
-void deinitialize(Context* ctx) {
+void clean_up(Context* ctx) {
   SDL_DestroySurface(ctx->bryce);
   SDL_DestroyWindowSurface(ctx->window);
 
@@ -78,6 +89,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
   }
 
   bool will_quit = false;
+  bool stop_rendering = false;
   SDL_Event event;
 
   while (!will_quit) {
@@ -85,20 +97,27 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
       if (event.type == SDL_EVENT_QUIT) {
         will_quit = true;
       }
+
+      if (event.type == SDL_EVENT_WINDOW_MINIMIZED) {
+        stop_rendering = true;
+      } else if (event.type == SDL_EVENT_WINDOW_RESTORED) {
+        stop_rendering = false;
+      }
     }
 
-    // Clear screen to white
-    SDL_FillSurfaceRect(ctx.screen_surface, nullptr,
-                        SDL_MapSurfaceRGB(ctx.screen_surface, 0xff, 0xff, 0xff));
+    // Don't draw if we're minimized
+    if (stop_rendering) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      continue;
+    }
 
-    // Render image to screen
-    SDL_BlitSurface(ctx.bryce, nullptr, ctx.screen_surface, nullptr);
+    draw(&ctx);
 
     // Make new screen visible
     SDL_UpdateWindowSurface(ctx.window);
   }
 
-  deinitialize(&ctx);
+  clean_up(&ctx);
 
   return EXIT_SUCCESS;
 }
