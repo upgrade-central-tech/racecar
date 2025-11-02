@@ -16,3 +16,6 @@ target_compile_options(racecar PRIVATE -Wall -Wextra -Werror -pedantic)
 
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE glm::glm)
+
+find_package(SDL3 CONFIG REQUIRED)
+target_link_libraries(racecar PRIVATE SDL3::SDL3)
