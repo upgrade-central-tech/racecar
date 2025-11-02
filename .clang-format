@@ -1,2 +1,16 @@
 BasedOnStyle: Chromium
+
 ColumnLimit: 100
+InsertNewlineAtEOF: true
+WrapNamespaceBodyWithEmptyLines: Always
+SeparateDefinitionBlocks: Always
+
+# Local includes, then 3rd party libraries, then standard library
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^".*"'
+    Priority: 1
+  - Regex: '^<(SDL|glm)/?.*>'
+    Priority: 2
+  - Regex: '^<.*>'
+    Priority: 3
