@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0..4.1)
+cmake_minimum_required(VERSION 4.0)
 
 project(racecar VERSION 1.0.0 LANGUAGES CXX)
 
