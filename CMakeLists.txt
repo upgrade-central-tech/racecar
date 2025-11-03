@@ -12,6 +12,12 @@ add_executable(racecar
   ${SRC_DIR}/main.cpp
 )
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  target_compile_definitions(racecar PRIVATE DEBUG=1)
+else()
+  target_compile_definitions(racecar PRIVATE DEBUG=0)
+endif()
+
 target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics)
 
 find_package(glm CONFIG REQUIRED)
@@ -19,3 +25,9 @@ target_link_libraries(racecar PRIVATE glm::glm)
 
 find_package(SDL3 CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE SDL3::SDL3)
+
+find_package(volk CONFIG REQUIRED)
+target_link_libraries(racecar PRIVATE volk::volk)
+
+find_package(vk-bootstrap CONFIG REQUIRED)
+target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)

@@ -5,12 +5,20 @@ InsertNewlineAtEOF: true
 WrapNamespaceBodyWithEmptyLines: Always
 SeparateDefinitionBlocks: Always
 
-# Local includes, then 3rd party libraries, then standard library
+# Local includes, then 3rd party libraries, then standard library. volk has to be included
+# before vk-bootstrap because the latter includes Vulkan headers which volk does not like
 IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^".*"'
     Priority: 1
   - Regex: '^<(SDL|glm)/?.*>'
     Priority: 2
+  - Regex: '^<(volk)/?.*>'
+    Priority: 2
+    SortPriority: 3
+  - Regex: '^<(VkBootstrap)/?.*>'
+    Priority: 2
+    SortPriority: 4
+    CaseSensitive: true
   - Regex: '^<.*>'
-    Priority: 3
+    Priority: 5
