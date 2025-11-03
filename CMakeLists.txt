@@ -12,7 +12,7 @@ add_executable(racecar
   ${SRC_DIR}/main.cpp
 )
 
-target_compile_options(racecar PRIVATE /W4 /WX)
+target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics)
 
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE glm::glm)
