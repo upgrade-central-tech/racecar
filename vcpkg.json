@@ -1,6 +1,14 @@
 {
   "dependencies": [
     "glm",
-    "sdl3"
+    {
+      "name": "sdl3",
+      "features": [
+        "vulkan"
+      ],
+      "version>=": "3.2.0"
+    },
+    "volk",
+    "vk-bootstrap"
   ]
 }
