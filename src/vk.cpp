@@ -1,11 +1,11 @@
-#include "engine.hpp"
+#include "vk.hpp"
 
 #include <SDL3/SDL_vulkan.h>
 
 #include <algorithm>
 #include <limits>
 
-namespace Racecar {
+namespace Racecar::vk {
 
 namespace {
 
@@ -43,7 +43,7 @@ std::optional<vkb::Instance> create_vulkan_instance() {
     SDL_Log("[SDL] Could not get necessary Vulkan instance extensions: %s", SDL_GetError());
     return {};
   } else {
-    SDL_Log("[SDL] Enabling necessary Vulkan instance extensions:");
+    SDL_Log("[Vulkan] Enabling necessary instance extensions:");
 
     for (uint32_t i = 0; i < extension_count; ++i) {
       const char* extension = extensions[i];
@@ -71,8 +71,8 @@ std::optional<vkb::Instance> create_vulkan_instance() {
 
 /// Picks a physical device with a preference for a discrete GPU, and then creates a logical
 /// device with one queue enabled from each available queue family.
-std::optional<vkb::Device> pick_and_create_vulkan_device(const Engine& engine) {
-  vkb::PhysicalDeviceSelector phys_selector(engine.instance, engine.surface);
+std::optional<vkb::Device> pick_and_create_vulkan_device(const Common& vulkan) {
+  vkb::PhysicalDeviceSelector phys_selector(vulkan.instance, vulkan.surface);
   vkb::Result<vkb::PhysicalDevice> phys_selector_ret =
       phys_selector.prefer_gpu_device_type()
           .add_required_extension(VK_KHR_SWAPCHAIN_EXTENSION_NAME)
@@ -122,14 +122,14 @@ std::optional<vkb::Device> pick_and_create_vulkan_device(const Engine& engine) {
     return {};
   }
 
-  SDL_Log("[Engine] Selected physical device \"%s\"", phys_name.c_str());
+  SDL_Log("[Vulkan] Selected physical device \"%s\"", phys_name.c_str());
 
   return device;
 }
 
-std::optional<vkb::Swapchain> create_swapchain(const SDL::Context& ctx, const Engine& engine) {
+std::optional<vkb::Swapchain> create_swapchain(SDL_Window* window, const Common& vulkan) {
   VkSurfaceCapabilitiesKHR capabilities;
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(engine.device.physical_device, engine.surface,
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkan.device.physical_device, vulkan.surface,
                                             &capabilities);
 
   VkExtent2D swap_extent = {.width = 0, .height = 0};
@@ -139,7 +139,7 @@ std::optional<vkb::Swapchain> create_swapchain(const SDL::Context& ctx, const En
     int width = 0;
     int height = 0;
 
-    if (!SDL_GetWindowSizeInPixels(ctx.window, &width, &height)) {
+    if (!SDL_GetWindowSizeInPixels(window, &width, &height)) {
       SDL_Log("[SDL] SDL_GetWindowSizeInPixels: %s", SDL_GetError());
       return {};
     }
@@ -152,10 +152,10 @@ std::optional<vkb::Swapchain> create_swapchain(const SDL::Context& ctx, const En
     };
   }
 
-  SDL_Log("[Engine] Initial desired swapchain extent: %d×%d", swap_extent.width,
+  SDL_Log("[Vulkan] Initial desired swapchain extent: %d×%d", swap_extent.width,
           swap_extent.height);
 
-  vkb::SwapchainBuilder swapchain_builder(engine.device);
+  vkb::SwapchainBuilder swapchain_builder(vulkan.device);
   vkb::Result<vkb::Swapchain> swapchain_ret =
       swapchain_builder.set_desired_extent(swap_extent.width, swap_extent.height)
           .set_desired_min_image_count(capabilities.minImageCount + 1)
@@ -172,74 +172,65 @@ std::optional<vkb::Swapchain> create_swapchain(const SDL::Context& ctx, const En
 
 }  // namespace
 
-std::optional<Engine> initialize_engine(const SDL::Context& ctx) {
-  Engine engine;
+std::optional<Common> initialize(SDL_Window* window) {
+  Common vulkan;
 
   if (std::optional<vkb::Instance> instance_opt = create_vulkan_instance(); !instance_opt) {
-    SDL_Log("[Engine] Failed to create Vulkan instance");
+    SDL_Log("[Vulkan] Failed to create Vulkan instance");
     return {};
   } else {
-    engine.instance = instance_opt.value();
+    vulkan.instance = instance_opt.value();
   }
 
-  volkLoadInstance(engine.instance);
+  volkLoadInstance(vulkan.instance);
 
-  if (!SDL_Vulkan_CreateSurface(ctx.window, engine.instance, nullptr, &engine.surface)) {
+  if (!SDL_Vulkan_CreateSurface(window, vulkan.instance, nullptr, &vulkan.surface)) {
     SDL_Log("[SDL] Could not create Vulkan surface: %s", SDL_GetError());
     return {};
   }
 
-  if (std::optional<vkb::Device> device_opt = pick_and_create_vulkan_device(engine); !device_opt) {
-    SDL_Log("[Engine] Failed to create Vulkan device");
+  if (std::optional<vkb::Device> device_opt = pick_and_create_vulkan_device(vulkan); !device_opt) {
+    SDL_Log("[Vulkan] Failed to create Vulkan device");
     return {};
   } else {
-    engine.device = device_opt.value();
+    vulkan.device = device_opt.value();
   }
 
-  if (std::optional<vkb::Swapchain> swapchain_opt = create_swapchain(ctx, engine); !swapchain_opt) {
-    SDL_Log("[Engine] Failed to create swapchain");
+  if (std::optional<vkb::Swapchain> swapchain_opt = create_swapchain(window, vulkan);
+      !swapchain_opt) {
+    SDL_Log("[Vulkan] Failed to create swapchain");
     return {};
   } else {
-    engine.swapchain = swapchain_opt.value();
+    vulkan.swapchain = swapchain_opt.value();
   }
 
-  if (vkb::Result<std::vector<VkImage>> images_res = engine.swapchain.get_images(); !images_res) {
+  if (vkb::Result<std::vector<VkImage>> images_res = vulkan.swapchain.get_images(); !images_res) {
     SDL_Log("[vkb] Failed to get swapchain images: %s", images_res.error().message().c_str());
     return {};
   } else {
-    engine.swapchain_images = std::move(images_res.value());
+    vulkan.swapchain_images = std::move(images_res.value());
   }
 
-  if (vkb::Result<std::vector<VkImageView>> image_views_res = engine.swapchain.get_image_views();
+  if (vkb::Result<std::vector<VkImageView>> image_views_res = vulkan.swapchain.get_image_views();
       !image_views_res) {
     SDL_Log("[vkb] Failed to get swapchain image views: %s",
             image_views_res.error().message().c_str());
     return {};
   } else {
-    engine.swapchain_image_views = std::move(image_views_res.value());
+    vulkan.swapchain_image_views = std::move(image_views_res.value());
   }
 
-  return engine;
+  return vulkan;
 }
 
-void draw(const SDL::Context&) {}
+void free(Common& vulkan) {
+  vulkan.swapchain.destroy_image_views(vulkan.swapchain_image_views);
+  vkb::destroy_swapchain(vulkan.swapchain);
+  vkb::destroy_device(vulkan.device);
+  SDL_Vulkan_DestroySurface(vulkan.instance, vulkan.surface, nullptr);
+  vkb::destroy_instance(vulkan.instance);
 
-void clean_up(Engine& engine) {
-  engine.swapchain.destroy_image_views(engine.swapchain_image_views);
-  vkb::destroy_swapchain(engine.swapchain);
-  vkb::destroy_device(engine.device);
-  SDL_Vulkan_DestroySurface(engine.instance, engine.surface, nullptr);
-  vkb::destroy_instance(engine.instance);
-
-  engine = {
-      .instance = {},
-      .device = {},
-      .surface = nullptr,
-
-      .swapchain = {},
-      .swapchain_images = {},
-      .swapchain_image_views = {},
-  };
+  vulkan = {};
 }
 
-}  // namespace Racecar
+}  // namespace Racecar::vk

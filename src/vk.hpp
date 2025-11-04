@@ -1,16 +1,15 @@
 #pragma once
 
-#include "sdl.hpp"
-
+#include <SDL3/SDL.h>
 #include <volk.h>
 #include <VkBootstrap.h>
 
 #include <optional>
-#include <vector>
 
-namespace Racecar {
+namespace Racecar::vk {
 
-struct Engine {
+/// Stores common Vulkan-related objects.
+struct Common {
   vkb::Instance instance;
   vkb::Device device;
   VkSurfaceKHR surface = nullptr;
@@ -20,8 +19,7 @@ struct Engine {
   std::vector<VkImageView> swapchain_image_views;
 };
 
-std::optional<Engine> initialize_engine(const SDL::Context& ctx);
-void draw(const SDL::Context& ctx);
-void clean_up(Engine& engine);
+std::optional<Common> initialize(SDL_Window* window);
+void free(Common& vulkan);
 
-}  // namespace Racecar
+}  // namespace Racecar::vk

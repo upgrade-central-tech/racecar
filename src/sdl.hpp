@@ -4,16 +4,12 @@
 
 #include <optional>
 
-namespace Racecar::SDL {
+namespace Racecar::sdl {
 
-struct Context {
-  SDL_Window* window = nullptr;
-};
-
-/// Initializes SDL, creates a window, and returns it in a context.
-std::optional<Context> initialize(int screen_w, int screen_h, bool fullscreen);
+/// Initializes SDL and creates a window.
+std::optional<SDL_Window*> initialize(int screen_w, int screen_h, bool fullscreen);
 
 /// Must be called after `Racecar::clean_up` to properly free Vulkan resources.
-void clean_up(Context& ctx);
+void free(SDL_Window* window);
 
-}  // namespace Racecar::SDL
+}  // namespace Racecar::sdl

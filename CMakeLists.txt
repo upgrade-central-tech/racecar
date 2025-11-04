@@ -12,7 +12,8 @@ add_executable(racecar
   ${SRC_DIR}/main.cpp
 
   ${SRC_DIR}/sdl.cpp
-  ${SRC_DIR}/engine.cpp
+  ${SRC_DIR}/vk.cpp
+  ${SRC_DIR}/renderer.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

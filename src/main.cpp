@@ -1,4 +1,5 @@
-#include "engine.hpp"
+#include "context.hpp"
+#include "renderer.hpp"
 #include "sdl.hpp"
 
 #include <SDL3/SDL.h>
@@ -15,26 +16,25 @@ constexpr int SCREEN_H = 720;
 constexpr bool USE_FULLSCREEN = false;
 
 int main(int, char*[]) {
-  std::optional<SDL::Context> ctx_opt = SDL::initialize(SCREEN_W, SCREEN_H, USE_FULLSCREEN);
+  Context ctx;
 
-  if (!ctx_opt) {
-    SDL_Log("[RACECAR] Could not initialize!");
+  if (std::optional<SDL_Window*> window_opt = sdl::initialize(SCREEN_W, SCREEN_H, USE_FULLSCREEN);
+      !window_opt) {
+    SDL_Log("[RACECAR] Could not initialize SDL!");
     return EXIT_FAILURE;
+  } else {
+    ctx.window = window_opt.value();
   }
 
-  SDL::Context& ctx = ctx_opt.value();
-
-  std::optional<Racecar::Engine> engine_opt = Racecar::initialize_engine(ctx);
-
-  if (!engine_opt) {
-    SDL_Log("[RACECAR] Could not initialize engine!");
+  if (std::optional<vk::Common> vulkan_opt = vk::initialize(ctx.window); !vulkan_opt) {
+    SDL_Log("[RACECAR] Could not initialize Vulkan!");
     return EXIT_FAILURE;
+  } else {
+    ctx.vulkan = vulkan_opt.value();
   }
-
-  Racecar::Engine& engine = engine_opt.value();
 
   bool will_quit = false;
-  bool stop_rendering = false;
+  bool stop_drawing = false;
   SDL_Event event;
 
   while (!will_quit) {
@@ -44,26 +44,26 @@ int main(int, char*[]) {
       }
 
       if (event.type == SDL_EVENT_WINDOW_MINIMIZED) {
-        stop_rendering = true;
+        stop_drawing = true;
       } else if (event.type == SDL_EVENT_WINDOW_RESTORED) {
-        stop_rendering = false;
+        stop_drawing = false;
       }
     }
 
     // Don't draw if we're minimized
-    if (stop_rendering) {
+    if (stop_drawing) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       continue;
     }
 
-    Racecar::draw(ctx);
+    renderer::draw(ctx);
 
     // Make new screen visible
     SDL_UpdateWindowSurface(ctx.window);
   }
 
-  Racecar::clean_up(engine);
-  SDL::clean_up(ctx);
+  vk::free(ctx.vulkan);
+  sdl::free(ctx.window);
 
   return EXIT_SUCCESS;
 }
