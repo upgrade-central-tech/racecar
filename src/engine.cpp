@@ -80,6 +80,7 @@ bool initialize_vulkan_instance(Engine& engine) {
 void initialize_swapchain([[maybe_unused]] Engine& engine) {}
 
 void clean_up(Engine& engine) {
+  vkb::destroy_surface(engine.instance, engine.surface);
   vkb::destroy_instance(engine.instance);
 
   engine = {
