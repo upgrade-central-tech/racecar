@@ -11,6 +11,7 @@ namespace Racecar {
 
 struct Engine {
   vkb::Instance instance;
+  vkb::Device device;
   VkSurfaceKHR surface = nullptr;
 };
 
