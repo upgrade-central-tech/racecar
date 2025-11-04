@@ -7,9 +7,6 @@ namespace Racecar {
 namespace {
 
 bool initialize_vulkan_instance(Engine& engine) {
-  vkb::InstanceBuilder instance_builder;
-  instance_builder.set_app_name("RACECAR").set_app_version(1, 0, 0).require_api_version(1, 4);
-
   vkb::Result<vkb::SystemInfo> system_info_ret = vkb::SystemInfo::get_system_info();
 
   if (!system_info_ret) {
@@ -18,6 +15,18 @@ bool initialize_vulkan_instance(Engine& engine) {
   }
 
   vkb::SystemInfo& system_info = system_info_ret.value();
+
+  if (auto handler =
+          reinterpret_cast<PFN_vkGetInstanceProcAddr>(SDL_Vulkan_GetVkGetInstanceProcAddr());
+      !handler) {
+    SDL_Log("[SDL] Could not get vkGetInstanceProcAddr: %s", SDL_GetError());
+    return {};
+  } else {
+    volkInitializeCustom(handler);
+  }
+
+  vkb::InstanceBuilder instance_builder;
+  instance_builder.set_app_name("RACECAR").set_app_version(1, 0, 0).require_api_version(1, 4);
 
 #if DEBUG
   if (system_info.validation_layers_available) {
@@ -70,7 +79,6 @@ std::optional<Engine> initialize_engine(const SDL::Context& ctx) {
     return {};
   }
 
-  // Note: while we use SDL to create the Vulkan surface, we will use vk-bootstrap to delete it
   if (!SDL_Vulkan_CreateSurface(ctx.window, engine.instance, nullptr, &engine.surface)) {
     SDL_Log("[SDL] Could not create Vulkan surface: %s", SDL_GetError());
     return {};
@@ -79,11 +87,10 @@ std::optional<Engine> initialize_engine(const SDL::Context& ctx) {
   return engine;
 }
 
-void draw([[maybe_unused]] const SDL::Context& ctx) {}
+void draw(const SDL::Context&) {}
 
 void clean_up(Engine& engine) {
-  // Note: while we use vk-bootstrap to delete the Vulkan surface, we used SDL to create it
-  vkb::destroy_surface(engine.instance, engine.surface);
+  SDL_Vulkan_DestroySurface(engine.instance, engine.surface, nullptr);
   vkb::destroy_instance(engine.instance);
 
   engine = {

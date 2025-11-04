@@ -2,6 +2,7 @@
 
 #include "sdl.hpp"
 
+#include <volk.h>
 #include <VkBootstrap.h>
 
 #include <optional>

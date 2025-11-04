@@ -3,7 +3,6 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-#include <VkBootstrap.h>
 
 #include <chrono>
 #include <cstdlib>
@@ -11,11 +10,12 @@
 
 using namespace Racecar;
 
-constexpr int SCREEN_WIDTH = 1280;
-constexpr int SCREEN_HEIGHT = 720;
+constexpr int SCREEN_W = 1280;
+constexpr int SCREEN_H = 720;
+constexpr bool USE_FULLSCREEN = false;
 
-int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
-  std::optional<SDL::Context> ctx_opt = SDL::initialize(SCREEN_WIDTH, SCREEN_HEIGHT, false);
+int main(int, char*[]) {
+  std::optional<SDL::Context> ctx_opt = SDL::initialize(SCREEN_W, SCREEN_H, USE_FULLSCREEN);
 
   if (!ctx_opt) {
     SDL_Log("[RACECAR] Could not initialize!");
