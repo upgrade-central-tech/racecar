@@ -6,8 +6,6 @@
 
 #include <optional>
 
-/// [Vulkan] Failed to allocate command buffer
-
 /// Custom define based on VK_CHECK, just with our SDL_Log. Feel free to tweak this.
 #define RACECAR_VK_CHECK(x, msg)                         \
   do {                                                   \
@@ -42,8 +40,6 @@ struct Common {
 
   uint32_t graphics_queue_family;
   VkQueue graphics_queue;
-
-  /// TOOD: Add compute_queue!
 
   std::vector<FrameData> frames;
   uint32_t frame_overlap;

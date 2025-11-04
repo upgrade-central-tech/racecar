@@ -280,8 +280,8 @@ std::optional<Common> initialize(SDL_Window* window) {
     vulkan.graphics_queue_family = graphics_queue_family.value();
   }
 
-  /// Graphics command pool/frame setup.
-  /// Similar to the create sync reources below, this scope should be abstracted away.
+  // Graphics command pool/frame setup.
+  // Similar to the create sync reources below, this scope should be abstracted away.
   {
     vulkan.frames = std::vector<FrameData>(vulkan.swapchain_images.size());
     vulkan.frame_overlap = static_cast<uint32_t>(vulkan.swapchain_images.size());
@@ -306,9 +306,9 @@ std::optional<Common> initialize(SDL_Window* window) {
     }
   }
 
-  /// Create sync structures - I'll leave this open for review. This should be abstraced away.
+  // Create sync structures - I'll leave this open for review. This should be abstraced away.
   {
-    /// Flag makes the fence signaled first to trigger a wait.
+    // Flag makes the fence signaled first to trigger a wait.
     VkFenceCreateInfo fence_create = fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
     VkSemaphoreCreateInfo semaphore_create = semaphore_create_info(0);
 
@@ -332,12 +332,12 @@ std::optional<Common> initialize(SDL_Window* window) {
 void initialize_commands() {}
 
 void free(Common& vulkan) {
-  /// Kill per-frame resources from vulkan.frames.
+  // Kill per-frame resources from vulkan.frames.
   for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
-    /// Kill command resources.
+    // Kill command resources.
     vkDestroyCommandPool(vulkan.device, vulkan.frames[i].command_pool, nullptr);
 
-    /// Kill sync resources.
+    // Kill sync resources.
     vkDestroyFence(vulkan.device, vulkan.frames[i].render_fence, nullptr);
     vkDestroySemaphore(vulkan.device, vulkan.frames[i].render_semaphore, nullptr);
     vkDestroySemaphore(vulkan.device, vulkan.frames[i].swapchain_semaphore, nullptr);
