@@ -170,7 +170,48 @@ std::optional<vkb::Swapchain> create_swapchain(SDL_Window* window, const Common&
   return swapchain_ret.value();
 }
 
+VkCommandPoolCreateInfo command_pool_create_info(uint32_t queue_family_index,
+                                                 VkCommandPoolCreateFlags flags) {
+  VkCommandPoolCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  info.pNext = nullptr;
+  info.queueFamilyIndex = queue_family_index;
+  info.flags = flags;
+
+  return info;
 }
+
+VkCommandBufferAllocateInfo command_buffer_allocate_info(VkCommandPool pool, uint32_t count) {
+  VkCommandBufferAllocateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  info.pNext = nullptr;
+
+  info.commandPool = pool;
+  info.commandBufferCount = count;
+  info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+  return info;
+}
+
+VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags) {
+  VkFenceCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  info.pNext = nullptr;
+  info.flags = flags;
+
+  return info;
+}
+
+VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags) {
+  VkSemaphoreCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  info.pNext = nullptr;
+  info.flags = flags;
+
+  return info;
+}
+
+}  // namespace
 
 std::optional<Common> initialize(SDL_Window* window) {
   Common vulkan;
@@ -220,30 +261,88 @@ std::optional<Common> initialize(SDL_Window* window) {
     vulkan.swapchain_image_views = std::move(image_views_res.value());
   }
 
-  if (vkb::Result<VkQueue> graphics_queue = vulkan.device.get_queue(vkb::QueueType::graphics).value(); 
-      !graphics_queue)
-  {
-    SDL_Log("[vkb] Failed to get graphics queue: %s", 
-            graphics_queue.error().message().c_str());
+  if (vkb::Result<VkQueue> graphics_queue =
+          vulkan.device.get_queue(vkb::QueueType::graphics).value();
+      !graphics_queue) {
+    SDL_Log("[vkb] Failed to get graphics queue: %s", graphics_queue.error().message().c_str());
     return {};
   } else {
     vulkan.graphics_queue = std::move(graphics_queue.value());
   }
 
-  if (vkb::Result<uint32_t> graphics_queue_family = vulkan.device.get_queue_index(vkb::QueueType::graphics).value(); 
-      !graphics_queue_family)
-  {
-    SDL_Log("[vkb] Failed to get graphics queue family: %s", 
-                  graphics_queue_family.error().message().c_str());
+  if (vkb::Result<uint32_t> graphics_queue_family =
+          vulkan.device.get_queue_index(vkb::QueueType::graphics).value();
+      !graphics_queue_family) {
+    SDL_Log("[vkb] Failed to get graphics queue family: %s",
+            graphics_queue_family.error().message().c_str());
     return {};
   } else {
     vulkan.graphics_queue_family = graphics_queue_family.value();
   }
 
+  /// Graphics command pool/frame setup.
+  /// Similar to the create sync reources below, this scope should be abstracted away.
+  {
+    vulkan.frames = std::vector<FrameData>(vulkan.swapchain_images.size());
+    vulkan.frame_overlap = static_cast<uint32_t>(vulkan.swapchain_images.size());
+    vulkan.frame_number = 0;
+
+    VkCommandPoolCreateInfo graphics_command_pool_info = command_pool_create_info(
+        vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+    for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
+      FrameData* frame = &vulkan.frames[i];
+
+      RACECAR_VK_CHECK(vkCreateCommandPool(vulkan.device, &graphics_command_pool_info, nullptr,
+                                           &frame->command_pool),
+                       "Failed to create command pool");
+
+      VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+          command_buffer_allocate_info(frame->command_pool, 1);
+
+      RACECAR_VK_CHECK(vkAllocateCommandBuffers(vulkan.device, &cmd_buffer_allocate_info,
+                                                &frame->command_buffer),
+                       "Failed to allocate command buffer");
+    }
+  }
+
+  /// Create sync structures - I'll leave this open for review. This should be abstraced away.
+  {
+    /// Flag makes the fence signaled first to trigger a wait.
+    VkFenceCreateInfo fence_create = fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
+    VkSemaphoreCreateInfo semaphore_create = semaphore_create_info(0);
+
+    for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
+      FrameData* frame = &vulkan.frames[i];
+
+      RACECAR_VK_CHECK(vkCreateFence(vulkan.device, &fence_create, nullptr, &frame->render_fence),
+                       "Failed to create render fence");
+      RACECAR_VK_CHECK(
+          vkCreateSemaphore(vulkan.device, &semaphore_create, nullptr, &frame->swapchain_semaphore),
+          "Failed to create swapchain semaphore");
+      RACECAR_VK_CHECK(
+          vkCreateSemaphore(vulkan.device, &semaphore_create, nullptr, &frame->render_semaphore),
+          "Failed to create render semaphore");
+    }
+  }
+
   return vulkan;
 }
 
+void initialize_commands() {}
+
 void free(Common& vulkan) {
+  /// Kill per-frame resources from vulkan.frames.
+  for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
+    /// Kill command resources.
+    vkDestroyCommandPool(vulkan.device, vulkan.frames[i].command_pool, nullptr);
+
+    /// Kill sync resources.
+    vkDestroyFence(vulkan.device, vulkan.frames[i].render_fence, nullptr);
+    vkDestroySemaphore(vulkan.device, vulkan.frames[i].render_semaphore, nullptr);
+    vkDestroySemaphore(vulkan.device, vulkan.frames[i].swapchain_semaphore, nullptr);
+  }
+
   vulkan.swapchain.destroy_image_views(vulkan.swapchain_image_views);
   vkb::destroy_swapchain(vulkan.swapchain);
   vkb::destroy_device(vulkan.device);
