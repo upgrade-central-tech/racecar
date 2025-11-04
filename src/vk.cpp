@@ -170,7 +170,7 @@ std::optional<vkb::Swapchain> create_swapchain(SDL_Window* window, const Common&
   return swapchain_ret.value();
 }
 
-}  // namespace
+}
 
 std::optional<Common> initialize(SDL_Window* window) {
   Common vulkan;
@@ -218,6 +218,26 @@ std::optional<Common> initialize(SDL_Window* window) {
     return {};
   } else {
     vulkan.swapchain_image_views = std::move(image_views_res.value());
+  }
+
+  if (vkb::Result<VkQueue> graphics_queue = vulkan.device.get_queue(vkb::QueueType::graphics).value(); 
+      !graphics_queue)
+  {
+    SDL_Log("[vkb] Failed to get graphics queue: %s", 
+            graphics_queue.error().message().c_str());
+    return {};
+  } else {
+    vulkan.graphics_queue = std::move(graphics_queue.value());
+  }
+
+  if (vkb::Result<uint32_t> graphics_queue_family = vulkan.device.get_queue_index(vkb::QueueType::graphics).value(); 
+      !graphics_queue_family)
+  {
+    SDL_Log("[vkb] Failed to get graphics queue family: %s", 
+                  graphics_queue_family.error().message().c_str());
+    return {};
+  } else {
+    vulkan.graphics_queue_family = graphics_queue_family.value();
   }
 
   return vulkan;

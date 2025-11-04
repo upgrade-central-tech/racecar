@@ -17,6 +17,11 @@ struct Common {
   vkb::Swapchain swapchain;
   std::vector<VkImage> swapchain_images;
   std::vector<VkImageView> swapchain_image_views;
+
+  uint32_t graphics_queue_family;
+  VkQueue graphics_queue;
+
+  /// TOOD: Add compute_queue
 };
 
 std::optional<Common> initialize(SDL_Window* window);
