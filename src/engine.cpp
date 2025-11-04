@@ -210,12 +210,22 @@ std::optional<Engine> initialize_engine(const SDL::Context& ctx) {
     engine.swapchain_images = std::move(images_res.value());
   }
 
+  if (vkb::Result<std::vector<VkImageView>> image_views_res = engine.swapchain.get_image_views();
+      !image_views_res) {
+    SDL_Log("[vkb] Failed to get swapchain image views: %s",
+            image_views_res.error().message().c_str());
+    return {};
+  } else {
+    engine.swapchain_image_views = std::move(image_views_res.value());
+  }
+
   return engine;
 }
 
 void draw(const SDL::Context&) {}
 
 void clean_up(Engine& engine) {
+  engine.swapchain.destroy_image_views(engine.swapchain_image_views);
   vkb::destroy_swapchain(engine.swapchain);
   vkb::destroy_device(engine.device);
   SDL_Vulkan_DestroySurface(engine.instance, engine.surface, nullptr);
@@ -228,6 +238,7 @@ void clean_up(Engine& engine) {
 
       .swapchain = {},
       .swapchain_images = {},
+      .swapchain_image_views = {},
   };
 }
 
