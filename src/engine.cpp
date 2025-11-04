@@ -2,6 +2,9 @@
 
 #include <SDL3/SDL_vulkan.h>
 
+#include <algorithm>
+#include <limits>
+
 namespace Racecar {
 
 namespace {
@@ -71,7 +74,9 @@ std::optional<vkb::Instance> create_vulkan_instance() {
 std::optional<vkb::Device> pick_and_create_vulkan_device(const Engine& engine) {
   vkb::PhysicalDeviceSelector phys_selector(engine.instance, engine.surface);
   vkb::Result<vkb::PhysicalDevice> phys_selector_ret =
-      phys_selector.prefer_gpu_device_type().select();
+      phys_selector.prefer_gpu_device_type()
+          .add_required_extension(VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+          .select();
 
   if (!phys_selector_ret) {
     auto phys_device_error =
@@ -111,9 +116,58 @@ std::optional<vkb::Device> pick_and_create_vulkan_device(const Engine& engine) {
     return {};
   }
 
+  if (!device.get_queue(vkb::QueueType::present)) {
+    SDL_Log("[vkb] VkDevice created from physical device \"%s\" does not have a present queue!",
+            phys_name.c_str());
+    return {};
+  }
+
   SDL_Log("[Engine] Selected physical device \"%s\"", phys_name.c_str());
 
   return device;
+}
+
+std::optional<vkb::Swapchain> create_swapchain(const SDL::Context& ctx, const Engine& engine) {
+  VkSurfaceCapabilitiesKHR capabilities;
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(engine.device.physical_device, engine.surface,
+                                            &capabilities);
+
+  VkExtent2D swap_extent = {.width = 0, .height = 0};
+  if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+    swap_extent = capabilities.currentExtent;
+  } else {
+    int width = 0;
+    int height = 0;
+
+    if (!SDL_GetWindowSizeInPixels(ctx.window, &width, &height)) {
+      SDL_Log("[SDL] SDL_GetWindowSizeInPixels: %s", SDL_GetError());
+      return {};
+    }
+
+    swap_extent = {
+        .width = std::clamp(static_cast<uint32_t>(width), capabilities.minImageExtent.width,
+                            capabilities.maxImageExtent.width),
+        .height = std::clamp(static_cast<uint32_t>(height), capabilities.minImageExtent.height,
+                             capabilities.maxImageExtent.height),
+    };
+  }
+
+  SDL_Log("[Engine] Initial desired swapchain extent: %d×%d", swap_extent.width,
+          swap_extent.height);
+
+  vkb::SwapchainBuilder swapchain_builder(engine.device);
+  vkb::Result<vkb::Swapchain> swapchain_ret =
+      swapchain_builder.set_desired_extent(swap_extent.width, swap_extent.height)
+          .set_desired_min_image_count(capabilities.minImageCount + 1)
+          .build();
+
+  if (!swapchain_ret) {
+    auto swapchain_error = static_cast<vkb::SwapchainError>(swapchain_ret.error().value());
+    SDL_Log("[vkb] Swapchain creation failed: %s", vkb::to_string(swapchain_error));
+    return {};
+  }
+
+  return swapchain_ret.value();
 }
 
 }  // namespace
@@ -142,12 +196,27 @@ std::optional<Engine> initialize_engine(const SDL::Context& ctx) {
     engine.device = device_opt.value();
   }
 
+  if (std::optional<vkb::Swapchain> swapchain_opt = create_swapchain(ctx, engine); !swapchain_opt) {
+    SDL_Log("[Engine] Failed to create swapchain");
+    return {};
+  } else {
+    engine.swapchain = swapchain_opt.value();
+  }
+
+  if (vkb::Result<std::vector<VkImage>> images_res = engine.swapchain.get_images(); !images_res) {
+    SDL_Log("[vkb] Failed to get swapchain images: %s", images_res.error().message().c_str());
+    return {};
+  } else {
+    engine.swapchain_images = std::move(images_res.value());
+  }
+
   return engine;
 }
 
 void draw(const SDL::Context&) {}
 
 void clean_up(Engine& engine) {
+  vkb::destroy_swapchain(engine.swapchain);
   vkb::destroy_device(engine.device);
   SDL_Vulkan_DestroySurface(engine.instance, engine.surface, nullptr);
   vkb::destroy_instance(engine.instance);
@@ -156,6 +225,9 @@ void clean_up(Engine& engine) {
       .instance = {},
       .device = {},
       .surface = nullptr,
+
+      .swapchain = {},
+      .swapchain_images = {},
   };
 }
 
