@@ -78,6 +78,15 @@ std::optional<Engine> initialize_engine(const SDL::Context& ctx) {
   return engine;
 }
 
+void draw(const SDL::Context& ctx) {
+  // Clear screen to white
+  SDL_FillSurfaceRect(ctx.sdl_surface, nullptr,
+                      SDL_MapSurfaceRGB(ctx.sdl_surface, 0xff, 0xff, 0xff));
+
+  // Render image to screen
+  SDL_BlitSurface(ctx.bryce, nullptr, ctx.sdl_surface, nullptr);
+}
+
 void clean_up(Engine& engine) {
   vkb::destroy_surface(engine.instance, engine.surface);
   vkb::destroy_instance(engine.instance);

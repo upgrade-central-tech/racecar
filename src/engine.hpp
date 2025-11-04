@@ -14,7 +14,7 @@ struct Engine {
 };
 
 std::optional<Engine> initialize_engine(const SDL::Context& ctx);
-
+void draw(const SDL::Context& ctx);
 void clean_up(Engine& engine);
 
 }  // namespace Racecar

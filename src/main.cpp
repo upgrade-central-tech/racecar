@@ -15,7 +15,7 @@ constexpr int SCREEN_WIDTH = 1280;
 constexpr int SCREEN_HEIGHT = 720;
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
-  std::optional<SDL::Context> ctx_opt = SDL::initialize_context(SCREEN_WIDTH, SCREEN_HEIGHT, false);
+  std::optional<SDL::Context> ctx_opt = SDL::initialize(SCREEN_WIDTH, SCREEN_HEIGHT, false);
 
   if (!ctx_opt) {
     SDL_Log("[RACECAR] Could not initialize!");
@@ -56,7 +56,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
       continue;
     }
 
-    SDL::draw(ctx);
+    Racecar::draw(ctx);
 
     // Make new screen visible
     SDL_UpdateWindowSurface(ctx.window);

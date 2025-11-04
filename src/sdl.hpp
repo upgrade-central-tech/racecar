@@ -14,12 +14,7 @@ struct Context {
   SDL_Surface* bryce = nullptr;
 };
 
-std::optional<Context> initialize_context(int screen_w, int screen_h, bool fullscreen);
-
-/// Draws the surface onto the window.
-void draw(const Context& ctx);
-
-/// Frees everything and shuts down SDL.
+std::optional<Context> initialize(int screen_w, int screen_h, bool fullscreen);
 void clean_up(Context& ctx);
 
 }  // namespace Racecar::SDL

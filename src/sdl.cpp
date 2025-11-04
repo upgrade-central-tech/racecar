@@ -4,18 +4,16 @@
 
 namespace Racecar::SDL {
 
-std::optional<Context> initialize_context(int screen_w,
-                                          int screen_h,
-                                          [[maybe_unused]] bool fullscreen) {
+std::optional<Context> initialize(int screen_w, int screen_h, [[maybe_unused]] bool fullscreen) {
   static std::string image_path = "../assets/bryce.bmp";
 
   if (volkInitialize() != VK_SUCCESS) {
-    SDL_Log("[volk] Could not init because Vulkan loader isn't installed on the system");
+    SDL_Log("[volk] Could not load the Vulkan loader; is it installed on the system?");
     return {};
   }
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
-    SDL_Log("[SDL] Could not init: %s", SDL_GetError());
+    SDL_Log("[SDL] Could not initialize: %s", SDL_GetError());
     return {};
   }
 
@@ -35,15 +33,6 @@ std::optional<Context> initialize_context(int screen_w,
   }
 
   return ctx;
-}
-
-void draw(const Context& ctx) {
-  // Clear screen to white
-  SDL_FillSurfaceRect(ctx.sdl_surface, nullptr,
-                      SDL_MapSurfaceRGB(ctx.sdl_surface, 0xff, 0xff, 0xff));
-
-  // Render image to screen
-  SDL_BlitSurface(ctx.bryce, nullptr, ctx.sdl_surface, nullptr);
 }
 
 void clean_up(Context& ctx) {
