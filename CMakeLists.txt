@@ -10,6 +10,9 @@ set(SRC_DIR "src")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
+
+  ${SRC_DIR}/sdl.cpp
+  ${SRC_DIR}/engine.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
