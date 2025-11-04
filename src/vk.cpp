@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <limits>
 
-namespace Racecar::vk {
+namespace racecar::vk {
 
 namespace {
 
@@ -233,4 +233,4 @@ void free(Common& vulkan) {
   vulkan = {};
 }
 
-}  // namespace Racecar::vk
+}  // namespace racecar::vk

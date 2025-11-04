@@ -4,11 +4,11 @@
 
 #include <SDL3/SDL.h>
 
-namespace Racecar {
+namespace racecar {
 
 struct Context {
   SDL_Window* window = nullptr;
   vk::Common vulkan;
 };
 
-}  // namespace Racecar
+}  // namespace racecar

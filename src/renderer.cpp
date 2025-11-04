@@ -1,7 +1,7 @@
 #include "renderer.hpp"
 
-namespace Racecar::renderer {
+namespace racecar::renderer {
 
 void draw(const Context&) {}
 
-}  // namespace Racecar::renderer
+}  // namespace racecar::renderer

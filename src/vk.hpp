@@ -6,7 +6,7 @@
 
 #include <optional>
 
-namespace Racecar::vk {
+namespace racecar::vk {
 
 /// Stores common Vulkan-related objects.
 struct Common {
@@ -22,4 +22,4 @@ struct Common {
 std::optional<Common> initialize(SDL_Window* window);
 void free(Common& vulkan);
 
-}  // namespace Racecar::vk
+}  // namespace racecar::vk
