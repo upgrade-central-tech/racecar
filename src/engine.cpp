@@ -4,24 +4,7 @@
 
 namespace Racecar {
 
-std::optional<Engine> initialize_engine(const SDL::Context& ctx) {
-  Engine engine;
-
-  if (!initialize_vulkan_instance(engine)) {
-    SDL_Log("[Engine] Failed to initialize Vulkan instance");
-    return {};
-  }
-
-  /// TODO: abstract away createSurface if needed, but if it's like a one-liner, it might be fine
-  if (!SDL_Vulkan_CreateSurface(ctx.window, engine.instance, nullptr, &engine.surface)) {
-    SDL_Log("[SDL] Could not create Vulkan surface: %s", SDL_GetError());
-    return {};
-  }
-
-  initialize_swapchain(engine);
-
-  return engine;
-}
+namespace {
 
 bool initialize_vulkan_instance(Engine& engine) {
   vkb::InstanceBuilder instance_builder;
@@ -77,7 +60,23 @@ bool initialize_vulkan_instance(Engine& engine) {
   return true;
 }
 
-void initialize_swapchain([[maybe_unused]] Engine& engine) {}
+}  // namespace
+
+std::optional<Engine> initialize_engine(const SDL::Context& ctx) {
+  Engine engine;
+
+  if (!initialize_vulkan_instance(engine)) {
+    SDL_Log("[Engine] Failed to initialize Vulkan instance");
+    return {};
+  }
+
+  if (!SDL_Vulkan_CreateSurface(ctx.window, engine.instance, nullptr, &engine.surface)) {
+    SDL_Log("[SDL] Could not create Vulkan surface: %s", SDL_GetError());
+    return {};
+  }
+
+  return engine;
+}
 
 void clean_up(Engine& engine) {
   vkb::destroy_surface(engine.instance, engine.surface);

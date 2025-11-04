@@ -15,9 +15,6 @@ struct Engine {
 
 std::optional<Engine> initialize_engine(const SDL::Context& ctx);
 
-bool initialize_vulkan_instance(Engine& engine);
-void initialize_swapchain(Engine& engine);
-
 void clean_up(Engine& engine);
 
 }  // namespace Racecar

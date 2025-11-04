@@ -16,9 +16,6 @@ struct Context {
 
 std::optional<Context> initialize_context(int screen_w, int screen_h, bool fullscreen);
 
-/// Loads a test image into context.
-bool load_bryce(Context& ctx);
-
 /// Draws the surface onto the window.
 void draw(const Context& ctx);
 

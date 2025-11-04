@@ -33,11 +33,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
 
   Racecar::Engine& engine = engine_opt.value();
 
-  if (!SDL::load_bryce(ctx)) {
-    SDL_Log("[RACECAR] Could not load Bryce!");
-    return EXIT_FAILURE;
-  }
-
   bool will_quit = false;
   bool stop_rendering = false;
   SDL_Event event;

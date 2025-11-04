@@ -2,13 +2,13 @@
 
 #include <SDL3/SDL_vulkan.h>
 
-#include <string>
-
 namespace Racecar::SDL {
 
 std::optional<Context> initialize_context(int screen_w,
                                           int screen_h,
                                           [[maybe_unused]] bool fullscreen) {
+  static std::string image_path = "../assets/bryce.bmp";
+
   if (volkInitialize() != VK_SUCCESS) {
     SDL_Log("[volk] Could not init because Vulkan loader isn't installed on the system");
     return {};
@@ -29,18 +29,12 @@ std::optional<Context> initialize_context(int screen_w,
 
   ctx.sdl_surface = SDL_GetWindowSurface(ctx.window);
 
-  return ctx;
-}
-
-bool load_bryce(Context& ctx) {
-  static std::string image_path = "../assets/bryce.bmp";
-
   if (ctx.bryce = SDL_LoadBMP(image_path.c_str()); !ctx.bryce) {
     SDL_Log("[SDL_LoadBMP] Unable to load \"%s\"! Error: %s", image_path.c_str(), SDL_GetError());
-    return false;
+    return {};
   }
 
-  return true;
+  return ctx;
 }
 
 void draw(const Context& ctx) {
