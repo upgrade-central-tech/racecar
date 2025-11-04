@@ -62,8 +62,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
     SDL_UpdateWindowSurface(ctx.window);
   }
 
-  SDL::clean_up(ctx);
   Racecar::clean_up(engine);
+  SDL::clean_up(ctx);
 
   return EXIT_SUCCESS;
 }

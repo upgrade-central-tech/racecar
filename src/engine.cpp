@@ -70,6 +70,7 @@ std::optional<Engine> initialize_engine(const SDL::Context& ctx) {
     return {};
   }
 
+  // Note: while we use SDL to create the Vulkan surface, we will use vk-bootstrap to delete it
   if (!SDL_Vulkan_CreateSurface(ctx.window, engine.instance, nullptr, &engine.surface)) {
     SDL_Log("[SDL] Could not create Vulkan surface: %s", SDL_GetError());
     return {};
@@ -78,16 +79,10 @@ std::optional<Engine> initialize_engine(const SDL::Context& ctx) {
   return engine;
 }
 
-void draw(const SDL::Context& ctx) {
-  // Clear screen to white
-  SDL_FillSurfaceRect(ctx.sdl_surface, nullptr,
-                      SDL_MapSurfaceRGB(ctx.sdl_surface, 0xff, 0xff, 0xff));
-
-  // Render image to screen
-  SDL_BlitSurface(ctx.bryce, nullptr, ctx.sdl_surface, nullptr);
-}
+void draw([[maybe_unused]] const SDL::Context& ctx) {}
 
 void clean_up(Engine& engine) {
+  // Note: while we use vk-bootstrap to delete the Vulkan surface, we used SDL to create it
   vkb::destroy_surface(engine.instance, engine.surface);
   vkb::destroy_instance(engine.instance);
 

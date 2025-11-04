@@ -10,11 +10,11 @@ namespace Racecar::SDL {
 
 struct Context {
   SDL_Window* window = nullptr;
-  SDL_Surface* sdl_surface = nullptr;
-  SDL_Surface* bryce = nullptr;
 };
 
 std::optional<Context> initialize(int screen_w, int screen_h, bool fullscreen);
+
+/// Must be called after `Racecar::clean_up` to properly free Vulkan resources.
 void clean_up(Context& ctx);
 
 }  // namespace Racecar::SDL

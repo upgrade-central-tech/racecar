@@ -25,26 +25,13 @@ std::optional<Context> initialize(int screen_w, int screen_h, [[maybe_unused]] b
     return {};
   }
 
-  ctx.sdl_surface = SDL_GetWindowSurface(ctx.window);
-
-  if (ctx.bryce = SDL_LoadBMP(image_path.c_str()); !ctx.bryce) {
-    SDL_Log("[SDL_LoadBMP] Unable to load \"%s\"! Error: %s", image_path.c_str(), SDL_GetError());
-    return {};
-  }
-
   return ctx;
 }
 
 void clean_up(Context& ctx) {
-  SDL_DestroySurface(ctx.bryce);
-  SDL_DestroyWindowSurface(ctx.window);
   SDL_DestroyWindow(ctx.window);
 
-  ctx = {
-      .window = nullptr,
-      .sdl_surface = nullptr,
-      .bryce = nullptr,
-  };
+  ctx = {.window = nullptr};
 
   SDL_Quit();
 }
