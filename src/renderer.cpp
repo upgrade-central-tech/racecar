@@ -192,16 +192,18 @@ std::optional<bool> draw(const Context& ctx) {
   const vk::Common& vulkan = ctx.vulkan;
   const vk::FrameData* frame = &vulkan.frames[vulkan.frame_number];
 
-  RACECAR_VK_CHECK(vkWaitForFences(vulkan.device, 1, &frame->render_fence, true, 1e9),
-                   "Failed to wait for fences");
+  RACECAR_VK_CHECK(
+      vkWaitForFences(vulkan.device, 1, &frame->render_fence, true, static_cast<uint64_t>(1e9)),
+      "Failed to wait for fences");
   RACECAR_VK_CHECK(vkResetFences(vulkan.device, 1, &frame->render_fence),
                    "Failed to reset render fence");
 
   // Request swap chain index.
   uint32_t swapchain_index = 0;
-  RACECAR_VK_CHECK(vkAcquireNextImageKHR(vulkan.device, vulkan.swapchain, 1e9,
-                                         frame->swapchain_semaphore, nullptr, &swapchain_index),
-                   "Failed to acquire next image from swapchain");
+  RACECAR_VK_CHECK(
+      vkAcquireNextImageKHR(vulkan.device, vulkan.swapchain, static_cast<uint64_t>(1e9),
+                            frame->swapchain_semaphore, nullptr, &swapchain_index),
+      "Failed to acquire next image from swapchain");
 
   // Reset command buffer clears all command from memory - always make sure to do this.
   VkCommandBuffer command_buffer = frame->command_buffer;

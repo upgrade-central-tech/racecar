@@ -115,7 +115,7 @@ VkSubmitInfo2 submit_info(VkCommandBufferSubmitInfo* command_buffer_info,
 VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderStageFlagBits flags,
                                                                   VkShaderModule shader_module,
                                                                   std::string_view name) {
-  VkPipelineShaderStageCreateInfo create_info;
+    VkPipelineShaderStageCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   create_info.stage = flags;
   create_info.module = shader_module;
