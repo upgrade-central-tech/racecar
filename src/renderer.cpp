@@ -29,8 +29,6 @@ std::optional<Pipeline> create_gfx_pipeline(const vk::Common& vulkan) {
   input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
   input_assembly_info.primitiveRestartEnable = VK_FALSE;
 
-  SDL_Log("[Renderer] my wife");
-
   // VkViewport viewport{};
   // viewport.x = 0.0f;
   // viewport.y = 0.0f;
@@ -87,8 +85,6 @@ std::optional<Pipeline> create_gfx_pipeline(const vk::Common& vulkan) {
   VkPipelineLayoutCreateInfo pipeline_layout_info{};
   pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-  SDL_Log("[Renderer] my wife2");
-
   VkPipelineLayout gfx_layout = nullptr;
 
   if (VkResult result =
@@ -113,8 +109,6 @@ std::optional<Pipeline> create_gfx_pipeline(const vk::Common& vulkan) {
       vk::init::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, shader_module,
                                                   "fragment_main"),
   };
-
-  SDL_Log("[Renderer] my wife 3");
 
   VkAttachmentDescription color_attach_desc{};
   color_attach_desc.format = vulkan.swapchain.image_format;
@@ -163,21 +157,13 @@ std::optional<Pipeline> create_gfx_pipeline(const vk::Common& vulkan) {
   gfx_pipeline_info.renderPass = gfx_pipeline.render_pass;
   gfx_pipeline_info.subpass = 0;
 
-  SDL_Log("[Renderer] my wife 3.5");
-
   RACECAR_VK_CHECK(vkCreateGraphicsPipelines(vulkan.device, nullptr, 1, &gfx_pipeline_info, nullptr,
                                              &gfx_pipeline.handle),
                    "Failed to create graphics pipeline");
 
-  SDL_Log("[Renderer] my wife 3.6");
-
   vkDestroyShaderModule(vulkan.device, shader_module, nullptr);
 
-  SDL_Log("[Renderer] my wife 3.75");
-
   gfx_pipeline.layout = gfx_layout;
-
-  SDL_Log("[Renderer] my wife 4");
 
   return gfx_pipeline;
 }
