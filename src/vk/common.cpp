@@ -76,14 +76,16 @@ std::optional<vkb::Instance> create_vulkan_instance() {
 std::optional<vkb::Device> pick_and_create_vulkan_device(const Common& vulkan) {
   vkb::PhysicalDeviceSelector phys_selector(vulkan.instance, vulkan.surface);
 
-  VkPhysicalDeviceVulkan13Features required_features_13{};
-  required_features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-  required_features_13.synchronization2 = VK_TRUE;
-  required_features_13.dynamicRendering = VK_TRUE;
+  VkPhysicalDeviceVulkan13Features required_features_13 = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+      .synchronization2 = VK_TRUE,
+      .dynamicRendering = VK_TRUE,
+  };
 
-  VkPhysicalDeviceVulkan11Features required_features_11{};
-  required_features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
-  required_features_11.shaderDrawParameters = VK_TRUE;
+  VkPhysicalDeviceVulkan11Features required_features_11 = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+      .shaderDrawParameters = VK_TRUE,
+  };
 
   vkb::Result<vkb::PhysicalDevice> phys_selector_ret =
       phys_selector.prefer_gpu_device_type()
@@ -143,7 +145,7 @@ std::optional<vkb::Device> pick_and_create_vulkan_device(const Common& vulkan) {
 }
 
 std::optional<vkb::Swapchain> create_swapchain(SDL_Window* window, const Common& vulkan) {
-  VkSurfaceCapabilitiesKHR capabilities;
+  VkSurfaceCapabilitiesKHR capabilities = {};
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkan.device.physical_device, vulkan.surface,
                                             &capabilities);
 
@@ -281,7 +283,7 @@ std::optional<Common> initialize(SDL_Window* window) {
 
       RACECAR_VK_CHECK(vkAllocateCommandBuffers(vulkan.device, &cmd_buffer_allocate_info,
                                                 &frame->command_buffer),
-                       "Failed to allocate command buffer");      
+                       "Failed to allocate command buffer");
     }
   }
 
@@ -302,9 +304,9 @@ std::optional<Common> initialize(SDL_Window* window) {
       RACECAR_VK_CHECK(
           vkCreateSemaphore(vulkan.device, &semaphore_create, nullptr, &frame->swapchain_semaphore),
           "Failed to create swapchain semaphore");
-      RACECAR_VK_CHECK(
-          vkCreateSemaphore(vulkan.device, &semaphore_create, nullptr, &vulkan.render_semaphores[i]),
-          "Failed to create render semaphore");
+      RACECAR_VK_CHECK(vkCreateSemaphore(vulkan.device, &semaphore_create, nullptr,
+                                         &vulkan.render_semaphores[i]),
+                       "Failed to create render semaphore");
     }
   }
 

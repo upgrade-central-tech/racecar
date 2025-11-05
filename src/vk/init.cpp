@@ -9,119 +9,95 @@ namespace racecar::vk::init {
 
 VkCommandPoolCreateInfo command_pool_create_info(uint32_t queue_family_index,
                                                  VkCommandPoolCreateFlags flags) {
-  VkCommandPoolCreateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  info.pNext = nullptr;
-  info.queueFamilyIndex = queue_family_index;
-  info.flags = flags;
-
-  return info;
+  return {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+      .flags = flags,
+      .queueFamilyIndex = queue_family_index,
+  };
 }
 
 VkCommandBufferAllocateInfo command_buffer_allocate_info(VkCommandPool pool, uint32_t count) {
-  VkCommandBufferAllocateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  info.pNext = nullptr;
-
-  info.commandPool = pool;
-  info.commandBufferCount = count;
-  info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-  return info;
+  return {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+      .commandPool = pool,
+      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+      .commandBufferCount = count,
+  };
 }
 
 VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags) {
-  VkFenceCreateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  info.pNext = nullptr;
-  info.flags = flags;
-
-  return info;
+  return {
+      .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+      .flags = flags,
+  };
 }
 
 VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags) {
-  VkSemaphoreCreateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  info.pNext = nullptr;
-  info.flags = flags;
-
-  return info;
+  return {
+      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+      .flags = flags,
+  };
 }
 
 VkCommandBufferBeginInfo command_buffer_begin_info(VkCommandBufferUsageFlags flags) {
-  VkCommandBufferBeginInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  info.pNext = nullptr;
-
-  info.pInheritanceInfo = nullptr;
-  info.flags = flags;
-
-  return info;
+  return {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+      .flags = flags,
+  };
 }
 
 VkImageSubresourceRange image_subresource_range(VkImageAspectFlags aspect_mask) {
-  VkImageSubresourceRange subImage = {};
-  subImage.aspectMask = aspect_mask;
-  subImage.baseMipLevel = 0;
-  subImage.levelCount = VK_REMAINING_MIP_LEVELS;
-  subImage.baseArrayLayer = 0;
-  subImage.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-  return subImage;
+  return {
+      .aspectMask = aspect_mask,
+      .baseMipLevel = 0,
+      .levelCount = VK_REMAINING_MIP_LEVELS,
+      .baseArrayLayer = 0,
+      .layerCount = VK_REMAINING_ARRAY_LAYERS,
+  };
 }
 
 VkSemaphoreSubmitInfo semaphore_submit_info(VkPipelineStageFlags2 stage_mask,
                                             VkSemaphore semaphore) {
-  VkSemaphoreSubmitInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-  info.pNext = nullptr;
-  info.semaphore = semaphore;
-  info.stageMask = stage_mask;
-  info.deviceIndex = 0;
-  info.value = 1;
-
-  return info;
+  return {
+      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+      .semaphore = semaphore,
+      .value = 1,
+      .stageMask = stage_mask,
+      .deviceIndex = 0,
+  };
 }
 
 VkCommandBufferSubmitInfo command_buffer_submit_info(VkCommandBuffer command_buffer) {
-  VkCommandBufferSubmitInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-  info.pNext = nullptr;
-  info.commandBuffer = command_buffer;
-  info.deviceMask = 0;
-
-  return info;
+  return {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+      .commandBuffer = command_buffer,
+      .deviceMask = 0,
+  };
 }
 
 VkSubmitInfo2 submit_info(VkCommandBufferSubmitInfo* command_buffer_info,
                           VkSemaphoreSubmitInfo* signal_semaphore_info,
                           VkSemaphoreSubmitInfo* wait_semaphore_info) {
-  VkSubmitInfo2 info = {};
-  info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-  info.pNext = nullptr;
-
-  info.waitSemaphoreInfoCount = (wait_semaphore_info == nullptr) ? 0 : 1;
-  info.pWaitSemaphoreInfos = wait_semaphore_info;
-
-  info.signalSemaphoreInfoCount = (signal_semaphore_info == nullptr) ? 0 : 1;
-  info.pSignalSemaphoreInfos = signal_semaphore_info;
-
-  info.commandBufferInfoCount = 1;
-  info.pCommandBufferInfos = command_buffer_info;
-
-  return info;
+  return {
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+      .waitSemaphoreInfoCount = (wait_semaphore_info ? 1U : 0U),
+      .pWaitSemaphoreInfos = wait_semaphore_info,
+      .commandBufferInfoCount = 1U,
+      .pCommandBufferInfos = command_buffer_info,
+      .signalSemaphoreInfoCount = (signal_semaphore_info ? 1U : 0U),
+      .pSignalSemaphoreInfos = signal_semaphore_info,
+  };
 }
 
 VkPipelineShaderStageCreateInfo pipeline_shader_stage_create_info(VkShaderStageFlagBits flags,
                                                                   VkShaderModule shader_module,
                                                                   std::string_view name) {
-    VkPipelineShaderStageCreateInfo create_info{};
-  create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  create_info.stage = flags;
-  create_info.module = shader_module;
-  create_info.pName = name.data();
-
-  return create_info;
+  return {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .stage = flags,
+      .module = shader_module,
+      .pName = name.data(),
+  };
 }
 
 /// Similar to a resource barrier transition in DX12, this is meant
@@ -135,38 +111,34 @@ void transition_image(VkCommandBuffer command_buffer,
                       VkImage image,
                       VkImageLayout currentLayout,
                       VkImageLayout newLayout) {
-  VkImageMemoryBarrier2 image_barrier = {};
-  image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-  image_barrier.pNext = nullptr;
+  VkImageMemoryBarrier2 image_barrier = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 
-  // srcStageMask represents what work in specific pipeline stages we wait for.
-  // For example, we can consider only looking at COMPUTE work, so
-  // VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT.
-  // Similarly, dstStageMask represents the work that waits until the barrier is lifted.
-  //
-  // **NOTE:** VkGuide notes that ALL_COMMANDS in StageMask is inefficient!!!
-  // More refined examples of using StageMask effectively can be found here:
-  // https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples
-  image_barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-  image_barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-  image_barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-  image_barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+      // For example, we can consider only looking at COMPUTE work, so
+      // VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT.
+      // Similarly, dstStageMask represents the work that waits until the barrier is lifted.
+      //
+      // Note: VkGuide notes that ALL_COMMANDS in StageMask is inefficient!!!
+      // More refined examples of using StageMask effectively can be found here:
+      // https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples
+      .srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+      .srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT,
+      .dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+      .dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT,
 
-  image_barrier.oldLayout = currentLayout;
-  image_barrier.newLayout = newLayout;
+      .oldLayout = currentLayout,
+      .newLayout = newLayout,
+  };
 
-  VkImageAspectFlags aspect_mask = (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
+  VkImageAspectFlags aspect_mask = newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
                                        ? VK_IMAGE_ASPECT_DEPTH_BIT
                                        : VK_IMAGE_ASPECT_COLOR_BIT;
   image_barrier.subresourceRange = image_subresource_range(aspect_mask);
   image_barrier.image = image;
 
-  VkDependencyInfo dependency_info{};
-  dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-  dependency_info.pNext = nullptr;
-
-  dependency_info.imageMemoryBarrierCount = 1;
-  dependency_info.pImageMemoryBarriers = &image_barrier;
+  VkDependencyInfo dependency_info = {.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+                                      .imageMemoryBarrierCount = 1,
+                                      .pImageMemoryBarriers = &image_barrier};
 
   vkCmdPipelineBarrier2(command_buffer, &dependency_info);
 }
