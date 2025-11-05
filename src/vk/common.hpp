@@ -7,13 +7,13 @@
 #include <optional>
 
 /// Custom define based on VK_CHECK, just with our SDL_Log. Feel free to tweak this.
-#define RACECAR_VK_CHECK(x, msg)                         \
-  do {                                                   \
-    VkResult err = x;                                    \
-    if (err) {                                           \
-      SDL_Log("[Vulkan] %s | Error code: %d", msg, err); \
-      return {};                                         \
-    }                                                    \
+#define RACECAR_VK_CHECK(vk_fn, message)                        \
+  do {                                                          \
+    VkResult result = vk_fn;                                    \
+    if (result) {                                               \
+      SDL_Log("[Vulkan] %s | Error code: %d", message, result); \
+      return {};                                                \
+    }                                                           \
   } while (0)
 
 namespace racecar::vk {
@@ -47,9 +47,6 @@ struct Common {
 };
 
 std::optional<Common> initialize(SDL_Window* window);
-
-void initialize_commands();
-
 void free(Common& vulkan);
 
 }  // namespace racecar::vk

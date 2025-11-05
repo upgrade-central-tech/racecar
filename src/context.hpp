@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vk.hpp"
+#include "vk/common.hpp"
 
 #include <SDL3/SDL.h>
 

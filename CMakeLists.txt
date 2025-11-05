@@ -7,13 +7,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS NO)
 
 set(SRC_DIR "src")
+set(VK_DIR "${SRC_DIR}/vk")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
 
   ${SRC_DIR}/sdl.cpp
-  ${SRC_DIR}/vk.cpp
   ${SRC_DIR}/renderer.cpp
+
+  ${VK_DIR}/common.cpp
+  ${VK_DIR}/init.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

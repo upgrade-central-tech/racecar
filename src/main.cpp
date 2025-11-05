@@ -56,7 +56,9 @@ int main(int, char*[]) {
       continue;
     }
 
-    renderer::draw(ctx);
+    if (renderer::draw(ctx)) {
+      ctx.vulkan.frame_number += 1;
+    }
 
     // Make new screen visible
     SDL_UpdateWindowSurface(ctx.window);

@@ -4,6 +4,8 @@
 
 namespace racecar::renderer {
 
-void draw(const Context& ctx);
+void create_graphics_pipeline(const vk::Common& vulkan);
+
+std::optional<bool> draw(const Context& ctx);
 
 }  // namespace racecar::renderer

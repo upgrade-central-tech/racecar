@@ -1,4 +1,6 @@
-#include "vk.hpp"
+#include "common.hpp"
+
+#include "init.hpp"
 
 #include <SDL3/SDL_vulkan.h>
 
@@ -73,9 +75,14 @@ std::optional<vkb::Instance> create_vulkan_instance() {
 /// device with one queue enabled from each available queue family.
 std::optional<vkb::Device> pick_and_create_vulkan_device(const Common& vulkan) {
   vkb::PhysicalDeviceSelector phys_selector(vulkan.instance, vulkan.surface);
+
+  VkPhysicalDeviceVulkan13Features required_features_13;
+  required_features_13.synchronization2 = true;
+
   vkb::Result<vkb::PhysicalDevice> phys_selector_ret =
       phys_selector.prefer_gpu_device_type()
           .add_required_extension(VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+          .set_required_features_13(required_features_13)
           .select();
 
   if (!phys_selector_ret) {
@@ -152,13 +159,13 @@ std::optional<vkb::Swapchain> create_swapchain(SDL_Window* window, const Common&
     };
   }
 
-  SDL_Log("[Vulkan] Initial desired swapchain extent: %d×%d", swap_extent.width,
-          swap_extent.height);
-
   vkb::SwapchainBuilder swapchain_builder(vulkan.device);
   vkb::Result<vkb::Swapchain> swapchain_ret =
       swapchain_builder.set_desired_extent(swap_extent.width, swap_extent.height)
           .set_desired_min_image_count(capabilities.minImageCount + 1)
+          .set_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                 VK_IMAGE_USAGE_TRANSFER_DST_BIT)
           .build();
 
   if (!swapchain_ret) {
@@ -167,48 +174,12 @@ std::optional<vkb::Swapchain> create_swapchain(SDL_Window* window, const Common&
     return {};
   }
 
-  return swapchain_ret.value();
-}
+  const vkb::Swapchain& swapchain = swapchain_ret.value();
 
-VkCommandPoolCreateInfo command_pool_create_info(uint32_t queue_family_index,
-                                                 VkCommandPoolCreateFlags flags) {
-  VkCommandPoolCreateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  info.pNext = nullptr;
-  info.queueFamilyIndex = queue_family_index;
-  info.flags = flags;
+  SDL_Log("[Vulkan] Initial swapchain extent: %d×%d", swapchain.extent.width,
+          swapchain.extent.height);
 
-  return info;
-}
-
-VkCommandBufferAllocateInfo command_buffer_allocate_info(VkCommandPool pool, uint32_t count) {
-  VkCommandBufferAllocateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  info.pNext = nullptr;
-
-  info.commandPool = pool;
-  info.commandBufferCount = count;
-  info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-  return info;
-}
-
-VkFenceCreateInfo fence_create_info(VkFenceCreateFlags flags) {
-  VkFenceCreateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  info.pNext = nullptr;
-  info.flags = flags;
-
-  return info;
-}
-
-VkSemaphoreCreateInfo semaphore_create_info(VkSemaphoreCreateFlags flags) {
-  VkSemaphoreCreateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  info.pNext = nullptr;
-  info.flags = flags;
-
-  return info;
+  return swapchain;
 }
 
 }  // namespace
@@ -287,7 +258,7 @@ std::optional<Common> initialize(SDL_Window* window) {
     vulkan.frame_overlap = static_cast<uint32_t>(vulkan.swapchain_images.size());
     vulkan.frame_number = 0;
 
-    VkCommandPoolCreateInfo graphics_command_pool_info = command_pool_create_info(
+    VkCommandPoolCreateInfo graphics_command_pool_info = vk::init::command_pool_create_info(
         vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
     for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
@@ -298,7 +269,7 @@ std::optional<Common> initialize(SDL_Window* window) {
                        "Failed to create command pool");
 
       VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
-          command_buffer_allocate_info(frame->command_pool, 1);
+          vk::init::command_buffer_allocate_info(frame->command_pool, 1);
 
       RACECAR_VK_CHECK(vkAllocateCommandBuffers(vulkan.device, &cmd_buffer_allocate_info,
                                                 &frame->command_buffer),
@@ -309,8 +280,8 @@ std::optional<Common> initialize(SDL_Window* window) {
   // Create sync structures - I'll leave this open for review. This should be abstraced away.
   {
     // Flag makes the fence signaled first to trigger a wait.
-    VkFenceCreateInfo fence_create = fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
-    VkSemaphoreCreateInfo semaphore_create = semaphore_create_info(0);
+    VkFenceCreateInfo fence_create = vk::init::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
+    VkSemaphoreCreateInfo semaphore_create = vk::init::semaphore_create_info(0);
 
     for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
       FrameData* frame = &vulkan.frames[i];
@@ -328,8 +299,6 @@ std::optional<Common> initialize(SDL_Window* window) {
 
   return vulkan;
 }
-
-void initialize_commands() {}
 
 void free(Common& vulkan) {
   // Kill per-frame resources from vulkan.frames.
