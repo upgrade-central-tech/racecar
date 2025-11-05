@@ -65,7 +65,7 @@ int main(int, char*[]) {
       continue;
     }
 
-    if (renderer::draw(ctx)) {
+    if (renderer::draw(ctx, gfx_pipeline)) {
       ctx.vulkan.rendered_frames = ctx.vulkan.rendered_frames + 1;
       ctx.vulkan.frame_number = (ctx.vulkan.rendered_frames + 1) % ctx.vulkan.frame_overlap;
     }
@@ -74,6 +74,7 @@ int main(int, char*[]) {
     SDL_UpdateWindowSurface(ctx.window);
   }
 
+  vkDeviceWaitIdle(ctx.vulkan.device);
   renderer::free_pipeline(ctx.vulkan, gfx_pipeline);
   vk::free(ctx.vulkan);
   sdl::free(ctx.window);

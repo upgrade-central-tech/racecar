@@ -1,6 +1,6 @@
 #include "common.hpp"
 
-#include "init.hpp"
+#include "create.hpp"
 
 #include <SDL3/SDL_vulkan.h>
 
@@ -173,6 +173,7 @@ std::optional<vkb::Swapchain> create_swapchain(SDL_Window* window, const Common&
   vkb::Result<vkb::Swapchain> swapchain_ret =
       swapchain_builder.set_desired_extent(swap_extent.width, swap_extent.height)
           .set_desired_min_image_count(capabilities.minImageCount + 1)
+          .set_desired_present_mode(VK_PRESENT_MODE_FIFO_RELAXED_KHR)  // this is vsync
           .set_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
                                  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                                  VK_IMAGE_USAGE_TRANSFER_DST_BIT)
@@ -190,6 +191,57 @@ std::optional<vkb::Swapchain> create_swapchain(SDL_Window* window, const Common&
           swapchain.extent.height);
 
   return swapchain;
+}
+
+/// For each frame (of which there are as many as swapchain images), create a graphics command
+/// pool, command buffer, and synchronization primitives.
+bool create_frame_data(Common& vulkan) {
+  vulkan.frames = std::vector<FrameData>(vulkan.swapchain_images.size());
+  vulkan.frame_overlap = static_cast<uint32_t>(vulkan.swapchain_images.size());
+  vulkan.frame_number = 0;
+
+  VkCommandPoolCreateInfo graphics_command_pool_info = vk::create::command_pool_info(
+      vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+  for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
+    FrameData& frame = vulkan.frames[i];
+
+    RACECAR_VK_CHECK(vkCreateCommandPool(vulkan.device, &graphics_command_pool_info, nullptr,
+                                         &frame.command_pool),
+                     "Failed to create command pool");
+
+    VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+        vk::create::command_buffer_allocate_info(frame.command_pool, 1);
+
+    RACECAR_VK_CHECK(
+        vkAllocateCommandBuffers(vulkan.device, &cmd_buffer_allocate_info, &frame.command_buffer),
+        "Failed to allocate command buffer");
+  }
+
+  // Initialize the fence in a signaled state because otherwise, the first frame we wish to
+  // draw will block indefinitely waiting for a signal to the fence that will never come
+  VkFenceCreateInfo fence_info = vk::create::fence_info(VK_FENCE_CREATE_SIGNALED_BIT);
+  VkSemaphoreCreateInfo semaphore_info = vk::create::semaphore_info();
+
+  // To avoid synchronization validation errors, keep render semaphores separate from FrameData.
+  vulkan.render_semaphores = std::vector<VkSemaphore>(vulkan.swapchain_images.size());
+
+  for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
+    FrameData* frame = &vulkan.frames[i];
+
+    RACECAR_VK_CHECK(vkCreateFence(vulkan.device, &fence_info, nullptr, &frame->render_fence),
+                     "Failed to create render fence");
+
+    RACECAR_VK_CHECK(
+        vkCreateSemaphore(vulkan.device, &semaphore_info, nullptr, &frame->swapchain_semaphore),
+        "Failed to create swapchain semaphore");
+
+    RACECAR_VK_CHECK(
+        vkCreateSemaphore(vulkan.device, &semaphore_info, nullptr, &vulkan.render_semaphores[i]),
+        "Failed to create render semaphore");
+  }
+
+  return true;
 }
 
 }  // namespace
@@ -261,61 +313,15 @@ std::optional<Common> initialize(SDL_Window* window) {
     vulkan.graphics_queue_family = graphics_queue_family.value();
   }
 
-  // Graphics command pool/frame setup.
-  // Similar to the create sync reources below, this scope should be abstracted away.
-  {
-    vulkan.frames = std::vector<FrameData>(vulkan.swapchain_images.size());
-    vulkan.frame_overlap = static_cast<uint32_t>(vulkan.swapchain_images.size());
-    vulkan.frame_number = 0;
-
-    VkCommandPoolCreateInfo graphics_command_pool_info = vk::init::command_pool_create_info(
-        vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-
-    for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
-      FrameData* frame = &vulkan.frames[i];
-
-      RACECAR_VK_CHECK(vkCreateCommandPool(vulkan.device, &graphics_command_pool_info, nullptr,
-                                           &frame->command_pool),
-                       "Failed to create command pool");
-
-      VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
-          vk::init::command_buffer_allocate_info(frame->command_pool, 1);
-
-      RACECAR_VK_CHECK(vkAllocateCommandBuffers(vulkan.device, &cmd_buffer_allocate_info,
-                                                &frame->command_buffer),
-                       "Failed to allocate command buffer");
-    }
-  }
-
-  // Create sync structures - I'll leave this open for review. This should be abstraced away.
-  {
-    // Flag makes the fence signaled first to trigger a wait.
-    VkFenceCreateInfo fence_create = vk::init::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
-    VkSemaphoreCreateInfo semaphore_create = vk::init::semaphore_create_info(0);
-
-    // To avoid sycnhronization validation errors, keep render semaphore separate from FrameData.
-    vulkan.render_semaphores = std::vector<VkSemaphore>(vulkan.swapchain_images.size());
-
-    for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
-      FrameData* frame = &vulkan.frames[i];
-
-      RACECAR_VK_CHECK(vkCreateFence(vulkan.device, &fence_create, nullptr, &frame->render_fence),
-                       "Failed to create render fence");
-      RACECAR_VK_CHECK(
-          vkCreateSemaphore(vulkan.device, &semaphore_create, nullptr, &frame->swapchain_semaphore),
-          "Failed to create swapchain semaphore");
-      RACECAR_VK_CHECK(vkCreateSemaphore(vulkan.device, &semaphore_create, nullptr,
-                                         &vulkan.render_semaphores[i]),
-                       "Failed to create render semaphore");
-    }
+  if (!create_frame_data(vulkan)) {
+    SDL_Log("[Renderer] Failed to create frame data");
+    return {};
   }
 
   return vulkan;
 }
 
 void free(Common& vulkan) {
-  vkDeviceWaitIdle(vulkan.device);
-
   // Kill per-frame resources from vulkan.frames.
   for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
     // Kill command resources.

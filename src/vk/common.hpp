@@ -18,14 +18,12 @@
 
 namespace racecar::vk {
 
-/// Frame objects per view in the swapchain.
+/// Contains Vulkan objects for each image view in the swapchain.
 struct FrameData {
-  VkCommandPool command_pool;
-  VkCommandBuffer command_buffer;
-
-  /// Synchronization objects. Use sempahores for GPU/GPU sync, fences for CPU/GPU sync,
-  VkSemaphore swapchain_semaphore;
-  VkFence render_fence;
+  VkCommandPool command_pool = nullptr;
+  VkCommandBuffer command_buffer = nullptr;
+  VkSemaphore swapchain_semaphore = nullptr;
+  VkFence render_fence = nullptr;
 };
 
 /// Stores common Vulkan-related objects.
@@ -38,14 +36,14 @@ struct Common {
   std::vector<VkImage> swapchain_images;
   std::vector<VkImageView> swapchain_image_views;
 
-  uint32_t graphics_queue_family;
+  uint32_t graphics_queue_family = 0;
   VkQueue graphics_queue;
 
   std::vector<FrameData> frames;
   std::vector<VkSemaphore> render_semaphores;
-  uint32_t frame_overlap;
-  uint32_t frame_number;
-  uint32_t rendered_frames;
+  uint32_t frame_overlap = 0;
+  uint32_t frame_number = 0;
+  uint32_t rendered_frames = 0;
 };
 
 std::optional<Common> initialize(SDL_Window* window);

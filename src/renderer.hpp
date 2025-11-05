@@ -14,6 +14,6 @@ struct Pipeline {
 std::optional<Pipeline> create_gfx_pipeline(const vk::Common& vulkan);
 void free_pipeline(const vk::Common& vulkan, Pipeline& pipeline);
 
-std::optional<bool> draw(const Context& ctx);
+bool draw(const Context& ctx, const Pipeline& gfx_pipeline);
 
 }  // namespace racecar::renderer
