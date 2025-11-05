@@ -191,7 +191,7 @@ std::optional<VkShaderModule> create_shader_module(const Common& vulkan,
 
   // The pointer is of type `uint32_t`, so we have to cast it. std::vector's default allocator
   // ensures the data satisfies the alignment requirements
-  VkShaderModuleCreateInfo create_info;
+  VkShaderModuleCreateInfo create_info{};
   create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   create_info.codeSize = shader_buffer.size();
   create_info.pCode = reinterpret_cast<const uint32_t*>(shader_buffer.data());

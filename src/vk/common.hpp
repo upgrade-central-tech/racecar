@@ -24,7 +24,7 @@ struct FrameData {
   VkCommandBuffer command_buffer;
 
   /// Synchronization objects. Use sempahores for GPU/GPU sync, fences for CPU/GPU sync,
-  VkSemaphore swapchain_semaphore, render_semaphore;
+  VkSemaphore swapchain_semaphore;
   VkFence render_fence;
 };
 
@@ -42,8 +42,10 @@ struct Common {
   VkQueue graphics_queue;
 
   std::vector<FrameData> frames;
+  std::vector<VkSemaphore> render_semaphores;
   uint32_t frame_overlap;
   uint32_t frame_number;
+  uint32_t rendered_frames;
 };
 
 std::optional<Common> initialize(SDL_Window* window);

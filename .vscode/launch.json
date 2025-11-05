@@ -1,0 +1,19 @@
+{
+    "configurations": [
+    {
+        "type": "lldb",
+        "request": "launch",
+        "name": "Launch",
+        "program": "${workspaceFolder}/build/racecar.exe",
+        "args": [],
+        "cwd": "${workspaceFolder}",
+        "stopOnEntry": false,
+        "env": {},
+        "console": "integratedTerminal",
+        "initCommands": [
+            "settings set target.import-std-module false",
+            "settings set target.prefer-dynamic-value no-dynamic-values"
+        ]
+    }
+    ]
+}

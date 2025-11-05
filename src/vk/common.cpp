@@ -76,12 +76,19 @@ std::optional<vkb::Instance> create_vulkan_instance() {
 std::optional<vkb::Device> pick_and_create_vulkan_device(const Common& vulkan) {
   vkb::PhysicalDeviceSelector phys_selector(vulkan.instance, vulkan.surface);
 
-  VkPhysicalDeviceVulkan13Features required_features_13;
-  required_features_13.synchronization2 = true;
+  VkPhysicalDeviceVulkan13Features required_features_13{};
+  required_features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+  required_features_13.synchronization2 = VK_TRUE;
+
+  VkPhysicalDeviceVulkan11Features required_features_11{};
+  required_features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+  required_features_11.shaderDrawParameters = VK_TRUE;
 
   vkb::Result<vkb::PhysicalDevice> phys_selector_ret =
       phys_selector.prefer_gpu_device_type()
+          .set_minimum_version(1, 3)
           .add_required_extension(VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+          .set_required_features_11(required_features_11)
           .set_required_features_13(required_features_13)
           .select();
 
@@ -273,7 +280,7 @@ std::optional<Common> initialize(SDL_Window* window) {
 
       RACECAR_VK_CHECK(vkAllocateCommandBuffers(vulkan.device, &cmd_buffer_allocate_info,
                                                 &frame->command_buffer),
-                       "Failed to allocate command buffer");
+                       "Failed to allocate command buffer");      
     }
   }
 
@@ -282,6 +289,9 @@ std::optional<Common> initialize(SDL_Window* window) {
     // Flag makes the fence signaled first to trigger a wait.
     VkFenceCreateInfo fence_create = vk::init::fence_create_info(VK_FENCE_CREATE_SIGNALED_BIT);
     VkSemaphoreCreateInfo semaphore_create = vk::init::semaphore_create_info(0);
+
+    // To avoid sycnhronization validation errors, keep render semaphore separate from FrameData.
+    vulkan.render_semaphores = std::vector<VkSemaphore>(vulkan.swapchain_images.size());
 
     for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
       FrameData* frame = &vulkan.frames[i];
@@ -292,7 +302,7 @@ std::optional<Common> initialize(SDL_Window* window) {
           vkCreateSemaphore(vulkan.device, &semaphore_create, nullptr, &frame->swapchain_semaphore),
           "Failed to create swapchain semaphore");
       RACECAR_VK_CHECK(
-          vkCreateSemaphore(vulkan.device, &semaphore_create, nullptr, &frame->render_semaphore),
+          vkCreateSemaphore(vulkan.device, &semaphore_create, nullptr, &vulkan.render_semaphores[i]),
           "Failed to create render semaphore");
     }
   }
@@ -301,6 +311,8 @@ std::optional<Common> initialize(SDL_Window* window) {
 }
 
 void free(Common& vulkan) {
+  vkDeviceWaitIdle(vulkan.device);
+
   // Kill per-frame resources from vulkan.frames.
   for (uint32_t i = 0; i < vulkan.frame_overlap; i++) {
     // Kill command resources.
@@ -308,8 +320,8 @@ void free(Common& vulkan) {
 
     // Kill sync resources.
     vkDestroyFence(vulkan.device, vulkan.frames[i].render_fence, nullptr);
-    vkDestroySemaphore(vulkan.device, vulkan.frames[i].render_semaphore, nullptr);
     vkDestroySemaphore(vulkan.device, vulkan.frames[i].swapchain_semaphore, nullptr);
+    vkDestroySemaphore(vulkan.device, vulkan.render_semaphores[i], nullptr);
   }
 
   vulkan.swapchain.destroy_image_views(vulkan.swapchain_image_views);
