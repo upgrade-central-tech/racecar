@@ -95,14 +95,6 @@ std::optional<Pipeline> create_gfx_pipeline(const vk::Common& vulkan) {
     return {};
   }
 
-  SDL_Log("gfx layout ptr: %p", gfx_layout);
-
-  // Use dynamic rendering instead of manually creating render passes
-  // VkPipelineRenderingCreateInfo pipeline_rendering_info{};
-  // pipeline_rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-  // pipeline_rendering_info.colorAttachmentCount = 1;
-  // pipeline_rendering_info.pColorAttachmentFormats = &vulkan.swapchain.image_format;
-
   std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages = {
       vk::init::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, shader_module,
                                                   "vertex_main"),
@@ -110,52 +102,30 @@ std::optional<Pipeline> create_gfx_pipeline(const vk::Common& vulkan) {
                                                   "fragment_main"),
   };
 
-  VkAttachmentDescription color_attach_desc{};
-  color_attach_desc.format = vulkan.swapchain.image_format;
-  color_attach_desc.samples = VK_SAMPLE_COUNT_1_BIT;
-  color_attach_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-  color_attach_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-  color_attach_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-  color_attach_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  color_attach_desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  color_attach_desc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  // Use dynamic rendering instead of manually creating render passes
+  VkPipelineRenderingCreateInfo pipeline_rendering_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+      .colorAttachmentCount = 1,
+      .pColorAttachmentFormats = &vulkan.swapchain.image_format,
+  };
 
-  VkAttachmentReference color_attach_ref{};
-  color_attach_ref.attachment = 0;
-  color_attach_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-  VkSubpassDescription subpass_desc{};
-  subpass_desc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  subpass_desc.colorAttachmentCount = 1;
-  subpass_desc.pColorAttachments = &color_attach_ref;
-
-  VkRenderPassCreateInfo render_pass_info{};
-  render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-  render_pass_info.attachmentCount = 1;
-  render_pass_info.pAttachments = &color_attach_desc;
-  render_pass_info.subpassCount = 1;
-  render_pass_info.pSubpasses = &subpass_desc;
+  VkGraphicsPipelineCreateInfo gfx_pipeline_info = {
+      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+      .pNext = &pipeline_rendering_info,
+      .stageCount = 2,
+      .pStages = shader_stages.data(),
+      .pVertexInputState = &vertex_input_info,
+      .pInputAssemblyState = &input_assembly_info,
+      .pViewportState = &viewport_state_info,
+      .pRasterizationState = &rasterization_info,
+      .pMultisampleState = &multisample_info,
+      .pColorBlendState = &color_blend_info,
+      .pDynamicState = &dynamic_state_info,
+      .layout = gfx_layout,
+      .renderPass = nullptr,
+  };
 
   Pipeline gfx_pipeline;
-  RACECAR_VK_CHECK(
-      vkCreateRenderPass(vulkan.device, &render_pass_info, nullptr, &gfx_pipeline.render_pass),
-      "Failed to create render pass");
-
-  VkGraphicsPipelineCreateInfo gfx_pipeline_info{};
-  gfx_pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  // gfx_pipeline_info.pNext = &pipeline_rendering_info;
-  gfx_pipeline_info.stageCount = 2;
-  gfx_pipeline_info.pStages = shader_stages.data();
-  gfx_pipeline_info.pVertexInputState = &vertex_input_info;
-  gfx_pipeline_info.pInputAssemblyState = &input_assembly_info;
-  gfx_pipeline_info.pViewportState = &viewport_state_info;
-  gfx_pipeline_info.pRasterizationState = &rasterization_info;
-  gfx_pipeline_info.pMultisampleState = &multisample_info;
-  gfx_pipeline_info.pColorBlendState = &color_blend_info;
-  gfx_pipeline_info.pDynamicState = &dynamic_state_info;
-  gfx_pipeline_info.layout = gfx_layout;
-  gfx_pipeline_info.renderPass = gfx_pipeline.render_pass;
-  gfx_pipeline_info.subpass = 0;
 
   RACECAR_VK_CHECK(vkCreateGraphicsPipelines(vulkan.device, nullptr, 1, &gfx_pipeline_info, nullptr,
                                              &gfx_pipeline.handle),
@@ -171,7 +141,6 @@ std::optional<Pipeline> create_gfx_pipeline(const vk::Common& vulkan) {
 void free_pipeline(const vk::Common& vulkan, Pipeline& pipeline) {
   vkDestroyPipeline(vulkan.device, pipeline.handle, nullptr);
   vkDestroyPipelineLayout(vulkan.device, pipeline.layout, nullptr);
-  vkDestroyRenderPass(vulkan.device, pipeline.render_pass, nullptr);
 }
 
 std::optional<bool> draw(const Context& ctx) {

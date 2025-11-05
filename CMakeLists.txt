@@ -25,7 +25,7 @@ else()
   target_compile_definitions(racecar PRIVATE DEBUG=0)
 endif()
 
-target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics)
+target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
 
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE glm::glm)

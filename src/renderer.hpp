@@ -7,7 +7,6 @@ namespace racecar::renderer {
 struct Pipeline {
   VkPipeline handle = nullptr;
   VkPipelineLayout layout = nullptr;
-  VkRenderPass render_pass = nullptr;
 };
 
 /// Creates the graphics pipeline, if successful. Remember to call `free_pipeline` to destroy

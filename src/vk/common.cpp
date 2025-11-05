@@ -79,6 +79,7 @@ std::optional<vkb::Device> pick_and_create_vulkan_device(const Common& vulkan) {
   VkPhysicalDeviceVulkan13Features required_features_13{};
   required_features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
   required_features_13.synchronization2 = VK_TRUE;
+  required_features_13.dynamicRendering = VK_TRUE;
 
   VkPhysicalDeviceVulkan11Features required_features_11{};
   required_features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
