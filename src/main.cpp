@@ -33,6 +33,15 @@ int main(int, char*[]) {
     ctx.vulkan = vulkan_opt.value();
   }
 
+  std::optional<renderer::Pipeline> gfx_pipeline_opt = renderer::create_gfx_pipeline(ctx.vulkan);
+
+  if (!gfx_pipeline_opt) {
+    SDL_Log("[RACECAR] Could not create graphics pipeline!");
+    return EXIT_FAILURE;
+  }
+
+  renderer::Pipeline& gfx_pipeline = gfx_pipeline_opt.value();
+
   bool will_quit = false;
   bool stop_drawing = false;
   SDL_Event event;
@@ -56,12 +65,16 @@ int main(int, char*[]) {
       continue;
     }
 
-    renderer::draw(ctx);
+    if (renderer::draw(ctx)) {
+      ctx.vulkan.rendered_frames = ctx.vulkan.rendered_frames + 1;
+      ctx.vulkan.frame_number = (ctx.vulkan.rendered_frames + 1) % ctx.vulkan.frame_overlap;
+    }
 
     // Make new screen visible
     SDL_UpdateWindowSurface(ctx.window);
   }
 
+  renderer::free_pipeline(ctx.vulkan, gfx_pipeline);
   vk::free(ctx.vulkan);
   sdl::free(ctx.window);
 

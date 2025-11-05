@@ -7,13 +7,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS NO)
 
 set(SRC_DIR "src")
+set(VK_DIR "${SRC_DIR}/vk")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
 
   ${SRC_DIR}/sdl.cpp
-  ${SRC_DIR}/vk.cpp
   ${SRC_DIR}/renderer.cpp
+
+  ${VK_DIR}/common.cpp
+  ${VK_DIR}/init.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -22,7 +25,7 @@ else()
   target_compile_definitions(racecar PRIVATE DEBUG=0)
 endif()
 
-target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics)
+target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
 
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE glm::glm)

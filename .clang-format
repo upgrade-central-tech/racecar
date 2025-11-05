@@ -11,7 +11,7 @@ IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^".*"'
     Priority: 1
-  - Regex: '^<(SDL|glm)/?.*>'
+  - Regex: '^<(SDL|glm|vulkan)/?.*>'
     Priority: 2
   - Regex: '^<(volk)/?.*>'
     Priority: 2
