@@ -26,7 +26,7 @@ struct GfxTask {
     VkSemaphore source_semaphore = VK_NULL_HANDLE;
     VkSemaphore target_semaphore = VK_NULL_HANDLE;
 
-    std::optional<VkFence> fence;
+    VkFence fence;
 
     std::vector<DrawTaskDescriptor> draw_tasks;
 

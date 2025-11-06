@@ -107,6 +107,18 @@ bool create_frame_data( State& engine, const vk::Common& vulkan ) {
                           "Failed to create render semaphore" );
     }
 
+    // Initialize the global command buffers
+
+    RACECAR_VK_CHECK( vkCreateCommandPool( vulkan.device, &graphics_command_pool_info, nullptr,
+                                               &engine.global_gfx_command_pool ),
+                          "Failed to create global gfx command pool" );
+
+    VkCommandBufferAllocateInfo global_gfx_cmd_buf_allocate_info = vk::create::command_buffer_allocate_info(
+         engine.global_gfx_command_pool, 1 );
+
+    RACECAR_VK_CHECK( vkAllocateCommandBuffers( vulkan.device, &global_gfx_cmd_buf_allocate_info, &engine.global_gfx_cmd_buf ),
+        "Failed to create global gfx command buffer" );
+
     return true;
 }
 

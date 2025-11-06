@@ -31,7 +31,11 @@ else()
   target_compile_definitions(racecar PRIVATE DEBUG=0)
 endif()
 
-target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
+if (MSVC)
+  target_compile_options(racecar PRIVATE /W4 /WX)
+else()
+  target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
+endif()
 
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE glm::glm)

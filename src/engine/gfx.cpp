@@ -15,7 +15,7 @@ bool GfxTask::add_draw_task( DrawTaskDescriptor draw_task ) {
 std::optional<GfxTask> create_gfx_task( const vk::Common& vulkan, const State& engine ) {
     GfxTask gfx_task = {};
 
-    VkCommandPool cmd_pool = engine.gfx_command_pool;
+    VkCommandPool cmd_pool = engine.global_gfx_command_pool;
 
     VkCommandBufferAllocateInfo cmd_buf_alloc_info =
         vk::create::command_buffer_allocate_info( cmd_pool, 1 );
@@ -30,7 +30,7 @@ std::optional<GfxTask> create_gfx_task( const vk::Common& vulkan, const State& e
     VkFenceCreateInfo fence_create_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
 
     RACECAR_VK_CHECK(
-        vkCreateFence( vulkan.device, &fence_create_info, nullptr, &gfx_task.fence.value() ),
+        vkCreateFence( vulkan.device, &fence_create_info, nullptr, &gfx_task.fence ),
         "Failed to create render fence" );
 
     VkSemaphoreCreateInfo semaphore_create_info = vk::create::semaphore_info();
@@ -74,7 +74,7 @@ bool execute_gfx_task( const vk::Common& vulkan, const GfxTask& task ) {
     VkSubmitInfo2 submit_info = vk::create::submit_info( &command_info, &signal_info, &wait_info );
 
     RACECAR_VK_CHECK( vkQueueSubmit2( vulkan.graphics_queue, 1, &submit_info,
-                                      task.fence.value_or( VK_NULL_HANDLE ) ),
+                                      task.fence ),
                       "Graphics queue submit failed" );
 
     return true;

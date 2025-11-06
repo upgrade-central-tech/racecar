@@ -31,6 +31,7 @@ bool execute( State& engine, const Context& ctx ) {
                       "Failed to acquire next image from swapchain" );
 
     const VkImage& output_image = engine.swapchain_images[output_swapchain_index];
+    const VkImageView& output_image_view = engine.swapchain_image_views[output_swapchain_index];
 
     // Make swapchain image writeable
     vk::utility::transition_image(
@@ -72,6 +73,8 @@ bool execute( State& engine, const Context& ctx ) {
             .shader_module = triangle_shader_module,
             .extent = engine.swapchain.extent,
             .clear_screen = true,
+            .draw_target = output_image,
+            .draw_target_view = output_image_view,
         } );
 
         execute_gfx_task( vulkan, render_triangle_task );

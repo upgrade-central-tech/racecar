@@ -21,7 +21,7 @@ struct State {
     uint32_t frame_number = 0;
     uint32_t rendered_frames = 0;
 
-    VkCommandPool gfx_command_pool = VK_NULL_HANDLE;
+    VkCommandPool global_gfx_command_pool = VK_NULL_HANDLE;
     VkCommandBuffer global_gfx_cmd_buf = VK_NULL_HANDLE;
 };
 
