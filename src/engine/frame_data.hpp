@@ -1,6 +1,6 @@
 #pragma once
 
-#include <volk.h>
+#include "../vk/common.hpp"
 
 namespace racecar::engine {
 
@@ -8,7 +8,6 @@ namespace racecar::engine {
 struct FrameData {
     VkCommandPool command_pool = nullptr;
     VkCommandBuffer command_buffer = nullptr;
-    VkSemaphore swapchain_semaphore = nullptr;
     VkFence render_fence = nullptr;
 };
 

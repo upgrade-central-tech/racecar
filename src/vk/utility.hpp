@@ -1,8 +1,8 @@
 #pragma once
 
-#include <volk.h>
-
+#include "common.hpp"
 namespace racecar::vk::utility {
+
 
 /// Similar to a resource barrier transition in DX12, this is meant to adjust a given image's
 /// layout/access properties, etc. For example, to write to our image while drawing, we need our

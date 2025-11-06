@@ -99,6 +99,11 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_info( VkShaderStageFlagBit
 
 std::optional<VkShaderModule> shader_module( const Common& vulkan,
                                              std::filesystem::path shader_path ) {
+    if ( !std::filesystem::exists( shader_path ) ) {
+        SDL_Log( "[Shader] \"%s\" does not exist!", shader_path.string().c_str() );
+        return {};
+    }
+
     std::ifstream file( shader_path.string(), std::ios::ate | std::ios::binary );
 
     if ( !file.is_open() ) {
@@ -117,16 +122,37 @@ std::optional<VkShaderModule> shader_module( const Common& vulkan,
 
     // The pointer is of type `uint32_t`, so we have to cast it. std::vector's default allocator
     // ensures the data satisfies the alignment requirements
-    VkShaderModuleCreateInfo create_info{};
-    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    create_info.codeSize = shader_buffer.size();
-    create_info.pCode = reinterpret_cast<const uint32_t*>( shader_buffer.data() );
+    VkShaderModuleCreateInfo create_info{
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = shader_buffer.size(),
+        .pCode = reinterpret_cast<const uint32_t*>( shader_buffer.data() ),
+    };
 
     VkShaderModule shader_module;
     RACECAR_VK_CHECK( vkCreateShaderModule( vulkan.device, &create_info, nullptr, &shader_module ),
                       "Failed to create shader module" );
 
     return shader_module;
+}
+
+AllSubmitInfo all_submit_info( CreateSubmitInfoDescriptor submit_info_descriptor ) {
+    // Prepare to submit our command to the graphics queue
+    VkSemaphoreSubmitInfo wait_info = vk::create::semaphore_submit_info(
+        submit_info_descriptor.wait_flag_bits, submit_info_descriptor.wait_semaphore );
+    VkSemaphoreSubmitInfo signal_info = vk::create::semaphore_submit_info(
+        submit_info_descriptor.signal_flag_bits, submit_info_descriptor.signal_semaphore );
+    VkCommandBufferSubmitInfo command_info =
+        vk::create::command_buffer_submit_info( submit_info_descriptor.command_buffer );
+        
+    return {
+        .wait_info = wait_info,
+        .signal_info = signal_info,
+        .command_info = command_info
+    };
+}
+
+VkSubmitInfo2 submit_info_from_all( AllSubmitInfo &all_submit_info ) {
+    return vk::create::submit_info( &all_submit_info.command_info, &all_submit_info.signal_info, &all_submit_info.wait_info );
 }
 
 }  // namespace racecar::vk::create

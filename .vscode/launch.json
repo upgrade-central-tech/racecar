@@ -6,7 +6,7 @@
         "name": "Launch",
         "program": "${workspaceFolder}/build/racecar.exe",
         "args": [],
-        "cwd": "${workspaceFolder}",
+        "cwd": "${workspaceFolder}/build",
         "stopOnEntry": false,
         "env": {},
         "console": "integratedTerminal",

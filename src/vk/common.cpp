@@ -14,7 +14,7 @@ std::optional<vkb::Instance> create_vulkan_instance() {
         return {};
     }
 
-    vkb::SystemInfo &system_info = system_info_ret.value();
+    vkb::SystemInfo& system_info = system_info_ret.value();
 
     if ( auto handler =
              reinterpret_cast<PFN_vkGetInstanceProcAddr>( SDL_Vulkan_GetVkGetInstanceProcAddr() );
@@ -37,7 +37,7 @@ std::optional<vkb::Instance> create_vulkan_instance() {
 #endif
 
     uint32_t extension_count = 0;
-    if ( const char *const *extensions = SDL_Vulkan_GetInstanceExtensions( &extension_count );
+    if ( const char* const* extensions = SDL_Vulkan_GetInstanceExtensions( &extension_count );
          !extensions ) {
         SDL_Log( "[SDL] Could not get necessary Vulkan instance extensions: %s", SDL_GetError() );
         return {};
@@ -45,7 +45,7 @@ std::optional<vkb::Instance> create_vulkan_instance() {
         SDL_Log( "[Vulkan] Enabling necessary instance extensions:" );
 
         for ( uint32_t i = 0; i < extension_count; ++i ) {
-            const char *extension = extensions[i];
+            const char* extension = extensions[i];
             SDL_Log( "- %s", extension );
 
             if ( system_info.is_extension_available( extension ) ) {
@@ -70,8 +70,15 @@ std::optional<vkb::Instance> create_vulkan_instance() {
 
 /// Picks a physical device with a preference for a discrete GPU, and then creates a logical
 /// device with one queue enabled from each available queue family.
-std::optional<vkb::Device> pick_and_create_vulkan_device( const Common &vulkan ) {
+std::optional<vkb::Device> pick_and_create_vulkan_device( const Common& vulkan ) {
     vkb::PhysicalDeviceSelector phys_selector( vulkan.instance, vulkan.surface );
+
+    VkPhysicalDeviceVulkan11Features required_features_11 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .shaderDrawParameters = VK_TRUE,
+    };
+
+    VkPhysicalDeviceVulkan12Features required_features_12 = { .bufferDeviceAddress = VK_TRUE };
 
     VkPhysicalDeviceVulkan13Features required_features_13 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
@@ -79,16 +86,12 @@ std::optional<vkb::Device> pick_and_create_vulkan_device( const Common &vulkan )
         .dynamicRendering = VK_TRUE,
     };
 
-    VkPhysicalDeviceVulkan11Features required_features_11 = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-        .shaderDrawParameters = VK_TRUE,
-    };
-
     vkb::Result<vkb::PhysicalDevice> phys_selector_ret =
         phys_selector.prefer_gpu_device_type()
             .set_minimum_version( 1, 3 )
             .add_required_extension( VK_KHR_SWAPCHAIN_EXTENSION_NAME )
             .set_required_features_11( required_features_11 )
+            .set_required_features_12( required_features_12 )
             .set_required_features_13( required_features_13 )
             .select();
 
@@ -98,21 +101,21 @@ std::optional<vkb::Device> pick_and_create_vulkan_device( const Common &vulkan )
 
         // Handle no physical devices separately
         switch ( phys_device_error ) {
-        case vkb::PhysicalDeviceError::no_physical_devices_found: {
-            SDL_Log( "[vkb] No physical devices found" );
-            return {};
-        }
+            case vkb::PhysicalDeviceError::no_physical_devices_found: {
+                SDL_Log( "[vkb] No physical devices found" );
+                return {};
+            }
 
-        default: {
-            SDL_Log( "[vkb] Physical device selection failed because: %s",
-                     vkb::to_string( phys_device_error ) );
-            return {};
-        }
+            default: {
+                SDL_Log( "[vkb] Physical device selection failed because: %s",
+                         vkb::to_string( phys_device_error ) );
+                return {};
+            }
         }
     }
 
-    vkb::PhysicalDevice &phys_device = phys_selector_ret.value();
-    const std::string &phys_name = phys_device.name;
+    vkb::PhysicalDevice& phys_device = phys_selector_ret.value();
+    const std::string& phys_name = phys_device.name;
     vkb::DeviceBuilder device_builder( phys_device );
     vkb::Result<vkb::Device> device_ret = device_builder.build();
 
@@ -122,7 +125,7 @@ std::optional<vkb::Device> pick_and_create_vulkan_device( const Common &vulkan )
         return {};
     }
 
-    vkb::Device &device = device_ret.value();
+    vkb::Device& device = device_ret.value();
 
     if ( !device.get_queue( vkb::QueueType::graphics ) ) {
         SDL_Log(
@@ -143,9 +146,35 @@ std::optional<vkb::Device> pick_and_create_vulkan_device( const Common &vulkan )
     return device;
 }
 
-} // namespace
+bool initialize_allocator( vk::Common& vulkan ) {
+    VmaAllocatorCreateInfo allocator_info = {
+        .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
+        .physicalDevice = vulkan.device.physical_device,
+        .device = vulkan.device,
+        .instance = vulkan.instance,
+        .vulkanApiVersion = VK_API_VERSION_1_4,
+    };
 
-std::optional<Common> initialize( SDL_Window *window ) {
+    VmaVulkanFunctions vulkan_functions = {};
+
+    if ( vmaImportVulkanFunctionsFromVolk( &allocator_info, &vulkan_functions ) ) {
+        SDL_Log( "[VMA] Failed to import Vulkan functions from volk" );
+        return false;
+    } else {
+        allocator_info.pVulkanFunctions = &vulkan_functions;
+    }
+
+    if ( vmaCreateAllocator( &allocator_info, &vulkan.allocator ) ) {
+        SDL_Log( "[VMA] Failed to allocate global VMA allocator" );
+        return false;
+    }
+
+    return true;
+}
+
+}  // namespace
+
+std::optional<Common> initialize( SDL_Window* window ) {
     Common vulkan;
 
     if ( std::optional<vkb::Instance> instance_opt = create_vulkan_instance(); !instance_opt ) {
@@ -168,6 +197,11 @@ std::optional<Common> initialize( SDL_Window *window ) {
         return {};
     } else {
         vulkan.device = device_opt.value();
+    }
+
+    if ( !initialize_allocator( vulkan ) ) {
+        SDL_Log( "[Engine] Failed to initialize VMA allocator" );
+        return {};
     }
 
     if ( vkb::Result<VkQueue> graphics_queue =
@@ -193,7 +227,8 @@ std::optional<Common> initialize( SDL_Window *window ) {
     return vulkan;
 }
 
-void free( Common &vulkan ) {
+void free( Common& vulkan ) {
+    vmaDestroyAllocator( vulkan.allocator );
     vkb::destroy_device( vulkan.device );
     SDL_Vulkan_DestroySurface( vulkan.instance, vulkan.surface, nullptr );
     vkb::destroy_instance( vulkan.instance );
@@ -201,4 +236,4 @@ void free( Common &vulkan ) {
     vulkan = {};
 }
 
-} // namespace racecar::vk
+}  // namespace racecar::vk

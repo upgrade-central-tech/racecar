@@ -18,11 +18,15 @@ add_executable(racecar
   ${VK_DIR}/common.cpp
   ${VK_DIR}/create.cpp
   ${VK_DIR}/utility.cpp
+  ${VK_DIR}/vma.cpp
+  ${VK_DIR}/mem.cpp
 
   ${ENGINE_DIR}/execute.cpp
   ${ENGINE_DIR}/state.cpp
   ${ENGINE_DIR}/pipeline.cpp
-  ${ENGINE_DIR}/gfx.cpp
+  ${ENGINE_DIR}/gfx_task.cpp
+  ${ENGINE_DIR}/imm_submit.cpp
+  ${ENGINE_DIR}/task_list.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -32,10 +36,18 @@ else()
 endif()
 
 if (MSVC)
-  target_compile_options(racecar PRIVATE /W4 /WX)
+  target_compile_options(racecar PRIVATE /W4 /WX -Wno-missing-designated-field-initializers)
 else()
   target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
 endif()
+
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+
+
+find_package(volk CONFIG REQUIRED)
+target_link_libraries(racecar PRIVATE volk::volk)
+
+target_link_libraries(racecar PRIVATE volk::volk GPUOpen::VulkanMemoryAllocator)
 
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE glm::glm)
@@ -43,8 +55,6 @@ target_link_libraries(racecar PRIVATE glm::glm)
 find_package(SDL3 CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE SDL3::SDL3)
 
-find_package(volk CONFIG REQUIRED)
-target_link_libraries(racecar PRIVATE volk::volk)
 
 find_package(vk-bootstrap CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)

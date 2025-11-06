@@ -1,5 +1,7 @@
 #pragma once
 
+#include "vma.hpp"
+
 #include <SDL3/SDL.h>
 #include <volk.h>
 #include <VkBootstrap.h>
@@ -10,7 +12,7 @@
 #define RACECAR_VK_CHECK( vk_fn, message )                              \
     do {                                                                \
         VkResult result = vk_fn;                                        \
-        if ( result ) {                                                 \
+        if ( result != VK_SUCCESS ) {                                   \
             SDL_Log( "[Vulkan] %s | Error code: %d", message, result ); \
             return {};                                                  \
         }                                                               \
@@ -26,6 +28,8 @@ struct Common {
 
     uint32_t graphics_queue_family = 0;
     VkQueue graphics_queue = nullptr;
+
+    VmaAllocator allocator;
 };
 
 std::optional<Common> initialize( SDL_Window* window );

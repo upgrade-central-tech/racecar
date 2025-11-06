@@ -27,9 +27,12 @@ IncludeCategories:
   - Regex: '^<(volk)/?.*>'
     Priority: 2
     SortPriority: 3
-  - Regex: '^<(VkBootstrap)/?.*>'
+  - Regex: '^<(vk_mem_alloc)/?.*>'
     Priority: 2
     SortPriority: 4
+  - Regex: '^<(VkBootstrap)/?.*>'
+    Priority: 2
+    SortPriority: 5
     CaseSensitive: true
   - Regex: '^<.*>'
-    Priority: 5
+    Priority: 6
