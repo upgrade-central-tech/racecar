@@ -8,16 +8,21 @@ set(CMAKE_CXX_EXTENSIONS NO)
 
 set(SRC_DIR "src")
 set(VK_DIR "${SRC_DIR}/vk")
+set(ENGINE_DIR "${SRC_DIR}/engine")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
 
   ${SRC_DIR}/sdl.cpp
-  ${SRC_DIR}/renderer.cpp
+  ${SRC_DIR}/draw.cpp
 
   ${VK_DIR}/common.cpp
   ${VK_DIR}/create.cpp
   ${VK_DIR}/utility.cpp
+
+  ${ENGINE_DIR}/execute.cpp
+  ${ENGINE_DIR}/state.cpp
+  ${ENGINE_DIR}/pipeline.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -39,3 +44,6 @@ target_link_libraries(racecar PRIVATE volk::volk)
 
 find_package(vk-bootstrap CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)
+
+find_package(imgui CONFIG REQUIRED)
+target_link_libraries(racecar PRIVATE imgui::imgui)

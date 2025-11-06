@@ -8,7 +8,14 @@
       ],
       "version>=": "3.2.0"
     },
+    "vk-bootstrap",
     "volk",
-    "vk-bootstrap"
+    {
+		"name": "imgui",
+		"features": [
+			"sdl3-binding",
+			"vulkan-binding"
+		]
+	}
   ]
 }
