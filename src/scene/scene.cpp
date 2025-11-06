@@ -43,6 +43,8 @@ bool loadBinaryJson(std::string filepath, Scene& scene) {
 
   // TODO @terskayl: Add Material Loading
 
+  // Used for pairing children and parents in the scene graph
+  std::vector<std::vector<int>> childrenLists;
   // Load Nodes
   for (tinygltf::Node& loadedNode : model.nodes) {
     std::unique_ptr<Node> newNode;
@@ -223,6 +225,18 @@ bool loadBinaryJson(std::string filepath, Scene& scene) {
       newNode->camera = std::move(camera);
     }
     scene.nodes.push_back(std::move(newNode));
+  }
+
+  // Assumes scene.nodes order is the same as the indices in the GLTF. Will probably break if this
+  // function is multithreaded.
+  for (size_t i = 0; i < scene.nodes.size(); i++) {
+    std::unique_ptr<Node>& node = scene.nodes[i];
+    std::vector<int> children = childrenLists[i];
+    for (int child : children) {
+      std::unique_ptr<Node>& childNode = scene.nodes[static_cast<size_t>(child)];
+      childNode->parent = node.get();
+      node->children.push_back(childNode.get());
+    }
   }
 
   return true;

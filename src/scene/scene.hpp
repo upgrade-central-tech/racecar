@@ -49,6 +49,7 @@ struct Node {
   glm::mat4 invTranspose = glm::mat4(0.f);
 
   Node* parent;
+  std::vector<Node*> children;
 };
 
 struct Scene {
