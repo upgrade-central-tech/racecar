@@ -5,11 +5,19 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include <filesystem>
+
 namespace racecar::scene {
 
 bool loadBinaryJson(std::string filepath, Scene& scene) {
-  auto ext = filepath.substr(filepath.find_last_of('.'));
-
+  std::filesystem::path path(filepath);
+  
+  if (!std::filesystem::exists(path)) {
+    SDL_Log("[Scene] File does not exist");
+    return false;
+  }
+  
+  auto ext = path.extension().string();
   if (ext != ".gltf" && ext != ".glb") {
     SDL_Log("[Scene] Invalid file extension loaded");
     return false;
@@ -81,21 +89,20 @@ bool loadBinaryJson(std::string filepath, Scene& scene) {
                            glm::scale(glm::mat4(1.0f), scale);
     }
 
-    newNode->invTransform = glm::inverse(newNode->transform);
-    newNode->invTranspose = glm::inverseTranspose(newNode->transform);
+    newNode->inv_transform = glm::inverse(newNode->transform);
+    newNode->inv_transpose = glm::inverseTranspose(newNode->transform);
 
     // Load the mesh or camera of the node. Potential optimization: Right now we are creating a new
     // mesh on every node. In the case where meshes are instanced, we will created Mesh structs with
     // the same data. We could use a lookup set to resolve this in the future.
     if (loadedNode.mesh != -1) {
-      newNode->camera = std::nullopt;
-      newNode->mesh = std::make_unique<Mesh>();
+      newNode->data = std::make_unique<Mesh>();
       tinygltf::Mesh loadedMesh = model.meshes[static_cast<size_t>(loadedNode.mesh)];
 
-      // Load primatives
+      // Load primitives
       for (tinygltf::Primitive& loadedPrim : loadedMesh.primitives) {
-        Primative newPrim;
-        newPrim.materialId = loadedPrim.material;
+        Primitive newPrim;
+        newPrim.material_id = loadedPrim.material;
         if (loadedPrim.mode != 4) {
           SDL_Log(
               "[Scene] GLTF Loading: Mesh detected that uses a mode other than TRIANGLES. This is "
@@ -123,7 +130,7 @@ bool loadBinaryJson(std::string filepath, Scene& scene) {
           }
 
           tinygltf::BufferView bufferView = model.bufferViews[static_cast<size_t>(bufferViewId)];
-          newPrim.posOffset = static_cast<int>(bufferView.byteOffset);
+          newPrim.pos_offset = static_cast<int>(bufferView.byteOffset);
           posBufferId = bufferView.buffer;
         }
 
@@ -143,7 +150,7 @@ bool loadBinaryJson(std::string filepath, Scene& scene) {
           }
 
           tinygltf::BufferView bufferView = model.bufferViews[static_cast<size_t>(bufferViewId)];
-          newPrim.norOffset = static_cast<int>(bufferView.byteOffset);
+          newPrim.nor_offset = static_cast<int>(bufferView.byteOffset);
           norBufferId = bufferView.buffer;
         }
 
@@ -164,7 +171,7 @@ bool loadBinaryJson(std::string filepath, Scene& scene) {
           }
 
           tinygltf::BufferView bufferView = model.bufferViews[static_cast<size_t>(bufferViewId)];
-          newPrim.uvOffset = static_cast<int>(bufferView.byteOffset);
+          newPrim.uv_offset = static_cast<int>(bufferView.byteOffset);
           uvBufferId = bufferView.buffer;
         }
 
@@ -179,7 +186,7 @@ bool loadBinaryJson(std::string filepath, Scene& scene) {
           }
           // Indices uses unsigned ints instead of unsigned shorts
           if (accessor.componentType == 5124) {
-            newPrim.sixteenBitIndices = false;
+            newPrim.sixteen_bit_indices = false;
           }
           if (accessor.type != 65) {
             SDL_Log(
@@ -189,8 +196,8 @@ bool loadBinaryJson(std::string filepath, Scene& scene) {
 
           size_t count = accessor.count;
           tinygltf::BufferView bufferView = model.bufferViews[static_cast<size_t>(bufferViewId)];
-          newPrim.indOffset = static_cast<int>(bufferView.byteOffset);
-          newPrim.indCount = count;
+          newPrim.ind_offset = static_cast<int>(bufferView.byteOffset);
+          newPrim.ind_count = count;
           indBufferId = bufferView.buffer;
         }
 
@@ -200,29 +207,28 @@ bool loadBinaryJson(std::string filepath, Scene& scene) {
             (posBufferId != indBufferId || indBufferId == -1)) {
           SDL_Log("[Scene] GLTF Loading: Prim with attributes in multiple buffers detected!");
         }
-        newPrim.bufferID = static_cast<size_t>(posBufferId);
+        newPrim.buffer_id = static_cast<size_t>(posBufferId);
 
-        newNode->mesh.value()->primatives.push_back(newPrim);
+        std::get<std::unique_ptr<Mesh>>(newNode->data)->primitives.push_back(newPrim);
       }
     } else {  // Presumably the node is a camera
-      newNode->mesh = std::nullopt;
-      std::unique_ptr<Camera> camera = std::make_unique<Camera>() tinygltf::Camera loadedCamera =
-          model.cameras[static_cast<size_t>(loadedNode.camera)];
-      camera->aspectRatio = loadedCamera.perspective.aspectRatio;
-      camera->nearPlane = loadedCamera.perspective.znear;
-      camera->farPlane = loadedCamera.perspective.zfar;
+      std::unique_ptr<Camera> camera = std::make_unique<Camera>();
+      tinygltf::Camera loadedCamera = model.cameras[static_cast<size_t>(loadedNode.camera)];
+      camera->aspect_ratio = loadedCamera.perspective.aspectRatio;
+      camera->near_plane = loadedCamera.perspective.znear;
+      camera->far_plane = loadedCamera.perspective.zfar;
       camera->fovy = loadedCamera.perspective.yfov;
-      camera->viewMat = newNode->transform;
+      camera->view_mat = newNode->transform;
       camera->forward =
           glm::normalize(glm::vec3(newNode->transform * glm::vec4(0.f, 0.f, -1.f, 0.f)));
       camera->up = glm::normalize(glm::vec3(newNode->transform * glm::vec4(0.f, 1.f, 0.f, 0.f)));
-      camera->right = glm::normalize(glm::cross(camera->view, camera->up));
+      camera->right = glm::normalize(glm::cross(camera->forward, camera->up));
 
       // The main camera will be the first camera loaded.
-      if (scene.mainCamera == nullptr) {
-        scene.mainCamera = camera.get();
+      if (scene.main_camera == nullptr) {
+        scene.main_camera = camera.get();
       }
-      newNode->camera = std::move(camera);
+      newNode->data = std::move(camera);
     }
     scene.nodes.push_back(std::move(newNode));
   }

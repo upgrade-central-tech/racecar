@@ -6,11 +6,11 @@
 namespace racecar::scene {
 
 glm::mat4 getViewMatrix(Camera& cam) {
-  return cam.viewMat;
+  return cam.view_mat;
 }
 
 glm::mat4 getProjMatrix(Camera& cam) {
-  return glm::perspective(cam.fovy, cam.aspectRatio, cam.nearPlane, cam.farPlane);
+  return glm::perspective(cam.fovy, cam.aspect_ratio, cam.near_plane, cam.far_plane);
 }
 
 glm::mat4 getViewProjMatrix(Camera& cam) {
@@ -52,7 +52,7 @@ void processSDLEvent(SDL_Event& e, Camera& cam) {
 
   // Check for mouse motion events
   if (e.type == SDL_EVENT_MOUSE_MOTION) {
-    glm::vec3 direction = glm::normalize(cam.lookAt - cam.eye);
+    glm::vec3 direction = glm::normalize(cam.look_at - cam.eye);
     float yaw = std::atan2(direction.z, direction.x);
     float pitch = std::asin(direction.y);
 
@@ -64,19 +64,19 @@ void processSDLEvent(SDL_Event& e, Camera& cam) {
 
     // update camera properties
     glm::vec3 newEye;
-    float distance = glm::distance(cam.lookAt, cam.eye);
-    newEye.x = cam.lookAt.x + distance * cos(yaw) * cos(pitch);
-    newEye.y = cam.lookAt.y + distance * sin(pitch);
-    newEye.z = cam.lookAt.z + distance * sin(yaw) * cos(pitch);
+    float distance = glm::distance(cam.look_at, cam.eye);
+    newEye.x = cam.look_at.x + distance * cos(yaw) * cos(pitch);
+    newEye.y = cam.look_at.y + distance * sin(pitch);
+    newEye.z = cam.look_at.z + distance * sin(yaw) * cos(pitch);
 
     cam.eye = newEye;
-    cam.forward = glm::normalize(cam.lookAt - cam.eye);
+    cam.forward = glm::normalize(cam.look_at - cam.eye);
     // By default, rotate around 1 unit in front of the camera.
-    cam.lookAt = cam.eye + cam.forward;
+    cam.look_at = cam.eye + cam.forward;
     glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
     cam.right = glm::normalize(glm::cross(cam.forward, worldUp));
     cam.up = glm::normalize(glm::cross(cam.right, cam.forward));
-    cam.viewMat = glm::lookAt(cam.eye, cam.lookAt, cam.up);
+    cam.view_mat = glm::lookAt(cam.eye, cam.look_at, cam.up);
   }
 }
 
