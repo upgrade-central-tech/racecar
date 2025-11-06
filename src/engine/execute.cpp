@@ -1,9 +1,10 @@
 #include "execute.hpp"
 
-#include "../draw.hpp"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
 #include "frame_data.hpp"
+#include "gfx.hpp"
+
 
 namespace racecar::engine {
 
@@ -39,14 +40,6 @@ bool execute( State& engine, const Context& ctx ) {
 
     // Rendering
     {
-        std::optional<Pipeline> triangle_pipeline_opt =
-            create_gfx_pipeline( engine, ctx.vulkan, "../shaders/triangle.spv" );
-
-        if ( !triangle_pipeline_opt ) {
-            SDL_Log( "[Engine] Failed to create pipeline" );
-            return false;
-        }
-
         std::optional<VkShaderModule> triangle_shader_module_opt =
             vk::create::shader_module( vulkan, "../shaders/triangle.spv" );
 
@@ -55,7 +48,15 @@ bool execute( State& engine, const Context& ctx ) {
             return {};
         }
 
-        std::optional<GfxTask> render_triangle_task_opt = create_gfx_task( ctx, engine );
+        std::optional<Pipeline> triangle_pipeline_opt =
+            create_gfx_pipeline( engine, ctx.vulkan, triangle_shader_module_opt.value() );
+
+        if ( !triangle_pipeline_opt ) {
+            SDL_Log( "[Engine] Failed to create pipeline" );
+            return false;
+        }
+
+        std::optional<GfxTask> render_triangle_task_opt = create_gfx_task( ctx.vulkan, engine );
 
         if ( !render_triangle_task_opt ) {
             SDL_Log( "[Engine] Failed to create graphics task" );

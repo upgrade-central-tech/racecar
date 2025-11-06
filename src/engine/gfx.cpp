@@ -1,9 +1,9 @@
-#include "draw.hpp"
+#include "gfx.hpp"
 
-#include "engine/pipeline.hpp"
-#include "engine/state.hpp"
-#include "vk/create.hpp"
-#include "vk/utility.hpp"
+#include "pipeline.hpp"
+#include "state.hpp"
+#include "../vk/create.hpp"
+#include "../vk/utility.hpp"
 
 namespace racecar::engine {
 
@@ -12,28 +12,36 @@ bool GfxTask::add_draw_task( DrawTaskDescriptor draw_task ) {
     return true;
 }
 
-std::optional<GfxTask> create_gfx_task( vk::Common vulkan, engine::State engine ) {
+std::optional<GfxTask> create_gfx_task( const vk::Common& vulkan, const State& engine ) {
     GfxTask gfx_task = {};
 
     VkCommandPool cmd_pool = engine.gfx_command_pool;
 
-    VkCommandBufferAllocateInfo cmd_buf_alloc_info = vk::create::command_buffer_allocate_info(cmd_pool, 1);
-    RACECAR_VK_CHECK(
-        vkAllocateCommandBuffers(vulkan.device, &cmd_buf_alloc_info, &gfx_task.command_buffer), 
-        "Failed to allocate command buffer"
-    );
-
-    VkFenceCreateInfo fence_
+    VkCommandBufferAllocateInfo cmd_buf_alloc_info =
+        vk::create::command_buffer_allocate_info( cmd_pool, 1 );
 
     RACECAR_VK_CHECK(
-        vkCreateFence( vulkan.device, &fence_info, nullptr, &frame->render_fence ),
+        vkAllocateCommandBuffers( vulkan.device, &cmd_buf_alloc_info, &gfx_task.command_buffer ),
+        "Failed to allocate command buffer" );
+
+    // I don't really know what the initial flag should be, so I'm setting it to
+    // VK_FENCE_CREATE_SIGNALED_BIT. The engine itself uses VK_FENCE_CREATE_SIGNALED_BIT because we
+    // want to signal the fence is ready initially.
+    VkFenceCreateInfo fence_create_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
+
+    RACECAR_VK_CHECK(
+        vkCreateFence( vulkan.device, &fence_create_info, nullptr, &gfx_task.fence.value() ),
         "Failed to create render fence" );
 
-    VkSemaphoreCreateInfo semaphore_create_info = vk::create::semaphore_info();;
+    VkSemaphoreCreateInfo semaphore_create_info = vk::create::semaphore_info();
 
     RACECAR_VK_CHECK( vkCreateSemaphore( vulkan.device, &semaphore_create_info, nullptr,
-                                            &frame->swapchain_semaphore ),
-                        "Failed to create swapchain semaphore" );
+                                         &gfx_task.source_semaphore ),
+                      "Failed to create source semaphore" );
+
+    RACECAR_VK_CHECK( vkCreateSemaphore( vulkan.device, &semaphore_create_info, nullptr,
+                                         &gfx_task.target_semaphore ),
+                      "Failed to create target semaphore" );
 
     return gfx_task;
 }
@@ -72,7 +80,7 @@ bool execute_gfx_task( const vk::Common& vulkan, const GfxTask& task ) {
     return true;
 }
 
-bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer cmd_buf ) {
+bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf ) {
     vk::utility::transition_image(
         cmd_buf, draw_task.draw_target, VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,

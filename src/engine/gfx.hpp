@@ -1,8 +1,8 @@
 #pragma once
 
-#include "context.hpp"
-#include "engine/pipeline.hpp"
-#include "engine/state.hpp"
+#include "../context.hpp"
+#include "pipeline.hpp"
+#include "state.hpp"
 
 #include <vector>
 
@@ -33,7 +33,7 @@ struct GfxTask {
     bool add_draw_task( DrawTaskDescriptor draw_task );
 };
 
-std::optional<GfxTask> create_gfx_task( const Context& ctx, const State& engine );
+std::optional<GfxTask> create_gfx_task( const vk::Common& vulkan, const State& engine );
 bool execute_gfx_task( const vk::Common& vulkan, const GfxTask& task );
 void free_gfx_task( GfxTask& gfx_task );
 

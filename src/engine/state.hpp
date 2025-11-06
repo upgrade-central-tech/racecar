@@ -25,7 +25,7 @@ struct State {
     VkCommandBuffer global_gfx_cmd_buf = VK_NULL_HANDLE;
 };
 
-std::optional<State> initialize( const vk::Common& vulkan );
+std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan );
 void free( State& engine, const vk::Common& vulkan );
 
 }  // namespace racecar::engine

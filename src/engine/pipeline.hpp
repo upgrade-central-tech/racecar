@@ -18,7 +18,7 @@ struct Pipeline {
 /// the layout and other potential objects.
 std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
                                              const vk::Common& vulkan,
-                                             std::filesystem::path shader_path );
+                                             VkShaderModule shader_module );
 void free_pipeline( const vk::Common& vulkan, Pipeline& pipeline );
 
 }  // namespace racecar::engine

@@ -1,5 +1,4 @@
 #include "context.hpp"
-#include "pipeline.hpp"
 #include "sdl.hpp"
 #include "engine/state.hpp"
 #include "engine/execute.hpp"
@@ -35,7 +34,7 @@ int main(int, char*[]) {
 		ctx.vulkan = vulkan_opt.value();
 	}
 
-    std::optional<engine::State> engine_opt = engine::initialize(ctx.vulkan);
+    std::optional<engine::State> engine_opt = engine::initialize( ctx.window, ctx.vulkan);
 
     if (!engine_opt) {
         SDL_Log("[RACECAR] Failed to initialize engine!");
@@ -43,15 +42,6 @@ int main(int, char*[]) {
     }
 
     engine::State& engine = engine_opt.value();
-
-	std::optional<renderer::Pipeline> gfx_pipeline_opt = renderer::create_gfx_pipeline(ctx.vulkan);
-
-	if (!gfx_pipeline_opt) {
-		SDL_Log("[RACECAR] Could not create graphics pipeline!");
-		return EXIT_FAILURE;
-	}
-
-	renderer::Pipeline& gfx_pipeline = gfx_pipeline_opt.value();
 
 	bool will_quit = false;
 	bool stop_drawing = false;
@@ -76,7 +66,7 @@ int main(int, char*[]) {
 			continue;
         }
 
-		if (engine::execute(engine, ctx, gfx_pipeline)) {
+		if (engine::execute(engine, ctx)) {
 			engine.rendered_frames = engine.rendered_frames + 1;
 			engine.frame_number = (engine.rendered_frames + 1) % engine.frame_overlap;
 		}
@@ -87,7 +77,6 @@ int main(int, char*[]) {
 
 	vkDeviceWaitIdle(ctx.vulkan.device);
 
-	engine::free_pipeline(ctx.vulkan, gfx_pipeline);
     engine::free(engine, ctx.vulkan);
 	vk::free(ctx.vulkan);
 	sdl::free(ctx.window);

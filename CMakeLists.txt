@@ -14,7 +14,6 @@ add_executable(racecar
   ${SRC_DIR}/main.cpp
 
   ${SRC_DIR}/sdl.cpp
-  ${SRC_DIR}/draw.cpp
 
   ${VK_DIR}/common.cpp
   ${VK_DIR}/create.cpp
@@ -23,6 +22,7 @@ add_executable(racecar
   ${ENGINE_DIR}/execute.cpp
   ${ENGINE_DIR}/state.cpp
   ${ENGINE_DIR}/pipeline.cpp
+  ${ENGINE_DIR}/gfx.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
