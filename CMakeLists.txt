@@ -39,3 +39,6 @@ target_link_libraries(racecar PRIVATE volk::volk)
 
 find_package(vk-bootstrap CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)
+
+find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
+target_include_directories(racecar PRIVATE ${TINYGLTF_INCLUDE_DIRS})
