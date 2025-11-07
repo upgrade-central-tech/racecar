@@ -97,4 +97,14 @@ std::optional<GPUMeshBuffers> upload_mesh( const vk::Common& vulkan,
     return new_mesh_buffers;
 }
 
+void free_mesh( const vk::Common& vulkan, Mesh& mesh ) {
+    if ( mesh.mesh_buffers.vertex_buffer ) {
+        vk::mem::free_buffer( vulkan, mesh.mesh_buffers.vertex_buffer.value() );
+    }
+
+    if ( mesh.mesh_buffers.index_buffer ) {
+        vk::mem::free_buffer( vulkan, mesh.mesh_buffers.index_buffer.value() );
+    }
+}
+
 }  // namespace racecar::geometry

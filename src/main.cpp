@@ -49,9 +49,9 @@ int main( int, char*[] ) {
     engine::TaskList task_list;
 
     // Draw a triangle
-    {
-        geometry::Triangle triangle( ctx.vulkan, engine );
+    geometry::Triangle triangle( ctx.vulkan, engine );
 
+    {
         std::optional<VkShaderModule> triangle_shader_module_opt = vk::create::shader_module(
             ctx.vulkan, "../shaders/buffer_triangle/buffer_triangle.spv" );
 
@@ -121,6 +121,8 @@ int main( int, char*[] ) {
     }
 
     vkDeviceWaitIdle( ctx.vulkan.device );
+
+    geometry::free_mesh( ctx.vulkan, triangle.mesh );
 
     engine::free( engine, ctx.vulkan );
     vk::free( ctx.vulkan );
