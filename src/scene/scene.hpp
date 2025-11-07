@@ -1,12 +1,13 @@
 #pragma once
 
 #include "camera.hpp"
-#include "glm/glm.hpp"
-#include "tiny_gltf.h"
+
+#include <glm/glm.hpp>
 
 #include <memory>
-#include <optional>
 #include <string>
+#include <tiny_gltf.h>
+#include <variant>
 
 namespace racecar::scene {
 
@@ -14,49 +15,48 @@ struct Material {
   // TODO
 };
 
-/// A primative is a basic association of geometry data along with a single material.
+/// A primitive is a basic association of geometry data along with a single material.
 /// We assume a vertex attribute data is stored in a buffer that contains all attribute
 /// data and index data.
-struct Primative {
-  int materialId = -1;
-  // Offsets are in bytes. Pos, nor, and uv data are assumed to be floats in vec3, vec3, and vec2s
-  int posOffset = -1;
-  int norOffset = -1;
-  int uvOffset = -1;
+struct Primitive {
+  int material_id = -1;
+  /// Offsets are in bytes. Pos, nor, and uv data are assumed to be floats in vec3, vec3, and vec2s
+  int pos_offset = -1;
+  int nor_offset = -1;
+  int uv_offset = -1;
   int colOffset = -1;
-  // Index data can be a unsigned short uint_16t or an unsigned int uint_32t
-  int indOffset = -1;
-  // Index count is in actual indices, not in bytes.
-  size_t indCount = 0;
-  // True if indices are uint_16t, and false if indices are uint_32t
-  bool sixteenBitIndices = true;
-  size_t bufferID;
+  /// Index data can be a unsigned short uint_16t or an unsigned int uint_32t
+  int ind_offset = -1;
+  /// Index count is in actual indices, not in bytes.
+  size_t ind_count = 0;
+  /// True if indices are uint_16t, and false if indices are uint_32t
+  bool sixteen_bit_indices = true;
+  size_t buffer_id = 0;
 };
 
-/// A mesh is divided into primative surfaces that may each have a different material
+/// A mesh is divided into primitive surfaces that may each have a different material
 struct Mesh {
-  std::vector<Primative> primatives;
+  std::vector<Primitive> primitives;
 };
 
-// Each node will have either a mesh or a camera
+/// Each node will have either a mesh or a camera
 struct Node {
-  std::optional<std::unique_ptr<Mesh>> mesh;
-  std::optional<std::unique_ptr<Camera>> camera;
+  std::variant<std::monostate, std::unique_ptr<Mesh>, std::unique_ptr<Camera>> data;
 
-  // transforms are local
-  glm::mat4 transform = glm::mat4(0.f);
-  glm::mat4 invTransform = glm::mat4(0.f);
-  glm::mat4 invTranspose = glm::mat4(0.f);
+  /// transforms are local
+  glm::mat4 transform = glm::mat4();
+  glm::mat4 inv_transform = glm::mat4();
+  glm::mat4 inv_transpose = glm::mat4();
 
-  Node* parent;
+  Node* parent = nullptr;
   std::vector<Node*> children;
 };
 
 struct Scene {
   std::vector<std::unique_ptr<Node>> nodes;
-  Camera* mainCamera = nullptr;
+  Camera* main_camera = nullptr;
 };
 
-bool loadBinaryJson(std::string filepath, Scene& scene);
+bool load_binary_json(std::string filepath, Scene& scene);
 
 }  // namespace racecar::scene
