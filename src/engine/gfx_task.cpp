@@ -15,7 +15,7 @@ void GfxTask::set_wait_semaphore( VkSemaphore semaphore ) {
     wait_semaphore = semaphore;
 }
 
-bool execute_gfx_task( const vk::Common& vulkan, const GfxTask& task ) {    
+bool execute_gfx_task( const vk::Common& vulkan, const GfxTask& task ) {
     VkCommandBuffer command_buffer = task.command_buffer;
     RACECAR_VK_CHECK( vkResetCommandBuffer( command_buffer, 0 ), "Failed to reset command buffer" );
 
@@ -40,11 +40,10 @@ bool execute_gfx_task( const vk::Common& vulkan, const GfxTask& task ) {
         .signal_semaphore = task.signal_semaphore,
         .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
     } );
-    VkSubmitInfo2 gfx_submit_info = vk::create::submit_info_from_all(gfx_submit_info_all);
+    VkSubmitInfo2 gfx_submit_info = vk::create::submit_info_from_all( gfx_submit_info_all );
 
     RACECAR_VK_CHECK( vkQueueSubmit2( vulkan.graphics_queue, 1, &gfx_submit_info, VK_NULL_HANDLE ),
                       "Graphics queue submit failed" );
-
 
     return true;
 }
@@ -94,7 +93,23 @@ bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf )
         };
         vkCmdSetScissor( cmd_buf, 0, 1, &scissor );
 
-        vkCmdDraw( cmd_buf, 3, 1, 0, 0 );
+        if ( draw_task.mesh.has_value() ) {
+            const geometry::Mesh& mesh = draw_task.mesh.value();
+            const geometry::GPUMeshBuffers& mesh_buffers = mesh.mesh_buffers;
+
+            VkBuffer vertex_buffer = mesh_buffers.vertex_buffer.value().handle;
+            VkBuffer index_buffer = mesh_buffers.index_buffer.value().handle;
+
+            VkDeviceSize offsets[] = { 0 };
+
+            vkCmdBindVertexBuffers( cmd_buf, VERTEX_BUFFER_BINDING, 1, &vertex_buffer, offsets );
+            vkCmdBindIndexBuffer( cmd_buf, index_buffer, 0, VK_INDEX_TYPE_UINT32 );
+
+            vkCmdDrawIndexed( cmd_buf, static_cast<uint32_t>( mesh.indices.size() ), 1, 0, 0, 0 );
+        } else {
+            // HARDCODED draw! This shouldn't be needed if we force users to draw via vertex buffer.
+            vkCmdDraw( cmd_buf, 3, 1, 0, 0 );
+        }
     }
 
     vkCmdEndRendering( cmd_buf );

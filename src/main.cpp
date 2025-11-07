@@ -1,9 +1,10 @@
 #include "context.hpp"
 #include "engine/execute.hpp"
-#include "engine/state.hpp"
-#include "vk/create.hpp"
-#include "sdl.hpp"
 #include "engine/pipeline.hpp"
+#include "engine/state.hpp"
+#include "geometry/triangle.hpp"
+#include "sdl.hpp"
+#include "vk/create.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -11,7 +12,6 @@
 #include <chrono>
 #include <cstdlib>
 #include <thread>
-
 
 using namespace racecar;
 
@@ -46,40 +46,44 @@ int main( int, char*[] ) {
     }
 
     engine::State& engine = engine_opt.value();
+    engine::TaskList task_list;
 
-    std::optional<VkShaderModule> triangle_shader_module_opt =
-        vk::create::shader_module( ctx.vulkan, "../shaders/triangle.spv" );
+    // Draw a triangle
+    {
+        geometry::Triangle triangle( ctx.vulkan, engine );
 
-    if ( !triangle_shader_module_opt ) {
-        SDL_Log( "[Engine] Failed to create shader module" );
-        return {};
-    }
+        std::optional<VkShaderModule> triangle_shader_module_opt =
+            vk::create::shader_module( ctx.vulkan, "../shaders/buffer_triangle/buffer_triangle.spv" );
 
-    VkShaderModule& triangle_shader_module = triangle_shader_module_opt.value();
+        if ( !triangle_shader_module_opt ) {
+            SDL_Log( "[Engine] Failed to create shader module" );
+            return {};
+        }
 
-    std::optional<engine::Pipeline> triangle_pipeline_opt =
-        create_gfx_pipeline( engine, ctx.vulkan, triangle_shader_module );
+        VkShaderModule& triangle_shader_module = triangle_shader_module_opt.value();
 
-    if ( !triangle_pipeline_opt ) {
-        SDL_Log( "[Engine] Failed to create pipeline" );
-        return false;
-    }
-    
-    engine::Pipeline& triangle_pipeline = triangle_pipeline_opt.value();
+        std::optional<engine::Pipeline> triangle_pipeline_opt =
+            create_gfx_pipeline( engine, ctx.vulkan, triangle.mesh, triangle_shader_module );
 
-    engine::TaskList triangle_task_list;
-    triangle_task_list.add_gfx_task( ctx.vulkan, engine );
-    triangle_task_list.gfx_tasks.back().add_draw_task({
-        .pipeline = triangle_pipeline,
-        .shader_module = triangle_shader_module,
-        .extent = engine.swapchain.extent,
-        .clear_screen = true,
-        .render_target_is_swapchain = true
-    });
-    
-    if (!triangle_task_list.create( engine )) {
-        SDL_Log("[RACECAR] Failed to create triangle task list!");
-        return EXIT_FAILURE;
+        if ( !triangle_pipeline_opt ) {
+            SDL_Log( "[Engine] Failed to create pipeline" );
+            return false;
+        }
+
+        engine::Pipeline& triangle_pipeline = triangle_pipeline_opt.value();
+
+        task_list.add_gfx_task( ctx.vulkan, engine );
+        task_list.gfx_tasks.back().add_draw_task( { .mesh = triangle.mesh,
+                                                    .pipeline = triangle_pipeline,
+                                                    .shader_module = triangle_shader_module,
+                                                    .extent = engine.swapchain.extent,
+                                                    .clear_screen = true,
+                                                    .render_target_is_swapchain = true } );
+
+        if ( !task_list.create( engine ) ) {
+            SDL_Log( "[RACECAR] Failed to create triangle task list!" );
+            return EXIT_FAILURE;
+        }
     }
 
     bool will_quit = false;
@@ -105,7 +109,7 @@ int main( int, char*[] ) {
             continue;
         }
 
-        if ( engine::execute( engine, ctx, triangle_task_list) ) {
+        if ( engine::execute( engine, ctx, task_list ) ) {
             engine.rendered_frames = engine.rendered_frames + 1;
             engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
         }

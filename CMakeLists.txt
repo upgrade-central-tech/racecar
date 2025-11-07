@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS NO)
 set(SRC_DIR "src")
 set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
+set(GEOMETRY_DIR "${SRC_DIR}/geometry")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
@@ -27,6 +28,8 @@ add_executable(racecar
   ${ENGINE_DIR}/gfx_task.cpp
   ${ENGINE_DIR}/imm_submit.cpp
   ${ENGINE_DIR}/task_list.cpp
+
+  ${GEOMETRY_DIR}/mesh.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -36,7 +39,7 @@ else()
 endif()
 
 if (MSVC)
-  target_compile_options(racecar PRIVATE /W4 /WX -Wno-missing-designated-field-initializers)
+  target_compile_options(racecar PRIVATE /W4 /WX)
 else()
   target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
 endif()
