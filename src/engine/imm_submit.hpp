@@ -7,9 +7,9 @@
 namespace racecar::engine {
 
 struct ImmediateSubmit {
-    VkFence immediate_fence;
-    VkCommandBuffer immediate_command_buffer;
-    VkCommandPool immediate_command_pool;
+    VkFence immediate_fence = VK_NULL_HANDLE;
+    VkCommandBuffer immediate_command_buffer = VK_NULL_HANDLE;
+    VkCommandPool immediate_command_pool = VK_NULL_HANDLE;
 };
 
 /// Used for immediate command buffer calls, used for stuff like uploading buffer mem, etc.

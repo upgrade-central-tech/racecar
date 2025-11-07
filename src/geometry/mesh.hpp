@@ -12,10 +12,10 @@ namespace racecar::geometry {
 
 /// Vertex struct, not optimally arranged to fit 16 bytes.
 struct Vertex {
-    glm::vec4 color = {};
-    glm::vec3 position = {};
-    glm::vec3 normal = {};
-    glm::vec2 uv = {};
+    glm::vec4 color;
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 uv;
 };
 
 struct GPUMeshBuffers {
@@ -25,14 +25,14 @@ struct GPUMeshBuffers {
 };
 
 struct Mesh {
-    std::vector<Vertex> vertices = {};
-    std::vector<uint32_t> indices = {};
-    GPUMeshBuffers mesh_buffers = {};
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+    GPUMeshBuffers mesh_buffers;
 
     VkVertexInputBindingDescription vertex_binding_description = {
         .binding = VERTEX_BUFFER_BINDING,
         .stride = sizeof( geometry::Vertex ),
-        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX };
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX, };
 
     std::array<VkVertexInputAttributeDescription, 4> attribute_descriptions = { {
         { 0, VERTEX_BUFFER_BINDING, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof( Vertex, color ) },
