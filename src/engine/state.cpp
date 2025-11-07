@@ -37,7 +37,7 @@ std::optional<vkb::Swapchain> create_swapchain( SDL_Window* window, const vk::Co
     vkb::SwapchainBuilder swapchain_builder( vulkan.device );
     vkb::Result<vkb::Swapchain> swapchain_ret =
         swapchain_builder.set_desired_extent( swap_extent.width, swap_extent.height )
-            .set_desired_min_image_count( capabilities.minImageCount + 1 )
+            .set_desired_min_image_count( capabilities.minImageCount )
             .set_desired_present_mode( VK_PRESENT_MODE_FIFO_RELAXED_KHR )  // this is vsync
             .set_image_usage_flags( VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
                                     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |

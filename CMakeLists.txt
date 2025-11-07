@@ -27,6 +27,7 @@ add_executable(racecar
   ${ENGINE_DIR}/gfx_task.cpp
   ${ENGINE_DIR}/imm_submit.cpp
   ${ENGINE_DIR}/task_list.cpp
+  ${ENGINE_DIR}/gui.cpp
 
   ${GEOMETRY_DIR}/mesh.cpp
 )
@@ -56,7 +57,6 @@ target_link_libraries(racecar PRIVATE glm::glm)
 
 find_package(SDL3 CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE SDL3::SDL3)
-
 
 find_package(vk-bootstrap CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)
