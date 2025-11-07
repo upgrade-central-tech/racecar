@@ -4,12 +4,24 @@ namespace racecar::geometry {
 
 struct Triangle {
     geometry::Mesh mesh = {
-        .vertices = { { glm::vec4( 1, 0, 0, 1 ), glm::vec3( 0, -0.5, 0 ), glm::vec3( 0, 0, 1 ),
-                        glm::vec2( 0.5, 1 ) },
-                      { glm::vec4( 0, 1, 0, 1 ), glm::vec3( 0.5, 0.5, 0 ), glm::vec3( 0, 0, 1 ),
-                        glm::vec2( 1, 0 ) },
-                      { glm::vec4( 0, 0, 1, 1 ), glm::vec3( -0.5, 0.5, 0 ), glm::vec3( 0, 0, 1 ),
-                        glm::vec2( 0, 0 ) } },
+        .vertices = { {
+                          glm::vec4( 1, 0, 0, 1 ),
+                          glm::vec3( 0, -0.5, 0 ),
+                          glm::vec3( 0, 0, 1 ),
+                          glm::vec2( 0.5, 1 ),
+                      },
+                      {
+                          glm::vec4( 0, 1, 0, 1 ),
+                          glm::vec3( 0.5, 0.5, 0 ),
+                          glm::vec3( 0, 0, 1 ),
+                          glm::vec2( 1, 0 ),
+                      },
+                      {
+                          glm::vec4( 0, 0, 1, 1 ),
+                          glm::vec3( -0.5, 0.5, 0 ),
+                          glm::vec3( 0, 0, 1 ),
+                          glm::vec2( 0, 0 ),
+                      } },
 
         .indices = { 0, 1, 2 },
     };

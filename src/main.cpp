@@ -52,8 +52,8 @@ int main( int, char*[] ) {
     {
         geometry::Triangle triangle( ctx.vulkan, engine );
 
-        std::optional<VkShaderModule> triangle_shader_module_opt =
-            vk::create::shader_module( ctx.vulkan, "../shaders/buffer_triangle/buffer_triangle.spv" );
+        std::optional<VkShaderModule> triangle_shader_module_opt = vk::create::shader_module(
+            ctx.vulkan, "../shaders/buffer_triangle/buffer_triangle.spv" );
 
         if ( !triangle_shader_module_opt ) {
             SDL_Log( "[Engine] Failed to create shader module" );
@@ -73,12 +73,14 @@ int main( int, char*[] ) {
         engine::Pipeline& triangle_pipeline = triangle_pipeline_opt.value();
 
         task_list.add_gfx_task( ctx.vulkan, engine );
-        task_list.gfx_tasks.back().add_draw_task( { .mesh = triangle.mesh,
-                                                    .pipeline = triangle_pipeline,
-                                                    .shader_module = triangle_shader_module,
-                                                    .extent = engine.swapchain.extent,
-                                                    .clear_screen = true,
-                                                    .render_target_is_swapchain = true } );
+        task_list.gfx_tasks.back().add_draw_task( {
+            .mesh = triangle.mesh,
+            .pipeline = triangle_pipeline,
+            .shader_module = triangle_shader_module,
+            .extent = engine.swapchain.extent,
+            .clear_screen = true,
+            .render_target_is_swapchain = true,
+        } );
 
         if ( !task_list.create( engine ) ) {
             SDL_Log( "[RACECAR] Failed to create triangle task list!" );

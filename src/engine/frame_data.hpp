@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../vk/common.hpp"
+#include <volk.h>
 
 namespace racecar::engine {
 
@@ -11,4 +11,4 @@ struct FrameData {
     VkFence render_fence = nullptr;
 };
 
-} // namespace racecar::engine
+}  // namespace racecar::engine

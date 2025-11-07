@@ -18,6 +18,6 @@ struct TaskList {
     std::optional<VkSemaphore> get_signal_semaphore();
 };
 
-void free_task_list(TaskList &task_list);
+void free_task_list( TaskList& task_list );
 
 }  // namespace racecar::engine

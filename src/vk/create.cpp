@@ -143,16 +143,13 @@ AllSubmitInfo all_submit_info( CreateSubmitInfoDescriptor submit_info_descriptor
         submit_info_descriptor.signal_flag_bits, submit_info_descriptor.signal_semaphore );
     VkCommandBufferSubmitInfo command_info =
         vk::create::command_buffer_submit_info( submit_info_descriptor.command_buffer );
-        
-    return {
-        .wait_info = wait_info,
-        .signal_info = signal_info,
-        .command_info = command_info
-    };
+
+    return { .wait_info = wait_info, .signal_info = signal_info, .command_info = command_info };
 }
 
-VkSubmitInfo2 submit_info_from_all( AllSubmitInfo &all_submit_info ) {
-    return vk::create::submit_info( &all_submit_info.command_info, &all_submit_info.signal_info, &all_submit_info.wait_info );
+VkSubmitInfo2 submit_info_from_all( AllSubmitInfo& all_submit_info ) {
+    return vk::create::submit_info( &all_submit_info.command_info, &all_submit_info.signal_info,
+                                    &all_submit_info.wait_info );
 }
 
 }  // namespace racecar::vk::create

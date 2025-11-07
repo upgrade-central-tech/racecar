@@ -13,7 +13,6 @@ set(GEOMETRY_DIR "${SRC_DIR}/geometry")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
-
   ${SRC_DIR}/sdl.cpp
 
   ${VK_DIR}/common.cpp
@@ -39,7 +38,7 @@ else()
 endif()
 
 if (MSVC)
-  target_compile_options(racecar PRIVATE /W4 /WX)
+  target_compile_options(racecar PRIVATE /W4 /WX -Wno-missing-designated-field-initializers)
 else()
   target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
 endif()

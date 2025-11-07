@@ -30,15 +30,16 @@ struct Mesh {
     GPUMeshBuffers mesh_buffers;
 
     VkVertexInputBindingDescription vertex_binding_description = {
-        .binding = VERTEX_BUFFER_BINDING,
+        .binding = vk::binding::VERTEX_BUFFER,
         .stride = sizeof( geometry::Vertex ),
-        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX, };
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+    };
 
     std::array<VkVertexInputAttributeDescription, 4> attribute_descriptions = { {
-        { 0, VERTEX_BUFFER_BINDING, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof( Vertex, color ) },
-        { 1, VERTEX_BUFFER_BINDING, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, position ) },
-        { 2, VERTEX_BUFFER_BINDING, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, normal ) },
-        { 3, VERTEX_BUFFER_BINDING, VK_FORMAT_R32G32_SFLOAT, offsetof( Vertex, uv ) },
+        { 0, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof( Vertex, color ) },
+        { 1, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, position ) },
+        { 2, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, normal ) },
+        { 3, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32_SFLOAT, offsetof( Vertex, uv ) },
     } };
 };
 

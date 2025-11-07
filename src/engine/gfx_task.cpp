@@ -102,7 +102,8 @@ bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf )
 
             VkDeviceSize offsets[] = { 0 };
 
-            vkCmdBindVertexBuffers( cmd_buf, VERTEX_BUFFER_BINDING, 1, &vertex_buffer, offsets );
+            vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER, 1, &vertex_buffer,
+                                    offsets );
             vkCmdBindIndexBuffer( cmd_buf, index_buffer, 0, VK_INDEX_TYPE_UINT32 );
 
             vkCmdDrawIndexed( cmd_buf, static_cast<uint32_t>( mesh.indices.size() ), 1, 0, 0, 0 );

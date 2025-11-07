@@ -83,7 +83,7 @@ std::optional<GPUMeshBuffers> upload_mesh( const vk::Common& vulkan,
     // Map GPU buffer temporarily for debug
     void* mapped = nullptr;
     vmaMapMemory( vulkan.allocator, new_mesh_buffers.vertex_buffer->allocation, &mapped );
-    Vertex* verts = reinterpret_cast<Vertex*>(mapped);
+    Vertex* verts = reinterpret_cast<Vertex*>( mapped );
     for ( size_t i = 0; i < 3; ++i )
         printf( "Vertex %zu: pos=(%f,%f,%f) color=(%f,%f,%f,%f)\n", i, verts[i].position.x,
                 verts[i].position.y, verts[i].position.z, verts[i].color.r, verts[i].color.g,

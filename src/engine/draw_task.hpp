@@ -5,7 +5,6 @@
 
 #include <volk.h>
 
-
 namespace racecar::engine {
 
 /// Descriptor for a draw call.

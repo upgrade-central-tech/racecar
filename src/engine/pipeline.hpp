@@ -4,7 +4,6 @@
 #include "../vk/common.hpp"
 #include "state.hpp"
 
-
 namespace racecar::engine {
 
 struct Pipeline {

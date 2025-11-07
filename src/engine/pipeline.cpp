@@ -70,7 +70,8 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         .depthWriteEnable = VK_FALSE,
         .depthCompareOp = VK_COMPARE_OP_LESS,
         .depthBoundsTestEnable = VK_FALSE,
-        .stencilTestEnable = VK_FALSE, };
+        .stencilTestEnable = VK_FALSE,
+    };
 
     VkPipelineMultisampleStateCreateInfo multisample_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
