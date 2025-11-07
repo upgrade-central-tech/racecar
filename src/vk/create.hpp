@@ -33,24 +33,24 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_info( VkShaderStageFlagBit
                                                             std::string_view name );
 
 /// Creates shader module from the specified file path. Path is relative to the executable.
-std::optional<VkShaderModule> shader_module( const Common &vulkan,
+std::optional<VkShaderModule> shader_module( const Common& vulkan,
                                              std::filesystem::path shader_path );
 
 struct CreateSubmitInfoDescriptor {
-    VkCommandBuffer command_buffer;
-    VkSemaphore wait_semaphore;
-    VkPipelineStageFlagBits2 wait_flag_bits;
-    VkSemaphore signal_semaphore;
-    VkPipelineStageFlagBits2 signal_flag_bits;
+    VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+    VkSemaphore wait_semaphore = VK_NULL_HANDLE;
+    VkPipelineStageFlagBits2 wait_flag_bits = VK_PIPELINE_STAGE_2_NONE;
+    VkSemaphore signal_semaphore = VK_NULL_HANDLE;
+    VkPipelineStageFlagBits2 signal_flag_bits = VK_PIPELINE_STAGE_2_NONE;
 };
 
 struct AllSubmitInfo {
-    VkSemaphoreSubmitInfo wait_info;
-    VkSemaphoreSubmitInfo signal_info;
-    VkCommandBufferSubmitInfo command_info;
+    VkSemaphoreSubmitInfo wait_info = {};
+    VkSemaphoreSubmitInfo signal_info = {};
+    VkCommandBufferSubmitInfo command_info = {};
 };
 
-AllSubmitInfo all_submit_info(CreateSubmitInfoDescriptor submit_info_descriptor);
-VkSubmitInfo2 submit_info_from_all( AllSubmitInfo &all_submit_info );
+AllSubmitInfo all_submit_info( CreateSubmitInfoDescriptor submit_info_descriptor );
+VkSubmitInfo2 submit_info_from_all( AllSubmitInfo& all_submit_info );
 
-} // namespace racecar::vk::create
+}  // namespace racecar::vk::create

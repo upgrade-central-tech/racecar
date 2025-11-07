@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../geometry/mesh.hpp"
 #include "../vk/common.hpp"
 #include "state.hpp"
 
@@ -17,6 +18,7 @@ struct Pipeline {
 /// the layout and other potential objects.
 std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
                                              const vk::Common& vulkan,
+                                             const std::optional<const geometry::Mesh>& mesh,
                                              VkShaderModule shader_module );
 void free_pipeline( const vk::Common& vulkan, Pipeline& pipeline );
 

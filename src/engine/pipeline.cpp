@@ -7,11 +7,12 @@
 
 namespace racecar::engine {
 
-constexpr std::string_view VERTEX_ENTRY_NAME = "vertex_main";
-constexpr std::string_view FRAGMENT_ENTRY_NAME = "fragment_main";
+constexpr std::string_view VERTEX_ENTRY_NAME = "vs_main";
+constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
 std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
                                              const vk::Common& vulkan,
+                                             const std::optional<const geometry::Mesh>& mesh,
                                              VkShaderModule shader_module ) {
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -20,6 +21,14 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         .vertexAttributeDescriptionCount = 0,
         .pVertexAttributeDescriptions = nullptr,
     };
+
+    if ( mesh.has_value() && mesh->mesh_buffers.vertex_buffer_address ) {
+        vertex_input_info.vertexBindingDescriptionCount = 1,
+        vertex_input_info.pVertexBindingDescriptions = &mesh->vertex_binding_description;
+        vertex_input_info.vertexAttributeDescriptionCount =
+            static_cast<uint32_t>( mesh->attribute_descriptions.size() );
+        vertex_input_info.pVertexAttributeDescriptions = mesh->attribute_descriptions.data();
+    }
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -53,6 +62,15 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         .frontFace = VK_FRONT_FACE_CLOCKWISE,
         .depthBiasEnable = VK_FALSE,
         .lineWidth = 1.0f,
+    };
+
+    VkPipelineDepthStencilStateCreateInfo depth_stencil_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable = VK_FALSE,
+        .depthWriteEnable = VK_FALSE,
+        .depthCompareOp = VK_COMPARE_OP_LESS,
+        .depthBoundsTestEnable = VK_FALSE,
+        .stencilTestEnable = VK_FALSE,
     };
 
     VkPipelineMultisampleStateCreateInfo multisample_info = {
@@ -111,6 +129,7 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         .pViewportState = &viewport_state_info,
         .pRasterizationState = &rasterization_info,
         .pMultisampleState = &multisample_info,
+        .pDepthStencilState = &depth_stencil_info,
         .pColorBlendState = &color_blend_info,
         .pDynamicState = &dynamic_state_info,
         .layout = gfx_layout,

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../geometry/mesh.hpp"
 #include "pipeline.hpp"
 
 #include <volk.h>
@@ -9,6 +10,7 @@ namespace racecar::engine {
 /// Descriptor for a draw call.
 struct DrawTaskDescriptor {
     /// User-defined parameters:
+    std::optional<geometry::Mesh> mesh = {};
     Pipeline pipeline = {};
     VkShaderModule shader_module = {};
     VkExtent2D extent = {};

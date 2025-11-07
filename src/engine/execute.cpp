@@ -6,7 +6,7 @@
 
 namespace racecar::engine {
 
-bool execute( State& engine, const Context& ctx, TaskList& task_list ) {    
+bool execute( State& engine, const Context& ctx, TaskList& task_list ) {
     const vk::Common& vulkan = ctx.vulkan;
 
     // Using the maximum 64-bit unsigned integer value effectively disables the timeout
@@ -60,7 +60,8 @@ bool execute( State& engine, const Context& ctx, TaskList& task_list ) {
         .signal_semaphore = engine.begin_gfx_semaphore,
         .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
     } );
-    VkSubmitInfo2 global_start_submit_info = vk::create::submit_info_from_all(global_start_submit_info_all);
+    VkSubmitInfo2 global_start_submit_info =
+        vk::create::submit_info_from_all( global_start_submit_info_all );
 
     RACECAR_VK_CHECK(
         vkQueueSubmit2( vulkan.graphics_queue, 1, &global_start_submit_info, VK_NULL_HANDLE ),
@@ -87,7 +88,8 @@ bool execute( State& engine, const Context& ctx, TaskList& task_list ) {
         .signal_semaphore = engine.present_image_signal_semaphore,
         .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
     } );
-    VkSubmitInfo2 global_end_submit_info = vk::create::submit_info_from_all(global_end_submit_info_all);
+    VkSubmitInfo2 global_end_submit_info =
+        vk::create::submit_info_from_all( global_end_submit_info_all );
 
     RACECAR_VK_CHECK(
         vkQueueSubmit2( vulkan.graphics_queue, 1, &global_end_submit_info, engine.render_fence ),

@@ -69,18 +69,18 @@ bool create_frame_data( State& engine, const vk::Common& vulkan ) {
         vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
 
     // for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
-        // FrameData& frame = engine.frames[i];
+    // FrameData& frame = engine.frames[i];
 
-        // RACECAR_VK_CHECK( vkCreateCommandPool( vulkan.device, &graphics_command_pool_info, nullptr,
-                                            //    &frame.command_pool ),
-                        //   "Failed to create command pool" );
+    // RACECAR_VK_CHECK( vkCreateCommandPool( vulkan.device, &graphics_command_pool_info, nullptr,
+    //    &frame.command_pool ),
+    //   "Failed to create command pool" );
 
-        // VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
-            // vk::create::command_buffer_allocate_info( frame.command_pool, 1 );
+    // VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
+    // vk::create::command_buffer_allocate_info( frame.command_pool, 1 );
 
-        // RACECAR_VK_CHECK( vkAllocateCommandBuffers( vulkan.device, &cmd_buffer_allocate_info,
-                                                    // &frame.command_buffer ),
-                        //   "Failed to allocate command buffer" );
+    // RACECAR_VK_CHECK( vkAllocateCommandBuffers( vulkan.device, &cmd_buffer_allocate_info,
+    // &frame.command_buffer ),
+    //   "Failed to allocate command buffer" );
     // }
 
     // Initialize the fence in a signaled state because otherwise, the first frame we wish to
@@ -88,11 +88,11 @@ bool create_frame_data( State& engine, const vk::Common& vulkan ) {
     // VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
 
     // for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
-        // FrameData* frame = &engine.frames[i];
+    // FrameData* frame = &engine.frames[i];
 
-        // RACECAR_VK_CHECK(
-            // vkCreateFence( vulkan.device, &fence_info, nullptr, &frame->render_fence ),
-            // "Failed to create render fence" );
+    // RACECAR_VK_CHECK(
+    // vkCreateFence( vulkan.device, &fence_info, nullptr, &frame->render_fence ),
+    // "Failed to create render fence" );
     // }
 
     // Initialize the global command buffers

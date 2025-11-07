@@ -28,12 +28,12 @@ TaskList& TaskList::add_gfx_task( const vk::Common& vulkan, const State& engine 
         return *this;
     }
 
-    if (!gfx_tasks.empty()) {
+    if ( !gfx_tasks.empty() ) {
         const GfxTask& prev_gfx_task = gfx_tasks.back();
         gfx_task.set_wait_semaphore( prev_gfx_task.signal_semaphore );
     }
 
-    gfx_tasks.push_back(std::move(gfx_task));
+    gfx_tasks.push_back( std::move( gfx_task ) );
 
     return *this;
 }
@@ -60,7 +60,7 @@ std::optional<VkSemaphore> TaskList::get_signal_semaphore() {
 void free_task_list( vk::Common& vulkan, State& engine, TaskList& task_list ) {
     for ( auto& task : task_list.gfx_tasks ) {
         free_gfx_task( vulkan, engine.global_command_pool, task );
-    }   
+    }
 }
 
 }  // namespace racecar::engine

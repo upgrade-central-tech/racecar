@@ -20,6 +20,13 @@
 
 namespace racecar::vk {
 
+/// Binding defines.
+namespace binding {
+
+constexpr int VERTEX_BUFFER = 0;
+
+}
+
 /// Stores common Vulkan-related objects.
 struct Common {
     vkb::Instance instance;

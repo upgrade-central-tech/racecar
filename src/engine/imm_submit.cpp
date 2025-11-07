@@ -4,8 +4,8 @@
 
 namespace racecar::engine {
 
-bool immediate_submit( vk::Common& vulkan,
-                       ImmediateSubmit& immediate_submit,
+bool immediate_submit( const vk::Common& vulkan,
+                       const ImmediateSubmit& immediate_submit,
                        std::function<void( VkCommandBuffer command_buffer )>&& function ) {
     RACECAR_VK_CHECK( vkResetFences( vulkan.device, 1, &immediate_submit.immediate_fence ),
                       "Failed to reset immediate fence" );
@@ -51,13 +51,14 @@ bool create_immediate_commands( ImmediateSubmit& immediate_submit, const vk::Com
     RACECAR_VK_CHECK( vkAllocateCommandBuffers( vulkan.device, &command_buffer_allocate_info,
                                                 &immediate_submit.immediate_command_buffer ),
                       "Failed to allocate immediate command buffer" );
-    
+
     /// TODO: Call free when done
 
     return true;
 };
 
-bool create_immediate_sync_structures( ImmediateSubmit& immediate_submit, const vk::Common& vulkan ) {
+bool create_immediate_sync_structures( ImmediateSubmit& immediate_submit,
+                                       const vk::Common& vulkan ) {
     VkFenceCreateInfo fence_create_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
 
     RACECAR_VK_CHECK( vkCreateFence( vulkan.device, &fence_create_info, nullptr,
