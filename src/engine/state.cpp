@@ -87,25 +87,32 @@ bool create_frame_data( State& engine, const vk::Common& vulkan ) {
             vkAllocateCommandBuffers( vulkan.device, &cmdbuf_info, &frame.end_cmdbuf ),
             "Failed to create command buffer" );
 
+        engine.destructor_stack.push_free_cmdbufs(vulkan.device, engine.cmd_pool, {frame.start_cmdbuf, frame.render_cmdbuf, frame.end_cmdbuf});
+
         RACECAR_VK_CHECK(
             vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &frame.start_render_smp ),
             "Failed to create state semaphore" );
+        engine.destructor_stack.push(vulkan.device, frame.start_render_smp, vkDestroySemaphore);
 
         RACECAR_VK_CHECK(
             vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &frame.render_end_smp ),
             "Failed to create state semaphore" );
+        engine.destructor_stack.push(vulkan.device, frame.render_end_smp, vkDestroySemaphore);
 
         RACECAR_VK_CHECK(
             vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &frame.acquire_start_smp ),
             "Failed to create state semaphore" );
+        engine.destructor_stack.push(vulkan.device, frame.acquire_start_smp, vkDestroySemaphore);
 
         RACECAR_VK_CHECK(
             vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &swapchain_semaphores.end_present_smp ),
             "Failed to create state semaphore" );
+        engine.destructor_stack.push(vulkan.device, swapchain_semaphores.end_present_smp, vkDestroySemaphore);
 
         RACECAR_VK_CHECK(
             vkCreateFence( vulkan.device, &fence_info, nullptr, &frame.render_fence ),
             "Failed to create render fence" );
+        engine.destructor_stack.push(vulkan.device, frame.render_fence, vkDestroyFence);
     }
 
     return true;
@@ -143,10 +150,10 @@ std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan ) 
 
     VkCommandPoolCreateInfo graphics_command_pool_info = vk::create::command_pool_info(
         vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
-
     RACECAR_VK_CHECK( vkCreateCommandPool( vulkan.device, &graphics_command_pool_info, nullptr,
                                            &engine.cmd_pool ),
                       "Failed to create command pool" );
+    engine.destructor_stack.push(vulkan.device, engine.cmd_pool, vkDestroyCommandPool);
 
     if ( !create_frame_data( engine, vulkan ) ) {
         SDL_Log( "[Engine] Failed to create frame data" );
@@ -167,14 +174,7 @@ std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan ) 
 }
 
 void free( State& engine, [[maybe_unused]] const vk::Common& vulkan ) {
-    // Kill per-frame resources from the engine
-    // for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
-    //     // Kill command resources.
-    //     vkDestroyCommandPool( vulkan.device, engine.frames[i].command_pool, nullptr );
-
-    //     // Kill sync resources.
-    //     vkDestroyFence( vulkan.device, engine.frames[i].render_fence, nullptr );
-    // }
+    engine.destructor_stack.execute_cleanup();
 
     engine.swapchain.destroy_image_views( engine.swapchain_image_views );
     vkb::destroy_swapchain( engine.swapchain );

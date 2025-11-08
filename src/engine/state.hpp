@@ -2,6 +2,7 @@
 
 #include "../vk/common.hpp"
 #include "imm_submit.hpp"
+#include "destructor_stack.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -41,6 +42,8 @@ struct State {
 
     std::vector<FrameData> frames;
     std::vector<SwapchainSemaphores> swapchain_semaphores;
+
+    DestructorStack destructor_stack;
 };
 
 std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan );

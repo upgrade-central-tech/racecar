@@ -27,6 +27,7 @@ add_executable(racecar
   ${ENGINE_DIR}/draw_task.cpp
   ${ENGINE_DIR}/imm_submit.cpp
   ${ENGINE_DIR}/task_list.cpp
+  ${ENGINE_DIR}/destructor_stack.cpp
 
   ${GEOMETRY_DIR}/mesh.cpp
 )
