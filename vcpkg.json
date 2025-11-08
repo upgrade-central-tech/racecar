@@ -17,6 +17,7 @@
     },
     "vk-bootstrap",
     "volk",
+    "tinygltf"
     "vulkan-memory-allocator"
   ]
 }
