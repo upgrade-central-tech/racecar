@@ -1,54 +1,11 @@
-#include "gfx_task.hpp"
-
-#include "../vk/create.hpp"
 #include "draw_task.hpp"
+
 #include "pipeline.hpp"
+
 
 namespace racecar::engine {
 
-bool GfxTask::add_draw_task( DrawTaskDescriptor draw_task ) {
-    draw_tasks.push_back( draw_task );
-    return true;
-}
-
-void GfxTask::set_wait_semaphore( VkSemaphore semaphore ) {
-    wait_semaphore = semaphore;
-}
-
-bool execute_gfx_task( const vk::Common& vulkan, const GfxTask& task ) {
-    VkCommandBuffer command_buffer = task.command_buffer;
-    RACECAR_VK_CHECK( vkResetCommandBuffer( command_buffer, 0 ), "Failed to reset command buffer" );
-
-    // Begin the command buffer, use one time flag for single usage (one submit
-    // per frame).
-    VkCommandBufferBeginInfo command_buffer_begin_info =
-        vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
-
-    RACECAR_VK_CHECK( vkBeginCommandBuffer( command_buffer, &command_buffer_begin_info ),
-                      "Failed to begin command buffer" );
-
-    for ( size_t i = 0; i < task.draw_tasks.size(); i++ ) {
-        draw( task.draw_tasks[i], task.command_buffer );
-    }
-
-    RACECAR_VK_CHECK( vkEndCommandBuffer( command_buffer ), "Failed to end the command buffer" );
-
-    vk::create::AllSubmitInfo gfx_submit_info_all = vk::create::all_submit_info( {
-        .command_buffer = task.command_buffer,
-        .wait_semaphore = task.wait_semaphore,
-        .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-        .signal_semaphore = task.signal_semaphore,
-        .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-    } );
-    VkSubmitInfo2 gfx_submit_info = vk::create::submit_info_from_all( gfx_submit_info_all );
-
-    RACECAR_VK_CHECK( vkQueueSubmit2( vulkan.graphics_queue, 1, &gfx_submit_info, VK_NULL_HANDLE ),
-                      "Graphics queue submit failed" );
-
-    return true;
-}
-
-bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf ) {
+bool draw( const DrawTask& draw_task, const VkCommandBuffer& cmd_buf ) {
     // Clear the background with a pulsing blue color
     // float flash = std::abs( std::sin( static_cast<float>( vulkan.rendered_frames ) / 120.f ) );
     VkClearColorValue clear_color = { { 0.0f, 0.0f, 1.0f, 1.0f } };
@@ -116,11 +73,6 @@ bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf )
     vkCmdEndRendering( cmd_buf );
 
     return true;
-}
-
-void free_gfx_task( const vk::Common& vulkan, const VkCommandPool cmd_pool, GfxTask& gfx_task ) {
-    vkFreeCommandBuffers( vulkan.device, cmd_pool, 1, &gfx_task.command_buffer );
-    vkDestroySemaphore( vulkan.device, gfx_task.signal_semaphore, nullptr );
 }
 
 }  // namespace racecar::engine

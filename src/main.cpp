@@ -72,8 +72,7 @@ int main( int, char*[] ) {
 
         engine::Pipeline& triangle_pipeline = triangle_pipeline_opt.value();
 
-        task_list.add_gfx_task( ctx.vulkan, engine );
-        task_list.gfx_tasks.back().add_draw_task( {
+        add_draw_task( task_list, {
             .mesh = triangle.mesh,
             .pipeline = triangle_pipeline,
             .shader_module = triangle_shader_module,
@@ -81,11 +80,6 @@ int main( int, char*[] ) {
             .clear_screen = true,
             .render_target_is_swapchain = true,
         } );
-
-        if ( !task_list.create( engine ) ) {
-            SDL_Log( "[RACECAR] Failed to create triangle task list!" );
-            return EXIT_FAILURE;
-        }
     }
 
     bool will_quit = false;

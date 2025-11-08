@@ -23,20 +23,16 @@ struct State {
 
     ImmediateSubmit immediate_submit = {};
 
-    VkCommandPool global_command_pool = VK_NULL_HANDLE;
-    VkCommandBuffer global_start_cmd_buf = VK_NULL_HANDLE;
-    VkCommandBuffer global_end_cmd_buf = VK_NULL_HANDLE;
+    VkCommandPool cmd_pool = VK_NULL_HANDLE;
 
-    /// Semaphore that gets signaled when `vkAcquireNextImageKHR` finishes.
-    VkSemaphore acquire_img_semaphore = nullptr;
+    VkCommandBuffer start_cmdbuf = VK_NULL_HANDLE;
+    VkCommandBuffer render_cmdbuf = VK_NULL_HANDLE;
+    VkCommandBuffer end_cmdbuf = VK_NULL_HANDLE;
 
-    /// Semaphore that gets signaled when `global_start_cmd_buf` completes.
-    /// Should be used as a wait for gfx tasks
-    VkSemaphore begin_gfx_semaphore = nullptr;
-
-    /// Semaphore that gets signaled when `global_end_cmd_buf` completes.
-    /// Should be used as a wait for `vkQueuePresetKHR`.
-    VkSemaphore present_image_signal_semaphore = nullptr;
+    VkSemaphore acquire_start_smp = VK_NULL_HANDLE;
+    VkSemaphore start_render_smp = VK_NULL_HANDLE;
+    VkSemaphore render_end_smp = VK_NULL_HANDLE;
+    VkSemaphore end_present_smp = VK_NULL_HANDLE;
 };
 
 std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan );
