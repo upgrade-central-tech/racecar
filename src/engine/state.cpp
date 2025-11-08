@@ -61,9 +61,9 @@ std::optional<vkb::Swapchain> create_swapchain( SDL_Window* window, const vk::Co
 /// For each frame (of which there are as many as swapchain images), create a command buffer, and
 /// synchronization primitives.
 bool create_frame_data( State& engine, const vk::Common& vulkan ) {
-    // engine.frames = std::vector<FrameData>( engine.swapchain_images.size() );
-    // engine.frame_overlap = static_cast<uint32_t>( engine.swapchain_images.size() );
-    // engine.frame_number = 0;
+    engine.frames = std::vector<FrameData>( engine.swapchain_images.size() );
+    engine.frame_overlap = static_cast<uint32_t>( engine.swapchain_images.size() );
+    engine.frame_number = 0;
 
     VkCommandPoolCreateInfo graphics_command_pool_info = vk::create::command_pool_info(
         vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
@@ -160,6 +160,11 @@ std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan ) 
 
     if ( !create_immediate_sync_structures( engine.immediate_submit, vulkan ) ) {
         SDL_Log( "[Engine] Failed to create immediate command sync fence" );
+        return {};
+    }
+
+    if ( !create_descriptor_system( vulkan, engine.frame_overlap, engine.descriptor_system )) {
+        SDL_Log("[Engine] Failed to create descriptor system");
         return {};
     }
 

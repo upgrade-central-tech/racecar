@@ -1,7 +1,10 @@
 #pragma once
 
 #include "../vk/common.hpp"
+
+#include "descriptors.hpp"
 #include "imm_submit.hpp"
+#include "frame_data.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -15,6 +18,7 @@ struct State {
     std::vector<VkImage> swapchain_images;
     std::vector<VkImageView> swapchain_image_views;
 
+    std::vector<FrameData> frames;
     uint32_t frame_overlap = 1;
     uint32_t frame_number = 0;
     uint32_t rendered_frames = 0;
@@ -26,6 +30,8 @@ struct State {
     VkCommandPool global_command_pool = VK_NULL_HANDLE;
     VkCommandBuffer global_start_cmd_buf = VK_NULL_HANDLE;
     VkCommandBuffer global_end_cmd_buf = VK_NULL_HANDLE;
+
+    DescriptorSystem descriptor_system = {};
 
     /// Semaphore that gets signaled when `vkAcquireNextImageKHR` finishes.
     VkSemaphore acquire_img_semaphore = nullptr;

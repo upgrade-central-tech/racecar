@@ -8,15 +8,25 @@ namespace racecar::engine {
 
 bool execute( State& engine, const Context& ctx, TaskList& task_list ) {
     const vk::Common& vulkan = ctx.vulkan;
+    
+    {
+        // Update the scene block. Hard-coded goodness.
+        vk::mem::CameraBufferData &scene_camera_data = engine.descriptor_system.camera_data;
+        scene_camera_data.color = glm::vec3( std::sin(static_cast<uint32_t>(engine.rendered_frames) * 0.01f), 0.0f, 0.0f );
+    }
 
     // Using the maximum 64-bit unsigned integer value effectively disables the timeout
     RACECAR_VK_CHECK( vkWaitForFences( vulkan.device, 1, &engine.render_fence, VK_TRUE,
                                        std::numeric_limits<uint64_t>::max() ),
                       "Failed to wait for frame render fence" );
+    
+    RACECAR_VK_CHECK( vkResetDescriptorPool( vulkan.device, engine.descriptor_system.frame_allocators[0].pool, 0 ),
+        "Failed to reset frame descriptor pool" );
 
     // Manually reset previous frame's render fence to an unsignaled state
     RACECAR_VK_CHECK( vkResetFences( vulkan.device, 1, &engine.render_fence ),
                       "Failed to reset frame render fence" );
+
 
     vkResetCommandBuffer( engine.global_start_cmd_buf, 0 );
     vkResetCommandBuffer( engine.global_end_cmd_buf, 0 );
@@ -68,7 +78,7 @@ bool execute( State& engine, const Context& ctx, TaskList& task_list ) {
         "Graphics queue submit failed" );
 
     for ( auto& task : task_list.gfx_tasks ) {
-        execute_gfx_task( vulkan, task );
+        execute_gfx_task( vulkan, engine, task );
     }
 
     {

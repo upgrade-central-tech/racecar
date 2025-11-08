@@ -24,6 +24,7 @@ namespace racecar::vk {
 namespace binding {
 
 constexpr int VERTEX_BUFFER = 0;
+constexpr int CAMERA_BUFFER = 0;
 
 }
 

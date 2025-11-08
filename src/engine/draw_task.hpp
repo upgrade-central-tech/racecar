@@ -11,6 +11,8 @@ namespace racecar::engine {
 struct DrawTaskDescriptor {
     /// User-defined parameters:
     std::optional<geometry::Mesh> mesh = {};
+    std::vector<LayoutResource> layout_resources = {};
+
     Pipeline pipeline = {};
     VkShaderModule shader_module = {};
     VkExtent2D extent = {};

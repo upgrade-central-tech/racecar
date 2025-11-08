@@ -24,9 +24,9 @@ struct GfxTask {
     void set_wait_semaphore( VkSemaphore wait_semaphore );
 };
 
-bool execute_gfx_task( const vk::Common& vulkan, const GfxTask& task );
+bool execute_gfx_task( const vk::Common& vulkan, const engine::State& engine, const GfxTask& task );
 void free_gfx_task( const vk::Common& vulkan, const VkCommandPool cmd_pool, GfxTask& gfx_task );
 
-bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf );
+bool draw( const vk::Common& vulkan, const engine::State& engine, const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf );
 
 }  // namespace racecar::engine

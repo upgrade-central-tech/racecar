@@ -62,8 +62,14 @@ int main( int, char*[] ) {
 
         VkShaderModule& triangle_shader_module = triangle_shader_module_opt.value();
 
-        std::optional<engine::Pipeline> triangle_pipeline_opt =
-            create_gfx_pipeline( engine, ctx.vulkan, triangle.mesh, triangle_shader_module );
+        std::vector<engine::LayoutResource> triangle_layout_resources = {
+            { engine.descriptor_system.camera_set_layout, sizeof( vk::mem::CameraBufferData ),
+              &engine.descriptor_system.camera_data } };
+        std::vector<VkDescriptorSetLayout> triangle_layouts = {
+            engine.descriptor_system.camera_set_layout };
+
+        std::optional<engine::Pipeline> triangle_pipeline_opt = create_gfx_pipeline(
+            engine, ctx.vulkan, triangle.mesh, triangle_layouts, triangle_shader_module );
 
         if ( !triangle_pipeline_opt ) {
             SDL_Log( "[Engine] Failed to create pipeline" );
@@ -75,6 +81,7 @@ int main( int, char*[] ) {
         task_list.add_gfx_task( ctx.vulkan, engine );
         task_list.gfx_tasks.back().add_draw_task( {
             .mesh = triangle.mesh,
+            .layout_resources = triangle_layout_resources,
             .pipeline = triangle_pipeline,
             .shader_module = triangle_shader_module,
             .extent = engine.swapchain.extent,

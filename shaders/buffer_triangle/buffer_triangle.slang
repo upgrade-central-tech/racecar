@@ -10,6 +10,12 @@ struct VertexOutput {
   float3 color;
 };
 
+struct CameraBufferData {
+    float3 color;
+};
+
+layout(binding = 0, set = 0) ConstantBuffer<CameraBufferData> camera_buffer_data; 
+
 [shader("vertex")]
 VertexOutput vs_main( VertexInput input ) {
   VertexOutput output;
@@ -21,5 +27,5 @@ VertexOutput vs_main( VertexInput input ) {
 
 [shader("fragment")]
 float4 fs_main( VertexOutput vertex_in ) : SV_Target {
-  return float4(vertex_in.color, 1.0);
+  return float4(float3(camera_buffer_data.color), 1.0);
 }
