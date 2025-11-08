@@ -168,6 +168,22 @@ std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan ) 
         return {};
     }
 
+    {
+        scene::Camera& camera = engine.global_camera;
+
+        camera.eye = glm::vec3(0, 0, 3);
+        camera.look_at = glm::vec3(0, 0, 0);
+        camera.up = glm::vec3(0, 1, 0);
+        camera.forward = glm::normalize(camera.look_at - camera.eye);
+        camera.right = glm::normalize(glm::cross(camera.forward, camera.up));
+        camera.velocity = glm::vec3(0);
+
+        camera.fov_y = glm::radians(60.0);
+        camera.aspect_ratio = 16.0 / 9.0;
+        camera.near_plane = 0.1;
+        camera.far_plane = 100.0;
+    }
+
     VkSemaphoreCreateInfo semaphore_info = vk::create::semaphore_info();
 
     RACECAR_VK_CHECK(

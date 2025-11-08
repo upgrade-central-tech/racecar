@@ -5,6 +5,7 @@
 #include "descriptors.hpp"
 #include "imm_submit.hpp"
 #include "frame_data.hpp"
+#include "../scene/camera.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -17,6 +18,9 @@ struct State {
     vkb::Swapchain swapchain;
     std::vector<VkImage> swapchain_images;
     std::vector<VkImageView> swapchain_image_views;
+
+    // Initialized in initalize
+    scene::Camera global_camera = {};
 
     std::vector<FrameData> frames;
     uint32_t frame_overlap = 1;

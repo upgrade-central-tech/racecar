@@ -4,29 +4,53 @@
 #include "../vk/utility.hpp"
 #include "task_list.hpp"
 
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+
 namespace racecar::engine {
 
 bool execute( State& engine, const Context& ctx, TaskList& task_list ) {
     const vk::Common& vulkan = ctx.vulkan;
-    
+
     {
         // Update the scene block. Hard-coded goodness.
-        vk::mem::CameraBufferData &scene_camera_data = engine.descriptor_system.camera_data;
-        scene_camera_data.color = glm::vec3( std::sin(static_cast<uint32_t>(engine.rendered_frames) * 0.01f), 0.0f, 0.0f );
+        vk::mem::CameraBufferData& scene_camera_data = engine.descriptor_system.camera_data;
+
+        glm::mat4 view = glm::lookAt( engine.global_camera.eye, engine.global_camera.look_at,
+                                      engine.global_camera.up );
+
+        /// TODO: Is there any reason why most of these camera struct values are doubles? Do we
+        /// really need that much precision?
+        glm::mat4 projection =
+            glm::perspective( static_cast<float>( engine.global_camera.fov_y ),
+                              static_cast<float>( engine.global_camera.aspect_ratio ),
+                              static_cast<float>( engine.global_camera.near_plane ),
+                              static_cast<float>( engine.global_camera.far_plane ) );
+
+        projection[1][1] *= -1;
+
+        // glm::mat4 model = glm::mat4( 1.0f );
+
+        float angle = static_cast<float>( engine.rendered_frames ) * 0.1f; // in radians
+        glm::mat4 model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 1, 0)); // Y-axis rotation
+
+        scene_camera_data.mvp = projection * view * model;
+        scene_camera_data.color = glm::vec3(
+            std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
     }
 
     // Using the maximum 64-bit unsigned integer value effectively disables the timeout
     RACECAR_VK_CHECK( vkWaitForFences( vulkan.device, 1, &engine.render_fence, VK_TRUE,
                                        std::numeric_limits<uint64_t>::max() ),
                       "Failed to wait for frame render fence" );
-    
-    RACECAR_VK_CHECK( vkResetDescriptorPool( vulkan.device, engine.descriptor_system.frame_allocators[0].pool, 0 ),
-        "Failed to reset frame descriptor pool" );
+
+    RACECAR_VK_CHECK( vkResetDescriptorPool( vulkan.device,
+                                             engine.descriptor_system.frame_allocators[0].pool, 0 ),
+                      "Failed to reset frame descriptor pool" );
 
     // Manually reset previous frame's render fence to an unsignaled state
     RACECAR_VK_CHECK( vkResetFences( vulkan.device, 1, &engine.render_fence ),
                       "Failed to reset frame render fence" );
-
 
     vkResetCommandBuffer( engine.global_start_cmd_buf, 0 );
     vkResetCommandBuffer( engine.global_end_cmd_buf, 0 );

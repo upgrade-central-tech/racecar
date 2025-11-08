@@ -7,23 +7,23 @@ struct Triangle {
         .vertices = { {
                           glm::vec4( 1, 0, 0, 1 ),
                           glm::vec3( 0, -0.5, 0 ),
-                          glm::vec3( 0, 0, 1 ),
+                          glm::vec3( 0.894427, 0, 0.447214 ),
                           glm::vec2( 0.5, 1 ),
                       },
                       {
                           glm::vec4( 0, 1, 0, 1 ),
-                          glm::vec3( 0.5, 0.5, 0 ),
-                          glm::vec3( 0, 0, 1 ),
+                          glm::vec3( 0.5, 0.5, 1 ),
+                          glm::vec3( 0.894427, 0, 0.447214 ),
                           glm::vec2( 1, 0 ),
                       },
                       {
                           glm::vec4( 0, 0, 1, 1 ),
-                          glm::vec3( -0.5, 0.5, 0 ),
-                          glm::vec3( 0, 0, 1 ),
+                          glm::vec3( -0.5, 0.5, -1 ),
+                          glm::vec3( 0.894427, 0, 0.447214 ),
                           glm::vec2( 0, 0 ),
                       } },
 
-        .indices = { 0, 1, 2 },
+        .indices = { 0, 2, 1 },
     };
 
     Triangle( const vk::Common& vulkan, const engine::State& engine ) {

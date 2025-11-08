@@ -20,8 +20,12 @@ struct UniformBuffer {
     void* mapped_data = nullptr;
 };
 
+/// Simple uniform example for setting up camera buffer data
+// Ensure that all uniform structs are 16 byte aligned!
 struct CameraBufferData {
+    glm::mat4 mvp = {};
     glm::vec3 color = {};
+    float padding;
 };
 
 std::optional<UniformBuffer> create_uniform_buffer( const Common& vulkan,
