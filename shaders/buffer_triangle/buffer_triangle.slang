@@ -11,6 +11,7 @@ struct VertexOutput {
 };
 
 struct CameraBufferData {
+    mat4x4 etc..
     float3 color;
 };
 
