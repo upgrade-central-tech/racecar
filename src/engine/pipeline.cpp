@@ -13,6 +13,7 @@ constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
                                              const vk::Common& vulkan,
                                              const std::optional<const geometry::Mesh>& mesh,
+                                             std::vector<VkDescriptorSetLayout>& layouts,
                                              VkShaderModule shader_module ) {
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -94,6 +95,11 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
     VkPipelineLayoutCreateInfo pipeline_layout_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     };
+
+    if ( layouts.size() > 0 ) {
+        pipeline_layout_info.setLayoutCount = static_cast<uint32_t>( layouts.size() );
+        pipeline_layout_info.pSetLayouts = layouts.data();
+    }
 
     VkPipelineLayout gfx_layout = nullptr;
 

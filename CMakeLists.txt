@@ -28,6 +28,7 @@ add_executable(racecar
   ${ENGINE_DIR}/imm_submit.cpp
   ${ENGINE_DIR}/task_list.cpp
   ${ENGINE_DIR}/destructor_stack.cpp
+  ${ENGINE_DIR}/descriptors.cpp
 
   ${GEOMETRY_DIR}/mesh.cpp
 )

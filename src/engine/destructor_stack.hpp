@@ -2,7 +2,12 @@
 
 #include <functional>
 #include <stack>
-#include "../vk/common.hpp"
+#include <volk.h>
+#include "../vk/vma.hpp"
+
+namespace racecar::vk::mem {
+    struct AllocatedBuffer;
+}
 
 struct DestructorStack {
     std::stack<std::function<void()>> destructors;
@@ -18,6 +23,8 @@ struct DestructorStack {
     }  
 
     void push_free_cmdbufs(VkDevice device, VkCommandPool pool, const std::vector<VkCommandBuffer>& buffers);
+
+    void push_free_vmabuffer( const VmaAllocator allocator, racecar::vk::mem::AllocatedBuffer buffer );
 
     void execute_cleanup();
 };

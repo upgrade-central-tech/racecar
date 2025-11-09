@@ -5,8 +5,10 @@
 
 namespace racecar::engine {
 
-bool draw( const DrawTask& draw_task, const VkCommandBuffer& cmd_buf ) {
-    // Clear the background with a pulsing blue color
+bool draw( vk::Common& vulkan,
+           const engine::State& engine,
+           const DrawTask& draw_task,
+           const VkCommandBuffer& cmd_buf ) {    // Clear the background with a pulsing blue color
     // float flash = std::abs( std::sin( static_cast<float>( vulkan.rendered_frames ) / 120.f ) );
     VkClearColorValue clear_color = { { 0.0f, 0.0f, 1.0f, 1.0f } };
 
@@ -49,6 +51,38 @@ bool draw( const DrawTask& draw_task, const VkCommandBuffer& cmd_buf ) {
             .extent = draw_task.extent,
         };
         vkCmdSetScissor( cmd_buf, 0, 1, &scissor );
+
+        for ( const LayoutResource& layout_resource : draw_task.layout_resources ) {
+            // Copy from VkGuide
+            vk::mem::AllocatedBuffer gpu_buffer =
+                vk::mem::create_buffer( vulkan, layout_resource.data_size,
+                                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                        VMA_MEMORY_USAGE_CPU_TO_GPU )
+                    .value();
+
+            /// TODO: Setup cleanup
+
+            // Map CPU to GPU mem
+            memcpy( gpu_buffer.info.pMappedData, layout_resource.source_data,
+                    layout_resource.data_size );
+
+            // Create the descriptor set on the fly LOL
+            // Ideally in double-buffering setup, we have the descriptor set available per frame.
+            // Assume not, let's just hardcode 0 for the first
+            // This should be ideally cached per frame. It's a waste of time to rebuild it every
+            // time Or maybe, we could have a map or something that determines if such layout is
+            // already pre-made. That, or we do a frames * layouts sized array containing every
+            // descriptor set. That would be funny.
+            VkDescriptorSet resource_descriptor = descriptor_allocator::allocate(
+                vulkan, engine.descriptor_system.frame_allocators[0], layout_resource.layout );
+
+
+            DescriptorWriter writer;
+            write_buffer( writer, 0, gpu_buffer.handle, layout_resource.data_size, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+            update_set( writer, vulkan.device, resource_descriptor);
+
+            vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.layout, 0, 1, &resource_descriptor, 0, nullptr);
+        }
 
         if ( draw_task.mesh.has_value() ) {
             const geometry::Mesh& mesh = draw_task.mesh.value();

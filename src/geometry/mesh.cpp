@@ -4,7 +4,7 @@
 
 namespace racecar::geometry {
 
-std::optional<GPUMeshBuffers> upload_mesh( const vk::Common& vulkan,
+std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
                                            const engine::State& engine,
                                            std::span<uint32_t> indices,
                                            std::span<Vertex> vertices ) {
@@ -92,19 +92,9 @@ std::optional<GPUMeshBuffers> upload_mesh( const vk::Common& vulkan,
 
     /// TODO: Destroy buffer immediately, maybe later verify if this needs to be in the deletion
     /// queue or not (as of writing, deletion queue not made)
-    free_buffer( vulkan, staging.value() );
+    // vmaDestroyBuffer(vulkan.allocator, staging.value().handle, staging.value().allocation);
 
     return new_mesh_buffers;
-}
-
-void free_mesh( const vk::Common& vulkan, Mesh& mesh ) {
-    if ( mesh.mesh_buffers.vertex_buffer ) {
-        vk::mem::free_buffer( vulkan, mesh.mesh_buffers.vertex_buffer.value() );
-    }
-
-    if ( mesh.mesh_buffers.index_buffer ) {
-        vk::mem::free_buffer( vulkan, mesh.mesh_buffers.index_buffer.value() );
-    }
 }
 
 }  // namespace racecar::geometry

@@ -11,6 +11,8 @@ namespace racecar::engine {
 struct DrawTask {
     /// User-defined parameters:
     std::optional<geometry::Mesh> mesh = {};
+    std::vector<LayoutResource> layout_resources = {};
+
     Pipeline pipeline = {};
     VkShaderModule shader_module = {};
     VkExtent2D extent = {};
@@ -23,6 +25,9 @@ struct DrawTask {
     VkImageView draw_target_view = VK_NULL_HANDLE;
 };
 
-bool draw( const DrawTask& draw_task, const VkCommandBuffer& cmd_buf );
+bool draw( vk::Common& vulkan,
+           const engine::State& engine,
+           const DrawTask& draw_task,
+           const VkCommandBuffer& cmd_buf );
 
 }  // namespace racecar::engine
