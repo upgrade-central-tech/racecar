@@ -2,12 +2,29 @@
 
 #include "../vk/common.hpp"
 #include "imm_submit.hpp"
+#include "destructor_stack.hpp"
 
 #include <SDL3/SDL.h>
 
 #include <optional>
 
 namespace racecar::engine {
+
+struct FrameData {
+    VkFence render_fence = VK_NULL_HANDLE;
+
+    VkCommandBuffer start_cmdbuf = VK_NULL_HANDLE;
+    VkCommandBuffer render_cmdbuf = VK_NULL_HANDLE;
+    VkCommandBuffer end_cmdbuf = VK_NULL_HANDLE;
+
+    VkSemaphore acquire_start_smp = VK_NULL_HANDLE;
+    VkSemaphore start_render_smp = VK_NULL_HANDLE;
+    VkSemaphore render_end_smp = VK_NULL_HANDLE;
+};
+
+struct SwapchainSemaphores {
+    VkSemaphore end_present_smp = VK_NULL_HANDLE;
+};
 
 /// Global engine state.
 struct State {
@@ -19,24 +36,14 @@ struct State {
     uint32_t frame_number = 0;
     uint32_t rendered_frames = 0;
 
-    VkFence render_fence = nullptr;
-
     ImmediateSubmit immediate_submit = {};
 
-    VkCommandPool global_command_pool = VK_NULL_HANDLE;
-    VkCommandBuffer global_start_cmd_buf = VK_NULL_HANDLE;
-    VkCommandBuffer global_end_cmd_buf = VK_NULL_HANDLE;
+    VkCommandPool cmd_pool = VK_NULL_HANDLE;
 
-    /// Semaphore that gets signaled when `vkAcquireNextImageKHR` finishes.
-    VkSemaphore acquire_img_semaphore = nullptr;
+    std::vector<FrameData> frames;
+    std::vector<SwapchainSemaphores> swapchain_semaphores;
 
-    /// Semaphore that gets signaled when `global_start_cmd_buf` completes.
-    /// Should be used as a wait for gfx tasks
-    VkSemaphore begin_gfx_semaphore = nullptr;
-
-    /// Semaphore that gets signaled when `global_end_cmd_buf` completes.
-    /// Should be used as a wait for `vkQueuePresetKHR`.
-    VkSemaphore present_image_signal_semaphore = nullptr;
+    DestructorStack destructor_stack;
 };
 
 std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan );

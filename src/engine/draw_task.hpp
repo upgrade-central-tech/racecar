@@ -8,7 +8,7 @@
 namespace racecar::engine {
 
 /// Descriptor for a draw call.
-struct DrawTaskDescriptor {
+struct DrawTask {
     /// User-defined parameters:
     std::optional<geometry::Mesh> mesh = {};
     Pipeline pipeline = {};
@@ -22,5 +22,7 @@ struct DrawTaskDescriptor {
     VkImage draw_target = VK_NULL_HANDLE;
     VkImageView draw_target_view = VK_NULL_HANDLE;
 };
+
+bool draw( const DrawTask& draw_task, const VkCommandBuffer& cmd_buf );
 
 }  // namespace racecar::engine
