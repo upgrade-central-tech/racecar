@@ -3,16 +3,23 @@
 #include <SDL3/SDL.h>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL  // Needed for quaternion.hpp
 #include <glm/gtx/quaternion.hpp>
 
 #include <filesystem>
 
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
+#include <tiny_gltf.h>
+
 namespace racecar::scene {
 
-bool load_binary_json( std::string filepath,
-                       Scene& scene,
-                       std::vector<geometry::Vertex> out_global_vertices,
-                       std::vector<uint32_t> out_global_indices ) {
+bool load_gltf( std::string filepath,
+                Scene& scene,
+                std::vector<geometry::Vertex>& out_global_vertices,
+                std::vector<uint32_t>& out_global_indices ) {
     std::filesystem::path path( filepath );
 
     if ( !std::filesystem::exists( path ) ) {
@@ -58,7 +65,7 @@ bool load_binary_json( std::string filepath,
     std::vector<std::vector<int>> children_lists;
     // Load Nodes
     for ( tinygltf::Node& loaded_node : model.nodes ) {
-        std::unique_ptr<Node> new_node;
+        std::unique_ptr<Node> new_node = std::make_unique<Node>();
 
         // Get node transform
         if ( loaded_node.matrix.size() ) {
@@ -88,6 +95,7 @@ bool load_binary_json( std::string filepath,
                 scale =
                     glm::vec3( loaded_node.scale[0], loaded_node.scale[1], loaded_node.scale[2] );
             }
+
             // Combine translate, rotation, and scale
             // Build transform: translate * rotate * scale
             new_node->transform = glm::translate( glm::mat4( 1.0f ), translation ) *
@@ -97,6 +105,8 @@ bool load_binary_json( std::string filepath,
 
         new_node->inv_transform = glm::inverse( new_node->transform );
         new_node->inv_transpose = glm::inverseTranspose( new_node->transform );
+
+        children_lists.push_back( loaded_node.children );
 
         // Load the mesh or camera of the node. Potential optimization: Right now we are creating a
         // new mesh on every node. In the case where meshes are instanced, we will created Mesh
@@ -131,7 +141,7 @@ bool load_binary_json( std::string filepath,
                             "unsupported "
                             "component type detected" );
                     }
-                    if ( accessor.componentType != TINYGLTF_TYPE_VEC3 ) {
+                    if ( accessor.type != TINYGLTF_TYPE_VEC3 ) {
                         SDL_Log(
                             "[Scene] GLTF Loading: Expected all positions to be in vec3 - "
                             "unsupported type "
@@ -162,7 +172,7 @@ bool load_binary_json( std::string filepath,
                             "unsupported "
                             "component type detected" );
                     }
-                    if ( accessor.componentType != TINYGLTF_TYPE_VEC3 ) {
+                    if ( accessor.type != TINYGLTF_TYPE_VEC3 ) {
                         SDL_Log(
                             "[Scene] GLTF Loading: Expected all normals to be in vec3 - "
                             "unsupported type "
@@ -194,7 +204,7 @@ bool load_binary_json( std::string filepath,
                             "unsupported "
                             "component type detected" );
                     }
-                    if ( accessor.componentType != TINYGLTF_TYPE_VEC2 ) {
+                    if ( accessor.type != TINYGLTF_TYPE_VEC2 ) {
                         SDL_Log(
                             "[Scene] GLTF Loading: Expected all uvs to be in vec2 - unsupported "
                             "type "
@@ -223,7 +233,6 @@ bool load_binary_json( std::string filepath,
                 }
 
                 new_prim.vertex_offset = out_global_vertices.size();
-                new_prim.vertex_count = pos.size();
 
                 for ( size_t i = 0; i < pos.size(); ++i ) {
                     geometry::Vertex new_vertex;
@@ -238,6 +247,7 @@ bool load_binary_json( std::string filepath,
                     } else {
                         new_vertex.uv = glm::vec2( 0.5, 0.5 );
                     }
+                    new_vertex.color = glm::vec4( 0, 0, 0, 1 );
                     // Vertex Colors are currently not supported.
                     out_global_vertices.push_back( new_vertex );
                 }
@@ -267,7 +277,9 @@ bool load_binary_json( std::string filepath,
 
                     if ( accessor.componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT ) {
                         std::vector<uint16_t> ind( new_prim.ind_count );
+
                         std::memcpy( ind.data(), buffer.data.data() + byte_offset, byte_length );
+
                         for ( uint16_t index : ind ) {
                             out_global_indices.push_back( static_cast<uint32_t>( index ) );
                         }
@@ -313,11 +325,13 @@ bool load_binary_json( std::string filepath,
             }
             new_node->data = std::move( camera );
         }
+
         scene.nodes.push_back( std::move( new_node ) );
     }
 
     // Assumes scene.nodes order is the same as the indices in the GLTF. Will probably break if this
     // function is multithreaded.
+
     for ( size_t i = 0; i < scene.nodes.size(); i++ ) {
         std::unique_ptr<Node>& node = scene.nodes[i];
         std::vector<int> children = children_lists[i];

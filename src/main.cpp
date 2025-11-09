@@ -3,6 +3,7 @@
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
 #include "geometry/triangle.hpp"
+#include "scene/scene.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
 
@@ -18,6 +19,7 @@ using namespace racecar;
 constexpr int SCREEN_W = 1280;
 constexpr int SCREEN_H = 720;
 constexpr bool USE_FULLSCREEN = false;
+constexpr const char* GLTF_FILE_PATH = "../assets/suzanne.glb";
 
 int main( int, char*[] ) {
     Context ctx;
@@ -48,45 +50,64 @@ int main( int, char*[] ) {
     engine::State& engine = engine_opt.value();
     engine::TaskList task_list;
 
-    // Draw a triangle
-    geometry::Triangle triangle( ctx.vulkan, engine );
+    scene::Scene scene;
+    geometry::Mesh sceneMesh;
+
+    scene::load_gltf( std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices, sceneMesh.indices );
+
+    std::optional<geometry::GPUMeshBuffers> uploaded_mesh_buffer =
+        geometry::upload_mesh( ctx.vulkan, engine, sceneMesh.indices, sceneMesh.vertices );
+
+    if ( !uploaded_mesh_buffer ) {
+        SDL_Log( "[VMA] Failed to upload mesh" );
+    }
+
+    sceneMesh.mesh_buffers = uploaded_mesh_buffer.value();
 
     {
-        std::optional<VkShaderModule> triangle_shader_module_opt = vk::create::shader_module(
-            ctx.vulkan, "../shaders/buffer_triangle/buffer_triangle.spv" );
+        std::optional<VkShaderModule> scene_shader_module_opt = vk::create::shader_module(
+            ctx.vulkan, "../shaders/world_pos_debug/world_pos_debug.spv" );
 
-        if ( !triangle_shader_module_opt ) {
+        if ( !scene_shader_module_opt ) {
             SDL_Log( "[Engine] Failed to create shader module" );
             return {};
         }
 
-        VkShaderModule& triangle_shader_module = triangle_shader_module_opt.value();
+        VkShaderModule& scene_shader_module = scene_shader_module_opt.value();
 
-        std::vector<engine::LayoutResource> triangle_layout_resources = {
+        std::vector<engine::LayoutResource> scene_layout_resources = {
             { engine.descriptor_system.camera_set_layout, sizeof( vk::mem::CameraBufferData ),
               &engine.descriptor_system.camera_data } };
-        std::vector<VkDescriptorSetLayout> triangle_layouts = {
+        std::vector<VkDescriptorSetLayout> scene_layouts = {
             engine.descriptor_system.camera_set_layout };
 
-        std::optional<engine::Pipeline> triangle_pipeline_opt = create_gfx_pipeline(
-            engine, ctx.vulkan, triangle.mesh, triangle_layouts, triangle_shader_module );
+        std::optional<engine::Pipeline> scene_pipeline_opt = create_gfx_pipeline(
+            engine, ctx.vulkan, sceneMesh, scene_layouts, scene_shader_module );
 
-        if ( !triangle_pipeline_opt ) {
+        if ( !scene_pipeline_opt ) {
             SDL_Log( "[Engine] Failed to create pipeline" );
             return false;
         }
 
-        engine::Pipeline& triangle_pipeline = triangle_pipeline_opt.value();
+        engine::Pipeline& scene_pipeline = scene_pipeline_opt.value();
 
-        add_draw_task( task_list, {
-            .mesh = triangle.mesh,
-            .layout_resources = triangle_layout_resources,
-            .pipeline = triangle_pipeline,
-            .shader_module = triangle_shader_module,
-            .extent = engine.swapchain.extent,
-            .clear_screen = true,
-            .render_target_is_swapchain = true,
-        } );
+        for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
+            if ( std::holds_alternative<std::unique_ptr<scene::Mesh>>( node->data ) ) {
+                std::unique_ptr<scene::Mesh>& mesh =
+                    std::get<std::unique_ptr<scene::Mesh>>( node->data );
+                for ( scene::Primitive& prim : mesh->primitives ) {
+                    add_draw_task( task_list, {
+                                                  .mesh = sceneMesh,
+                                                  .primitive = prim,
+                                                  .pipeline = scene_pipeline,
+                                                  .shader_module = scene_shader_module,
+                                                  .extent = engine.swapchain.extent,
+                                                  .clear_screen = true,
+                                                  .render_target_is_swapchain = true,
+                                              } );
+                }
+            }
+        }
     }
 
     bool will_quit = false;

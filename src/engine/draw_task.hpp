@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../geometry/mesh.hpp"
+#include "../scene/scene.hpp"
 #include "pipeline.hpp"
 
 #include <volk.h>
@@ -11,6 +12,7 @@ namespace racecar::engine {
 struct DrawTask {
     /// User-defined parameters:
     std::optional<geometry::Mesh> mesh = {};
+    std::optional<scene::Primitive> primitive = {};
     std::vector<LayoutResource> layout_resources = {};
 
     Pipeline pipeline = {};

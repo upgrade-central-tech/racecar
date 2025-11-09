@@ -93,11 +93,20 @@ bool draw( vk::Common& vulkan,
 
             VkDeviceSize offsets[] = { 0 };
 
+            uint32_t first_index = 0;
+            int32_t vertex_offset = 0;
+            uint32_t index_count = static_cast<uint32_t>( mesh.indices.size() );
+            if ( draw_task.primitive.has_value() ) {
+                first_index = draw_task.primitive->ind_offset;
+                vertex_offset = draw_task.primitive->vertex_offset;
+                index_count = draw_task.primitive->ind_count;
+            }
+
             vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER, 1, &vertex_buffer,
                                     offsets );
             vkCmdBindIndexBuffer( cmd_buf, index_buffer, 0, VK_INDEX_TYPE_UINT32 );
 
-            vkCmdDrawIndexed( cmd_buf, static_cast<uint32_t>( mesh.indices.size() ), 1, 0, 0, 0 );
+            vkCmdDrawIndexed( cmd_buf, index_count, 1, first_index, vertex_offset, 0 );
         } else {
             // HARDCODED draw! This shouldn't be needed if we force users to draw via vertex buffer.
             vkCmdDraw( cmd_buf, 3, 1, 0, 0 );

@@ -10,6 +10,7 @@ set(SRC_DIR "src")
 set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
 set(GEOMETRY_DIR "${SRC_DIR}/geometry")
+set(SCENE_DIR "${SRC_DIR}/scene")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
@@ -31,6 +32,9 @@ add_executable(racecar
   ${ENGINE_DIR}/descriptors.cpp
 
   ${GEOMETRY_DIR}/mesh.cpp
+
+  ${SCENE_DIR}/scene.cpp
+  ${SCENE_DIR}/camera.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
