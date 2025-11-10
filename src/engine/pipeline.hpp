@@ -19,7 +19,7 @@ struct Pipeline {
 std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
                                              const vk::Common& vulkan,
                                              const std::optional<const geometry::Mesh>& mesh,
-                                             std::vector<VkDescriptorSetLayout>& layouts,
+                                             const std::vector<VkDescriptorSetLayout>& layouts,
                                              VkShaderModule shader_module );
 void free_pipeline( const vk::Common& vulkan, Pipeline& pipeline );
 

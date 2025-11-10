@@ -37,6 +37,8 @@ struct State {
     std::vector<VkImage> swapchain_images;
     std::vector<VkImageView> swapchain_image_views;
 
+    std::vector<vk::mem::AllocatedImage> depth_images;
+
     // Initialized in initalize
     scene::Camera global_camera = {};
 

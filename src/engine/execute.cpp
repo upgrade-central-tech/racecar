@@ -31,15 +31,16 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
 
         // glm::mat4 model = glm::mat4( 1.0f );
 
-        float angle = static_cast<float>( engine.rendered_frames ) * 0.001f; // in radians
-        glm::mat4 model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 1, 0)); // Y-axis rotation
+        float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
+        glm::mat4 model =
+            glm::rotate( glm::mat4( 1.0f ), angle, glm::vec3( 0, 1, 0 ) );  // Y-axis rotation
 
         scene_camera_data.mvp = projection * view * model;
-        scene_camera_data.inv_model = glm::inverse(model);
+        scene_camera_data.inv_model = glm::inverse( model );
         scene_camera_data.color = glm::vec3(
             std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
     }
-    
+
     uint32_t frame_number = engine.frame_number % engine.frame_overlap;
     FrameData& frame = engine.frames[frame_number];
 
@@ -73,6 +74,8 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
     const VkImage& output_image = engine.swapchain_images[output_swapchain_index];
     const VkImageView& output_image_view = engine.swapchain_image_views[output_swapchain_index];
 
+    const vk::mem::AllocatedImage& out_depth_image = engine.depth_images[output_swapchain_index];
+
     SwapchainSemaphores& swapchain_semaphores = engine.swapchain_semaphores[output_swapchain_index];
 
     // for any render target rendering to the screen, set the dynamic output
@@ -80,16 +83,27 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         if ( draw_task.render_target_is_swapchain ) {
             draw_task.draw_target = output_image;
             draw_task.draw_target_view = output_image_view;
+            draw_task.depth_image = out_depth_image.image;
+            draw_task.depth_image_view = out_depth_image.image_view;
         }
     }
 
     {
         // Make swapchain image writeable
         vkBeginCommandBuffer( frame.start_cmdbuf, &command_buffer_begin_info );
+
         vk::utility::transition_image(
             frame.start_cmdbuf, output_image, VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
             VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT );
+
+        // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
+        vk::utility::transition_image(
+            frame.start_cmdbuf, out_depth_image.image, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
+            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT );
+
         vkEndCommandBuffer( frame.start_cmdbuf );
     }
 
@@ -100,22 +114,20 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         .signal_semaphore = frame.start_render_smp,
         .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
     } );
-    VkSubmitInfo2 start_submit_info =
-        vk::create::submit_info_from_all( start_submit_info_all );
+    VkSubmitInfo2 start_submit_info = vk::create::submit_info_from_all( start_submit_info_all );
 
     RACECAR_VK_CHECK(
         vkQueueSubmit2( vulkan.graphics_queue, 1, &start_submit_info, VK_NULL_HANDLE ),
         "Graphics queue submit failed" );
 
-        
     {
-        vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info);    
+        vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
         for ( size_t i = 0; i < task_list.draw_tasks.size(); i++ ) {
-            draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf);
+            draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
         }
         vkEndCommandBuffer( frame.render_cmdbuf );
     }
-    
+
     vk::create::AllSubmitInfo render_submit_info_all = vk::create::all_submit_info( {
         .command_buffer = frame.render_cmdbuf,
         .wait_semaphore = frame.start_render_smp,
@@ -123,14 +135,11 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         .signal_semaphore = frame.render_end_smp,
         .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
     } );
-    VkSubmitInfo2 render_submit_info =
-        vk::create::submit_info_from_all( render_submit_info_all );
+    VkSubmitInfo2 render_submit_info = vk::create::submit_info_from_all( render_submit_info_all );
 
     RACECAR_VK_CHECK(
         vkQueueSubmit2( vulkan.graphics_queue, 1, &render_submit_info, VK_NULL_HANDLE ),
         "Graphics queue submit failed" );
-
-
 
     {
         vkBeginCommandBuffer( frame.end_cmdbuf, &command_buffer_begin_info );
@@ -149,14 +158,11 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         .signal_semaphore = swapchain_semaphores.end_present_smp,
         .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
     } );
-    VkSubmitInfo2 end_submit_info =
-        vk::create::submit_info_from_all( end_submit_info_all );
+    VkSubmitInfo2 end_submit_info = vk::create::submit_info_from_all( end_submit_info_all );
 
     RACECAR_VK_CHECK(
         vkQueueSubmit2( vulkan.graphics_queue, 1, &end_submit_info, frame.render_fence ),
         "Graphics queue submit failed" );
-
-
 
     VkPresentInfoKHR present_info = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
