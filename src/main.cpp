@@ -118,9 +118,9 @@ int main( int, char*[] ) {
                 std::unique_ptr<scene::Mesh>& mesh =
                     std::get<std::unique_ptr<scene::Mesh>>( node->data );
                 for ( scene::Primitive& prim : mesh->primitives ) {
+                    engine::DrawResourceDescriptor desc = engine::DrawResourceDescriptor::from_mesh(sceneMesh, prim);
                     add_draw_task( task_list, {
-                                                  .mesh = sceneMesh,
-                                                  .primitive = prim,
+                                                  .draw_resource_desc = desc,
                                                   .layout_resources = scene_layout_resources,
                                                   .pipeline = scene_pipeline,
                                                   .shader_module = scene_shader_module,

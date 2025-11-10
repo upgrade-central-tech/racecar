@@ -97,38 +97,59 @@ bool draw( vk::Common& vulkan,
             vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.layout, 0, 1, &resource_descriptor, 0, nullptr);
         }
 
-        if ( draw_task.mesh.has_value() ) {
-            const geometry::Mesh& mesh = draw_task.mesh.value();
-            const geometry::GPUMeshBuffers& mesh_buffers = mesh.mesh_buffers;
+        // const geometry::Mesh& mesh = draw_task.mesh.value();
+        // const geometry::GPUMeshBuffers& mesh_buffers = mesh.mesh_buffers;
 
-            VkBuffer vertex_buffer = mesh_buffers.vertex_buffer.value().handle;
-            VkBuffer index_buffer = mesh_buffers.index_buffer.value().handle;
+        // VkBuffer vertex_buffer = mesh_buffers.vertex_buffer.value().handle;
+        // VkBuffer index_buffer = mesh_buffers.index_buffer.value().handle;
 
-            VkDeviceSize offsets[] = { 0 };
+        // VkDeviceSize offsets[] = { 0 };
 
-            uint32_t first_index = 0;
-            int32_t vertex_offset = 0;
-            uint32_t index_count = static_cast<uint32_t>( mesh.indices.size() );
-            if ( draw_task.primitive.has_value() ) {
-                first_index = draw_task.primitive->ind_offset;
-                vertex_offset = draw_task.primitive->vertex_offset;
-                index_count = draw_task.primitive->ind_count;
-            }
+        // uint32_t first_index = 0;
+        // int32_t vertex_offset = 0;
+        // uint32_t index_count = static_cast<uint32_t>( mesh.indices.size() );
+        // if ( draw_task.primitive.has_value() ) {
+        //     first_index = draw_task.primitive->ind_offset;
+        //     vertex_offset = draw_task.primitive->vertex_offset;
+        //     index_count = draw_task.primitive->ind_count;
+        // }
 
-            vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER, 1, &vertex_buffer,
-                                    offsets );
-            vkCmdBindIndexBuffer( cmd_buf, index_buffer, 0, VK_INDEX_TYPE_UINT32 );
+        vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER, draw_task.draw_resource_desc.vertex_buffers.size(), draw_task.draw_resource_desc.vertex_buffers.data(),
+                                draw_task.draw_resource_desc.vertex_buffer_offsets.data() );
 
-            vkCmdDrawIndexed( cmd_buf, index_count, 1, first_index, vertex_offset, 0 );
-        } else {
-            // HARDCODED draw! This shouldn't be needed if we force users to draw via vertex buffer.
-            vkCmdDraw( cmd_buf, 3, 1, 0, 0 );
-        }
+        vkCmdBindIndexBuffer( cmd_buf, draw_task.draw_resource_desc.index_buffer, 0, VK_INDEX_TYPE_UINT32 );
+
+        vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_desc.index_count, 1, draw_task.draw_resource_desc.first_index, draw_task.draw_resource_desc.index_buffer_offset, 0 );
+
     }
 
     vkCmdEndRendering( cmd_buf );
 
     return true;
 }
+
+DrawResourceDescriptor DrawResourceDescriptor::from_mesh(const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive) {
+    engine::DrawResourceDescriptor draw_mesh_desc {
+        .vertex_buffers = {
+            mesh.mesh_buffers.vertex_buffer.value().handle
+        },
+        .index_buffer = mesh.mesh_buffers.index_buffer.value().handle,
+        .vertex_buffer_offsets = {
+            0
+        },
+        .index_buffer_offset = 0,
+        .first_index = 0,
+        .index_count = static_cast<uint32_t>( mesh.indices.size() )
+    };
+
+    if ( primitive.has_value() ) {
+        draw_mesh_desc.first_index = primitive->ind_offset;
+        draw_mesh_desc.index_buffer_offset = primitive->vertex_offset;
+        draw_mesh_desc.index_count = primitive->ind_count;
+    }
+
+    return draw_mesh_desc;
+}
+
 
 }  // namespace racecar::engine
