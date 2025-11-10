@@ -7,14 +7,19 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include <filesystem>
+#include <stb_image.h>
 
-#define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#define TINYGLTF_IMPLEMENTATION
 
 #include <tiny_gltf.h>
 
 namespace racecar::scene {
+
+static inline glm::vec3 double_array_to_vec3( std::vector<double> arr ) {
+    return glm::vec3( arr[0], arr[1], arr[2] );
+}
 
 bool load_gltf( std::string filepath,
                 Scene& scene,
@@ -60,6 +65,88 @@ bool load_gltf( std::string filepath,
     }
 
     // TODO @terskayl: Add Material Loading
+    // Materials
+    for ( tinygltf::Material& loaded_mat : model.materials ) {
+        Material new_mat;
+        new_mat.base_color =
+            double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );
+        new_mat.base_color_texture_index = loaded_mat.pbrMetallicRoughness.baseColorTexture.index;
+        new_mat.metallic = loaded_mat.pbrMetallicRoughness.metallicFactor;
+        new_mat.roughness = loaded_mat.pbrMetallicRoughness.roughnessFactor;
+        new_mat.metallic_roughness_texture_index =
+            loaded_mat.pbrMetallicRoughness.metallicRoughnessTexture.index;
+
+        if ( loaded_mat.extensions.count( "KHR_materials_specular" ) != 0 ) {
+            auto specular = loaded_mat.extensions.find( "KHR_materials_specular" )->second;
+            new_mat.specular = specular.Get( "specularFactor" ).GetNumberAsDouble();
+            // newMat.specularTint = specular.Get("specularColorFactor")
+        }
+        if ( loaded_mat.extensions.count( "KHR_materials_ior" ) != 0 ) {
+            new_mat.ior = loaded_mat.extensions.find( "KHR_materials_ior" )
+                              ->second.Get( "ior" )
+                              .GetNumberAsDouble();
+        }
+
+        if ( loaded_mat.extensions.count( "KHR_materials_clearcoat" ) ) {
+            new_mat.clearcoat = loaded_mat.extensions.find( "KHR_materials_clearcoat" )
+                                    ->second.Get( "clearcoatFactor" )
+                                    .GetNumberAsDouble();
+            new_mat.clearcoat_roughness = loaded_mat.extensions.find( "KHR_materials_clearcoat" )
+                                              ->second.Get( "clearcoatRoughnessFactor" )
+                                              .GetNumberAsDouble();
+        }
+
+        if ( loaded_mat.extensions.count( "KHR_materials_sheen" ) ) {
+            auto sheen = loaded_mat.extensions.find( "KHR_materials_sheen" )->second;
+            new_mat.sheen_weight = 1.f;
+
+            const tinygltf::Value& color_factor = sheen.Get( "sheenColorFactor" );
+
+            if ( color_factor.IsArray() && color_factor.Size() == 3 ) {
+                new_mat.sheen_tint = glm::vec3( color_factor.Get( 0 ).GetNumberAsDouble(),
+                                                color_factor.Get( 1 ).GetNumberAsDouble(),
+                                                color_factor.Get( 2 ).GetNumberAsDouble() );
+            }
+            new_mat.sheen_roughness = sheen.Get( "sheenRoughnessFactor" ).GetNumberAsDouble();
+        }
+
+        if ( loaded_mat.extensions.count( "KHR_materials_transmission" ) ) {
+            new_mat.transmission = loaded_mat.extensions.find( "KHR_materials_transmission" )
+                                       ->second.Get( "transmissionFactor" )
+                                       .GetNumberAsDouble();
+        }
+
+        new_mat.emissive = double_array_to_vec3( loaded_mat.emissiveFactor );
+        if ( loaded_mat.extensions.count( "KHR_materials_emissive_strength" ) ) {
+            new_mat.emissive *= loaded_mat.extensions.find( "KHR_materials_emissive_strength" )
+                                    ->second.Get( "emissiveStrength" )
+                                    .GetNumberAsDouble();
+        }
+        new_mat.emmisive_texture_index = loaded_mat.emissiveTexture.index;
+
+        new_mat.normal_texture_index = loaded_mat.normalTexture.index;
+        new_mat.normal_texture_weight = loaded_mat.normalTexture.scale;
+        new_mat.occulusion_texture_index = loaded_mat.occlusionTexture.index;
+
+        new_mat.double_sided = loaded_mat.doubleSided;
+        new_mat.unlit = false;
+
+        scene.materials.push_back( new_mat );
+    }
+
+    // Textures & Load onto GPU
+    for ( tinygltf::Texture& loaded_tex : model.textures ) {
+        Host_Texture new_tex;
+        tinygltf::Image loaded_img = model.images[loaded_tex.source];
+
+        new_tex.width = loaded_img.width;
+        new_tex.height = loaded_img.height;
+        new_tex.bitsPerChannel = loaded_img.bits;
+        new_tex.numChannels = loaded_img.component;
+        new_tex.data = loaded_img.image;
+
+        scene.textures.push_back( new_tex );
+    }
 
     // Used for pairing children and parents in the scene graph
     std::vector<std::vector<int>> children_lists;
@@ -108,9 +195,10 @@ bool load_gltf( std::string filepath,
 
         children_lists.push_back( loaded_node.children );
 
-        // Load the mesh or camera of the node. Potential optimization: Right now we are creating a
-        // new mesh on every node. In the case where meshes are instanced, we will created Mesh
-        // structs with the same data. We could use a lookup set to resolve this in the future.
+        // Load the mesh or camera of the node. Potential optimization: Right now we are
+        // creating a new mesh on every node. In the case where meshes are instanced, we will
+        // created Mesh structs with the same data. We could use a lookup set to resolve this in
+        // the future.
         if ( loaded_node.mesh != -1 ) {
             new_node->data = std::make_unique<Mesh>();
             tinygltf::Mesh loaded_mesh = model.meshes[static_cast<size_t>( loaded_node.mesh )];
@@ -137,7 +225,8 @@ bool load_gltf( std::string filepath,
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
                         SDL_Log(
-                            "[Scene] GLTF Loading: Expected all vertex attributes to be float - "
+                            "[Scene] GLTF Loading: Expected all vertex attributes to be float "
+                            "- "
                             "unsupported "
                             "component type detected" );
                     }
@@ -168,7 +257,8 @@ bool load_gltf( std::string filepath,
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
                         SDL_Log(
-                            "[Scene] GLTF Loading: Expected all vertex attributes to be float - "
+                            "[Scene] GLTF Loading: Expected all vertex attributes to be float "
+                            "- "
                             "unsupported "
                             "component type detected" );
                     }
@@ -200,13 +290,15 @@ bool load_gltf( std::string filepath,
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
                         SDL_Log(
-                            "[Scene] GLTF Loading: Expected all vertex attributes to be float - "
+                            "[Scene] GLTF Loading: Expected all vertex attributes to be float "
+                            "- "
                             "unsupported "
                             "component type detected" );
                     }
                     if ( accessor.type != TINYGLTF_TYPE_VEC2 ) {
                         SDL_Log(
-                            "[Scene] GLTF Loading: Expected all uvs to be in vec2 - unsupported "
+                            "[Scene] GLTF Loading: Expected all uvs to be in vec2 - "
+                            "unsupported "
                             "type "
                             "detected" );
                     }
@@ -290,7 +382,8 @@ bool load_gltf( std::string filepath,
                                                    ind.end() );
                     } else {
                         SDL_Log(
-                            "[Scene] GLTF Loading: Expected all indices to either be a unsigned "
+                            "[Scene] GLTF Loading: Expected all indices to either be a "
+                            "unsigned "
                             "short or an "
                             "unsigned int - unsupported component type detected" );
                     }
@@ -329,8 +422,8 @@ bool load_gltf( std::string filepath,
         scene.nodes.push_back( std::move( new_node ) );
     }
 
-    // Assumes scene.nodes order is the same as the indices in the GLTF. Will probably break if this
-    // function is multithreaded.
+    // Assumes scene.nodes order is the same as the indices in the GLTF. Will probably break if
+    // this function is multithreaded.
 
     for ( size_t i = 0; i < scene.nodes.size(); i++ ) {
         std::unique_ptr<Node>& node = scene.nodes[i];
@@ -342,6 +435,27 @@ bool load_gltf( std::string filepath,
         }
     }
 
+    return true;
+}
+
+bool load_hdri( std::string filepath, Scene& scene ) {
+    int x = 0, y = 0, channels = 0;
+    float* hdriData = stbi_loadf( filepath.c_str(), &x, &y, &channels, 4 );
+    if ( x == 0 || y == 0 ) {
+        SDL_Log( "[Scene] Failed to load HDRI: %s", stbi_failure_reason() );
+        return false;
+    }
+    Host_Texture hdri;
+    hdri.width = x;
+    hdri.height = y;
+    hdri.bitsPerChannel = 32;  // via stbi_loadf
+    hdri.numChannels = 4;
+
+    int num_bytes = x * y * channels * sizeof( float );
+    hdri.data.resize( num_bytes );
+    memcpy( hdri.data.data(), hdriData, num_bytes );
+    scene.textures.push_back( hdri );
+    scene.hdri_index = scene.textures.size() - 1;
     return true;
 }
 
