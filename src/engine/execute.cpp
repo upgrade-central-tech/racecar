@@ -1,0 +1,182 @@
+#include "execute.hpp"
+
+#include "../vk/create.hpp"
+#include "../vk/utility.hpp"
+#include "task_list.hpp"
+
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+
+namespace racecar::engine {
+
+bool execute( State& engine, Context& ctx, TaskList& task_list ) {
+    vk::Common& vulkan = ctx.vulkan;
+
+    {
+        // Update the scene block. Hard-coded goodness.
+        uniform_buffer::CameraBufferData& scene_camera_data = engine.descriptor_system.camera_data;
+
+        glm::mat4 view = glm::lookAt( engine.global_camera.eye, engine.global_camera.look_at,
+                                      engine.global_camera.up );
+
+        /// TODO: Is there any reason why most of these camera struct values are doubles? Do we
+        /// really need that much precision?
+        glm::mat4 projection =
+            glm::perspective( static_cast<float>( engine.global_camera.fov_y ),
+                              static_cast<float>( engine.global_camera.aspect_ratio ),
+                              static_cast<float>( engine.global_camera.near_plane ),
+                              static_cast<float>( engine.global_camera.far_plane ) );
+
+        projection[1][1] *= -1;
+
+        // glm::mat4 model = glm::mat4( 1.0f );
+
+        float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
+        glm::mat4 model =
+            glm::rotate( glm::mat4( 1.0f ), angle, glm::vec3( 0, 1, 0 ) );  // Y-axis rotation
+
+        scene_camera_data.mvp = projection * view * model;
+        scene_camera_data.inv_model = glm::inverse( model );
+        scene_camera_data.color = glm::vec3(
+            std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
+    }
+
+    uint32_t frame_number = engine.frame_number % engine.frame_overlap;
+    FrameData& frame = engine.frames[frame_number];
+
+    // Using the maximum 64-bit unsigned integer value effectively disables the timeout
+    RACECAR_VK_CHECK( vkWaitForFences( vulkan.device, 1, &frame.render_fence, VK_TRUE,
+                                       std::numeric_limits<uint64_t>::max() ),
+                      "Failed to wait for frame render fence" );
+
+    RACECAR_VK_CHECK( vkResetDescriptorPool( vulkan.device,
+                                             engine.descriptor_system.frame_allocators[0].pool, 0 ),
+                      "Failed to reset frame descriptor pool" );
+
+    // Manually reset previous frame's render fence to an unsignaled state
+    RACECAR_VK_CHECK( vkResetFences( vulkan.device, 1, &frame.render_fence ),
+                      "Failed to reset frame render fence" );
+
+    vkResetCommandBuffer( frame.start_cmdbuf, 0 );
+    vkResetCommandBuffer( frame.render_cmdbuf, 0 );
+    vkResetCommandBuffer( frame.end_cmdbuf, 0 );
+
+    const VkCommandBufferBeginInfo command_buffer_begin_info =
+        vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
+
+    // Request swapchain index.
+    uint32_t output_swapchain_index = 0;
+    RACECAR_VK_CHECK( vkAcquireNextImageKHR(
+                          vulkan.device, engine.swapchain, std::numeric_limits<uint64_t>::max(),
+                          frame.acquire_start_smp, nullptr, &output_swapchain_index ),
+                      "Failed to acquire next image from swapchain" );
+
+    const VkImage& output_image = engine.swapchain_images[output_swapchain_index];
+    const VkImageView& output_image_view = engine.swapchain_image_views[output_swapchain_index];
+
+    const vk::mem::AllocatedImage& out_depth_image = engine.depth_images[output_swapchain_index];
+
+    SwapchainSemaphores& swapchain_semaphores = engine.swapchain_semaphores[output_swapchain_index];
+
+    // for any render target rendering to the screen, set the dynamic output
+    for ( DrawTask& draw_task : task_list.draw_tasks ) {
+        if ( draw_task.render_target_is_swapchain ) {
+            draw_task.draw_target = output_image;
+            draw_task.draw_target_view = output_image_view;
+            draw_task.depth_image = out_depth_image.image;
+            draw_task.depth_image_view = out_depth_image.image_view;
+        }
+    }
+
+    {
+        // Make swapchain image writeable
+        vkBeginCommandBuffer( frame.start_cmdbuf, &command_buffer_begin_info );
+
+        vk::utility::transition_image(
+            frame.start_cmdbuf, output_image, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT );
+
+        // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
+        vk::utility::transition_image(
+            frame.start_cmdbuf, out_depth_image.image, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
+            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT );
+
+        vkEndCommandBuffer( frame.start_cmdbuf );
+    }
+
+    vk::create::AllSubmitInfo start_submit_info_all = vk::create::all_submit_info( {
+        .command_buffer = frame.start_cmdbuf,
+        .wait_semaphore = frame.acquire_start_smp,
+        .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+        .signal_semaphore = frame.start_render_smp,
+        .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+    } );
+    VkSubmitInfo2 start_submit_info = vk::create::submit_info_from_all( start_submit_info_all );
+
+    RACECAR_VK_CHECK(
+        vkQueueSubmit2( vulkan.graphics_queue, 1, &start_submit_info, VK_NULL_HANDLE ),
+        "Graphics queue submit failed" );
+
+    {
+        vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
+        for ( size_t i = 0; i < task_list.draw_tasks.size(); i++ ) {
+            draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
+        }
+        vkEndCommandBuffer( frame.render_cmdbuf );
+    }
+
+    vk::create::AllSubmitInfo render_submit_info_all = vk::create::all_submit_info( {
+        .command_buffer = frame.render_cmdbuf,
+        .wait_semaphore = frame.start_render_smp,
+        .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+        .signal_semaphore = frame.render_end_smp,
+        .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+    } );
+    VkSubmitInfo2 render_submit_info = vk::create::submit_info_from_all( render_submit_info_all );
+
+    RACECAR_VK_CHECK(
+        vkQueueSubmit2( vulkan.graphics_queue, 1, &render_submit_info, VK_NULL_HANDLE ),
+        "Graphics queue submit failed" );
+
+    {
+        vkBeginCommandBuffer( frame.end_cmdbuf, &command_buffer_begin_info );
+        vk::utility::transition_image(
+            frame.end_cmdbuf, output_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 0,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT );
+        vkEndCommandBuffer( frame.end_cmdbuf );
+    }
+
+    vk::create::AllSubmitInfo end_submit_info_all = vk::create::all_submit_info( {
+        .command_buffer = frame.end_cmdbuf,
+        .wait_semaphore = frame.render_end_smp,
+        .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+        .signal_semaphore = swapchain_semaphores.end_present_smp,
+        .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+    } );
+    VkSubmitInfo2 end_submit_info = vk::create::submit_info_from_all( end_submit_info_all );
+
+    RACECAR_VK_CHECK(
+        vkQueueSubmit2( vulkan.graphics_queue, 1, &end_submit_info, frame.render_fence ),
+        "Graphics queue submit failed" );
+
+    VkPresentInfoKHR present_info = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &swapchain_semaphores.end_present_smp,
+        .swapchainCount = 1,
+        .pSwapchains = &engine.swapchain.swapchain,
+        .pImageIndices = &output_swapchain_index,
+    };
+
+    RACECAR_VK_CHECK( vkQueuePresentKHR( vulkan.graphics_queue, &present_info ),
+                      "Failed to present to screen" );
+
+    return true;
+}
+
+}  // namespace racecar::engine

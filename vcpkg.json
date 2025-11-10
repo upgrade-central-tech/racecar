@@ -1,14 +1,23 @@
 {
-  "dependencies": [
-    "glm",
-    {
-      "name": "sdl3",
-      "features": [
-        "vulkan"
-      ],
-      "version>=": "3.2.0"
-    },
-    "volk",
-    "vk-bootstrap"
-  ]
+    "dependencies": [
+        "glm",
+        {
+            "name": "imgui",
+            "features": [
+                "sdl3-binding",
+                "vulkan-binding"
+            ]
+        },
+        {
+            "name": "sdl3",
+            "features": [
+                "vulkan"
+            ],
+            "version>=": "3.2.0"
+        },
+        "vk-bootstrap",
+        "volk",
+        "tinygltf",
+        "vulkan-memory-allocator"
+    ]
 }
