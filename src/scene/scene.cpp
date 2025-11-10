@@ -193,8 +193,8 @@ bool load_gltf( std::string filepath,
                 }
 
                 // Currently only accepting one uv coordinate per primative.
-                if ( loaded_prim.attributes.count( "TEX_COORD0" ) > 0 ) {
-                    int accessor_id = loaded_prim.attributes["TEX_COORD0"];
+                if ( loaded_prim.attributes.count( "TEXCOORD_0" ) > 0 ) {
+                    int accessor_id = loaded_prim.attributes["TEXCOORD_0"];
                     tinygltf::Accessor accessor =
                         model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
