@@ -1,9 +1,11 @@
 #include "mem.hpp"
 
+#include "create.hpp"
+#include "utility.hpp"
+
 namespace racecar::vk::mem {
 
-std::optional<UniformBuffer> create_uniform_buffer( Common& vulkan,
-                                                    size_t data_size ) {
+std::optional<UniformBuffer> create_uniform_buffer( Common& vulkan, size_t data_size ) {
     UniformBuffer uniform_buffer = {
         // uniform_data can potentially be out of scope.
         // Shouldn't be a problem at all if we keep everything in main's scope (ideally no heap mem,
@@ -60,8 +62,8 @@ std::optional<AllocatedBuffer> create_buffer( Common& vulkan,
         vmaCreateBuffer( vulkan.allocator, &buffer_info, &vma_alloc_info, &new_buffer.handle,
                          &new_buffer.allocation, &new_buffer.info ),
         "Failed to create GPU buffer" );
-    
-    vulkan.destructor_stack.push_free_vmabuffer(vulkan.allocator, new_buffer);
+
+    vulkan.destructor_stack.push_free_vmabuffer( vulkan.allocator, new_buffer );
 
     return new_buffer;
 }

@@ -2,6 +2,7 @@
 #include "engine/execute.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
+#include "engine/image.hpp"
 #include "geometry/triangle.hpp"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
@@ -52,6 +53,11 @@ int main( int, char*[] ) {
 
     scene::Scene scene;
     geometry::Mesh sceneMesh;
+
+    if ( !image::create_debug_image_data( ctx.vulkan, engine ) ) {
+        SDL_Log("[Engine] Failed to create debug image data!");
+        return {};
+    }
 
     scene::load_gltf( std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices, sceneMesh.indices );
 
