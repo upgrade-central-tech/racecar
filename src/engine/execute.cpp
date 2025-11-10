@@ -14,7 +14,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
 
     {
         // Update the scene block. Hard-coded goodness.
-        vk::mem::CameraBufferData& scene_camera_data = engine.descriptor_system.camera_data;
+        uniform_buffer::CameraBufferData& scene_camera_data = engine.descriptor_system.camera_data;
 
         glm::mat4 view = glm::lookAt( engine.global_camera.eye, engine.global_camera.look_at,
                                       engine.global_camera.up );
@@ -35,6 +35,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         glm::mat4 model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 1, 0)); // Y-axis rotation
 
         scene_camera_data.mvp = projection * view * model;
+        scene_camera_data.inv_model = glm::inverse(model);
         scene_camera_data.color = glm::vec3(
             std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
     }
