@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../vk/common.hpp"
-#include "../vk/mem.hpp"
+#include "uniform_buffers.hpp"
 
 #include <deque>
 #include <span>
@@ -38,8 +38,12 @@ struct DescriptorSystem {
 
     // It's intended that this camera uniform information gets made per frame.
     // For now, for simplicity, let's ignore.
-    vk::mem::CameraBufferData camera_data;
-    std::vector<vk::mem::UniformBuffer> camera_buffers;
+    uniform_buffer::CameraBufferData camera_data;
+    
+    // std::vector<vk::mem::UniformBuffer> camera_buffers;
+
+
+
 };
 
 struct LayoutResource {

@@ -186,7 +186,7 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
         camera.velocity = glm::vec3(0);
 
         camera.fov_y = glm::radians(60.0);
-        camera.aspect_ratio = 16.0 / 9.0;
+        camera.aspect_ratio = 1280.0 / 720.0;
         camera.near_plane = 0.1;
         camera.far_plane = 100.0;
     }

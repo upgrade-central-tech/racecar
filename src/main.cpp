@@ -75,9 +75,31 @@ int main( int, char*[] ) {
 
         VkShaderModule& scene_shader_module = scene_shader_module_opt.value();
 
+        // To use buffers in your shader, you need to add a descriptor_layout.
+        // Can be done in the following steps:
+        //
+        //  (pre-step) Add a struct in uniform_buffers.hpp that will represent your uniform data.
+        //  Then make a new member of just that in descriptor_system struct
+        //
+        //  1. Add a new VkDescriptorSetLayout in descriptors.hpp descriptor_system
+        //  2. In the initlaize for descriptor_system, create a new DescriptorBuilder
+        //  3. Add necessary bindings to the DescriptorBuilder (this will be your uniform buffers
+        //     added to descriptor_system struct)
+        //  4. Set your layout = descriptor_layout_builder::build(), and use it as seen below
+        //
+        // To link a uniform buffer to your shader, do the following:
+        //  1. Create a scene_layout_resources vector of type LayoutResource with all layouts
+        //  necessary for your pipeline.
+        //     Add this to your new task in the struct constructor under .layout_resources
+        //  2. I probably did something stupid but make an extra vector of VkDescriptorSetLayout.
+        //  This gets passed into
+        //     create_gfx_pipeline().
+        //
+        // If you've done that, then your new uniform buffer should be properly allocated and linked
+        // to the draw via vkCmdBindDescriptorSets!
         std::vector<engine::LayoutResource> scene_layout_resources = {
-            { engine.descriptor_system.camera_set_layout, sizeof( vk::mem::CameraBufferData ),
-              &engine.descriptor_system.camera_data } };
+            { engine.descriptor_system.camera_set_layout,
+              sizeof( uniform_buffer::CameraBufferData ), &engine.descriptor_system.camera_data } };
         std::vector<VkDescriptorSetLayout> scene_layouts = {
             engine.descriptor_system.camera_set_layout };
 
@@ -99,6 +121,7 @@ int main( int, char*[] ) {
                     add_draw_task( task_list, {
                                                   .mesh = sceneMesh,
                                                   .primitive = prim,
+                                                  .layout_resources = scene_layout_resources,
                                                   .pipeline = scene_pipeline,
                                                   .shader_module = scene_shader_module,
                                                   .extent = engine.swapchain.extent,
