@@ -24,3 +24,9 @@ void DestructorStack::push_free_vmabuffer( const VmaAllocator allocator, racecar
        vmaDestroyBuffer(allocator, buffer.handle, buffer.allocation); 
     });
 }
+
+void DestructorStack::push_free_vmaimage( const VmaAllocator allocator, racecar::vk::mem::AllocatedImage allocated_image ) {
+    destructors.push([=]() -> void {
+       vmaDestroyImage(allocator, allocated_image.image, allocated_image.allocation ); 
+    });
+}

@@ -25,6 +25,9 @@ struct DrawTask {
     /// Uninitialized by default below
     VkImage draw_target = VK_NULL_HANDLE;
     VkImageView draw_target_view = VK_NULL_HANDLE;
+
+    VkImage depth_image = VK_NULL_HANDLE;
+    VkImageView depth_image_view = VK_NULL_HANDLE;
 };
 
 bool draw( vk::Common& vulkan,

@@ -13,6 +13,14 @@ struct AllocatedBuffer {
     VmaAllocationInfo info = {};
 };
 
+struct AllocatedImage {
+    VkImage image = VK_NULL_HANDLE;
+    VkImageView image_view = VK_NULL_HANDLE;
+    VmaAllocation allocation = nullptr;
+    VkExtent3D image_extent = {};
+    VkFormat image_format = VK_FORMAT_UNDEFINED;
+};
+
 struct UniformBuffer {
     AllocatedBuffer buffer;
     size_t data_size = 0;

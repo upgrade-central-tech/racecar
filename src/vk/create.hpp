@@ -21,6 +21,13 @@ VkSemaphoreCreateInfo semaphore_info();
 
 VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask );
 
+VkImageCreateInfo image_create_info( VkFormat format,
+                                     VkImageUsageFlags usage_flags,
+                                     VkExtent3D extent );
+VkImageViewCreateInfo image_view_create_info( VkFormat format,
+                                              VkImage image,
+                                              VkImageAspectFlags aspect_flags );
+
 VkSemaphoreSubmitInfo semaphore_submit_info( VkPipelineStageFlags2 stage_mask,
                                              VkSemaphore semaphore );
 VkCommandBufferSubmitInfo command_buffer_submit_info( VkCommandBuffer command_buffer );

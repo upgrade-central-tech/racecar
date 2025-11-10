@@ -7,6 +7,7 @@
 
 namespace racecar::vk::mem {
     struct AllocatedBuffer;
+    struct AllocatedImage;
 }
 
 struct DestructorStack {
@@ -25,6 +26,8 @@ struct DestructorStack {
     void push_free_cmdbufs(VkDevice device, VkCommandPool pool, const std::vector<VkCommandBuffer>& buffers);
 
     void push_free_vmabuffer( const VmaAllocator allocator, racecar::vk::mem::AllocatedBuffer buffer );
+
+    void push_free_vmaimage( const VmaAllocator allocator, racecar::vk::mem::AllocatedImage allocated_image );
 
     void execute_cleanup();
 };

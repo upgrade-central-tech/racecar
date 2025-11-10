@@ -21,12 +21,25 @@ bool draw( vk::Common& vulkan,
         .clearValue = { .color = clear_color },
     };
 
+    VkRenderingAttachmentInfo depth_attachment_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = draw_task.depth_image_view,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+    };
+
+    // 1 is furthest away, this ultimately depends on your camera's near/far setup
+    depth_attachment_info.clearValue.depthStencil.depth = 1.0f;
+
     VkRenderingInfo rendering_info = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
         .renderArea = { .offset = { .x = 0, .y = 0 }, .extent = draw_task.extent },
         .layerCount = 1,
         .colorAttachmentCount = 1,
         .pColorAttachments = &color_attachment_info,
+        .pDepthAttachment = &depth_attachment_info,
+        .pStencilAttachment = nullptr
     };
 
     vkCmdBeginRendering( cmd_buf, &rendering_info );
