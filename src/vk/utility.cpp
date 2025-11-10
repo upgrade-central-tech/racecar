@@ -48,4 +48,18 @@ void transition_image( VkCommandBuffer command_buffer,
     vkCmdPipelineBarrier2( command_buffer, &dependency_info );
 }
 
+/// Open to ideas for how to replace this. 
+uint32_t bytes_from_format( VkFormat format ) {
+    switch( format ) {
+        case VK_FORMAT_R8_UNORM:
+            return 1;
+
+        case VK_FORMAT_R8G8B8A8_UNORM:
+            return 4;
+
+        default:
+            return 0;
+    }
+}
+
 }  // namespace racecar::vk::utility

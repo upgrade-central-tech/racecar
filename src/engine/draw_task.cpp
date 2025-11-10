@@ -2,7 +2,6 @@
 
 #include "pipeline.hpp"
 
-
 namespace racecar::engine {
 
 bool draw( vk::Common& vulkan,
@@ -38,8 +37,7 @@ bool draw( vk::Common& vulkan,
         .colorAttachmentCount = 1,
         .pColorAttachments = &color_attachment_info,
         .pDepthAttachment = &depth_attachment_info,
-        .pStencilAttachment = nullptr
-    };
+        .pStencilAttachment = nullptr };
 
     vkCmdBeginRendering( cmd_buf, &rendering_info );
 
@@ -88,12 +86,19 @@ bool draw( vk::Common& vulkan,
             VkDescriptorSet resource_descriptor = descriptor_allocator::allocate(
                 vulkan, engine.descriptor_system.frame_allocators[0], layout_resource.layout );
 
-
             DescriptorWriter writer;
-            write_buffer( writer, 0, gpu_buffer.handle, layout_resource.data_size, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-            update_set( writer, vulkan.device, resource_descriptor);
+            write_buffer( writer, 0, gpu_buffer.handle, layout_resource.data_size, 0,
+                          VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER );
+            write_image( writer, 1, engine.debug_image_data.checkerboard_image->image_view,
+                         engine.debug_image_data.default_sampler_linear,
+                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER );
 
-            vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.layout, 0, 1, &resource_descriptor, 0, nullptr);
+            update_set( writer, vulkan.device, resource_descriptor );
+
+            vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                     draw_task.pipeline.layout, 0, 1, &resource_descriptor, 0,
+                                     nullptr );
         }
 
         if ( draw_task.mesh.has_value() ) {

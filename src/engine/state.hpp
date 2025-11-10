@@ -54,6 +54,8 @@ struct State {
     std::vector<SwapchainSemaphores> swapchain_semaphores;
 
     DescriptorSystem descriptor_system = {};
+
+    vk::mem::DebugImageData debug_image_data = {};
 };
 
 std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan );

@@ -10,6 +10,7 @@ struct VertexOutput {
   float3 position;
   float3 normal;
   float3 color;
+  float2 uv;
 };
 
 struct CameraBufferData {
@@ -20,6 +21,9 @@ struct CameraBufferData {
 };
 
 layout(binding = 0, set = 0) ConstantBuffer<CameraBufferData> camera_buffer_data;
+
+[[vk::binding(1, 0)]]
+Sampler2D test_texture;
 
 static const float PI = 3.14159265359;
 
@@ -32,6 +36,7 @@ VertexOutput vs_main( VertexInput input ) {
 
   float3x3 normal_matrix = (float3x3)transpose(camera_buffer_data.inv_model);
   output.normal = mul(normal_matrix, input.normal);
+  output.uv = input.uv;
 
   return output;
 }
@@ -73,7 +78,7 @@ float4 fs_main( VertexOutput in ) : SV_Target {
   float3 light_pos = float3(1, 2, 1);
   float3 light = normalize(light_pos);
 
-  float3 base_albedo = float3(0.85f, 0, 0);
+  float3 base_albedo = test_texture.Sample(in.normal.xy).rgb;
 
   // Material properties
   float roughness = 0.001f;
@@ -104,5 +109,5 @@ float4 fs_main( VertexOutput in ) : SV_Target {
   out_color = out_color / (out_color + float3(1.0f));
   out_color = pow(out_color, float3(1.0f / 2.2f));
 
-  return float4(out_color, 1.0);
+  return float4(base_albedo, 1.0);
 }

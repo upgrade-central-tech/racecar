@@ -20,4 +20,6 @@ void transition_image( VkCommandBuffer command_buffer,
                        VkPipelineStageFlags2 src_stage_mask,
                        VkPipelineStageFlags2 dst_stage_mask );
 
+uint32_t bytes_from_format( VkFormat format );
+
 }  // namespace racecar::vk::utility
