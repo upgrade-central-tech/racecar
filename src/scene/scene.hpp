@@ -12,8 +12,53 @@
 
 namespace racecar::scene {
 
+enum Material_Types {
+    // fill with types as needed
+    DEFAULT_MAT_TYPE,
+};
+
 struct Material {
-    // TODO
+    glm::vec3 base_color;
+    std::optional<int> base_color_texture_index = std::nullopt;
+    float metallic = 0.f;
+    float roughness = 1.f;
+    // typically roughness in G, metallic in B
+    std::optional<int> metallic_roughness_texture_index = -1;
+
+    float specular = 0.f;
+    glm::vec3 specular_tint = glm::vec3( 1 );
+    float ior = 1.f;
+
+    float sheen_weight = 0.f;
+    glm::vec3 sheen_tint = glm::vec3( 1 );
+    float sheen_roughness = 1.f;
+
+    float transmission = 0.f;
+    float clearcoat = 0.f;
+    float clearcoat_roughness = 1.f;
+
+    glm::vec3 emissive = glm::vec3( 0.f );
+    std::optional<int> emmisive_texture_index = std::nullopt;
+    bool unlit = false;
+
+    std::optional<int> normal_texture_index = std::nullopt;
+    int normal_texture_weight = 1;
+
+    // Low priority, usually R channel of rough-metal
+    std::optional<int> occulusion_texture_index = std::nullopt;
+
+    bool double_sided = true;                // Low-priority
+    Material_Types type = DEFAULT_MAT_TYPE;  // Can define as needed for easy switching.
+};
+
+struct Host_Texture {
+    std::vector<uint8_t> data;
+
+    int width = 0;
+    int height = 0;
+    /// Can only be 8, 16, or 32
+    int bitsPerChannel = 0;
+    int numChannels = 0;
 };
 
 /// A primitive is a basic association of geometry data along with a single material.
@@ -52,11 +97,17 @@ struct Node {
 struct Scene {
     std::vector<std::unique_ptr<Node>> nodes;
     Camera* main_camera = nullptr;
+    std::vector<Material> materials;
+    std::vector<Host_Texture> textures;
+
+    std::optional<size_t> hdri_index = std::nullopt;
 };
 
 bool load_gltf( std::string filepath,
                 Scene& scene,
                 std::vector<geometry::Vertex>& out_vertices,
                 std::vector<uint32_t>& out_indices );
+
+bool load_hdri( std::string filepath, Scene& scene );
 
 }  // namespace racecar::scene
