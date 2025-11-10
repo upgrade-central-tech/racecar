@@ -36,8 +36,8 @@ bool create_debug_image_data( vk::Common& vulkan, engine::State& engine ) {
 
     VkSamplerCreateInfo sampler_linear_create_info = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_LINEAR,
-        .minFilter = VK_FILTER_LINEAR,
+        .magFilter = VK_FILTER_NEAREST,
+        .minFilter = VK_FILTER_NEAREST,
     };
 
     RACECAR_VK_CHECK( vkCreateSampler( vulkan.device, &sampler_linear_create_info, nullptr,

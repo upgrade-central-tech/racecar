@@ -78,7 +78,7 @@ float4 fs_main( VertexOutput in ) : SV_Target {
   float3 light_pos = float3(1, 2, 1);
   float3 light = normalize(light_pos);
 
-  float3 base_albedo = test_texture.Sample(in.normal.xy).rgb;
+  float3 base_albedo = 0.5f * (test_texture.Sample(in.uv).rgb) + 0.5f * normal;
 
   // Material properties
   float roughness = 0.001f;
@@ -109,5 +109,5 @@ float4 fs_main( VertexOutput in ) : SV_Target {
   out_color = out_color / (out_color + float3(1.0f));
   out_color = pow(out_color, float3(1.0f / 2.2f));
 
-  return float4(base_albedo, 1.0);
+  return float4(out_color, 1.0);
 }
