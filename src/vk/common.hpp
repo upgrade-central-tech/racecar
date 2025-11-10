@@ -2,6 +2,8 @@
 
 #include "vma.hpp"
 
+#include "../engine/destructor_stack.hpp"
+
 #include <SDL3/SDL.h>
 #include <volk.h>
 #include <VkBootstrap.h>
@@ -24,6 +26,7 @@ namespace racecar::vk {
 namespace binding {
 
 constexpr int VERTEX_BUFFER = 0;
+constexpr int CAMERA_BUFFER = 0;
 
 }
 
@@ -37,6 +40,8 @@ struct Common {
     VkQueue graphics_queue = nullptr;
 
     VmaAllocator allocator;
+
+    DestructorStack destructor_stack;
 };
 
 std::optional<Common> initialize( SDL_Window* window );

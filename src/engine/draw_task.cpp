@@ -1,55 +1,14 @@
-#include "gfx_task.hpp"
-
-#include "../vk/create.hpp"
 #include "draw_task.hpp"
+
 #include "pipeline.hpp"
+
 
 namespace racecar::engine {
 
-bool GfxTask::add_draw_task( DrawTaskDescriptor draw_task ) {
-    draw_tasks.push_back( draw_task );
-    return true;
-}
-
-void GfxTask::set_wait_semaphore( VkSemaphore semaphore ) {
-    wait_semaphore = semaphore;
-}
-
-bool execute_gfx_task( const vk::Common& vulkan, const GfxTask& task ) {
-    VkCommandBuffer command_buffer = task.command_buffer;
-    RACECAR_VK_CHECK( vkResetCommandBuffer( command_buffer, 0 ), "Failed to reset command buffer" );
-
-    // Begin the command buffer, use one time flag for single usage (one submit
-    // per frame).
-    VkCommandBufferBeginInfo command_buffer_begin_info =
-        vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
-
-    RACECAR_VK_CHECK( vkBeginCommandBuffer( command_buffer, &command_buffer_begin_info ),
-                      "Failed to begin command buffer" );
-
-    for ( size_t i = 0; i < task.draw_tasks.size(); i++ ) {
-        draw( task.draw_tasks[i], task.command_buffer );
-    }
-
-    RACECAR_VK_CHECK( vkEndCommandBuffer( command_buffer ), "Failed to end the command buffer" );
-
-    vk::create::AllSubmitInfo gfx_submit_info_all = vk::create::all_submit_info( {
-        .command_buffer = task.command_buffer,
-        .wait_semaphore = task.wait_semaphore,
-        .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-        .signal_semaphore = task.signal_semaphore,
-        .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-    } );
-    VkSubmitInfo2 gfx_submit_info = vk::create::submit_info_from_all( gfx_submit_info_all );
-
-    RACECAR_VK_CHECK( vkQueueSubmit2( vulkan.graphics_queue, 1, &gfx_submit_info, VK_NULL_HANDLE ),
-                      "Graphics queue submit failed" );
-
-    return true;
-}
-
-bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf ) {
-    // Clear the background with a pulsing blue color
+bool draw( vk::Common& vulkan,
+           const engine::State& engine,
+           const DrawTask& draw_task,
+           const VkCommandBuffer& cmd_buf ) {    // Clear the background with a pulsing blue color
     // float flash = std::abs( std::sin( static_cast<float>( vulkan.rendered_frames ) / 120.f ) );
     VkClearColorValue clear_color = { { 0.0f, 0.0f, 1.0f, 1.0f } };
 
@@ -93,6 +52,38 @@ bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf )
         };
         vkCmdSetScissor( cmd_buf, 0, 1, &scissor );
 
+        for ( const LayoutResource& layout_resource : draw_task.layout_resources ) {
+            // Copy from VkGuide
+            vk::mem::AllocatedBuffer gpu_buffer =
+                vk::mem::create_buffer( vulkan, layout_resource.data_size,
+                                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                        VMA_MEMORY_USAGE_CPU_TO_GPU )
+                    .value();
+
+            /// TODO: Setup cleanup
+
+            // Map CPU to GPU mem
+            memcpy( gpu_buffer.info.pMappedData, layout_resource.source_data,
+                    layout_resource.data_size );
+
+            // Create the descriptor set on the fly LOL
+            // Ideally in double-buffering setup, we have the descriptor set available per frame.
+            // Assume not, let's just hardcode 0 for the first
+            // This should be ideally cached per frame. It's a waste of time to rebuild it every
+            // time Or maybe, we could have a map or something that determines if such layout is
+            // already pre-made. That, or we do a frames * layouts sized array containing every
+            // descriptor set. That would be funny.
+            VkDescriptorSet resource_descriptor = descriptor_allocator::allocate(
+                vulkan, engine.descriptor_system.frame_allocators[0], layout_resource.layout );
+
+
+            DescriptorWriter writer;
+            write_buffer( writer, 0, gpu_buffer.handle, layout_resource.data_size, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+            update_set( writer, vulkan.device, resource_descriptor);
+
+            vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.layout, 0, 1, &resource_descriptor, 0, nullptr);
+        }
+
         if ( draw_task.mesh.has_value() ) {
             const geometry::Mesh& mesh = draw_task.mesh.value();
             const geometry::GPUMeshBuffers& mesh_buffers = mesh.mesh_buffers;
@@ -102,11 +93,20 @@ bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf )
 
             VkDeviceSize offsets[] = { 0 };
 
+            uint32_t first_index = 0;
+            int32_t vertex_offset = 0;
+            uint32_t index_count = static_cast<uint32_t>( mesh.indices.size() );
+            if ( draw_task.primitive.has_value() ) {
+                first_index = draw_task.primitive->ind_offset;
+                vertex_offset = draw_task.primitive->vertex_offset;
+                index_count = draw_task.primitive->ind_count;
+            }
+
             vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER, 1, &vertex_buffer,
                                     offsets );
             vkCmdBindIndexBuffer( cmd_buf, index_buffer, 0, VK_INDEX_TYPE_UINT32 );
 
-            vkCmdDrawIndexed( cmd_buf, static_cast<uint32_t>( mesh.indices.size() ), 1, 0, 0, 0 );
+            vkCmdDrawIndexed( cmd_buf, index_count, 1, first_index, vertex_offset, 0 );
         } else {
             // HARDCODED draw! This shouldn't be needed if we force users to draw via vertex buffer.
             vkCmdDraw( cmd_buf, 3, 1, 0, 0 );
@@ -116,11 +116,6 @@ bool draw( const DrawTaskDescriptor& draw_task, const VkCommandBuffer& cmd_buf )
     vkCmdEndRendering( cmd_buf );
 
     return true;
-}
-
-void free_gfx_task( const vk::Common& vulkan, const VkCommandPool cmd_pool, GfxTask& gfx_task ) {
-    vkFreeCommandBuffers( vulkan.device, cmd_pool, 1, &gfx_task.command_buffer );
-    vkDestroySemaphore( vulkan.device, gfx_task.signal_semaphore, nullptr );
 }
 
 }  // namespace racecar::engine

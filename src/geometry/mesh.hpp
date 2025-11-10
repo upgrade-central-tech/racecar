@@ -43,10 +43,9 @@ struct Mesh {
     } };
 };
 
-std::optional<GPUMeshBuffers> upload_mesh( const vk::Common& vulkan,
+std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
                                            const engine::State& engine,
                                            std::span<uint32_t> indices,
                                            std::span<Vertex> vertices );
-void free_mesh( const vk::Common& vulkan, Mesh& mesh );
 
 }  // namespace racecar::geometry

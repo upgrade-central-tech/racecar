@@ -1,7 +1,11 @@
 #pragma once
 
 #include "../vk/common.hpp"
+
+#include "descriptors.hpp"
 #include "imm_submit.hpp"
+#include "../scene/camera.hpp"
+#include "../vk/mem.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -9,37 +13,48 @@
 
 namespace racecar::engine {
 
+struct FrameData {
+    VkFence render_fence = VK_NULL_HANDLE;
+
+    VkCommandBuffer start_cmdbuf = VK_NULL_HANDLE;
+    VkCommandBuffer render_cmdbuf = VK_NULL_HANDLE;
+    VkCommandBuffer end_cmdbuf = VK_NULL_HANDLE;
+
+    VkSemaphore acquire_start_smp = VK_NULL_HANDLE;
+    VkSemaphore start_render_smp = VK_NULL_HANDLE;
+    VkSemaphore render_end_smp = VK_NULL_HANDLE;
+
+    vk::mem::UniformBuffer triangle_uniform_buffer;
+};
+
+struct SwapchainSemaphores {
+    VkSemaphore end_present_smp = VK_NULL_HANDLE;
+};
+
 /// Global engine state.
 struct State {
     vkb::Swapchain swapchain;
     std::vector<VkImage> swapchain_images;
     std::vector<VkImageView> swapchain_image_views;
 
+    // Initialized in initalize
+    scene::Camera global_camera = {};
+
     uint32_t frame_overlap = 1;
     uint32_t frame_number = 0;
     uint32_t rendered_frames = 0;
 
-    VkFence render_fence = nullptr;
-
     ImmediateSubmit immediate_submit = {};
 
-    VkCommandPool global_command_pool = VK_NULL_HANDLE;
-    VkCommandBuffer global_start_cmd_buf = VK_NULL_HANDLE;
-    VkCommandBuffer global_end_cmd_buf = VK_NULL_HANDLE;
+    VkCommandPool cmd_pool = VK_NULL_HANDLE;
 
-    /// Semaphore that gets signaled when `vkAcquireNextImageKHR` finishes.
-    VkSemaphore acquire_img_semaphore = nullptr;
+    std::vector<FrameData> frames;
+    std::vector<SwapchainSemaphores> swapchain_semaphores;
 
-    /// Semaphore that gets signaled when `global_start_cmd_buf` completes.
-    /// Should be used as a wait for gfx tasks
-    VkSemaphore begin_gfx_semaphore = nullptr;
-
-    /// Semaphore that gets signaled when `global_end_cmd_buf` completes.
-    /// Should be used as a wait for `vkQueuePresetKHR`.
-    VkSemaphore present_image_signal_semaphore = nullptr;
+    DescriptorSystem descriptor_system = {};
 };
 
-std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan );
-void free( State& engine, const vk::Common& vulkan );
+std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan );
+void free( State& engine, vk::Common& vulkan );
 
 }  // namespace racecar::engine

@@ -13,6 +13,7 @@ struct VertexOutput {
 
 struct CameraBufferData {
     float4x4 mvp;
+    float4x4 inv_model;
     float3 color;
 };
 
@@ -22,17 +23,16 @@ layout(binding = 0, set = 0) ConstantBuffer<CameraBufferData> camera_buffer_data
 VertexOutput vs_main( VertexInput input ) {
   VertexOutput output;
   output.sv_position = mul(camera_buffer_data.mvp, float4(input.position, 1.0));
-  output.color = input.color.rgb;
-  output.normal = input.normal.rgb;
+  output.color = input.position.xyz;
+
+  float3x3 normal_matrix = (float3x3)transpose(camera_buffer_data.inv_model);
+  output.normal = mul(normal_matrix, input.normal);
+
   return output;
 }
 
 [shader("fragment")]
 float4 fs_main( VertexOutput vertex_in ) : SV_Target {
-  float3 light = float3(1, 1, 1);
-  float lambert = max(dot(normalize(light), normalize(vertex_in.normal)), 0.0);
-
-  float3 out_color = lambert * vertex_in.color * (float3(camera_buffer_data.color) + 0.5f);
-
-  return float4(out_color, 1.0);
+  float3 normal = normalize(vertex_in.normal);
+  return float4(normal, 1.0);
 }

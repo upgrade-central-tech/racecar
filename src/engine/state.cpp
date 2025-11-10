@@ -60,67 +60,67 @@ std::optional<vkb::Swapchain> create_swapchain( SDL_Window* window, const vk::Co
 
 /// For each frame (of which there are as many as swapchain images), create a command buffer, and
 /// synchronization primitives.
-bool create_frame_data( State& engine, const vk::Common& vulkan ) {
-    // engine.frames = std::vector<FrameData>( engine.swapchain_images.size() );
-    // engine.frame_overlap = static_cast<uint32_t>( engine.swapchain_images.size() );
-    // engine.frame_number = 0;
+bool create_frame_data( State& engine, vk::Common& vulkan ) {
+    engine.frames = std::vector<FrameData>( engine.swapchain_images.size() );
+    engine.swapchain_semaphores = std::vector<SwapchainSemaphores>( engine.swapchain_images.size() );
+    engine.frame_overlap = static_cast<uint32_t>( engine.swapchain_images.size() );
+    engine.frame_number = 0;
 
-    VkCommandPoolCreateInfo graphics_command_pool_info = vk::create::command_pool_info(
-        vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
+    const VkCommandBufferAllocateInfo cmdbuf_info =
+        vk::create::command_buffer_allocate_info( engine.cmd_pool, 1 );
+    const VkSemaphoreCreateInfo semaphore_info = vk::create::semaphore_info();
+    const VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
 
-    // for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
-    // FrameData& frame = engine.frames[i];
+    for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
+        FrameData& frame = engine.frames[i];
+        SwapchainSemaphores& swapchain_semaphores = engine.swapchain_semaphores[i];
 
-    // RACECAR_VK_CHECK( vkCreateCommandPool( vulkan.device, &graphics_command_pool_info, nullptr,
-    //    &frame.command_pool ),
-    //   "Failed to create command pool" );
+        RACECAR_VK_CHECK(
+            vkAllocateCommandBuffers( vulkan.device, &cmdbuf_info, &frame.start_cmdbuf ),
+            "Failed to create command buffer" );
 
-    // VkCommandBufferAllocateInfo cmd_buffer_allocate_info =
-    // vk::create::command_buffer_allocate_info( frame.command_pool, 1 );
+        RACECAR_VK_CHECK(
+            vkAllocateCommandBuffers( vulkan.device, &cmdbuf_info, &frame.render_cmdbuf ),
+            "Failed to create command buffer" );
 
-    // RACECAR_VK_CHECK( vkAllocateCommandBuffers( vulkan.device, &cmd_buffer_allocate_info,
-    // &frame.command_buffer ),
-    //   "Failed to allocate command buffer" );
-    // }
+        RACECAR_VK_CHECK(
+            vkAllocateCommandBuffers( vulkan.device, &cmdbuf_info, &frame.end_cmdbuf ),
+            "Failed to create command buffer" );
 
-    // Initialize the fence in a signaled state because otherwise, the first frame we wish to
-    // draw will block indefinitely waiting for a signal to the fence that will never come
-    // VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
+        vulkan.destructor_stack.push_free_cmdbufs(vulkan.device, engine.cmd_pool, {frame.start_cmdbuf, frame.render_cmdbuf, frame.end_cmdbuf});
 
-    // for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
-    // FrameData* frame = &engine.frames[i];
+        RACECAR_VK_CHECK(
+            vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &frame.start_render_smp ),
+            "Failed to create state semaphore" );
+        vulkan.destructor_stack.push(vulkan.device, frame.start_render_smp, vkDestroySemaphore);
 
-    // RACECAR_VK_CHECK(
-    // vkCreateFence( vulkan.device, &fence_info, nullptr, &frame->render_fence ),
-    // "Failed to create render fence" );
-    // }
+        RACECAR_VK_CHECK(
+            vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &frame.render_end_smp ),
+            "Failed to create state semaphore" );
+        vulkan.destructor_stack.push(vulkan.device, frame.render_end_smp, vkDestroySemaphore);
 
-    // Initialize the global command buffers
+        RACECAR_VK_CHECK(
+            vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &frame.acquire_start_smp ),
+            "Failed to create state semaphore" );
+        vulkan.destructor_stack.push(vulkan.device, frame.acquire_start_smp, vkDestroySemaphore);
 
-    RACECAR_VK_CHECK( vkCreateCommandPool( vulkan.device, &graphics_command_pool_info, nullptr,
-                                           &engine.global_command_pool ),
-                      "Failed to create global gfx command pool" );
+        RACECAR_VK_CHECK(
+            vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &swapchain_semaphores.end_present_smp ),
+            "Failed to create state semaphore" );
+        vulkan.destructor_stack.push(vulkan.device, swapchain_semaphores.end_present_smp, vkDestroySemaphore);
 
-    VkCommandBufferAllocateInfo global_start_cmd_buf_allocate_info =
-        vk::create::command_buffer_allocate_info( engine.global_command_pool, 1 );
-
-    VkCommandBufferAllocateInfo global_end_cmd_buf_allocate_info =
-        vk::create::command_buffer_allocate_info( engine.global_command_pool, 1 );
-
-    RACECAR_VK_CHECK( vkAllocateCommandBuffers( vulkan.device, &global_start_cmd_buf_allocate_info,
-                                                &engine.global_start_cmd_buf ),
-                      "Failed to create global gfx command buffer" );
-
-    RACECAR_VK_CHECK( vkAllocateCommandBuffers( vulkan.device, &global_end_cmd_buf_allocate_info,
-                                                &engine.global_end_cmd_buf ),
-                      "Failed to create global gfx command buffer" );
+        RACECAR_VK_CHECK(
+            vkCreateFence( vulkan.device, &fence_info, nullptr, &frame.render_fence ),
+            "Failed to create render fence" );
+        vulkan.destructor_stack.push(vulkan.device, frame.render_fence, vkDestroyFence);
+    }
 
     return true;
 }
 
 }  // namespace
 
-std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan ) {
+std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
     State engine = {};
 
     if ( std::optional<vkb::Swapchain> swapchain_opt = create_swapchain( window, vulkan );
@@ -148,6 +148,13 @@ std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan ) 
         engine.swapchain_image_views = std::move( image_views_res.value() );
     }
 
+    VkCommandPoolCreateInfo graphics_command_pool_info = vk::create::command_pool_info(
+        vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
+    RACECAR_VK_CHECK( vkCreateCommandPool( vulkan.device, &graphics_command_pool_info, nullptr,
+                                           &engine.cmd_pool ),
+                      "Failed to create command pool" );
+    vulkan.destructor_stack.push(vulkan.device, engine.cmd_pool, vkDestroyCommandPool);
+
     if ( !create_frame_data( engine, vulkan ) ) {
         SDL_Log( "[Engine] Failed to create frame data" );
         return {};
@@ -162,37 +169,32 @@ std::optional<State> initialize( SDL_Window* window, const vk::Common& vulkan ) 
         SDL_Log( "[Engine] Failed to create immediate command sync fence" );
         return {};
     }
+    
+    if ( !create_descriptor_system( vulkan, engine.frame_overlap, engine.descriptor_system )) {
+        SDL_Log("[Engine] Failed to create descriptor system");
+        return {};
+    }
 
-    VkSemaphoreCreateInfo semaphore_info = vk::create::semaphore_info();
+    {
+        scene::Camera& camera = engine.global_camera;
 
-    RACECAR_VK_CHECK(
-        vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &engine.acquire_img_semaphore ),
-        "Failed to create state semaphore" );
+        camera.eye = glm::vec3(0, 0, 3);
+        camera.look_at = glm::vec3(0, 0, 0);
+        camera.up = glm::vec3(0, 1, 0);
+        camera.forward = glm::normalize(camera.look_at - camera.eye);
+        camera.right = glm::normalize(glm::cross(camera.forward, camera.up));
+        camera.velocity = glm::vec3(0);
 
-    RACECAR_VK_CHECK(
-        vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &engine.begin_gfx_semaphore ),
-        "Failed to create state semaphore" );
-
-    RACECAR_VK_CHECK( vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr,
-                                         &engine.present_image_signal_semaphore ),
-                      "Failed to create state semaphore" );
-
-    VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
-    RACECAR_VK_CHECK( vkCreateFence( vulkan.device, &fence_info, nullptr, &engine.render_fence ),
-                      "Failed to create render fence" );
-
+        camera.fov_y = glm::radians(60.0);
+        camera.aspect_ratio = 1280.0 / 720.0;
+        camera.near_plane = 0.1;
+        camera.far_plane = 100.0;
+    }
     return engine;
 }
 
-void free( State& engine, [[maybe_unused]] const vk::Common& vulkan ) {
-    // Kill per-frame resources from the engine
-    // for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
-    //     // Kill command resources.
-    //     vkDestroyCommandPool( vulkan.device, engine.frames[i].command_pool, nullptr );
-
-    //     // Kill sync resources.
-    //     vkDestroyFence( vulkan.device, engine.frames[i].render_fence, nullptr );
-    // }
+void free( State& engine, [[maybe_unused]] vk::Common& vulkan ) {
+    vulkan.destructor_stack.execute_cleanup();
 
     engine.swapchain.destroy_image_views( engine.swapchain_image_views );
     vkb::destroy_swapchain( engine.swapchain );

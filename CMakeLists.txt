@@ -10,6 +10,7 @@ set(SRC_DIR "src")
 set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
 set(GEOMETRY_DIR "${SRC_DIR}/geometry")
+set(SCENE_DIR "${SRC_DIR}/scene")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
@@ -24,12 +25,17 @@ add_executable(racecar
   ${ENGINE_DIR}/execute.cpp
   ${ENGINE_DIR}/state.cpp
   ${ENGINE_DIR}/pipeline.cpp
-  ${ENGINE_DIR}/gfx_task.cpp
+  ${ENGINE_DIR}/draw_task.cpp
   ${ENGINE_DIR}/imm_submit.cpp
   ${ENGINE_DIR}/task_list.cpp
+  ${ENGINE_DIR}/destructor_stack.cpp
+  ${ENGINE_DIR}/descriptors.cpp
   ${ENGINE_DIR}/gui.cpp
 
   ${GEOMETRY_DIR}/mesh.cpp
+
+  ${SCENE_DIR}/scene.cpp
+  ${SCENE_DIR}/camera.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -61,5 +67,7 @@ target_link_libraries(racecar PRIVATE SDL3::SDL3)
 find_package(vk-bootstrap CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)
 
+find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
+target_include_directories(racecar PRIVATE ${TINYGLTF_INCLUDE_DIRS})
 find_package(imgui CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE imgui::imgui)

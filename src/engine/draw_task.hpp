@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../geometry/mesh.hpp"
+#include "../scene/scene.hpp"
 #include "pipeline.hpp"
 
 #include <volk.h>
@@ -8,9 +9,12 @@
 namespace racecar::engine {
 
 /// Descriptor for a draw call.
-struct DrawTaskDescriptor {
+struct DrawTask {
     /// User-defined parameters:
     std::optional<geometry::Mesh> mesh = {};
+    std::optional<scene::Primitive> primitive = {};
+    std::vector<LayoutResource> layout_resources = {};
+
     Pipeline pipeline = {};
     VkShaderModule shader_module = {};
     VkExtent2D extent = {};
@@ -22,5 +26,10 @@ struct DrawTaskDescriptor {
     VkImage draw_target = VK_NULL_HANDLE;
     VkImageView draw_target_view = VK_NULL_HANDLE;
 };
+
+bool draw( vk::Common& vulkan,
+           const engine::State& engine,
+           const DrawTask& draw_task,
+           const VkCommandBuffer& cmd_buf );
 
 }  // namespace racecar::engine
