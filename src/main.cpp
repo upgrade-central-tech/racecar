@@ -19,7 +19,7 @@ using namespace racecar;
 constexpr int SCREEN_W = 1280;
 constexpr int SCREEN_H = 720;
 constexpr bool USE_FULLSCREEN = false;
-constexpr const char* GLTF_FILE_PATH = "../assets/suzanne.glb";
+constexpr const char* GLTF_FILE_PATH = "../assets/smooth_suzanne.glb";
 
 int main( int, char*[] ) {
     Context ctx;
@@ -66,7 +66,7 @@ int main( int, char*[] ) {
 
     {
         std::optional<VkShaderModule> scene_shader_module_opt = vk::create::shader_module(
-            ctx.vulkan, "../shaders/world_pos_debug/world_pos_debug.spv" );
+            ctx.vulkan, "../shaders/pbr/pbr.spv" );
 
         if ( !scene_shader_module_opt ) {
             SDL_Log( "[Engine] Failed to create shader module" );

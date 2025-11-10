@@ -36,6 +36,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
             glm::rotate( glm::mat4( 1.0f ), angle, glm::vec3( 0, 1, 0 ) );  // Y-axis rotation
 
         scene_camera_data.mvp = projection * view * model;
+        scene_camera_data.model = model;
         scene_camera_data.inv_model = glm::inverse( model );
         scene_camera_data.color = glm::vec3(
             std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );

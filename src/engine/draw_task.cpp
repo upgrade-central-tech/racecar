@@ -8,9 +8,8 @@ namespace racecar::engine {
 bool draw( vk::Common& vulkan,
            const engine::State& engine,
            const DrawTask& draw_task,
-           const VkCommandBuffer& cmd_buf ) {    // Clear the background with a pulsing blue color
-    // float flash = std::abs( std::sin( static_cast<float>( vulkan.rendered_frames ) / 120.f ) );
-    VkClearColorValue clear_color = { { 0.0f, 0.0f, 1.0f, 1.0f } };
+           const VkCommandBuffer& cmd_buf ) {
+    VkClearColorValue clear_color = { { 0.0f, 0.0f, 0.01f, 1.0f } };
 
     VkRenderingAttachmentInfo color_attachment_info = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
