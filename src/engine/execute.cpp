@@ -1,5 +1,7 @@
 #include "execute.hpp"
 
+#include "../imgui/imgui.h"
+#include "../imgui/imgui_impl_vulkan.h"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
 #include "task_list.hpp"
@@ -31,15 +33,16 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
 
         // glm::mat4 model = glm::mat4( 1.0f );
 
-        float angle = static_cast<float>( engine.rendered_frames ) * 0.001f; // in radians
-        glm::mat4 model = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 1, 0)); // Y-axis rotation
+        float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
+        glm::mat4 model =
+            glm::rotate( glm::mat4( 1.0f ), angle, glm::vec3( 0, 1, 0 ) );  // Y-axis rotation
 
         scene_camera_data.mvp = projection * view * model;
-        scene_camera_data.inv_model = glm::inverse(model);
+        scene_camera_data.inv_model = glm::inverse( model );
         scene_camera_data.color = glm::vec3(
             std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
     }
-    
+
     uint32_t frame_number = engine.frame_number % engine.frame_overlap;
     FrameData& frame = engine.frames[frame_number];
 
@@ -100,22 +103,48 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         .signal_semaphore = frame.start_render_smp,
         .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
     } );
-    VkSubmitInfo2 start_submit_info =
-        vk::create::submit_info_from_all( start_submit_info_all );
+    VkSubmitInfo2 start_submit_info = vk::create::submit_info_from_all( start_submit_info_all );
 
     RACECAR_VK_CHECK(
         vkQueueSubmit2( vulkan.graphics_queue, 1, &start_submit_info, VK_NULL_HANDLE ),
         "Graphics queue submit failed" );
 
-        
     {
-        vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info);    
+        vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
+
         for ( size_t i = 0; i < task_list.draw_tasks.size(); i++ ) {
-            draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf);
+            draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
         }
+
+        // GUI render pass
+        // TODO: draw tasks currently need to specify many things (pipeline, shader module).
+        // Therefore this step is currently hardcoded as part of the execution. Ideally we
+        // incorporate it as part of the task system
+        {
+            VkRenderingAttachmentInfo color_attachment_info = {
+                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+                .imageView = output_image_view,
+                .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            };
+
+            VkRenderingInfo rendering_info = {
+                .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+                .renderArea = { .offset = { .x = 0, .y = 0 }, .extent = engine.swapchain.extent },
+                .layerCount = 1,
+                .colorAttachmentCount = 1,
+                .pColorAttachments = &color_attachment_info,
+            };
+
+            vkCmdBeginRendering( frame.render_cmdbuf, &rendering_info );
+            ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), frame.render_cmdbuf );
+            vkCmdEndRendering( frame.render_cmdbuf );
+        }
+
         vkEndCommandBuffer( frame.render_cmdbuf );
     }
-    
+
     vk::create::AllSubmitInfo render_submit_info_all = vk::create::all_submit_info( {
         .command_buffer = frame.render_cmdbuf,
         .wait_semaphore = frame.start_render_smp,
@@ -123,14 +152,11 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         .signal_semaphore = frame.render_end_smp,
         .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
     } );
-    VkSubmitInfo2 render_submit_info =
-        vk::create::submit_info_from_all( render_submit_info_all );
+    VkSubmitInfo2 render_submit_info = vk::create::submit_info_from_all( render_submit_info_all );
 
     RACECAR_VK_CHECK(
         vkQueueSubmit2( vulkan.graphics_queue, 1, &render_submit_info, VK_NULL_HANDLE ),
         "Graphics queue submit failed" );
-
-
 
     {
         vkBeginCommandBuffer( frame.end_cmdbuf, &command_buffer_begin_info );
@@ -149,14 +175,11 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         .signal_semaphore = swapchain_semaphores.end_present_smp,
         .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
     } );
-    VkSubmitInfo2 end_submit_info =
-        vk::create::submit_info_from_all( end_submit_info_all );
+    VkSubmitInfo2 end_submit_info = vk::create::submit_info_from_all( end_submit_info_all );
 
     RACECAR_VK_CHECK(
         vkQueueSubmit2( vulkan.graphics_queue, 1, &end_submit_info, frame.render_fence ),
         "Graphics queue submit failed" );
-
-
 
     VkPresentInfoKHR present_info = {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,

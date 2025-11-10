@@ -39,11 +39,8 @@ struct DescriptorSystem {
     // It's intended that this camera uniform information gets made per frame.
     // For now, for simplicity, let's ignore.
     uniform_buffer::CameraBufferData camera_data;
-    
+
     // std::vector<vk::mem::UniformBuffer> camera_buffers;
-
-
-
 };
 
 struct LayoutResource {

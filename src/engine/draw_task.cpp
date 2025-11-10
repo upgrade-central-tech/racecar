@@ -2,13 +2,12 @@
 
 #include "pipeline.hpp"
 
-
 namespace racecar::engine {
 
 bool draw( vk::Common& vulkan,
            const engine::State& engine,
            const DrawTask& draw_task,
-           const VkCommandBuffer& cmd_buf ) {    // Clear the background with a pulsing blue color
+           const VkCommandBuffer& cmd_buf ) {  // Clear the background with a pulsing blue color
     // float flash = std::abs( std::sin( static_cast<float>( vulkan.rendered_frames ) / 120.f ) );
     VkClearColorValue clear_color = { { 0.0f, 0.0f, 1.0f, 1.0f } };
 
@@ -76,12 +75,14 @@ bool draw( vk::Common& vulkan,
             VkDescriptorSet resource_descriptor = descriptor_allocator::allocate(
                 vulkan, engine.descriptor_system.frame_allocators[0], layout_resource.layout );
 
-
             DescriptorWriter writer;
-            write_buffer( writer, 0, gpu_buffer.handle, layout_resource.data_size, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-            update_set( writer, vulkan.device, resource_descriptor);
+            write_buffer( writer, 0, gpu_buffer.handle, layout_resource.data_size, 0,
+                          VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER );
+            update_set( writer, vulkan.device, resource_descriptor );
 
-            vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.layout, 0, 1, &resource_descriptor, 0, nullptr);
+            vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                     draw_task.pipeline.layout, 0, 1, &resource_descriptor, 0,
+                                     nullptr );
         }
 
         if ( draw_task.mesh.has_value() ) {
@@ -99,7 +100,7 @@ bool draw( vk::Common& vulkan,
             if ( draw_task.primitive.has_value() ) {
                 first_index = draw_task.primitive->ind_offset;
                 vertex_offset = draw_task.primitive->vertex_offset;
-                index_count = draw_task.primitive->ind_count;
+                index_count = static_cast<uint32_t>(draw_task.primitive->ind_count);
             }
 
             vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER, 1, &vertex_buffer,

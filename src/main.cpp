@@ -1,8 +1,12 @@
 #include "context.hpp"
 #include "engine/execute.hpp"
+#include "engine/gui.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
 #include "geometry/triangle.hpp"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl3.h"
+#include "imgui/imgui_impl_vulkan.h"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
@@ -48,6 +52,16 @@ int main( int, char*[] ) {
     }
 
     engine::State& engine = engine_opt.value();
+
+    std::optional<engine::gui::Gui> gui_opt = engine::gui::initialize( ctx, engine );
+
+    if ( !gui_opt ) {
+        SDL_Log( "[RACECAR] Failed to initialize GUI!" );
+        return EXIT_FAILURE;
+    }
+
+    engine::gui::Gui& gui = gui_opt.value();
+
     engine::TaskList task_list;
 
     scene::Scene scene;
@@ -139,6 +153,8 @@ int main( int, char*[] ) {
 
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
+            ImGui_ImplSDL3_ProcessEvent( &event );
+
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;
             }
@@ -156,6 +172,14 @@ int main( int, char*[] ) {
             continue;
         }
 
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::ShowDemoWindow();
+
+        ImGui::Render();
+
         if ( engine::execute( engine, ctx, task_list ) ) {
             engine.rendered_frames = engine.rendered_frames + 1;
             engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
@@ -167,6 +191,7 @@ int main( int, char*[] ) {
 
     vkDeviceWaitIdle( ctx.vulkan.device );
 
+    engine::gui::free( ctx.vulkan, gui );
     engine::free( engine, ctx.vulkan );
     vk::free( ctx.vulkan );
     sdl::free( ctx.window );

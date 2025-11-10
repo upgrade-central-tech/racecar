@@ -11,6 +11,7 @@ set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
 set(GEOMETRY_DIR "${SRC_DIR}/geometry")
 set(SCENE_DIR "${SRC_DIR}/scene")
+set(IMGUI_DIR "${SRC_DIR}/imgui")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
@@ -36,6 +37,14 @@ add_executable(racecar
 
   ${SCENE_DIR}/scene.cpp
   ${SCENE_DIR}/camera.cpp
+
+  ${IMGUI_DIR}/imgui_demo.cpp
+  ${IMGUI_DIR}/imgui_draw.cpp
+  ${IMGUI_DIR}/imgui_tables.cpp
+  ${IMGUI_DIR}/imgui_widgets.cpp
+  ${IMGUI_DIR}/imgui.cpp
+  ${IMGUI_DIR}/imgui_impl_sdl3.cpp
+  ${IMGUI_DIR}/imgui_impl_vulkan.cpp
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -51,12 +60,10 @@ else()
 endif()
 
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-
+target_link_libraries(racecar PRIVATE volk::volk GPUOpen::VulkanMemoryAllocator)
 
 find_package(volk CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE volk::volk)
-
-target_link_libraries(racecar PRIVATE volk::volk GPUOpen::VulkanMemoryAllocator)
 
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE glm::glm)
@@ -69,5 +76,3 @@ target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)
 
 find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
 target_include_directories(racecar PRIVATE ${TINYGLTF_INCLUDE_DIRS})
-find_package(imgui CONFIG REQUIRED)
-target_link_libraries(racecar PRIVATE imgui::imgui)
