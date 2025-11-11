@@ -18,7 +18,8 @@ struct DrawResourceDescriptor {
 
     uint32_t index_count;
 
-    static DrawResourceDescriptor from_mesh(const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive);
+    static DrawResourceDescriptor from_mesh( const geometry::Mesh& mesh,
+                                             const std::optional<scene::Primitive>& primitive );
 };
 
 /// Descriptor for a draw call.
@@ -26,6 +27,7 @@ struct DrawTask {
     /// User-defined parameters:
     DrawResourceDescriptor draw_resource_desc;
     std::vector<LayoutResource> layout_resources = {};
+    std::map<std::string, scene::Texture> textures;
 
     Pipeline pipeline = {};
     VkShaderModule shader_module = {};

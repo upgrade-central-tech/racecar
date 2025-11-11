@@ -1,6 +1,8 @@
 #include "image.hpp"
+
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
+
 #include <glm/glm.hpp>
 
 namespace racecar::image {
@@ -11,8 +13,9 @@ bool create_debug_image_data( vk::Common& vulkan, engine::State& engine ) {
     uint32_t white_color = glm::packUnorm4x8( glm::vec4( 1, 1, 1, 1 ) );
     uint32_t black_color = glm::packUnorm4x8( glm::vec4( 0, 0, 0, 1 ) );
 
-    data.white_image = create_image( vulkan, engine, static_cast<void*>( &white_color ), { 1, 1, 1 },
-                                          VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+    data.white_image =
+        create_image( vulkan, engine, static_cast<void*>( &white_color ), { 1, 1, 1 },
+                      VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     if ( !data.white_image ) {
         SDL_Log( "[Vulkan] Failed to create debug white image" );
@@ -32,7 +35,7 @@ bool create_debug_image_data( vk::Common& vulkan, engine::State& engine ) {
 
     data.checkerboard_image =
         create_image( vulkan, engine, checkerboard_pixels.data(), { debug_width, debug_height, 1 },
-                           VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+                      VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     VkSamplerCreateInfo sampler_linear_create_info = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -46,9 +49,10 @@ bool create_debug_image_data( vk::Common& vulkan, engine::State& engine ) {
 
     vulkan.destructor_stack.push( vulkan.device, data.default_sampler_linear, vkDestroySampler );
 
-    vulkan.destructor_stack.push( vulkan.device, data.checkerboard_image->image_view, vkDestroyImageView );
+    vulkan.destructor_stack.push( vulkan.device, data.checkerboard_image->image_view,
+                                  vkDestroyImageView );
     vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, data.checkerboard_image.value() );
-    
+
     vulkan.destructor_stack.push( vulkan.device, data.white_image->image_view, vkDestroyImageView );
     vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, data.white_image.value() );
 
@@ -58,10 +62,10 @@ bool create_debug_image_data( vk::Common& vulkan, engine::State& engine ) {
 }
 
 std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan,
-                                              VkExtent3D size,
-                                              VkFormat format,
-                                              VkImageUsageFlags usage,
-                                              bool mipmapped ) {
+                                                       VkExtent3D size,
+                                                       VkFormat format,
+                                                       VkImageUsageFlags usage,
+                                                       bool mipmapped ) {
     vk::mem::AllocatedImage new_image = {
         .image_extent = size,
         .image_format = format,
@@ -101,13 +105,14 @@ std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan,
 }
 
 std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan,
-                                            engine::State& engine,
-                                            void* data,
-                                            VkExtent3D size,
-                                            VkFormat format,
-                                            VkImageUsageFlags usage,
-                                            bool mipmapped ) {
-    size_t data_size = size.depth * size.width * size.height * vk::utility::bytes_from_format( format );
+                                                     engine::State& engine,
+                                                     void* data,
+                                                     VkExtent3D size,
+                                                     VkFormat format,
+                                                     VkImageUsageFlags usage,
+                                                     bool mipmapped ) {
+    size_t data_size =
+        size.depth * size.width * size.height * vk::utility::bytes_from_format( format );
     std::optional<vk::mem::AllocatedBuffer> upload_buffer = vk::mem::create_buffer(
         vulkan, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
 
@@ -155,4 +160,4 @@ void destroy_image( vk::Common& vulkan, const vk::mem::AllocatedImage& image ) {
     vmaDestroyImage( vulkan.allocator, image.image, image.allocation );
 }
 
-}  // namespace racecar::vk::image
+}  // namespace racecar::image

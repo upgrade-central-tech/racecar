@@ -1,8 +1,8 @@
 #include "context.hpp"
 #include "engine/execute.hpp"
+#include "engine/image.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
-#include "engine/image.hpp"
 #include "geometry/triangle.hpp"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
@@ -55,11 +55,12 @@ int main( int, char*[] ) {
     geometry::Mesh sceneMesh;
 
     if ( !image::create_debug_image_data( ctx.vulkan, engine ) ) {
-        SDL_Log("[Engine] Failed to create debug image data!");
+        SDL_Log( "[Engine] Failed to create debug image data!" );
         return {};
     }
 
-    scene::load_gltf( std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices, sceneMesh.indices );
+    scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices,
+                      sceneMesh.indices );
 
     std::optional<geometry::GPUMeshBuffers> uploaded_mesh_buffer =
         geometry::upload_mesh( ctx.vulkan, engine, sceneMesh.indices, sceneMesh.vertices );
@@ -71,8 +72,8 @@ int main( int, char*[] ) {
     sceneMesh.mesh_buffers = uploaded_mesh_buffer.value();
 
     {
-        std::optional<VkShaderModule> scene_shader_module_opt = vk::create::shader_module(
-            ctx.vulkan, "../shaders/pbr/pbr.spv" );
+        std::optional<VkShaderModule> scene_shader_module_opt =
+            vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
 
         if ( !scene_shader_module_opt ) {
             SDL_Log( "[Engine] Failed to create shader module" );
@@ -113,7 +114,6 @@ int main( int, char*[] ) {
             engine, ctx.vulkan, sceneMesh, scene_layouts, scene_shader_module );
 
         if ( !scene_pipeline_opt ) {
-            SDL_Log( "[Engine] Failed to create pipeline" );
             return false;
         }
 
@@ -124,10 +124,33 @@ int main( int, char*[] ) {
                 std::unique_ptr<scene::Mesh>& mesh =
                     std::get<std::unique_ptr<scene::Mesh>>( node->data );
                 for ( scene::Primitive& prim : mesh->primitives ) {
-                    engine::DrawResourceDescriptor desc = engine::DrawResourceDescriptor::from_mesh(sceneMesh, prim);
+                    scene::Material current_material = scene.materials[prim.material_id];
+                    std::map<std::string, scene::Texture> textures_needed;
+
+                    // Lowkey I might refactor this later. Assume the default pipeline is a PBR
+                    // Albedo Map Pipeline
+                    if ( current_material.type == scene::Material_Types::PBR_ALBEDO_MAP_MAT_TYPE ) {
+                        if ( current_material.base_color_texture_index.has_value() ) {
+                            scene::Texture albedo_texture =
+                                scene.textures[current_material.base_color_texture_index.value()];
+                            textures_needed.insert( { "ALBEDO", albedo_texture } );
+                        }
+
+                    }  // We would continue this if-else chain for all material pipelines based on
+                       // needed textures.
+
+                    // TODO: Not yet connected with a layout
+                    if ( scene.hdri_index.has_value() ) {
+                        textures_needed.insert(
+                            { "HDRI", scene.textures[scene.hdri_index.value()] } );
+                    }
+                    engine::DrawResourceDescriptor desc =
+                        engine::DrawResourceDescriptor::from_mesh( sceneMesh, prim );
+
                     add_draw_task( task_list, {
                                                   .draw_resource_desc = desc,
                                                   .layout_resources = scene_layout_resources,
+                                                  .textures = textures_needed,
                                                   .pipeline = scene_pipeline,
                                                   .shader_module = scene_shader_module,
                                                   .extent = engine.swapchain.extent,

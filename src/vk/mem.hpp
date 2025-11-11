@@ -43,10 +43,9 @@ std::optional<UniformBuffer> create_uniform_buffer( Common& vulkan,
 template <typename T>
 bool update_uniform_buffer( UniformBuffer& uniform_buffer, const T& updated_buffer_data );
 
-
 std::optional<mem::AllocatedBuffer> create_buffer( Common& vulkan,
-                                              size_t alloc_size,
-                                              VkBufferUsageFlags usage_flags,
-                                              VmaMemoryUsage memory_usage );
+                                                   size_t alloc_size,
+                                                   VkBufferUsageFlags usage_flags,
+                                                   VmaMemoryUsage memory_usage );
 
 }  // namespace racecar::vk::mem

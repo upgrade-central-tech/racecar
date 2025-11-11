@@ -89,10 +89,15 @@ bool draw( vk::Common& vulkan,
             DescriptorWriter writer;
             write_buffer( writer, 0, gpu_buffer.handle, layout_resource.data_size, 0,
                           VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER );
-            write_image( writer, 1, engine.debug_image_data.checkerboard_image->image_view,
-                         engine.debug_image_data.default_sampler_linear,
-                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER );
+            SDL_Log( "BEFORE" );
+
+            if ( draw_task.textures.contains( "ALBEDO" ) ) {
+                SDL_Log( "AFTERz" );
+                write_image( writer, 1, draw_task.textures.at( "ALBEDO" ).data->image_view,
+                             engine.debug_image_data.default_sampler_linear,
+                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER );
+            }
 
             update_set( writer, vulkan.device, resource_descriptor );
 
@@ -118,13 +123,17 @@ bool draw( vk::Common& vulkan,
         //     index_count = draw_task.primitive->ind_count;
         // }
 
-        vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER, draw_task.draw_resource_desc.vertex_buffers.size(), draw_task.draw_resource_desc.vertex_buffers.data(),
+        vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER,
+                                draw_task.draw_resource_desc.vertex_buffers.size(),
+                                draw_task.draw_resource_desc.vertex_buffers.data(),
                                 draw_task.draw_resource_desc.vertex_buffer_offsets.data() );
 
-        vkCmdBindIndexBuffer( cmd_buf, draw_task.draw_resource_desc.index_buffer, 0, VK_INDEX_TYPE_UINT32 );
+        vkCmdBindIndexBuffer( cmd_buf, draw_task.draw_resource_desc.index_buffer, 0,
+                              VK_INDEX_TYPE_UINT32 );
 
-        vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_desc.index_count, 1, draw_task.draw_resource_desc.first_index, draw_task.draw_resource_desc.index_buffer_offset, 0 );
-
+        vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_desc.index_count, 1,
+                          draw_task.draw_resource_desc.first_index,
+                          draw_task.draw_resource_desc.index_buffer_offset, 0 );
     }
 
     vkCmdEndRendering( cmd_buf );
@@ -132,19 +141,16 @@ bool draw( vk::Common& vulkan,
     return true;
 }
 
-DrawResourceDescriptor DrawResourceDescriptor::from_mesh(const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive) {
-    engine::DrawResourceDescriptor draw_mesh_desc {
-        .vertex_buffers = {
-            mesh.mesh_buffers.vertex_buffer.value().handle
-        },
+DrawResourceDescriptor DrawResourceDescriptor::from_mesh(
+    const geometry::Mesh& mesh,
+    const std::optional<scene::Primitive>& primitive ) {
+    engine::DrawResourceDescriptor draw_mesh_desc{
+        .vertex_buffers = { mesh.mesh_buffers.vertex_buffer.value().handle },
         .index_buffer = mesh.mesh_buffers.index_buffer.value().handle,
-        .vertex_buffer_offsets = {
-            0
-        },
+        .vertex_buffer_offsets = { 0 },
         .index_buffer_offset = 0,
         .first_index = 0,
-        .index_count = static_cast<uint32_t>( mesh.indices.size() )
-    };
+        .index_count = static_cast<uint32_t>( mesh.indices.size() ) };
 
     if ( primitive.has_value() ) {
         draw_mesh_desc.first_index = primitive->ind_offset;
@@ -154,6 +160,5 @@ DrawResourceDescriptor DrawResourceDescriptor::from_mesh(const geometry::Mesh& m
 
     return draw_mesh_desc;
 }
-
 
 }  // namespace racecar::engine
