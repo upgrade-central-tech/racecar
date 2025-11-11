@@ -94,7 +94,7 @@ bool create_depth_images( State& engine, vk::Common& vulkan ) {
                           "Failed to create depth image view" );
 
         vulkan.destructor_stack.push( vulkan.device, depth_image.image_view, vkDestroyImageView );
-        vulkan.destructor_stack.push_free_vmaimage(vulkan.allocator, depth_image );
+        vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, depth_image );
     }
 
     return true;
@@ -204,9 +204,9 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
         SDL_Log( "[Engine] Failed to create frame data" );
         return {};
     }
-    
-    if ( !create_depth_images( engine, vulkan) ) {
-        SDL_Log("[Engine] Failed to create depth images/views" );
+
+    if ( !create_depth_images( engine, vulkan ) ) {
+        SDL_Log( "[Engine] Failed to create depth images/views" );
         return {};
     }
 

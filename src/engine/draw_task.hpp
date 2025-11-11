@@ -18,7 +18,8 @@ struct DrawResourceDescriptor {
 
     uint32_t index_count;
 
-    static DrawResourceDescriptor from_mesh(const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive);
+    static DrawResourceDescriptor from_mesh( const geometry::Mesh& mesh,
+                                             const std::optional<scene::Primitive>& primitive );
 };
 
 /// Descriptor for a draw call.

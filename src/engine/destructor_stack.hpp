@@ -7,7 +7,6 @@
 #include <functional>
 #include <stack>
 
-
 namespace racecar::vk::mem {
 
 struct AllocatedBuffer;

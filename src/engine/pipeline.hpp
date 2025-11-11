@@ -9,9 +9,6 @@ namespace racecar::engine {
 struct Pipeline {
     VkPipeline handle = nullptr;
     VkPipelineLayout layout = nullptr;
-
-    /// TODO: Add support functions for things like disabling MSAA, etc.
-    /// TODO: Need disable depth test function, etc.
 };
 
 /// Creates the graphics pipeline, if successful. Remember to call `free_pipeline` to destroy

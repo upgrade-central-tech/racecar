@@ -1,14 +1,14 @@
 #pragma once
 
-#include "vma.hpp"
-
 #include "../engine/destructor_stack.hpp"
+#include "vma.hpp"
 
 #include <SDL3/SDL.h>
 #include <volk.h>
 #include <VkBootstrap.h>
 
 #include <optional>
+
 
 /// Custom define based on VK_CHECK, just with our SDL_Log. Feel free to tweak this.
 #define RACECAR_VK_CHECK( vk_fn, message )                              \
@@ -28,7 +28,7 @@ namespace binding {
 constexpr int VERTEX_BUFFER = 0;
 constexpr int CAMERA_BUFFER = 0;
 
-}
+}  // namespace binding
 
 /// Stores common Vulkan-related objects.
 struct Common {
