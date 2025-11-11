@@ -6,12 +6,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS NO)
 
-set(SRC_DIR "src")
+set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
 set(GEOMETRY_DIR "${SRC_DIR}/geometry")
 set(SCENE_DIR "${SRC_DIR}/scene")
-set(IMGUI_DIR "${SRC_DIR}/imgui")
+
+set(THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
+set(IMGUI_DIR "${THIRD_PARTY_DIR}/imgui")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
@@ -38,14 +40,18 @@ add_executable(racecar
   ${SCENE_DIR}/scene.cpp
   ${SCENE_DIR}/camera.cpp
 
+  # Third party libraries not part of our vcpkg system
   ${IMGUI_DIR}/imgui_demo.cpp
   ${IMGUI_DIR}/imgui_draw.cpp
+  ${IMGUI_DIR}/imgui_impl_sdl3.cpp
+  ${IMGUI_DIR}/imgui_impl_vulkan.cpp
   ${IMGUI_DIR}/imgui_tables.cpp
   ${IMGUI_DIR}/imgui_widgets.cpp
   ${IMGUI_DIR}/imgui.cpp
-  ${IMGUI_DIR}/imgui_impl_sdl3.cpp
-  ${IMGUI_DIR}/imgui_impl_vulkan.cpp
 )
+
+# Treat ImGui as a third party library, has to be #included with angle brackets (<>)
+target_include_directories(racecar PRIVATE "${IMGUI_DIR}")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   target_compile_definitions(racecar PRIVATE DEBUG=1)

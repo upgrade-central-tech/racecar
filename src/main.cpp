@@ -4,15 +4,15 @@
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
 #include "geometry/triangle.hpp"
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl3.h"
-#include "imgui/imgui_impl_vulkan.h"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_vulkan.h>
 
 #include <chrono>
 #include <cstdlib>
@@ -149,7 +149,7 @@ int main( int, char*[] ) {
 
     bool will_quit = false;
     bool stop_drawing = false;
-    SDL_Event event;
+    SDL_Event event = {};
 
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {

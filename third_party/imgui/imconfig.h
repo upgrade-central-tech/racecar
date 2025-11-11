@@ -1,4 +1,3 @@
-// clang-format off
 //-----------------------------------------------------------------------------
 // DEAR IMGUI COMPILE-TIME OPTIONS
 // Runtime options (clipboard callbacks, enabling various features, etc.) can generally be set via
@@ -20,6 +19,7 @@
 
 #pragma once
 
+/// Make ImGui use the function pointers included from volk.
 #define IMGUI_IMPL_VULKAN_USE_VOLK 1
 
 //---- Define assertion handler. Defaults to calling assert().
@@ -43,7 +43,8 @@
 // set is hidden
 
 //---- Don't define obsolete functions/enums/behaviors. Consider enabling from time to time after
-//updating to clean your code of obsolete function/names. #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+// updating to clean your code of obsolete function/names.
+#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS 1
 
 //---- Disable all of Dear ImGui or don't implement standard windows/tools.
 // It is very strongly recommended to NOT disable the demo windows and debug tool during
@@ -96,17 +97,17 @@
 // #define IMGUI_USER_H_FILENAME         "my_folder/my_imgui_user.h"
 
 //---- Pack vertex colors as BGRA8 instead of RGBA8 (to avoid converting from one to another). Need
-//dedicated backend support. #define IMGUI_USE_BGRA_PACKED_COLOR
+// dedicated backend support. #define IMGUI_USE_BGRA_PACKED_COLOR
 
 //---- Use legacy CRC32-adler tables (used before 1.91.6), in order to preserve old .ini data that
-//you cannot afford to invalidate. #define IMGUI_USE_LEGACY_CRC32_ADLER
+// you cannot afford to invalidate. #define IMGUI_USE_LEGACY_CRC32_ADLER
 
 //---- Use 32-bit for ImWchar (default is 16-bit) to support Unicode planes 1-16. (e.g. point beyond
-//0xFFFF like emoticons, dingbats, symbols, shapes, ancient languages, etc...) #define
+// 0xFFFF like emoticons, dingbats, symbols, shapes, ancient languages, etc...) #define
 // IMGUI_USE_WCHAR32
 
 //---- Avoid multiple STB libraries implementations, or redefine path/filenames to prioritize
-//another version
+// another version
 // By default the embedded implementations are declared static and not available outside of Dear
 // ImGui sources files.
 // #define IMGUI_STB_TRUETYPE_FILENAME   "my_folder/stb_truetype.h"
@@ -123,7 +124,7 @@
 // #define IMGUI_USE_STB_SPRINTF
 
 //---- Use FreeType to build and rasterize the font atlas (instead of stb_truetype which is embedded
-//by default in Dear ImGui)
+// by default in Dear ImGui)
 // Requires FreeType headers to be available in the include path. Requires program to be compiled
 // with 'misc/freetype/imgui_freetype.cpp' (in this repository) + the FreeType library (not
 // provided). Note that imgui_freetype.cpp may be used _without_ this define, if you manually call
@@ -148,7 +149,7 @@
 // #define IMGUI_ENABLE_STB_TRUETYPE
 
 //---- Define constructor and implicit cast operators to convert back<>forth between your math types
-//and ImVec2/ImVec4.
+// and ImVec2/ImVec4.
 // This will be inlined as part of ImVec2 and ImVec4 class declarations.
 /*
 #define IM_VEC2_CLASS_EXTRA                                                     \
@@ -163,7 +164,7 @@
 // #define IMGUI_DEFINE_MATH_OPERATORS
 
 //---- Use 32-bit vertex indices (default is 16-bit) is one way to allow large meshes with more than
-//64K vertices.
+// 64K vertices.
 // Your renderer backend will need to support it (most example renderer backends support both
 // 16/32-bit indices). Another way to allow large meshes while keeping 16-bit indices is to handle
 // ImDrawCmd::VtxOffset in your renderer. Read about ImGuiBackendFlags_RendererHasVtxOffset for
@@ -177,14 +178,14 @@
 // my_renderer_user_data); #define ImDrawCallback MyImDrawCallback
 
 //---- Debug Tools: Macro to break in Debugger (we provide a default implementation of this in the
-//codebase)
+// codebase)
 // (use 'Metrics->Tools->Item Picker' to pick widgets with the mouse and break into them for easy
 // debugging.)
 // #define IM_DEBUG_BREAK  IM_ASSERT(0)
 // #define IM_DEBUG_BREAK  __debugbreak()
 
 //---- Debug Tools: Enable highlight ID conflicts _before_ hovering items. When
-//io.ConfigDebugHighlightIdConflicts is set.
+// io.ConfigDebugHighlightIdConflicts is set.
 // (THIS WILL SLOW DOWN DEAR IMGUI. Only use occasionally and disable after use)
 // #define IMGUI_DEBUG_HIGHLIGHT_ALL_ID_CONFLICTS
 
@@ -192,7 +193,7 @@
 // #define IMGUI_DEBUG_PARANOID
 
 //---- Tip: You can add extra functions within the ImGui:: namespace from anywhere (e.g. your own
-//sources/header files)
+// sources/header files)
 /*
 namespace ImGui
 {

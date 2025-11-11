@@ -1,20 +1,10 @@
 #include "gui.hpp"
 
-#include "../imgui/imgui.h"
-#include "../imgui/imgui_impl_sdl3.h"
-#include "../imgui/imgui_impl_vulkan.h"
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_vulkan.h>
 
 namespace racecar::engine::gui {
-
-/*namespace {
-
-  PFN_vkVoidFunction loader_function(const char* function_name, void* user_data) {
-    vkb::Instance* instance_ptr = static_cast<vkb::Instance*>(user_data);
-
-    return instance_ptr->fp_vkGetInstanceProcAddr(instance_ptr->instance, function_name);
-  }
-
-}*/
 
 std::optional<Gui> initialize( const Context& ctx, const State& engine ) {
     VkDescriptorPoolSize pool_size = {
@@ -70,22 +60,6 @@ std::optional<Gui> initialize( const Context& ctx, const State& engine ) {
             .UseDynamicRendering = true,
 
         };
-
-        SDL_Log( "[Info] vkGetInstanceProcAddr: %p", ctx.vulkan.instance.fp_vkGetInstanceProcAddr );
-        SDL_Log( "[Info] vkInstance: %p", ctx.vulkan.instance.instance );
-
-        /*bool result = ImGui_ImplVulkan_LoadFunctions(
-          VK_API_VERSION_1_4,
-          &loader_function,
-          const_cast<void*>(static_cast<const void*>(&ctx.vulkan.instance))
-        );
-
-        if (!result) {
-          SDL_Log("[ImGui] Failed to load Vulkan pointer functions!");
-          return {};
-        } else {
-          SDL_Log("worked");
-        }*/
 
         ImGui_ImplVulkan_Init( &init_info );
     }
