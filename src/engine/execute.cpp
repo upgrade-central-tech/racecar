@@ -31,11 +31,6 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
 
         projection[1][1] *= -1;
 
-        // glm::mat4 model = glm::mat4( 1.0f );
-
-        float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
-        glm::mat4 model =
-            glm::rotate( glm::mat4( 1.0f ), angle, glm::vec3( 0, 1, 0 ) );    // Y-axis rotation
         float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
         glm::mat4 model =
             glm::rotate( glm::mat4( 1.0f ), angle, glm::vec3( 0, 1, 0 ) );  // Y-axis rotation
