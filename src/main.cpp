@@ -3,6 +3,7 @@
 #include "engine/gui.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
+#include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
 #include "geometry/triangle.hpp"
 #include "scene/scene.hpp"
@@ -72,8 +73,6 @@ int main( int, char*[] ) {
     }
     sceneMesh.mesh_buffers = uploaded_mesh_buffer.value();
 
-    // Rendering setup
-    // {
     std::optional<VkShaderModule> scene_shader_module_opt =
         vk::create::shader_module( ctx.vulkan, "../shaders/world_pos_debug/world_pos_debug.spv" );
     if ( !scene_shader_module_opt ) {
@@ -96,6 +95,8 @@ int main( int, char*[] ) {
         return false;
     }
     engine::Pipeline& scene_pipeline = scene_pipeline_opt.value();
+
+    engine::TaskList task_list;
 
     for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
         if ( std::holds_alternative<std::unique_ptr<scene::Mesh>>( node->data ) ) {
@@ -123,6 +124,8 @@ int main( int, char*[] ) {
 
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
+            engine::gui::process_events( &event );
+
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;
             }
@@ -169,6 +172,8 @@ int main( int, char*[] ) {
                 std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
             camera_buffer.set_data( scene_camera_data );
         }
+
+        engine::gui::update( gui );
 
         if ( engine::execute( engine, ctx, task_list ) ) {
             engine.rendered_frames = engine.rendered_frames + 1;
