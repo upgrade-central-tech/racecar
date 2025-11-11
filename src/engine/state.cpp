@@ -240,6 +240,7 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
         camera.near_plane = 0.1;
         camera.far_plane = 100.0;
     }
+
     return engine;
 }
 

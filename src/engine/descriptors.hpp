@@ -47,6 +47,7 @@ struct LayoutResource {
     VkDescriptorSetLayout layout;
     size_t data_size;
     void* source_data;
+    void* image_data = nullptr;
 };
 
 bool create_descriptor_system( const vk::Common& vulkan,
@@ -104,7 +105,7 @@ struct DescriptorWriter {
     std::vector<VkWriteDescriptorSet> writes;
 };
 
-void write_image( DescriptorWriter descriptor_writer,
+void write_image( DescriptorWriter& writer,
                   int binding,
                   VkImageView image,
                   VkSampler sampler,

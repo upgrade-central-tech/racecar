@@ -26,7 +26,7 @@ using namespace racecar;
 constexpr int SCREEN_W = 1280;
 constexpr int SCREEN_H = 720;
 constexpr bool USE_FULLSCREEN = false;
-constexpr const char* GLTF_FILE_PATH = "../assets/suzanne.glb";
+constexpr const char* GLTF_FILE_PATH = "../assets/smooth_suzanne.glb";
 
 int main( int, char*[] ) {
     Context ctx;
@@ -66,7 +66,8 @@ int main( int, char*[] ) {
 
     geometry::Mesh sceneMesh;
     scene::Scene scene;
-    scene::load_gltf( std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices, sceneMesh.indices );
+    scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices,
+                      sceneMesh.indices );
 
     std::optional<geometry::GPUMeshBuffers> uploaded_mesh_buffer =
         geometry::upload_mesh( ctx.vulkan, engine, sceneMesh.indices, sceneMesh.vertices );
@@ -114,6 +115,30 @@ int main( int, char*[] ) {
             std::unique_ptr<scene::Mesh>& mesh =
                 std::get<std::unique_ptr<scene::Mesh>>( node->data );
             for ( scene::Primitive& prim : mesh->primitives ) {
+                scene::Material current_material = scene.materials[prim.material_id];
+                std::vector<std::optional<scene::Texture>> textures_needed;
+
+                // Lowkey I might refactor this later. Assume the default pipeline is a PBR
+                // Albedo Map Pipeline
+                if ( current_material.type == scene::Material_Types::PBR_ALBEDO_MAP_MAT_TYPE ) {
+                    if ( current_material.base_color_texture_index.has_value() ) {
+                        scene::Texture albedo_texture =
+                            scene.textures[current_material.base_color_texture_index.value()];
+                        textures_needed.push_back( albedo_texture );
+                    } else {
+                        textures_needed.push_back( std::nullopt );
+                    }
+
+                }  // We would continue this if-else chain for all material pipelines based on
+                   // needed textures.
+
+                // TODO: Not yet connected with a layout
+                if ( scene.hdri_index.has_value() ) {
+                    textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
+                } else {
+                    textures_needed.push_back( std::nullopt );
+                }
+
                 engine::DrawResourceDescriptor desc =
                     engine::DrawResourceDescriptor::from_mesh( sceneMesh, prim );
                 add_draw_task( task_list, {

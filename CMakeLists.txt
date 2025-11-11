@@ -33,7 +33,9 @@ add_executable(racecar
   ${ENGINE_DIR}/task_list.cpp
   ${ENGINE_DIR}/destructor_stack.cpp
   ${ENGINE_DIR}/descriptors.cpp
+  ${ENGINE_DIR}/image.cpp
   ${ENGINE_DIR}/gui.cpp
+
 
   ${GEOMETRY_DIR}/mesh.cpp
 
