@@ -52,7 +52,7 @@ std::optional<vkb::Swapchain> create_swapchain( SDL_Window* window, const vk::Co
 
     const vkb::Swapchain& swapchain = swapchain_ret.value();
 
-    SDL_Log( "[engine] Initial swapchain extent: %d×%d", swapchain.extent.width,
+    SDL_Log( "[Engine] Initial swapchain extent: %d×%d", swapchain.extent.width,
              swapchain.extent.height );
 
     return swapchain;
