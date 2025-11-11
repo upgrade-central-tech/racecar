@@ -3,6 +3,7 @@
 #include <SDL3/SDL.h>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
 #define GLM_ENABLE_EXPERIMENTAL  // Needed for quaternion.hpp
 #include <glm/gtx/quaternion.hpp>
 
@@ -21,7 +22,38 @@ static inline glm::vec3 double_array_to_vec3( std::vector<double> arr ) {
     return glm::vec3( arr[0], arr[1], arr[2] );
 }
 
-bool load_gltf( std::string filepath,
+// These are all the image formats currently supported. If more formats are required, also add to
+// vk::utility::bytes_from_format
+VkFormat get_vk_format( int bitsPerChannel, int numChannels ) {
+    if ( bitsPerChannel == 32 ) {
+        // Assume floating point formats for 32 bits per channel
+        switch ( numChannels ) {
+            case 4:
+                return VK_FORMAT_R32G32B32A32_SFLOAT;
+            default:
+                SDL_Log( "[Scene] Texture loading: Unsupported 32-bit channel count: %i",
+                         numChannels );
+        }
+    } else if ( bitsPerChannel == 8 ) {
+        switch ( numChannels ) {
+            case 1:
+                return VK_FORMAT_R8_UNORM;
+            case 3:
+                return VK_FORMAT_R8G8B8_UNORM;
+            case 4:
+                return VK_FORMAT_R8G8B8A8_UNORM;
+            default:
+                SDL_Log( "[Scene] Texture loading: Unsupported 8-bit channel count: %i",
+                         numChannels );
+        }
+    }
+    SDL_Log( "[Scene] Texture loading: Unknown texture format" );
+    return VK_FORMAT_R8G8B8A8_UNORM;
+}
+
+bool load_gltf( vk::Common vulkan,
+                engine::State& engine,
+                std::string filepath,
                 Scene& scene,
                 std::vector<geometry::Vertex>& out_global_vertices,
                 std::vector<uint32_t>& out_global_indices ) {
@@ -71,10 +103,19 @@ bool load_gltf( std::string filepath,
         new_mat.base_color =
             double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );
         new_mat.base_color_texture_index = loaded_mat.pbrMetallicRoughness.baseColorTexture.index;
+        if ( new_mat.base_color_texture_index.value() == -1 ) {
+            new_mat.base_color_texture_index = std::nullopt;
+        }
+        SDL_Log( "[Scene] GLTF parsing error! %i",
+                 loaded_mat.pbrMetallicRoughness.baseColorTexture.index );
+
         new_mat.metallic = loaded_mat.pbrMetallicRoughness.metallicFactor;
         new_mat.roughness = loaded_mat.pbrMetallicRoughness.roughnessFactor;
         new_mat.metallic_roughness_texture_index =
             loaded_mat.pbrMetallicRoughness.metallicRoughnessTexture.index;
+        if ( new_mat.metallic_roughness_texture_index.value() == -1 ) {
+            new_mat.metallic_roughness_texture_index = std::nullopt;
+        }
 
         if ( loaded_mat.extensions.count( "KHR_materials_specular" ) != 0 ) {
             auto specular = loaded_mat.extensions.find( "KHR_materials_specular" )->second;
@@ -123,10 +164,19 @@ bool load_gltf( std::string filepath,
                                     .GetNumberAsDouble();
         }
         new_mat.emmisive_texture_index = loaded_mat.emissiveTexture.index;
+        if ( new_mat.emmisive_texture_index.value() == -1 ) {
+            new_mat.emmisive_texture_index = std::nullopt;
+        }
 
         new_mat.normal_texture_index = loaded_mat.normalTexture.index;
+        if ( new_mat.normal_texture_index.value() == -1 ) {
+            new_mat.normal_texture_index = std::nullopt;
+        }
         new_mat.normal_texture_weight = loaded_mat.normalTexture.scale;
         new_mat.occulusion_texture_index = loaded_mat.occlusionTexture.index;
+        if ( new_mat.occulusion_texture_index.value() == -1 ) {
+            new_mat.occulusion_texture_index = std::nullopt;
+        }
 
         new_mat.double_sided = loaded_mat.doubleSided;
         new_mat.unlit = false;
@@ -136,14 +186,24 @@ bool load_gltf( std::string filepath,
 
     // Textures & Load onto GPU
     for ( tinygltf::Texture& loaded_tex : model.textures ) {
-        Host_Texture new_tex;
+        Texture new_tex;
         tinygltf::Image loaded_img = model.images[loaded_tex.source];
 
         new_tex.width = loaded_img.width;
         new_tex.height = loaded_img.height;
         new_tex.bitsPerChannel = loaded_img.bits;
         new_tex.numChannels = loaded_img.component;
-        new_tex.data = loaded_img.image;
+
+        VkFormat image_format = get_vk_format( new_tex.bitsPerChannel, new_tex.numChannels );
+
+        new_tex.data =
+            image::create_image( vulkan, engine, static_cast<void*>( loaded_img.image.data() ),
+                                 { static_cast<uint32_t>( loaded_img.width ),
+                                   static_cast<uint32_t>( loaded_img.height ), 1 },
+                                 image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+        if ( !new_tex.data ) {
+            SDL_Log( "[Scene] GLTF loading: Failed to load texture onto the GPU" );
+        }
 
         scene.textures.push_back( new_tex );
     }
@@ -283,8 +343,8 @@ bool load_gltf( std::string filepath,
                 }
 
                 // Currently only accepting one uv coordinate per primative.
-                if ( loaded_prim.attributes.count( "TEX_COORD0" ) > 0 ) {
-                    int accessor_id = loaded_prim.attributes["TEX_COORD0"];
+                if ( loaded_prim.attributes.count( "TEXCOORD_0" ) > 0 ) {
+                    int accessor_id = loaded_prim.attributes["TEXCOORD_0"];
                     tinygltf::Accessor accessor =
                         model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
@@ -438,22 +498,25 @@ bool load_gltf( std::string filepath,
     return true;
 }
 
-bool load_hdri( std::string filepath, Scene& scene ) {
+bool load_hdri( vk::Common vulkan, engine::State& engine, std::string filepath, Scene& scene ) {
     int x = 0, y = 0, channels = 0;
     float* hdriData = stbi_loadf( filepath.c_str(), &x, &y, &channels, 4 );
     if ( x == 0 || y == 0 ) {
         SDL_Log( "[Scene] Failed to load HDRI: %s", stbi_failure_reason() );
         return false;
     }
-    Host_Texture hdri;
+    Texture hdri;
     hdri.width = x;
     hdri.height = y;
     hdri.bitsPerChannel = 32;  // via stbi_loadf
-    hdri.numChannels = 4;
+    hdri.numChannels = 4;      // via stbi_loadf
 
-    int num_bytes = x * y * channels * sizeof( float );
-    hdri.data.resize( num_bytes );
-    memcpy( hdri.data.data(), hdriData, num_bytes );
+    VkFormat image_format = get_vk_format( hdri.bitsPerChannel, hdri.numChannels );
+    hdri.data = image::create_image(
+        vulkan, engine, static_cast<void*>( hdriData ),
+        { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
+        image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
     scene.textures.push_back( hdri );
     scene.hdri_index = scene.textures.size() - 1;
     return true;
