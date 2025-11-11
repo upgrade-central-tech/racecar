@@ -92,4 +92,59 @@ std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
     return new_mesh_buffers;
 }
 
+void generate_tangents( Mesh& mesh ) {
+    std::vector<geometry::Vertex>& vertices = mesh.vertices;
+    std::vector<uint32_t>& indices = mesh.indices;
+
+    // Shouldn't be necessary if default constructed to be 0, but do it in case
+    for ( geometry::Vertex& vertex : vertices ) {
+        vertex.tangent = glm::vec4( 0.0f );
+    }
+
+    for ( uint32_t index = 0; index < static_cast<uint32_t>( indices.size() ); index += 3 ) {
+        uint32_t i0 = indices[index];
+        uint32_t i1 = indices[index + 1];
+        uint32_t i2 = indices[index + 2];
+
+        const glm::vec3& pos0 = vertices[i0].position;
+        const glm::vec3& pos1 = vertices[i1].position;
+        const glm::vec3& pos2 = vertices[i2].position;
+
+        const glm::vec2& uv0 = vertices[i0].uv;
+        const glm::vec2& uv1 = vertices[i1].uv;
+        const glm::vec2& uv2 = vertices[i2].uv;
+
+        // https://learnopengl.com/Advanced-Lighting/Normal-Mapping
+        glm::vec3 edge1 = pos1 - pos0;
+        glm::vec3 edge2 = pos2 - pos0;
+
+        glm::vec2 deltaUV1 = uv1 - uv0;
+        glm::vec2 deltaUV2 = uv2 - uv0;
+
+        float f = 1.0f / ( deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y );
+        glm::vec3 tangent = f * ( deltaUV2.y * edge1 - deltaUV1.y * edge2 );
+        glm::vec3 bitangent = f * ( -deltaUV2.x * edge1 + deltaUV1.x * edge2 );
+
+        float w = glm::dot( normalize( glm::cross( vertices[i0].normal, tangent ) ),
+                            normalize( bitangent ) ) < 0.0f
+                      ? -1.0f
+                      : 0.0f;
+
+        vertices[i0].tangent += glm::vec4( tangent, w );
+        vertices[i1].tangent += glm::vec4( tangent, w );
+        vertices[i2].tangent += glm::vec4( tangent, w );
+    }
+
+    for ( geometry::Vertex& vertex : vertices ) {
+        glm::vec normal = glm::normalize( vertex.normal );
+        glm::vec3 tangent =
+            glm::normalize( glm::vec3( vertex.tangent.x, vertex.tangent.y, vertex.tangent.z ) );
+        float tangent_w = vertex.tangent.w < 0.0f ? -1.0f : 1.0f;
+
+        tangent = glm::normalize( tangent - normal * glm::dot( normal, tangent ) );
+
+        vertex.tangent = glm::vec4( tangent, tangent_w );
+    }
+}
+
 }  // namespace racecar::geometry

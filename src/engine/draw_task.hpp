@@ -4,6 +4,7 @@
 #include "../scene/scene.hpp"
 #include "pipeline.hpp"
 #include "uniform_buffer.hpp"
+#include "images.hpp"
 
 #include <volk.h>
 
@@ -26,10 +27,12 @@ struct DrawResourceDescriptor {
 /// Descriptor for a draw call.
 struct DrawTask {
     /// User-defined parameters:
-    DrawResourceDescriptor draw_resource_desc;
-
+    DrawResourceDescriptor draw_resource_descriptor;
+    ImagesDescriptor images_descriptor;
+    SamplersDescriptor samplers_descriptor;
+    
     std::vector<IUniformBuffer*> uniform_buffers;
-    std::vector<std::optional<scene::Texture>> textures;
+    std::vector<vk::mem::AllocatedImage> textures;
 
     Pipeline pipeline = {};
     VkExtent2D extent = {};

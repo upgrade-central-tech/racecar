@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../engine/image.hpp"
+#include "../engine/images.hpp"
 #include "../geometry/mesh.hpp"
 #include "camera.hpp"
 
@@ -105,7 +105,7 @@ struct Scene {
     std::optional<size_t> hdri_index = std::nullopt;
 };
 
-bool load_gltf( vk::Common vulkan,
+bool load_gltf( vk::Common& vulkan,
                 engine::State& engine,
                 std::string filepath,
                 Scene& scene,

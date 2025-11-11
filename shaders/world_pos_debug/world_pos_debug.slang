@@ -13,6 +13,7 @@ struct VertexOutput {
 
 struct CameraBufferData {
     float4x4 mvp;
+    float4x4 model;
     float4x4 inv_model;
     float3 color;
 };
