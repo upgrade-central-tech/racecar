@@ -13,7 +13,7 @@ struct Gui {
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 };
 
-std::optional<Gui> initialize( const Context& ctx, const State& engine );
-void free( const vk::Common& vulkan, Gui& gui );
+std::optional<Gui> initialize( Context& ctx, const State& engine );
+void free();
 
 }  // namespace racecar::engine::gui

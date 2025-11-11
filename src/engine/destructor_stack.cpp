@@ -2,7 +2,6 @@
 
 #include "../vk/mem.hpp"
 
-
 void DestructorStack::execute_cleanup() {
     while ( !destructors.empty() ) {
         auto destructor = destructors.top();

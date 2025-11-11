@@ -60,7 +60,7 @@ int main( int, char*[] ) {
         return EXIT_FAILURE;
     }
 
-    engine::gui::Gui& gui = gui_opt.value();
+    [[maybe_unused]] engine::gui::Gui& gui = gui_opt.value();
 
     engine::TaskList task_list;
 
@@ -132,7 +132,8 @@ int main( int, char*[] ) {
                 std::unique_ptr<scene::Mesh>& mesh =
                     std::get<std::unique_ptr<scene::Mesh>>( node->data );
                 for ( scene::Primitive& prim : mesh->primitives ) {
-                    engine::DrawResourceDescriptor desc = engine::DrawResourceDescriptor::from_mesh(sceneMesh, prim);
+                    engine::DrawResourceDescriptor desc =
+                        engine::DrawResourceDescriptor::from_mesh( sceneMesh, prim );
                     add_draw_task( task_list, {
                                                   .draw_resource_desc = desc,
                                                   .layout_resources = scene_layout_resources,
@@ -191,7 +192,7 @@ int main( int, char*[] ) {
 
     vkDeviceWaitIdle( ctx.vulkan.device );
 
-    engine::gui::free( ctx.vulkan, gui );
+    engine::gui::free();
     engine::free( engine, ctx.vulkan );
     vk::free( ctx.vulkan );
     sdl::free( ctx.window );

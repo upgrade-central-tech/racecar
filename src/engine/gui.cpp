@@ -6,7 +6,7 @@
 
 namespace racecar::engine::gui {
 
-std::optional<Gui> initialize( const Context& ctx, const State& engine ) {
+std::optional<Gui> initialize( Context& ctx, const State& engine ) {
     VkDescriptorPoolSize pool_size = {
         .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE,
@@ -25,6 +25,9 @@ std::optional<Gui> initialize( const Context& ctx, const State& engine ) {
     RACECAR_VK_CHECK( vkCreateDescriptorPool( ctx.vulkan.device, &descriptor_pool_info, nullptr,
                                               &gui.descriptor_pool ),
                       "[engine::gui::initialize] Failed to create descriptor pool" );
+
+    ctx.vulkan.destructor_stack.push( ctx.vulkan.device, gui.descriptor_pool,
+                                      vkDestroyDescriptorPool );
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -67,12 +70,10 @@ std::optional<Gui> initialize( const Context& ctx, const State& engine ) {
     return gui;
 }
 
-void free( const vk::Common& vulkan, Gui& gui ) {
+void free() {
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
-
-    vkDestroyDescriptorPool( vulkan.device, gui.descriptor_pool, nullptr );
 }
 
 }  // namespace racecar::engine::gui
