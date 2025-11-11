@@ -7,7 +7,7 @@ namespace racecar::engine {
 bool draw( [[maybe_unused]] vk::Common& vulkan,
            [[maybe_unused]] const engine::State& engine,
            const DrawTask& draw_task,
-           const VkCommandBuffer& cmd_buf ) {    // Clear the background with a pulsing blue color
+           const VkCommandBuffer& cmd_buf ) {  // Clear the background with a pulsing blue color
     VkClearColorValue clear_color = { { 0.0f, 0.0f, 1.0f, 1.0f } };
 
     VkRenderingAttachmentInfo color_attachment_info = {
@@ -37,8 +37,7 @@ bool draw( [[maybe_unused]] vk::Common& vulkan,
         .colorAttachmentCount = 1,
         .pColorAttachments = &color_attachment_info,
         .pDepthAttachment = &depth_attachment_info,
-        .pStencilAttachment = nullptr
-    };
+        .pStencilAttachment = nullptr };
 
     vkCmdBeginRendering( cmd_buf, &rendering_info );
 
@@ -64,16 +63,22 @@ bool draw( [[maybe_unused]] vk::Common& vulkan,
         vkCmdSetScissor( cmd_buf, 0, 1, &scissor );
 
         for ( IUniformBuffer* buffer : draw_task.uniform_buffers ) {
-            vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.layout, 0, 1, buffer->descriptor(engine.get_frame_index()), 0, nullptr);
+            vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                     draw_task.pipeline.layout, 0, 1,
+                                     buffer->descriptor( engine.get_frame_index() ), 0, nullptr );
         }
 
-        vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER, draw_task.draw_resource_desc.vertex_buffers.size(), draw_task.draw_resource_desc.vertex_buffers.data(),
+        vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER,
+                                draw_task.draw_resource_desc.vertex_buffers.size(),
+                                draw_task.draw_resource_desc.vertex_buffers.data(),
                                 draw_task.draw_resource_desc.vertex_buffer_offsets.data() );
 
-        vkCmdBindIndexBuffer( cmd_buf, draw_task.draw_resource_desc.index_buffer, 0, VK_INDEX_TYPE_UINT32 );
+        vkCmdBindIndexBuffer( cmd_buf, draw_task.draw_resource_desc.index_buffer, 0,
+                              VK_INDEX_TYPE_UINT32 );
 
-        vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_desc.index_count, 1, draw_task.draw_resource_desc.first_index, draw_task.draw_resource_desc.index_buffer_offset, 0 );
-
+        vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_desc.index_count, 1,
+                          draw_task.draw_resource_desc.first_index,
+                          draw_task.draw_resource_desc.index_buffer_offset, 0 );
     }
 
     vkCmdEndRendering( cmd_buf );
@@ -81,19 +86,16 @@ bool draw( [[maybe_unused]] vk::Common& vulkan,
     return true;
 }
 
-DrawResourceDescriptor DrawResourceDescriptor::from_mesh(const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive) {
-    engine::DrawResourceDescriptor draw_mesh_desc {
-        .vertex_buffers = {
-            mesh.mesh_buffers.vertex_buffer.value().handle
-        },
+DrawResourceDescriptor DrawResourceDescriptor::from_mesh(
+    const geometry::Mesh& mesh,
+    const std::optional<scene::Primitive>& primitive ) {
+    engine::DrawResourceDescriptor draw_mesh_desc{
+        .vertex_buffers = { mesh.mesh_buffers.vertex_buffer.value().handle },
         .index_buffer = mesh.mesh_buffers.index_buffer.value().handle,
-        .vertex_buffer_offsets = {
-            0
-        },
+        .vertex_buffer_offsets = { 0 },
         .index_buffer_offset = 0,
         .first_index = 0,
-        .index_count = static_cast<uint32_t>( mesh.indices.size() )
-    };
+        .index_count = static_cast<uint32_t>( mesh.indices.size() ) };
 
     if ( primitive.has_value() ) {
         draw_mesh_desc.first_index = primitive->ind_offset;
@@ -103,6 +105,5 @@ DrawResourceDescriptor DrawResourceDescriptor::from_mesh(const geometry::Mesh& m
 
     return draw_mesh_desc;
 }
-
 
 }  // namespace racecar::engine

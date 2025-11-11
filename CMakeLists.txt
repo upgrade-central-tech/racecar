@@ -6,11 +6,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS NO)
 
-set(SRC_DIR "src")
+set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
 set(GEOMETRY_DIR "${SRC_DIR}/geometry")
 set(SCENE_DIR "${SRC_DIR}/scene")
+
+set(THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
+set(IMGUI_DIR "${THIRD_PARTY_DIR}/imgui")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
@@ -30,12 +33,25 @@ add_executable(racecar
   ${ENGINE_DIR}/task_list.cpp
   ${ENGINE_DIR}/destructor_stack.cpp
   ${ENGINE_DIR}/descriptors.cpp
+  ${ENGINE_DIR}/gui.cpp
 
   ${GEOMETRY_DIR}/mesh.cpp
 
   ${SCENE_DIR}/scene.cpp
   ${SCENE_DIR}/camera.cpp
+
+  # Third party libraries not part of our vcpkg system
+  ${IMGUI_DIR}/imgui_demo.cpp
+  ${IMGUI_DIR}/imgui_draw.cpp
+  ${IMGUI_DIR}/imgui_impl_sdl3.cpp
+  ${IMGUI_DIR}/imgui_impl_vulkan.cpp
+  ${IMGUI_DIR}/imgui_tables.cpp
+  ${IMGUI_DIR}/imgui_widgets.cpp
+  ${IMGUI_DIR}/imgui.cpp
 )
+
+# Treat ImGui as a third party library, has to be #included with angle brackets (<>)
+target_include_directories(racecar PRIVATE "${IMGUI_DIR}")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   target_compile_definitions(racecar PRIVATE DEBUG=1)
@@ -50,12 +66,10 @@ else()
 endif()
 
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-
+target_link_libraries(racecar PRIVATE volk::volk GPUOpen::VulkanMemoryAllocator)
 
 find_package(volk CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE volk::volk)
-
-target_link_libraries(racecar PRIVATE volk::volk GPUOpen::VulkanMemoryAllocator)
 
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE glm::glm)
@@ -63,11 +77,8 @@ target_link_libraries(racecar PRIVATE glm::glm)
 find_package(SDL3 CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE SDL3::SDL3)
 
-
 find_package(vk-bootstrap CONFIG REQUIRED)
 target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)
 
 find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
 target_include_directories(racecar PRIVATE ${TINYGLTF_INCLUDE_DIRS})
-find_package(imgui CONFIG REQUIRED)
-target_link_libraries(racecar PRIVATE imgui::imgui)

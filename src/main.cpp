@@ -1,7 +1,9 @@
 #include "context.hpp"
 #include "engine/execute.hpp"
+#include "engine/gui.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
+#include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
 #include "geometry/triangle.hpp"
 #include "scene/scene.hpp"
@@ -16,7 +18,6 @@
 #include <chrono>
 #include <cstdlib>
 #include <thread>
-
 
 using namespace racecar;
 
@@ -51,10 +52,18 @@ int main( int, char*[] ) {
     }
 
     engine::State& engine = engine_opt.value();
-    engine::TaskList task_list;
 
-    scene::Scene scene;
+    std::optional<engine::gui::Gui> gui_opt = engine::gui::initialize( ctx, engine );
+
+    if ( !gui_opt ) {
+        SDL_Log( "[RACECAR] Failed to initialize GUI!" );
+        return EXIT_FAILURE;
+    }
+
+    engine::gui::Gui& gui = gui_opt.value();
+
     geometry::Mesh sceneMesh;
+    scene::Scene scene;
     scene::load_gltf( std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices, sceneMesh.indices );
 
     std::optional<geometry::GPUMeshBuffers> uploaded_mesh_buffer =
@@ -64,8 +73,6 @@ int main( int, char*[] ) {
     }
     sceneMesh.mesh_buffers = uploaded_mesh_buffer.value();
 
-    // Rendering setup
-    // {
     std::optional<VkShaderModule> scene_shader_module_opt =
         vk::create::shader_module( ctx.vulkan, "../shaders/world_pos_debug/world_pos_debug.spv" );
     if ( !scene_shader_module_opt ) {
@@ -80,15 +87,16 @@ int main( int, char*[] ) {
             VkShaderStageFlagBits( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT ),
             engine.frame_overlap );
 
-    std::optional<engine::Pipeline> scene_pipeline_opt =
-        create_gfx_pipeline( engine, ctx.vulkan, sceneMesh,
-                             { camera_buffer.layout( engine.get_frame_index() ) },
-                             scene_shader_module );
+    std::optional<engine::Pipeline> scene_pipeline_opt = create_gfx_pipeline(
+        engine, ctx.vulkan, sceneMesh, { camera_buffer.layout( engine.get_frame_index() ) },
+        scene_shader_module );
     if ( !scene_pipeline_opt ) {
         SDL_Log( "[Engine] Failed to create pipeline" );
         return false;
     }
     engine::Pipeline& scene_pipeline = scene_pipeline_opt.value();
+
+    engine::TaskList task_list;
 
     for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
         if ( std::holds_alternative<std::unique_ptr<scene::Mesh>>( node->data ) ) {
@@ -116,6 +124,8 @@ int main( int, char*[] ) {
 
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
+            engine::gui::process_events( &event );
+
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;
             }
@@ -160,8 +170,10 @@ int main( int, char*[] ) {
             scene_camera_data.inv_model = glm::inverse( model );
             scene_camera_data.color = glm::vec3(
                 std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
-            camera_buffer.set_data(scene_camera_data);
+            camera_buffer.set_data( scene_camera_data );
         }
+
+        engine::gui::update( gui );
 
         if ( engine::execute( engine, ctx, task_list ) ) {
             engine.rendered_frames = engine.rendered_frames + 1;

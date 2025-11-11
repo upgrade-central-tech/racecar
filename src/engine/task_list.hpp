@@ -10,6 +10,6 @@ struct TaskList {
     std::vector<DrawTask> draw_tasks;
 };
 
-bool add_draw_task(TaskList &task_list, DrawTask task);
+bool add_draw_task( TaskList& task_list, DrawTask task );
 
 }  // namespace racecar::engine
