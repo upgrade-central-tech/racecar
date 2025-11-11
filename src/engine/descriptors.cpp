@@ -152,6 +152,31 @@ VkDescriptorSet allocate( const vk::Common& vulkan,
 
 }  // namespace descriptor_allocator
 
+void write_image( DescriptorWriter& writer,
+                  int binding,
+                  VkImageView image,
+                  VkSampler sampler,
+                  VkImageLayout layout,
+                  VkDescriptorType type ) {
+
+    VkDescriptorImageInfo& info = writer.imageInfos.emplace_back( VkDescriptorImageInfo{
+        .sampler = sampler,
+        .imageView = image,
+        .imageLayout = layout
+    } );
+
+    VkWriteDescriptorSet write = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = VK_NULL_HANDLE,
+        .dstBinding = static_cast<uint32_t>(binding),
+        .descriptorCount = 1,
+        .descriptorType = type,
+        .pImageInfo = &info
+    };
+
+    writer.writes.push_back(write);
+}
+
 void write_buffer( DescriptorWriter& writer,
                    int binding,
                    VkBuffer buffer,

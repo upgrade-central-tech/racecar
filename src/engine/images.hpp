@@ -1,0 +1,42 @@
+#include "../vk/common.hpp"
+#include "state.hpp"
+
+namespace racecar::engine {
+
+struct ImagesDescriptor {
+    VkDescriptorSetLayout layout;
+    std::vector<VkDescriptorSet> descriptor_sets;
+    std::vector<std::vector<vk::mem::AllocatedImage>> images;
+};
+
+ImagesDescriptor create_image_descriptors( vk::Common& vulkan,
+                                           engine::State& engine,
+                                           const std::vector<vk::mem::AllocatedImage> images,
+                                           VkShaderStageFlags shader_flags,
+                                           int frame_overlap );
+
+std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan,
+                                                     engine::State& engine,
+                                                     void* data,
+                                                     VkExtent3D size,
+                                                     VkFormat format,
+                                                     VkImageUsageFlags usage,
+                                                     bool mipmapped );
+
+std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan,
+                                                       VkExtent3D size,
+                                                       VkFormat format,
+                                                       VkImageUsageFlags usage,
+                                                       bool mipmapped );
+
+std::optional<vk::mem::AllocatedImage> create_allocated_image( vk::Common& vulkan,
+                                                               engine::State& engine,
+                                                               void* data,
+                                                               VkExtent3D size,
+                                                               VkFormat format,
+                                                               VkImageUsageFlags usage,
+                                                               bool mipmapped );
+
+void destroy_image( vk::Common& vulkan, const vk::mem::AllocatedImage& image );
+
+}  // namespace racecar::engine

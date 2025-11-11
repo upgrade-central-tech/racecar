@@ -1,6 +1,7 @@
 #include "context.hpp"
 #include "engine/execute.hpp"
 #include "engine/gui.hpp"
+#include "engine/images.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
@@ -18,6 +19,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <thread>
+
 
 using namespace racecar;
 
@@ -87,8 +89,17 @@ int main( int, char*[] ) {
             VkShaderStageFlagBits( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT ),
             engine.frame_overlap );
 
+    engine::ImagesDescriptor images_descriptor = {};
+
+    std::vector<vk::mem::AllocatedImage> images;
+
+    engine::create_image_descriptors( ctx.vulkan, engine, images,
+                                      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                      engine.frame_overlap );
+
     std::optional<engine::Pipeline> scene_pipeline_opt = create_gfx_pipeline(
-        engine, ctx.vulkan, sceneMesh, { camera_buffer.layout( engine.get_frame_index() ) },
+        engine, ctx.vulkan, sceneMesh,
+        { camera_buffer.layout( engine.get_frame_index() ), images_descriptor.layout },
         scene_shader_module );
     if ( !scene_pipeline_opt ) {
         SDL_Log( "[Engine] Failed to create pipeline" );
