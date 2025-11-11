@@ -324,7 +324,7 @@ bool load_gltf( std::string filepath,
                         "with pos count" );
                 }
 
-                new_prim.vertex_offset = out_global_vertices.size();
+                new_prim.vertex_offset = static_cast<int>( out_global_vertices.size() );
 
                 for ( size_t i = 0; i < pos.size(); ++i ) {
                     geometry::Vertex new_vertex;
@@ -359,7 +359,7 @@ bool load_gltf( std::string filepath,
 
                     tinygltf::BufferView buffer_view =
                         model.bufferViews[static_cast<size_t>( buffer_view_id )];
-                    new_prim.ind_offset = out_global_indices.size();
+                    new_prim.ind_offset = static_cast<int>( out_global_indices.size() );
                     new_prim.ind_count = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset;
                     size_t byte_length = buffer_view.byteLength;
@@ -391,7 +391,7 @@ bool load_gltf( std::string filepath,
                           // triangles
                     new_prim.is_indexed = false;
                     for ( size_t i = 0; i < pos.size(); i++ ) {
-                        out_global_indices.push_back( i );
+                        out_global_indices.push_back( static_cast<unsigned int>( i ) );
                     }
                 }
 

@@ -34,16 +34,13 @@ struct DescriptorSystem {
     VkDescriptorSetLayout triangle_test_layout = nullptr;
 
     // This pointer gets populated during create_descriptor_system.
-    VkDescriptorSetLayout camera_set_layout = nullptr;
+    // VkDescriptorSetLayout camera_set_layout = nullptr;
 
     // It's intended that this camera uniform information gets made per frame.
     // For now, for simplicity, let's ignore.
-    uniform_buffer::CameraBufferData camera_data;
-    
+    // uniform_buffer::CameraBufferData camera_data;
+
     // std::vector<vk::mem::UniformBuffer> camera_buffers;
-
-
-
 };
 
 struct LayoutResource {

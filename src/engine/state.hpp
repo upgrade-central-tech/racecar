@@ -1,11 +1,10 @@
 #pragma once
 
+#include "../scene/camera.hpp"
 #include "../vk/common.hpp"
-
+#include "../vk/mem.hpp"
 #include "descriptors.hpp"
 #include "imm_submit.hpp"
-#include "../scene/camera.hpp"
-#include "../vk/mem.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -54,6 +53,8 @@ struct State {
     std::vector<SwapchainSemaphores> swapchain_semaphores;
 
     DescriptorSystem descriptor_system = {};
+
+    int get_frame_index() const { return frame_number % frame_overlap; };
 };
 
 std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan );

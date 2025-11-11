@@ -32,11 +32,11 @@ bool create_descriptor_system( const vk::Common& vulkan,
     // Build the per-frame camera layout. Idea is to introduce a model matrix or some float that
     // would change over time.
     {
-        DescriptorLayoutBuilder camera_builder;
-        descriptor_layout_builder::add_binding( camera_builder, 0,
-                                                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER );
-        descriptor_system.camera_set_layout = descriptor_layout_builder::build(
-            vulkan, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, camera_builder );
+        // DescriptorLayoutBuilder camera_builder;
+        // descriptor_layout_builder::add_binding( camera_builder, 0,
+                                                // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER );
+        // descriptor_system.camera_set_layout = descriptor_layout_builder::build(
+            // vulkan, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, camera_builder );
 
         /// TODO: This is per frame-information. We're going to hardcode the uniform updates within
         /// the draw loop for simplicity.
