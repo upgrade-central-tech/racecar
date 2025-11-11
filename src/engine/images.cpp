@@ -113,7 +113,7 @@ std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan,
     SDL_Log("[ALLOC] last alloc called from create_image!");
 
     vulkan.destructor_stack.push( vulkan.device, allocated_image->image_view, vkDestroyImageView );
-    vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, allocated_image.value() );
+    vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, *allocated_image );
 
     return allocated_image;
 };

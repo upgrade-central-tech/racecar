@@ -105,7 +105,7 @@ struct Scene {
     std::optional<size_t> hdri_index = std::nullopt;
 };
 
-bool load_gltf( vk::Common vulkan,
+bool load_gltf( vk::Common& vulkan,
                 engine::State& engine,
                 std::string filepath,
                 Scene& scene,

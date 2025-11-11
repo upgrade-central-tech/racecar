@@ -51,7 +51,7 @@ VkFormat get_vk_format( int bitsPerChannel, int numChannels ) {
     return VK_FORMAT_R8G8B8A8_UNORM;
 }
 
-bool load_gltf( vk::Common vulkan,
+bool load_gltf( vk::Common& vulkan,
                 engine::State& engine,
                 std::string filepath,
                 Scene& scene,
