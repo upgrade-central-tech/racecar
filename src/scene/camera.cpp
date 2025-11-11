@@ -3,7 +3,7 @@
 #include <SDL3/SDL.h>
 #include <glm/gtc/matrix_transform.hpp>
 
-namespace racecar::scene::camera {
+namespace racecar::camera {
 
 glm::mat4 get_view_matrix( Camera& cam ) {
     return cam.view_mat;
@@ -80,4 +80,4 @@ void process_event( const SDL_Event* event, Camera& cam ) {
     }
 }
 
-}  // namespace racecar::scene::camera
+}  // namespace racecar::camera

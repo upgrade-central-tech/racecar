@@ -40,7 +40,7 @@ struct State {
 
     /// The glTF file we load our scene from may define multiple cameras. Also, we initialize
     /// a default camera when no file has been loaded yet. See `engine::initialize()`.
-    scene::camera::Camera current_camera = {};
+    camera::Camera current_camera = {};
 
     uint32_t frame_overlap = 1;
     uint32_t frame_number = 0;

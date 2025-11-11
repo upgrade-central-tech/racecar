@@ -123,7 +123,7 @@ int main( int, char*[] ) {
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
             engine::gui::process_event( &event );
-            scene::camera::process_event( &event, engine.current_camera );
+            camera::process_event( &event, engine.current_camera );
 
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;
@@ -145,7 +145,7 @@ int main( int, char*[] ) {
         {
             // Update the scene block. Hard-coded goodness.
             uniform_buffer::CameraBufferData scene_camera_data = camera_buffer.get_data();
-            scene::camera::Camera& camera = engine.current_camera;
+            camera::Camera& camera = engine.current_camera;
 
             glm::mat4 view = glm::lookAt( camera.eye, camera.look_at, camera.up );
             glm::mat4 projection = glm::perspective( camera.fov_y, camera.aspect_ratio,

@@ -3,7 +3,7 @@
 #include <SDL3/SDL_events.h>
 #include <glm/glm.hpp>
 
-namespace racecar::scene::camera {
+namespace racecar::camera {
 
 struct Camera {
     glm::vec3 eye;
@@ -32,4 +32,4 @@ glm::mat4 get_view_proj_matrix( Camera& cam );
 
 void process_event( const SDL_Event* event, Camera& cam );
 
-}  // namespace racecar::scene::camera
+}  // namespace racecar::camera
