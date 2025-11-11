@@ -56,8 +56,6 @@ bool create_debug_image_data( vk::Common& vulkan, engine::State& engine ) {
     vulkan.destructor_stack.push( vulkan.device, data.white_image->image_view, vkDestroyImageView );
     vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, data.white_image.value() );
 
-    engine.debug_image_data = data;
-
     return true;
 }
 

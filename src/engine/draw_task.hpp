@@ -29,7 +29,7 @@ struct DrawTask {
     DrawResourceDescriptor draw_resource_desc;
 
     std::vector<IUniformBuffer*> uniform_buffers;
-    std::map<std::string, scene::Texture> textures;
+    std::vector<std::optional<scene::Texture>> textures;
 
     Pipeline pipeline = {};
     VkExtent2D extent = {};
