@@ -58,11 +58,54 @@ std::optional<vkb::Swapchain> create_swapchain( SDL_Window* window, const vk::Co
     return swapchain;
 }
 
+/// Generalized depth buffer creation per frame; for more robust depth textures, we may need a more
+/// general purpose create_texture() function later on. Ideally, create_depth_images would therefore
+/// re-use that create_texture() for each depth image.
+bool create_depth_images( State& engine, vk::Common& vulkan ) {
+    engine.depth_images = std::vector<vk::mem::AllocatedImage>( engine.frame_overlap );
+
+    for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
+        vk::mem::AllocatedImage& depth_image = engine.depth_images[i];
+
+        depth_image.image_format = VK_FORMAT_D32_SFLOAT;
+        depth_image.image_extent = { engine.swapchain.extent.width, engine.swapchain.extent.height,
+                                     1 };
+
+        VkImageUsageFlags depth_image_usages = {};
+        depth_image_usages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+        VkImageCreateInfo depth_image_create_info = vk::create::image_create_info(
+            depth_image.image_format, depth_image_usages, depth_image.image_extent );
+
+        VmaAllocationCreateInfo image_allocate_info = {
+            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+            .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) };
+
+        RACECAR_VK_CHECK(
+            vmaCreateImage( vulkan.allocator, &depth_image_create_info, &image_allocate_info,
+                            &depth_image.image, &depth_image.allocation, nullptr ),
+            "Failed to create depth image" );
+
+        VkImageViewCreateInfo depth_view_create_info = vk::create::image_view_create_info(
+            depth_image.image_format, depth_image.image, VK_IMAGE_ASPECT_DEPTH_BIT );
+
+        RACECAR_VK_CHECK( vkCreateImageView( vulkan.device, &depth_view_create_info, nullptr,
+                                             &depth_image.image_view ),
+                          "Failed to create depth image view" );
+
+        vulkan.destructor_stack.push( vulkan.device, depth_image.image_view, vkDestroyImageView );
+        vulkan.destructor_stack.push_free_vmaimage(vulkan.allocator, depth_image );
+    }
+
+    return true;
+}
+
 /// For each frame (of which there are as many as swapchain images), create a command buffer, and
 /// synchronization primitives.
 bool create_frame_data( State& engine, vk::Common& vulkan ) {
     engine.frames = std::vector<FrameData>( engine.swapchain_images.size() );
-    engine.swapchain_semaphores = std::vector<SwapchainSemaphores>( engine.swapchain_images.size() );
+    engine.swapchain_semaphores =
+        std::vector<SwapchainSemaphores>( engine.swapchain_images.size() );
     engine.frame_overlap = static_cast<uint32_t>( engine.swapchain_images.size() );
     engine.frame_number = 0;
 
@@ -87,32 +130,34 @@ bool create_frame_data( State& engine, vk::Common& vulkan ) {
             vkAllocateCommandBuffers( vulkan.device, &cmdbuf_info, &frame.end_cmdbuf ),
             "Failed to create command buffer" );
 
-        vulkan.destructor_stack.push_free_cmdbufs(vulkan.device, engine.cmd_pool, {frame.start_cmdbuf, frame.render_cmdbuf, frame.end_cmdbuf});
+        vulkan.destructor_stack.push_free_cmdbufs(
+            vulkan.device, engine.cmd_pool,
+            { frame.start_cmdbuf, frame.render_cmdbuf, frame.end_cmdbuf } );
 
         RACECAR_VK_CHECK(
             vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &frame.start_render_smp ),
             "Failed to create state semaphore" );
-        vulkan.destructor_stack.push(vulkan.device, frame.start_render_smp, vkDestroySemaphore);
+        vulkan.destructor_stack.push( vulkan.device, frame.start_render_smp, vkDestroySemaphore );
 
         RACECAR_VK_CHECK(
             vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &frame.render_end_smp ),
             "Failed to create state semaphore" );
-        vulkan.destructor_stack.push(vulkan.device, frame.render_end_smp, vkDestroySemaphore);
+        vulkan.destructor_stack.push( vulkan.device, frame.render_end_smp, vkDestroySemaphore );
 
         RACECAR_VK_CHECK(
             vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &frame.acquire_start_smp ),
             "Failed to create state semaphore" );
-        vulkan.destructor_stack.push(vulkan.device, frame.acquire_start_smp, vkDestroySemaphore);
+        vulkan.destructor_stack.push( vulkan.device, frame.acquire_start_smp, vkDestroySemaphore );
 
-        RACECAR_VK_CHECK(
-            vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr, &swapchain_semaphores.end_present_smp ),
-            "Failed to create state semaphore" );
-        vulkan.destructor_stack.push(vulkan.device, swapchain_semaphores.end_present_smp, vkDestroySemaphore);
+        RACECAR_VK_CHECK( vkCreateSemaphore( vulkan.device, &semaphore_info, nullptr,
+                                             &swapchain_semaphores.end_present_smp ),
+                          "Failed to create state semaphore" );
+        vulkan.destructor_stack.push( vulkan.device, swapchain_semaphores.end_present_smp,
+                                      vkDestroySemaphore );
 
-        RACECAR_VK_CHECK(
-            vkCreateFence( vulkan.device, &fence_info, nullptr, &frame.render_fence ),
-            "Failed to create render fence" );
-        vulkan.destructor_stack.push(vulkan.device, frame.render_fence, vkDestroyFence);
+        RACECAR_VK_CHECK( vkCreateFence( vulkan.device, &fence_info, nullptr, &frame.render_fence ),
+                          "Failed to create render fence" );
+        vulkan.destructor_stack.push( vulkan.device, frame.render_fence, vkDestroyFence );
     }
 
     return true;
@@ -153,10 +198,15 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
     RACECAR_VK_CHECK( vkCreateCommandPool( vulkan.device, &graphics_command_pool_info, nullptr,
                                            &engine.cmd_pool ),
                       "Failed to create command pool" );
-    vulkan.destructor_stack.push(vulkan.device, engine.cmd_pool, vkDestroyCommandPool);
+    vulkan.destructor_stack.push( vulkan.device, engine.cmd_pool, vkDestroyCommandPool );
 
     if ( !create_frame_data( engine, vulkan ) ) {
         SDL_Log( "[Engine] Failed to create frame data" );
+        return {};
+    }
+    
+    if ( !create_depth_images( engine, vulkan) ) {
+        SDL_Log("[Engine] Failed to create depth images/views" );
         return {};
     }
 
@@ -169,23 +219,23 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
         SDL_Log( "[Engine] Failed to create immediate command sync fence" );
         return {};
     }
-    
-    if ( !create_descriptor_system( vulkan, engine.frame_overlap, engine.descriptor_system )) {
-        SDL_Log("[Engine] Failed to create descriptor system");
+
+    if ( !create_descriptor_system( vulkan, engine.frame_overlap, engine.descriptor_system ) ) {
+        SDL_Log( "[Engine] Failed to create descriptor system" );
         return {};
     }
 
     {
         scene::Camera& camera = engine.global_camera;
 
-        camera.eye = glm::vec3(0, 0, 3);
-        camera.look_at = glm::vec3(0, 0, 0);
-        camera.up = glm::vec3(0, 1, 0);
-        camera.forward = glm::normalize(camera.look_at - camera.eye);
-        camera.right = glm::normalize(glm::cross(camera.forward, camera.up));
-        camera.velocity = glm::vec3(0);
+        camera.eye = glm::vec3( 0, 0, 3 );
+        camera.look_at = glm::vec3( 0, 0, 0 );
+        camera.up = glm::vec3( 0, 1, 0 );
+        camera.forward = glm::normalize( camera.look_at - camera.eye );
+        camera.right = glm::normalize( glm::cross( camera.forward, camera.up ) );
+        camera.velocity = glm::vec3( 0 );
 
-        camera.fov_y = glm::radians(60.0);
+        camera.fov_y = glm::radians( 60.0 );
         camera.aspect_ratio = 1280.0 / 720.0;
         camera.near_plane = 0.1;
         camera.far_plane = 100.0;

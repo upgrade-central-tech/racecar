@@ -53,6 +53,46 @@ VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask 
     };
 }
 
+VkImageCreateInfo image_create_info( VkFormat format,
+                                     VkImageUsageFlags usage_flags,
+                                     VkExtent3D extent ) {
+    return {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+
+        .format = format,
+        .extent = extent,
+
+        .mipLevels = 1,
+        .arrayLayers = 1,
+
+        // samples is used for MSAA
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = usage_flags,
+    };
+}
+
+VkImageViewCreateInfo image_view_create_info( VkFormat format,
+                                              VkImage image,
+                                              VkImageAspectFlags aspect_flags ) {
+    VkImageViewCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image,
+
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = format,
+    };
+
+    info.subresourceRange.baseMipLevel = 0;
+    info.subresourceRange.levelCount = 1;
+    info.subresourceRange.baseArrayLayer = 0;
+    info.subresourceRange.layerCount = 1;
+    info.subresourceRange.aspectMask = aspect_flags;
+
+    return info;
+}
+
 VkSemaphoreSubmitInfo semaphore_submit_info( VkPipelineStageFlags2 stage_mask,
                                              VkSemaphore semaphore ) {
     return {

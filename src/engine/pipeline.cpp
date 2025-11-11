@@ -13,7 +13,7 @@ constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
                                              const vk::Common& vulkan,
                                              const std::optional<const geometry::Mesh>& mesh,
-                                             std::vector<VkDescriptorSetLayout>& layouts,
+                                             const std::vector<VkDescriptorSetLayout>& layouts,
                                              VkShaderModule shader_module ) {
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -60,7 +60,7 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         .rasterizerDiscardEnable = VK_FALSE,
         .polygonMode = VK_POLYGON_MODE_FILL,
         .cullMode = VK_CULL_MODE_BACK_BIT,
-        .frontFace = VK_FRONT_FACE_CLOCKWISE,
+        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
         .depthBiasEnable = VK_FALSE,
         .lineWidth = 1.0f,
     };
@@ -101,6 +101,19 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         pipeline_layout_info.pSetLayouts = layouts.data();
     }
 
+    // Force depth testing on, will refactor this out and hopefully 
+    // remove this chunk when we add a pipeline builder.
+    {
+        depth_stencil_info.depthTestEnable = VK_TRUE;
+        depth_stencil_info.depthWriteEnable = true;
+        depth_stencil_info.depthBoundsTestEnable = VK_FALSE;
+        depth_stencil_info.stencilTestEnable = VK_FALSE;
+        depth_stencil_info.front = {};
+        depth_stencil_info.back = {};
+        depth_stencil_info.minDepthBounds = 0.0f;
+        depth_stencil_info.maxDepthBounds = 1.0f;
+    }
+
     VkPipelineLayout gfx_layout = nullptr;
 
     if ( VkResult result =
@@ -123,7 +136,7 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = 1,
         .pColorAttachmentFormats = &engine.swapchain.image_format,
-    };
+        .depthAttachmentFormat = engine.depth_images[0].image_format };
 
     VkGraphicsPipelineCreateInfo gfx_pipeline_info = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
