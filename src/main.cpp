@@ -74,38 +74,6 @@ int main( int, char*[] ) {
     }
     VkShaderModule& scene_shader_module = scene_shader_module_opt.value();
 
-    // To use buffers in your shader, you need to add a descriptor_layout.
-    // Can be done in the following steps:
-    //
-    //  (pre-step) Add a struct in uniform_buffers.hpp that will represent your uniform data.
-    //  Then make a new member of just that in descriptor_system struct
-    //
-    //  1. Add a new VkDescriptorSetLayout in descriptors.hpp descriptor_system
-    //  2. In the initlaize for descriptor_system, create a new DescriptorBuilder
-    //  3. Add necessary bindings to the DescriptorBuilder (this will be your uniform buffers
-    //     added to descriptor_system struct)
-    //  4. Set your layout = descriptor_layout_builder::build(), and use it as seen below
-    //
-    // To link a uniform buffer to your shader, do the following:
-    //  1. Create a scene_layout_resources vector of type LayoutResource with all layouts
-    //  necessary for your pipeline.
-    //     Add this to your new task in the struct constructor under .layout_resources
-    //  2. I probably did something stupid but make an extra vector of VkDescriptorSetLayout.
-    //  This gets passed into
-    //     create_gfx_pipeline().
-    //
-    // If you've done that, then your new uniform buffer should be properly allocated and linked
-    // to the draw via vkCmdBindDescriptorSets!
-    //
-    // This should eventually be replaced with a simpler system
-    // like create_uniform
-    // create_uniform to actually create a uniform buffer
-    // std::vector<engine::LayoutResource> scene_layout_resources = {
-    //     { engine.descriptor_system.camera_set_layout,
-    //       sizeof( uniform_buffer::CameraBufferData ), &engine.descriptor_system.camera_data } };
-    // std::vector<VkDescriptorSetLayout> scene_layouts = {
-    //     engine.descriptor_system.camera_set_layout };
-
     UniformBuffer<uniform_buffer::CameraBufferData> camera_buffer =
         create_uniform_buffer<uniform_buffer::CameraBufferData>(
             ctx.vulkan, engine, {},
@@ -167,7 +135,7 @@ int main( int, char*[] ) {
 
         {
             // Update the scene block. Hard-coded goodness.
-            uniform_buffer::CameraBufferData& scene_camera_data = camera_buffer.data;
+            uniform_buffer::CameraBufferData scene_camera_data = camera_buffer.get_data();
 
             glm::mat4 view = glm::lookAt( engine.global_camera.eye, engine.global_camera.look_at,
                                           engine.global_camera.up );
@@ -192,9 +160,9 @@ int main( int, char*[] ) {
             scene_camera_data.inv_model = glm::inverse( model );
             scene_camera_data.color = glm::vec3(
                 std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
+            camera_buffer.set_data(scene_camera_data);
         }
 
-        camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
         if ( engine::execute( engine, ctx, task_list ) ) {
             engine.rendered_frames = engine.rendered_frames + 1;
             engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
