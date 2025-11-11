@@ -123,6 +123,7 @@ int main( int, char*[] ) {
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
             engine::gui::process_event( &event );
+            scene::camera::process_event( &event, engine.current_camera );
 
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;

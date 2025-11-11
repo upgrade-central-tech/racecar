@@ -61,20 +61,20 @@ void process_event( const SDL_Event* event, Camera& cam ) {
         pitch -= static_cast<float>( event->motion.yrel / 200.f );
         pitch = glm::clamp( pitch, glm::radians( -89.0f ), glm::radians( 89.0f ) );
 
-        // update camera properties
-        glm::vec3 newEye;
+        // Update camera properties
         float distance = glm::distance( cam.look_at, cam.eye );
-        newEye.x = cam.look_at.x + distance * cos( yaw ) * cos( pitch );
-        newEye.y = cam.look_at.y + distance * sin( pitch );
-        newEye.z = cam.look_at.z + distance * sin( yaw ) * cos( pitch );
+        glm::vec3 new_eye;
+        new_eye.x = cam.look_at.x + distance * cos( yaw ) * cos( pitch );
+        new_eye.y = cam.look_at.y + distance * sin( pitch );
+        new_eye.z = cam.look_at.z + distance * sin( yaw ) * cos( pitch );
 
-        cam.eye = newEye;
+        cam.eye = new_eye;
         cam.forward = glm::normalize( cam.look_at - cam.eye );
 
         // By default, rotate around 1 unit in front of the camera
         cam.look_at = cam.eye + cam.forward;
-        glm::vec3 worldUp = glm::vec3( 0.0f, 1.0f, 0.0f );
-        cam.right = glm::normalize( glm::cross( cam.forward, worldUp ) );
+        glm::vec3 world_up = glm::vec3( 0.0f, 1.0f, 0.0f );
+        cam.right = glm::normalize( glm::cross( cam.forward, world_up ) );
         cam.up = glm::normalize( glm::cross( cam.right, cam.forward ) );
         cam.view_mat = glm::lookAt( cam.eye, cam.look_at, cam.up );
     }
