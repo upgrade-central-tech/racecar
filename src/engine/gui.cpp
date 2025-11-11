@@ -70,6 +70,24 @@ std::optional<Gui> initialize( Context& ctx, const State& engine ) {
     return gui;
 }
 
+void process_events( const SDL_Event* event ) {
+    // We may want to expand this function later. For now, it serves to remove any ImGui header
+    // includes in non-GUI related files.
+    ImGui_ImplSDL3_ProcessEvent( event );
+}
+
+void update( Gui& ) {
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
+    {
+        ImGui::ShowDemoWindow();
+    }
+
+    ImGui::Render();
+}
+
 void free() {
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();

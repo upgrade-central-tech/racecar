@@ -10,9 +10,6 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-#include <imgui.h>
-#include <imgui_impl_sdl3.h>
-#include <imgui_impl_vulkan.h>
 
 #include <chrono>
 #include <cstdlib>
@@ -60,13 +57,10 @@ int main( int, char*[] ) {
         return EXIT_FAILURE;
     }
 
-    [[maybe_unused]] engine::gui::Gui& gui = gui_opt.value();
+    engine::gui::Gui& gui = gui_opt.value();
 
-    engine::TaskList task_list;
-
-    scene::Scene scene;
     geometry::Mesh sceneMesh;
-
+    scene::Scene scene;
     scene::load_gltf( std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices, sceneMesh.indices );
 
     std::optional<geometry::GPUMeshBuffers> uploaded_mesh_buffer =
@@ -77,6 +71,8 @@ int main( int, char*[] ) {
     }
 
     sceneMesh.mesh_buffers = uploaded_mesh_buffer.value();
+
+    engine::TaskList task_list;
 
     {
         std::optional<VkShaderModule> scene_shader_module_opt = vk::create::shader_module(
@@ -154,7 +150,7 @@ int main( int, char*[] ) {
 
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
-            ImGui_ImplSDL3_ProcessEvent( &event );
+            engine::gui::process_events( &event );
 
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;
@@ -173,13 +169,7 @@ int main( int, char*[] ) {
             continue;
         }
 
-        ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplSDL3_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::ShowDemoWindow();
-
-        ImGui::Render();
+        engine::gui::update( gui );
 
         if ( engine::execute( engine, ctx, task_list ) ) {
             engine.rendered_frames = engine.rendered_frames + 1;
