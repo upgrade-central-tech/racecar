@@ -10,6 +10,8 @@
 
 namespace racecar::engine::gui {
 
+/// Stores GUI state. Add more fields here for data that you wish to keep track of
+/// across frames, and then let ImGui take a reference to it.
 struct Gui {
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 };

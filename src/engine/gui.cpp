@@ -81,8 +81,12 @@ void update( Gui& ) {
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    {
-        ImGui::ShowDemoWindow();
+    if ( ImGui::Begin( "RACECAR" ) ) {
+        const ImGuiIO& io = ImGui::GetIO();
+        float average_fps = io.Framerate;
+        ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );
+
+        ImGui::End();
     }
 
     ImGui::Render();
