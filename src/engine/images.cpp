@@ -1,10 +1,52 @@
 #include "images.hpp"
+
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
 
 namespace racecar::engine {
 
-ImagesDescriptor create_image_descriptors( vk::Common& vulkan,
+SamplersDescriptor create_samplers_descriptor( vk::Common& vulkan,
+                                               engine::State& engine,
+                                               const std::vector<VkSampler>& samplers,
+                                               VkShaderStageFlags shader_flags,
+                                               uint32_t frame_overlap ) {
+    SamplersDescriptor sampler_descriptor = {};
+
+    engine::DescriptorLayoutBuilder builder;
+    for ( uint32_t binding = 0; binding < samplers.size(); binding++ ) {
+        engine::descriptor_layout_builder::add_binding( builder, binding,
+                                                        VK_DESCRIPTOR_TYPE_SAMPLER );
+    }
+
+    sampler_descriptor.layout =
+        engine::descriptor_layout_builder::build( vulkan, shader_flags, builder );
+
+    sampler_descriptor.descriptor_sets = std::vector<VkDescriptorSet>( frame_overlap );
+
+    for ( uint32_t i = 0; i < frame_overlap; i++ ) {
+        sampler_descriptor.descriptor_sets[i] = engine::descriptor_allocator::allocate(
+            vulkan, engine.descriptor_system.frame_allocators[i], sampler_descriptor.layout );
+    }
+
+    sampler_descriptor.samplers = std::vector<std::vector<VkSampler>>( frame_overlap );
+
+    for ( uint32_t frame = 0; frame < frame_overlap; frame++ ) {
+        sampler_descriptor.samplers[frame] = samplers;
+    }
+
+    for ( uint32_t frame = 0; frame < frame_overlap; frame++ ) {
+        engine::DescriptorWriter writer;
+        for ( uint32_t binding = 0; binding < samplers.size(); binding++ ) {
+            write_image( writer, binding, VK_NULL_HANDLE, samplers[binding],
+                         VK_IMAGE_LAYOUT_UNDEFINED, VK_DESCRIPTOR_TYPE_SAMPLER );
+        }
+        update_set( writer, vulkan.device, sampler_descriptor.descriptor_sets[frame] );
+    }
+
+    return sampler_descriptor;
+};
+
+ImagesDescriptor create_images_descriptor( vk::Common& vulkan,
                                            engine::State& engine,
                                            const std::vector<vk::mem::AllocatedImage>& images,
                                            VkShaderStageFlags shader_flags,
@@ -20,8 +62,8 @@ ImagesDescriptor create_image_descriptors( vk::Common& vulkan,
     image_descriptor.layout =
         engine::descriptor_layout_builder::build( vulkan, shader_flags, builder );
 
-    image_descriptor.descriptor_sets = std::vector<VkDescriptorSet>(frame_overlap);
-    
+    image_descriptor.descriptor_sets = std::vector<VkDescriptorSet>( frame_overlap );
+
     for ( uint32_t i = 0; i < frame_overlap; i++ ) {
         image_descriptor.descriptor_sets[i] = engine::descriptor_allocator::allocate(
             vulkan, engine.descriptor_system.frame_allocators[i], image_descriptor.layout );
@@ -35,6 +77,23 @@ ImagesDescriptor create_image_descriptors( vk::Common& vulkan,
 
     return image_descriptor;
 };
+
+void update_images( vk::Common& vulkan,
+                    engine::ImagesDescriptor& image_descriptors,
+                    std::vector<vk::mem::AllocatedImage>& images,
+                    int32_t frame_index ) {
+    VkDescriptorSet image_descriptor_set = image_descriptors.descriptor_sets[frame_index];
+    engine::DescriptorWriter writer;
+
+    for ( uint32_t binding = 0; binding < images.size(); binding++ ) {
+        image_descriptors.images[frame_index][binding] = images[binding];
+
+        write_image( writer, binding, images[binding].image_view, nullptr,  // missing sampler!
+                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE );
+    }
+
+    update_set( writer, vulkan.device, image_descriptor_set );
+}
 
 std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan,
                                                      engine::State& engine,
@@ -50,6 +109,8 @@ std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan,
         SDL_Log( "Failed to allocate new image" );
         return {};
     }
+
+    SDL_Log("[ALLOC] last alloc called from create_image!");
 
     vulkan.destructor_stack.push( vulkan.device, allocated_image->image_view, vkDestroyImageView );
     vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, allocated_image.value() );
@@ -83,6 +144,8 @@ std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan,
     RACECAR_VK_CHECK( vmaCreateImage( vulkan.allocator, &image_create_info, &allocation_create_info,
                                       &new_image.image, &new_image.allocation, nullptr ),
                       "Failed to create VMA image" );
+
+    SDL_Log("[ALLOC] Image %p", new_image.image);
 
     VkImageAspectFlags aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
     if ( format == VK_FORMAT_D32_SFLOAT ) {

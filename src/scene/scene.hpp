@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../engine/image.hpp"
+#include "../engine/images.hpp"
 #include "../geometry/mesh.hpp"
 #include "camera.hpp"
 

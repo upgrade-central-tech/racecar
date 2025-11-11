@@ -4,10 +4,12 @@
 #include "../imgui/imgui_impl_vulkan.h"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
+#include "images.hpp"
 #include "task_list.hpp"
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+
 
 namespace racecar::engine {
 
@@ -34,6 +36,9 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         for ( IUniformBuffer* ubuffer : draw_task.uniform_buffers ) {
             ubuffer->update( vulkan, engine.get_frame_index() );
         }
+
+        engine::update_images( vulkan, draw_task.images_descriptor, draw_task.textures,
+                               engine.get_frame_index() );
     }
 
     const VkCommandBufferBeginInfo command_buffer_begin_info =

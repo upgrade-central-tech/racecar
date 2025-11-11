@@ -28,6 +28,12 @@ namespace binding {
 constexpr int VERTEX_BUFFER = 0;
 constexpr int CAMERA_BUFFER = 0;
 
+constexpr int UNIFORM_BUFFER_SET = 0;
+constexpr int TEXTURE_BUFFER_SET = 1;
+constexpr int SAMPLER_BUFFER_SET = 2;
+
+constexpr int MAX_IMAGES_BINDED = 4;
+
 }  // namespace binding
 
 /// Stores common Vulkan-related objects.

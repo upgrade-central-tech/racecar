@@ -20,7 +20,6 @@
 #include <cstdlib>
 #include <thread>
 
-
 using namespace racecar;
 
 constexpr int SCREEN_W = 1280;
@@ -77,7 +76,7 @@ int main( int, char*[] ) {
     sceneMesh.mesh_buffers = uploaded_mesh_buffer.value();
 
     std::optional<VkShaderModule> scene_shader_module_opt =
-        vk::create::shader_module( ctx.vulkan, "../shaders/world_pos_debug/world_pos_debug.spv" );
+        vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
     if ( !scene_shader_module_opt ) {
         SDL_Log( "[Engine] Failed to create shader module" );
         return {};
@@ -90,18 +89,39 @@ int main( int, char*[] ) {
             VkShaderStageFlagBits( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT ),
             engine.frame_overlap );
 
-    engine::ImagesDescriptor images_descriptor = {};
+    // Arbitrary 4 for the max number of images we may need to bind per PBR pass.
+    std::vector<vk::mem::AllocatedImage> images = std::vector<vk::mem::AllocatedImage>(vk::binding::MAX_IMAGES_BINDED);
 
-    std::vector<vk::mem::AllocatedImage> images;
+    engine::ImagesDescriptor images_descriptor = engine::create_images_descriptor(
+        ctx.vulkan, engine, images, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        engine.frame_overlap );
 
-    engine::create_image_descriptors( ctx.vulkan, engine, images,
-                                      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                                      engine.frame_overlap );
+    // Simple set up for linear sampler
+    VkSampler nearest_sampler;
+    {
+        VkSamplerCreateInfo sampler_nearest_create_info = {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .magFilter = VK_FILTER_NEAREST,
+            .minFilter = VK_FILTER_NEAREST,
+        };
 
-    std::optional<engine::Pipeline> scene_pipeline_opt = create_gfx_pipeline(
-        engine, ctx.vulkan, sceneMesh,
-        { camera_buffer.layout( engine.get_frame_index() ), images_descriptor.layout },
-        scene_shader_module );
+        vkCreateSampler( ctx.vulkan.device, &sampler_nearest_create_info, nullptr,
+                         &nearest_sampler );
+    }
+
+    ctx.vulkan.destructor_stack.push( ctx.vulkan.device, nearest_sampler, vkDestroySampler );
+
+    std::vector<VkSampler> samplers = { nearest_sampler };
+
+    engine::SamplersDescriptor samplers_descriptor = engine::create_samplers_descriptor(
+        ctx.vulkan, engine, samplers, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        engine.frame_overlap );
+
+    std::optional<engine::Pipeline> scene_pipeline_opt =
+        create_gfx_pipeline( engine, ctx.vulkan, sceneMesh,
+                             { camera_buffer.layout( engine.get_frame_index() ),
+                               images_descriptor.layout, samplers_descriptor.layout },
+                             scene_shader_module );
     if ( !scene_pipeline_opt ) {
         SDL_Log( "[Engine] Failed to create pipeline" );
         return false;
@@ -139,11 +159,21 @@ int main( int, char*[] ) {
                     textures_needed.push_back( std::nullopt );
                 }
 
-                engine::DrawResourceDescriptor desc =
+                std::vector<vk::mem::AllocatedImage> textures_sent;
+                for ( std::optional<scene::Texture>& texture : textures_needed ) {
+                    if ( texture && ( textures_sent.size() < images.size() ) ) {
+                        textures_sent.push_back( texture->data.value() );
+                    }
+                }
+
+                engine::DrawResourceDescriptor draw_descriptor =
                     engine::DrawResourceDescriptor::from_mesh( sceneMesh, prim );
                 add_draw_task( task_list, {
-                                              .draw_resource_desc = desc,
+                                              .draw_resource_descriptor = draw_descriptor,
+                                              .images_descriptor = images_descriptor,
+                                              .samplers_descriptor = samplers_descriptor,
                                               .uniform_buffers = { &camera_buffer },
+                                              .textures = textures_sent,
                                               .pipeline = scene_pipeline,
                                               .extent = engine.swapchain.extent,
                                               .clear_screen = true,
@@ -195,8 +225,6 @@ int main( int, char*[] ) {
                                   static_cast<float>( engine.global_camera.far_plane ) );
 
             projection[1][1] *= -1;
-
-            // glm::mat4 model = glm::mat4( 1.0f );
 
             float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
             glm::mat4 model =

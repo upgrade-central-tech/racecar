@@ -21,9 +21,8 @@ struct CameraBufferData {
 };
 
 layout(binding = 0, set = 0) ConstantBuffer<CameraBufferData> camera_buffer_data;
-
-[[vk::binding(1, 0)]]
-Sampler2D test_texture;
+layout(binding = 0, set = 1) Texture2D<float4> test_texture;
+layout(binding = 0, set = 2) SamplerState nearest_sampler;
 
 static const float PI = 3.14159265359;
 
@@ -78,7 +77,7 @@ float4 fs_main( VertexOutput in ) : SV_Target {
   float3 light_pos = float3(1, 2, 1);
   float3 light = normalize(light_pos);
 
-  float3 base_albedo = test_texture.Sample(in.uv).rgb;
+  float3 base_albedo = test_texture.Sample(nearest_sampler, in.uv).rgb;
 
   // Material properties
   float roughness = 0.001f;
