@@ -398,7 +398,7 @@ bool load_gltf( std::string filepath,
                 std::get<std::unique_ptr<Mesh>>( new_node->data )->primitives.push_back( new_prim );
             }
         } else {  // Presumably the node is a camera
-            std::unique_ptr<Camera> camera = std::make_unique<Camera>();
+            std::unique_ptr<camera::Camera> camera = std::make_unique<camera::Camera>();
             tinygltf::Camera loaded_camera =
                 model.cameras[static_cast<size_t>( loaded_node.camera )];
             camera->aspect_ratio = loaded_camera.perspective.aspectRatio;

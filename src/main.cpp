@@ -124,7 +124,7 @@ int main( int, char*[] ) {
 
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
-            engine::gui::process_events( &event );
+            engine::gui::process_event( &event );
 
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;

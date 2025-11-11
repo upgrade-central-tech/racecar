@@ -226,7 +226,7 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
     }
 
     {
-        scene::Camera& camera = engine.global_camera;
+        scene::camera::Camera& camera = engine.global_camera;
 
         camera.eye = glm::vec3( 0, 0, 3 );
         camera.look_at = glm::vec3( 0, 0, 0 );

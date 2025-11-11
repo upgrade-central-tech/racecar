@@ -17,7 +17,7 @@ struct Gui {
 };
 
 std::optional<Gui> initialize( Context& ctx, const State& engine );
-void process_events( const SDL_Event* event );
+void process_event( const SDL_Event* event );
 void update( Gui& gui );
 void free();
 
