@@ -18,17 +18,18 @@ struct Camera {
     glm::vec3 right;
 
     /// Not loaded from GLTF.
-    double fov_y = 0.0;
+    float fov_y = 0.f;
+
     /// In radians.
-    double aspect_ratio = 0.0;
-    double near_plane = 0.0;
-    double far_plane = 0.0;
+    float aspect_ratio = 0.f;
+    float near_plane = 0.f;
+    float far_plane = 0.f;
 };
 
 glm::mat4 get_view_matrix( Camera& cam );
 glm::mat4 get_proj_matrix( Camera& cam );
 glm::mat4 get_view_proj_matrix( Camera& cam );
 
-void process_sdl_event( SDL_Event& e, Camera& cam );
+void process_event( const SDL_Event* event, Camera& cam );
 
 }  // namespace racecar::scene::camera

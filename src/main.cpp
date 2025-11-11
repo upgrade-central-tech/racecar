@@ -1,3 +1,4 @@
+#include "constants.hpp"
 #include "context.hpp"
 #include "engine/execute.hpp"
 #include "engine/gui.hpp"
@@ -21,8 +22,6 @@
 
 using namespace racecar;
 
-constexpr int SCREEN_W = 1280;
-constexpr int SCREEN_H = 720;
 constexpr bool USE_FULLSCREEN = false;
 constexpr const char* GLTF_FILE_PATH = "../assets/suzanne.glb";
 
@@ -30,7 +29,7 @@ int main( int, char*[] ) {
     Context ctx;
 
     if ( std::optional<SDL_Window*> window_opt =
-             sdl::initialize( SCREEN_W, SCREEN_H, USE_FULLSCREEN );
+             sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, USE_FULLSCREEN );
          !window_opt ) {
         SDL_Log( "[RACECAR] Could not initialize SDL!" );
         return EXIT_FAILURE;
@@ -116,7 +115,6 @@ int main( int, char*[] ) {
             }
         }
     }
-    // }
 
     bool will_quit = false;
     bool stop_drawing = false;
@@ -146,30 +144,20 @@ int main( int, char*[] ) {
         {
             // Update the scene block. Hard-coded goodness.
             uniform_buffer::CameraBufferData scene_camera_data = camera_buffer.get_data();
+            scene::camera::Camera& camera = engine.current_camera;
 
-            glm::mat4 view = glm::lookAt( engine.global_camera.eye, engine.global_camera.look_at,
-                                          engine.global_camera.up );
-
-            /// TODO: Is there any reason why most of these camera struct values are doubles? Do we
-            /// really need that much precision?
-            glm::mat4 projection =
-                glm::perspective( static_cast<float>( engine.global_camera.fov_y ),
-                                  static_cast<float>( engine.global_camera.aspect_ratio ),
-                                  static_cast<float>( engine.global_camera.near_plane ),
-                                  static_cast<float>( engine.global_camera.far_plane ) );
-
+            glm::mat4 view = glm::lookAt( camera.eye, camera.look_at, camera.up );
+            glm::mat4 projection = glm::perspective( camera.fov_y, camera.aspect_ratio,
+                                                     camera.near_plane, camera.far_plane );
             projection[1][1] *= -1;
 
-            // glm::mat4 model = glm::mat4( 1.0f );
-
             float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
-            glm::mat4 model =
-                glm::rotate( glm::mat4( 1.0f ), angle, glm::vec3( 0, 1, 0 ) );  // Y-axis rotation
+            glm::mat4 model = glm::rotate( glm::mat4( 1.f ), angle, glm::vec3( 0.f, 1.f, 0.f ) );
 
             scene_camera_data.mvp = projection * view * model;
             scene_camera_data.inv_model = glm::inverse( model );
-            scene_camera_data.color = glm::vec3(
-                std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
+            scene_camera_data.color =
+                glm::vec3( std::sin( engine.rendered_frames * 0.01f ), 0.0f, 0.0f );
             camera_buffer.set_data( scene_camera_data );
         }
 
@@ -186,6 +174,7 @@ int main( int, char*[] ) {
 
     vkDeviceWaitIdle( ctx.vulkan.device );
 
+    engine::gui::free();
     engine::free( engine, ctx.vulkan );
     vk::free( ctx.vulkan );
     sdl::free( ctx.window );

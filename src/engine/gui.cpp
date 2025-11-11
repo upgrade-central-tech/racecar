@@ -85,10 +85,9 @@ void update( Gui& ) {
         const ImGuiIO& io = ImGui::GetIO();
         float average_fps = io.Framerate;
         ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );
-
-        ImGui::End();
     }
 
+    ImGui::End();
     ImGui::Render();
 }
 

@@ -1,5 +1,6 @@
 #include "state.hpp"
 
+#include "../constants.hpp"
 #include "../vk/create.hpp"
 
 #include <algorithm>
@@ -225,27 +226,26 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
         return {};
     }
 
-    {
-        scene::camera::Camera& camera = engine.global_camera;
+    engine.current_camera = {
+        .eye = glm::vec3( 0, 0, 3 ),
+        .look_at = glm::vec3( 0, 0, 0 ),
 
-        camera.eye = glm::vec3( 0, 0, 3 );
-        camera.look_at = glm::vec3( 0, 0, 0 );
-        camera.up = glm::vec3( 0, 1, 0 );
-        camera.forward = glm::normalize( camera.look_at - camera.eye );
-        camera.right = glm::normalize( glm::cross( camera.forward, camera.up ) );
-        camera.velocity = glm::vec3( 0 );
+        .forward = glm::normalize( engine.current_camera.look_at - engine.current_camera.eye ),
+        .up = glm::vec3( 0, 1, 0 ),
+        .right =
+            glm::normalize( glm::cross( engine.current_camera.forward, engine.current_camera.up ) ),
 
-        camera.fov_y = glm::radians( 60.0 );
-        camera.aspect_ratio = 1280.0 / 720.0;
-        camera.near_plane = 0.1;
-        camera.far_plane = 100.0;
-    }
+        .fov_y = glm::radians( 60.0 ),
+        .aspect_ratio = static_cast<float>( constant::SCREEN_W ) / constant::SCREEN_H,
+        .near_plane = 0.1,
+        .far_plane = 100.0,
+    };
+
     return engine;
 }
 
-void free( State& engine, [[maybe_unused]] vk::Common& vulkan ) {
+void free( State& engine, vk::Common& vulkan ) {
     vulkan.destructor_stack.execute_cleanup();
-
     engine.swapchain.destroy_image_views( engine.swapchain_image_views );
     vkb::destroy_swapchain( engine.swapchain );
 }

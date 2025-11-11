@@ -17,49 +17,48 @@ glm::mat4 get_view_proj_matrix( Camera& cam ) {
     return get_view_matrix( cam ) * get_proj_matrix( cam );
 }
 
-void process_sdl_event( SDL_Event& e, Camera& cam ) {
+void process_event( const SDL_Event* event, Camera& cam ) {
     // Check for key down events
-    if ( e.type == SDL_EVENT_KEY_DOWN ) {
-        if ( e.key.key == SDLK_W ) {
+    if ( event->type == SDL_EVENT_KEY_DOWN ) {
+        if ( event->key.key == SDLK_W ) {
             cam.velocity.z = -1;
         }
-        if ( e.key.key == SDLK_S ) {
+        if ( event->key.key == SDLK_S ) {
             cam.velocity.z = 1;
         }
-        if ( e.key.key == SDLK_A ) {
+        if ( event->key.key == SDLK_A ) {
             cam.velocity.x = -1;
         }
-        if ( e.key.key == SDLK_D ) {
+        if ( event->key.key == SDLK_D ) {
             cam.velocity.x = 1;
         }
     }
 
     // Check for key up events
-    if ( e.type == SDL_EVENT_KEY_UP ) {
-        if ( e.key.key == SDLK_W ) {
+    if ( event->type == SDL_EVENT_KEY_UP ) {
+        if ( event->key.key == SDLK_W ) {
             cam.velocity.z = 0;
         }
-        if ( e.key.key == SDLK_S ) {
+        if ( event->key.key == SDLK_S ) {
             cam.velocity.z = 0;
         }
-        if ( e.key.key == SDLK_A ) {
+        if ( event->key.key == SDLK_A ) {
             cam.velocity.x = 0;
         }
-        if ( e.key.key == SDLK_D ) {
+        if ( event->key.key == SDLK_D ) {
             cam.velocity.x = 0;
         }
     }
 
     // Check for mouse motion events
-    if ( e.type == SDL_EVENT_MOUSE_MOTION ) {
+    if ( event->type == SDL_EVENT_MOUSE_MOTION ) {
         glm::vec3 direction = glm::normalize( cam.look_at - cam.eye );
         float yaw = std::atan2( direction.z, direction.x );
         float pitch = std::asin( direction.y );
 
         // xrel and yrel fields remain the same in the motion struct
-        yaw += (float)e.motion.xrel / 200.f;
-        pitch -= (float)e.motion.yrel / 200.f;
-
+        yaw += static_cast<float>( event->motion.xrel / 200.f );
+        pitch -= static_cast<float>( event->motion.yrel / 200.f );
         pitch = glm::clamp( pitch, glm::radians( -89.0f ), glm::radians( 89.0f ) );
 
         // update camera properties
@@ -71,7 +70,8 @@ void process_sdl_event( SDL_Event& e, Camera& cam ) {
 
         cam.eye = newEye;
         cam.forward = glm::normalize( cam.look_at - cam.eye );
-        // By default, rotate around 1 unit in front of the camera.
+
+        // By default, rotate around 1 unit in front of the camera
         cam.look_at = cam.eye + cam.forward;
         glm::vec3 worldUp = glm::vec3( 0.0f, 1.0f, 0.0f );
         cam.right = glm::normalize( glm::cross( cam.forward, worldUp ) );
