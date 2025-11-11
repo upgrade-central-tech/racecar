@@ -63,11 +63,16 @@ int main( int, char*[] ) {
 
     engine::gui::Gui& gui = gui_opt.value();
 
-    geometry::Mesh sceneMesh;
+    // SCENE LOADING/PROCESSING
     scene::Scene scene;
-    scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices,
+    geometry::Mesh sceneMesh;
+    {
+        scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices,
                       sceneMesh.indices );
+        geometry::generate_tangents( sceneMesh );
+    }
 
+    std::vector<scene::Texture>& material_textures = scene.textures;
     std::optional<geometry::GPUMeshBuffers> uploaded_mesh_buffer =
         geometry::upload_mesh( ctx.vulkan, engine, sceneMesh.indices, sceneMesh.vertices );
     if ( !uploaded_mesh_buffer ) {
@@ -75,6 +80,7 @@ int main( int, char*[] ) {
     }
     sceneMesh.mesh_buffers = uploaded_mesh_buffer.value();
 
+    // SHADER LOADING/PROCESSING
     std::optional<VkShaderModule> scene_shader_module_opt =
         vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
     if ( !scene_shader_module_opt ) {
@@ -90,7 +96,8 @@ int main( int, char*[] ) {
             engine.frame_overlap );
 
     // Arbitrary 4 for the max number of images we may need to bind per PBR pass.
-    std::vector<vk::mem::AllocatedImage> images = std::vector<vk::mem::AllocatedImage>(vk::binding::MAX_IMAGES_BINDED);
+    std::vector<vk::mem::AllocatedImage> images =
+        std::vector<vk::mem::AllocatedImage>( vk::binding::MAX_IMAGES_BINDED );
 
     engine::ImagesDescriptor images_descriptor = engine::create_images_descriptor(
         ctx.vulkan, engine, images, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -141,13 +148,25 @@ int main( int, char*[] ) {
                 // Lowkey I might refactor this later. Assume the default pipeline is a PBR
                 // Albedo Map Pipeline
                 if ( current_material.type == scene::Material_Types::PBR_ALBEDO_MAP_MAT_TYPE ) {
-                    if ( current_material.base_color_texture_index.has_value() ) {
-                        scene::Texture albedo_texture =
-                            scene.textures[current_material.base_color_texture_index.value()];
-                        textures_needed.push_back( albedo_texture );
-                    } else {
-                        textures_needed.push_back( std::nullopt );
-                    }
+                    std::optional<int> albedo_index =
+                        current_material.base_color_texture_index.value();
+
+                    std::optional<int> normal_index = current_material.normal_texture_index.value();
+
+                    std::optional<int> metallic_roughness_index =
+                        current_material.metallic_roughness_texture_index.value();
+
+                    textures_needed.push_back(
+                        albedo_index ? std::optional{ ( material_textures[albedo_index.value()] ) }
+                                     : std::nullopt );
+                    textures_needed.push_back(
+                        normal_index ? std::optional{ ( material_textures[normal_index.value()] ) }
+                                     : std::nullopt );
+                    textures_needed.push_back(
+                        metallic_roughness_index
+                            ? std::optional{ (
+                                  material_textures[metallic_roughness_index.value()] ) }
+                            : std::nullopt );
 
                 }  // We would continue this if-else chain for all material pipelines based on
                    // needed textures.

@@ -206,7 +206,7 @@ std::optional<vk::mem::AllocatedImage> create_allocated_image( vk::Common& vulka
             copy_region.imageExtent = size;
 
             vkCmdCopyBufferToImage( command_buffer, upload_buffer->handle, new_image->image,
-                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, &copy_region );
+                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region );
 
             vk::utility::transition_image(
                 command_buffer, new_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
