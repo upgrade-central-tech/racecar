@@ -101,7 +101,7 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         pipeline_layout_info.pSetLayouts = layouts.data();
     }
 
-    // Force depth testing on, will refactor this out and hopefully 
+    // Force depth testing on, will refactor this out and hopefully
     // remove this chunk when we add a pipeline builder.
     {
         depth_stencil_info.depthTestEnable = VK_TRUE;
