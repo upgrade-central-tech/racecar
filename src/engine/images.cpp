@@ -110,7 +110,7 @@ std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan,
         return {};
     }
 
-    SDL_Log("[ALLOC] last alloc called from create_image!");
+    SDL_Log( "[ALLOC] last alloc called from create_image!" );
 
     vulkan.destructor_stack.push( vulkan.device, allocated_image->image_view, vkDestroyImageView );
     vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, *allocated_image );
@@ -145,7 +145,7 @@ std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan,
                                       &new_image.image, &new_image.allocation, nullptr ),
                       "Failed to create VMA image" );
 
-    SDL_Log("[ALLOC] Image %p", new_image.image);
+    SDL_Log( "[ALLOC] Image %p", new_image.image );
 
     VkImageAspectFlags aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
     if ( format == VK_FORMAT_D32_SFLOAT ) {
@@ -206,10 +206,14 @@ std::optional<vk::mem::AllocatedImage> create_allocated_image( vk::Common& vulka
             copy_region.imageExtent = size;
 
             vkCmdCopyBufferToImage( command_buffer, upload_buffer->handle, new_image->image,
-                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region );
-        } );
+                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, &copy_region );
 
-    vmaDestroyBuffer( vulkan.allocator, upload_buffer->handle, upload_buffer->allocation );
+            vk::utility::transition_image(
+                command_buffer, new_image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT );
+        } );
 
     return new_image;
 }
