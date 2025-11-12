@@ -147,7 +147,7 @@ int main( int, char*[] ) {
 
                 // Lowkey I might refactor this later. Assume the default pipeline is a PBR
                 // Albedo Map Pipeline
-                if ( current_material.type == scene::Material_Types::PBR_ALBEDO_MAP_MAT_TYPE ) {
+                if ( current_material.type == scene::MaterialTypes::PBR_ALBEDO_MAP_MAT_TYPE ) {
                     std::optional<int> albedo_index = current_material.base_color_texture_index;
 
                     std::optional<int> normal_index = current_material.normal_texture_index;

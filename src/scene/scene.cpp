@@ -24,7 +24,7 @@ static inline glm::vec3 double_array_to_vec3( std::vector<double> arr ) {
 
 // These are all the image formats currently supported. If more formats are required, also add to
 // vk::utility::bytes_from_format
-VkFormat get_vk_format( int bits_per_channel, int num_channels, Color_Space color_space ) {
+VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color_space ) {
     if ( bits_per_channel == 32 ) {
         // Assume floating point formats for 32 bits per channel
         switch ( num_channels ) {
@@ -41,7 +41,7 @@ VkFormat get_vk_format( int bits_per_channel, int num_channels, Color_Space colo
             case 3:
                 return VK_FORMAT_R8G8B8_UNORM;
             case 4:
-                if ( color_space == Color_Space::SRGB ) {
+                if ( color_space == ColorSpace::SRGB ) {
                     return VK_FORMAT_R8G8B8A8_SRGB;
                 }
                 return VK_FORMAT_R8G8B8A8_UNORM;
@@ -207,10 +207,10 @@ bool load_gltf( vk::Common& vulkan,
     // Mark albedo and emission as SRGB.
     for ( Material& mat : scene.materials ) {
         if ( mat.base_color_texture_index.has_value() ) {
-            scene.textures[mat.base_color_texture_index.value()].color_space = Color_Space::SRGB;
+            scene.textures[mat.base_color_texture_index.value()].color_space = ColorSpace::SRGB;
         }
         if ( mat.emmisive_texture_index.has_value() ) {
-            scene.textures[mat.emmisive_texture_index.value()].color_space = Color_Space::SRGB;
+            scene.textures[mat.emmisive_texture_index.value()].color_space = ColorSpace::SRGB;
         }
     }
 
@@ -234,6 +234,7 @@ bool load_gltf( vk::Common& vulkan,
 
     // Used for pairing children and parents in the scene graph
     std::vector<std::vector<int>> children_lists;
+
     // Load Nodes
     for ( tinygltf::Node& loaded_node : model.nodes ) {
         std::unique_ptr<Node> new_node = std::make_unique<Node>();
@@ -491,7 +492,6 @@ bool load_gltf( vk::Common& vulkan,
 
     // Assumes scene.nodes order is the same as the indices in the GLTF. Will probably break if
     // this function is multithreaded.
-
     for ( size_t i = 0; i < scene.nodes.size(); i++ ) {
         std::unique_ptr<Node>& node = scene.nodes[i];
         std::vector<int> children = children_lists[i];
@@ -519,7 +519,7 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string filepath, 
     hdri.numChannels = 4;      // via stbi_loadf
 
     VkFormat image_format =
-        get_vk_format( hdri.bitsPerChannel, hdri.numChannels, Color_Space::SFLOAT );
+        get_vk_format( hdri.bitsPerChannel, hdri.numChannels, ColorSpace::SFLOAT );
     hdri.data = engine::create_image(
         vulkan, engine, static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
