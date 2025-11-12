@@ -27,9 +27,11 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
     RACECAR_VK_CHECK( vkResetFences( vulkan.device, 1, &frame.render_fence ),
         "Failed to reset frame render fence" );
 
-    vkResetCommandBuffer( frame.start_cmdbuf, 0 );
-    vkResetCommandBuffer( frame.render_cmdbuf, 0 );
-    vkResetCommandBuffer( frame.end_cmdbuf, 0 );
+    if (engine.rendered_frames < 10) {
+        vkResetCommandBuffer( frame.start_cmdbuf, 0 );
+        vkResetCommandBuffer( frame.render_cmdbuf, 0 );
+        vkResetCommandBuffer( frame.end_cmdbuf, 0 );
+    }
 
     VkCommandBufferBeginInfo command_buffer_begin_info
         = vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
@@ -57,7 +59,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
         }
     }
 
-    {
+    if (engine.rendered_frames < 10) {
         // Make swapchain image writeable ( and clear! )
         vkBeginCommandBuffer( frame.start_cmdbuf, &command_buffer_begin_info );
 
@@ -112,7 +114,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
         vkQueueSubmit2( vulkan.graphics_queue, 1, &start_submit_info, VK_NULL_HANDLE ),
         "Graphics queue submit failed" );
 
-    {
+    if (engine.rendered_frames < 10) {
         vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
 
         for ( size_t i = 0; i < task_list.gfx_tasks.size(); i++ ) {
@@ -171,7 +173,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
         vkQueueSubmit2( vulkan.graphics_queue, 1, &render_submit_info, VK_NULL_HANDLE ),
         "Graphics queue submit failed" );
 
-    {
+    if (engine.rendered_frames < 10) {
         vkBeginCommandBuffer( frame.end_cmdbuf, &command_buffer_begin_info );
         vk::utility::transition_image( frame.end_cmdbuf, output_image,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
