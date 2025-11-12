@@ -32,7 +32,7 @@ void DestructorStack::push_free_vmabuffer( const VmaAllocator allocator,
 void DestructorStack::push_free_vmaimage( const VmaAllocator allocator,
                                           racecar::vk::mem::AllocatedImage allocated_image ) {
     destructors.push( [=]() -> void {
-        SDL_Log( "[FREE ] Image %p", allocated_image.image );
+        SDL_Log( "[free_vmaimage] %p", allocated_image.image );
         vmaDestroyImage( allocator, allocated_image.image, allocated_image.allocation );
     } );
 }

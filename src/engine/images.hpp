@@ -18,7 +18,7 @@ SamplersDescriptor create_samplers_descriptor( vk::Common& vulkan,
                                                uint32_t frame_overlap );
 
 struct ImagesDescriptor {
-    VkDescriptorSetLayout layout;
+    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
     std::vector<VkDescriptorSet> descriptor_sets;
     std::vector<std::vector<vk::mem::AllocatedImage>> images;
 };
@@ -29,7 +29,7 @@ ImagesDescriptor create_images_descriptor( vk::Common& vulkan,
                                            VkShaderStageFlags shader_flags,
                                            uint32_t frame_overlap );
 
-void update_images( vk::Common& vulkan,
+void update_images( const vk::Common& vulkan,
                     engine::ImagesDescriptor& image_descriptors,
                     std::vector<vk::mem::AllocatedImage>& images,
                     int32_t frame_index );
@@ -43,7 +43,7 @@ std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan,
                                                      bool mipmapped );
 
 std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan,
-                                                       VkExtent3D size,
+                                                       VkExtent3D extent,
                                                        VkFormat format,
                                                        VkImageUsageFlags usage,
                                                        bool mipmapped );
@@ -51,7 +51,7 @@ std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan,
 std::optional<vk::mem::AllocatedImage> create_allocated_image( vk::Common& vulkan,
                                                                engine::State& engine,
                                                                void* data,
-                                                               VkExtent3D size,
+                                                               VkExtent3D extent,
                                                                VkFormat format,
                                                                VkImageUsageFlags usage,
                                                                bool mipmapped );

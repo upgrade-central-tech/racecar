@@ -31,16 +31,15 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
     vkResetCommandBuffer( frame.render_cmdbuf, 0 );
     vkResetCommandBuffer( frame.end_cmdbuf, 0 );
 
-    for ( DrawTask& draw_task : task_list.draw_tasks ) {
-        for ( IUniformBuffer* ubuffer : draw_task.uniform_buffers ) {
-            ubuffer->update( vulkan, engine.get_frame_index() );
+    for ( GfxTask& gfx_task : task_list.gfx_tasks ) {
+        for ( DrawTask& draw_task : gfx_task.draw_tasks ) {
+            for ( IUniformBuffer* ubuffer : draw_task.uniform_buffers ) {
+                ubuffer->update( vulkan, engine.get_frame_index() );
+            }
         }
-
-        engine::update_images( vulkan, draw_task.images_descriptor, draw_task.textures,
-                               int(engine.get_frame_index()) );
     }
 
-    const VkCommandBufferBeginInfo command_buffer_begin_info =
+    VkCommandBufferBeginInfo command_buffer_begin_info =
         vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
 
     // Request swapchain index.
@@ -58,12 +57,11 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
     SwapchainSemaphores& swapchain_semaphores = engine.swapchain_semaphores[output_swapchain_index];
 
     // for any render target rendering to the screen, set the dynamic output
-    for ( DrawTask& draw_task : task_list.draw_tasks ) {
-        if ( draw_task.render_target_is_swapchain ) {
-            draw_task.draw_target = output_image;
-            draw_task.draw_target_view = output_image_view;
-            draw_task.depth_image = out_depth_image.image;
-            draw_task.depth_image_view = out_depth_image.image_view;
+    for ( GfxTask& gfx_task : task_list.gfx_tasks ) {
+        if ( gfx_task.render_target_is_swapchain ) {
+            gfx_task.color_attachments = {
+                { { { .image = output_image, .image_view = output_image_view } } } };
+            gfx_task.depth_image = { { out_depth_image } };
         }
     }
 
@@ -128,20 +126,17 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
     {
         vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
 
-        for ( size_t i = 0; i < task_list.draw_tasks.size(); i++ ) {
+        for ( size_t i = 0; i < task_list.gfx_tasks.size(); i++ ) {
             auto search = std::find_if( task_list.pipeline_barriers.begin(),
-                                          task_list.pipeline_barriers.end(),
-                                          [=]( std::pair<int, PipelineBarrierDescriptor> v ) -> bool {
-                                              return v.first == int( i );
-                                          } );
+                                        task_list.pipeline_barriers.end(),
+                                        [=]( std::pair<int, PipelineBarrierDescriptor> v ) -> bool {
+                                            return v.first == int( i );
+                                        } );
             if ( search != task_list.pipeline_barriers.end() ) {
-                run_pipeline_barrier( (*search).second, frame.render_cmdbuf );
+                run_pipeline_barrier( ( *search ).second, frame.render_cmdbuf );
             }
 
-            engine::update_images( vulkan, task_list.draw_tasks[i].images_descriptor, task_list.draw_tasks[i].textures,
-                                   int(engine.get_frame_index()) );
-
-            draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
+            execute_gfx_task( vulkan, engine, frame.render_cmdbuf, task_list.gfx_tasks[i] );
         }
 
         // GUI render pass

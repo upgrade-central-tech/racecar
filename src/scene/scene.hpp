@@ -57,9 +57,10 @@ struct Texture {
 
     int width = 0;
     int height = 0;
-    /// Can only be 8, 16, or 32
-    int bitsPerChannel = 0;
-    int numChannels = 0;
+
+    int bits_per_channel = 0;  ///< Can only be 8, 16, or 32.
+    int num_channels = 0;
+
     ColorSpace color_space = ColorSpace::UNORM;
 };
 
@@ -68,13 +69,12 @@ struct Texture {
 /// data and index data.
 struct Primitive {
     int material_id = -1;
-    /// Offsets are for the out_vertices array.
+    ///< Offsets are for the out_vertices array.
     int vertex_offset = -1;
-    /// Index data can be a unsigned short uint_16t or an unsigned int uint_32t.
+    ///< Index data can be a unsigned short uint_16t or an unsigned int uint_32t.
     int ind_offset = -1;
     /// Index count is in actual indices, not in bytes.
     size_t ind_count = 0;
-
     bool is_indexed = true;
 };
 
@@ -83,7 +83,6 @@ struct Mesh {
     std::vector<Primitive> primitives;
 };
 
-/// Each node will have either a mesh or a camera
 struct Node {
     std::optional<std::unique_ptr<scene::Mesh>> mesh;
 
@@ -106,11 +105,11 @@ struct Scene {
 
 bool load_gltf( vk::Common& vulkan,
                 engine::State& engine,
-                std::string filepath,
+                std::string file_path,
                 Scene& scene,
                 std::vector<geometry::Vertex>& out_vertices,
                 std::vector<uint32_t>& out_indices );
 
-bool load_hdri( vk::Common vulkan, engine::State& engine, std::string filepath, Scene& scene );
+bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene );
 
 }  // namespace racecar::scene

@@ -75,7 +75,7 @@ bool create_depth_images( State& engine, vk::Common& vulkan ) {
         VkImageUsageFlags depth_image_usages = {};
         depth_image_usages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
-        VkImageCreateInfo depth_image_create_info = vk::create::image_create_info(
+        VkImageCreateInfo depth_image_info = vk::create::image_info(
             depth_image.image_format, depth_image_usages, depth_image.image_extent );
 
         VmaAllocationCreateInfo image_allocate_info = {
@@ -83,13 +83,13 @@ bool create_depth_images( State& engine, vk::Common& vulkan ) {
             .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) };
 
         RACECAR_VK_CHECK(
-            vmaCreateImage( vulkan.allocator, &depth_image_create_info, &image_allocate_info,
+            vmaCreateImage( vulkan.allocator, &depth_image_info, &image_allocate_info,
                             &depth_image.image, &depth_image.allocation, nullptr ),
             "Failed to create depth image" );
 
         SDL_Log( "[ALLOC] Image %p", depth_image.image );
 
-        VkImageViewCreateInfo depth_view_create_info = vk::create::image_view_create_info(
+        VkImageViewCreateInfo depth_view_create_info = vk::create::image_view_info(
             depth_image.image_format, depth_image.image, VK_IMAGE_ASPECT_DEPTH_BIT );
 
         RACECAR_VK_CHECK( vkCreateImageView( vulkan.device, &depth_view_create_info, nullptr,

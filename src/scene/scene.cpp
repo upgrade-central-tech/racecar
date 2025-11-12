@@ -58,11 +58,11 @@ VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color
 
 bool load_gltf( vk::Common& vulkan,
                 engine::State& engine,
-                std::string filepath,
+                std::string file_path,
                 Scene& scene,
                 std::vector<geometry::Vertex>& out_global_vertices,
                 std::vector<uint32_t>& out_global_indices ) {
-    std::filesystem::path path( filepath );
+    std::filesystem::path path( file_path );
 
     if ( !std::filesystem::exists( path ) ) {
         SDL_Log( "[Scene] File does not exist" );
@@ -83,9 +83,9 @@ bool load_gltf( vk::Common& vulkan,
     bool has_loaded_successfully = false;
     // Binary files
     if ( ext == ".glb" ) {
-        has_loaded_successfully = loader.LoadBinaryFromFile( &model, &err, &warn, filepath );
+        has_loaded_successfully = loader.LoadBinaryFromFile( &model, &err, &warn, file_path );
     } else {  // ASCII files
-        has_loaded_successfully = loader.LoadASCIIFromFile( &model, &err, &warn, filepath );
+        has_loaded_successfully = loader.LoadASCIIFromFile( &model, &err, &warn, file_path );
     }
 
     // Check for errors and warnings
@@ -201,8 +201,8 @@ bool load_gltf( vk::Common& vulkan,
 
         new_tex.width = loaded_img.width;
         new_tex.height = loaded_img.height;
-        new_tex.bitsPerChannel = loaded_img.bits;
-        new_tex.numChannels = loaded_img.component;
+        new_tex.bits_per_channel = loaded_img.bits;
+        new_tex.num_channels = loaded_img.component;
         scene.textures.push_back( new_tex );
     }
 
@@ -223,7 +223,7 @@ bool load_gltf( vk::Common& vulkan,
         tinygltf::Image loaded_img = model.images[size_t(loaded_tex.source)];
 
         VkFormat image_format =
-            get_vk_format( texture.bitsPerChannel, texture.numChannels, texture.color_space );
+            get_vk_format( texture.bits_per_channel, texture.num_channels, texture.color_space );
 
         texture.data = engine::create_image(
             vulkan, engine, static_cast<void*>( loaded_img.image.data() ),
@@ -507,21 +507,23 @@ bool load_gltf( vk::Common& vulkan,
     return true;
 }
 
-bool load_hdri( vk::Common vulkan, engine::State& engine, std::string filepath, Scene& scene ) {
+bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene ) {
     int x = 0, y = 0, channels = 0;
-    float* hdriData = stbi_loadf( filepath.c_str(), &x, &y, &channels, 4 );
+    float* hdriData = stbi_loadf( file_path.c_str(), &x, &y, &channels, 4 );
+
     if ( x == 0 || y == 0 ) {
         SDL_Log( "[Scene] Failed to load HDRI: %s", stbi_failure_reason() );
         return false;
     }
+
     Texture hdri;
     hdri.width = x;
     hdri.height = y;
-    hdri.bitsPerChannel = 32;  // via stbi_loadf
-    hdri.numChannels = 4;      // via stbi_loadf
+    hdri.bits_per_channel = 32;  // via stbi_loadf
+    hdri.num_channels = 4;      // via stbi_loadf
 
     VkFormat image_format =
-        get_vk_format( hdri.bitsPerChannel, hdri.numChannels, ColorSpace::SFLOAT );
+        get_vk_format( hdri.bits_per_channel, hdri.num_channels, ColorSpace::SFLOAT );
     hdri.data = engine::create_image(
         vulkan, engine, static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },

@@ -35,7 +35,6 @@ struct State {
     vkb::Swapchain swapchain;
     std::vector<VkImage> swapchain_images;
     std::vector<VkImageView> swapchain_image_views;
-
     std::vector<vk::mem::AllocatedImage> depth_images;
 
     camera::OrbitCamera camera;

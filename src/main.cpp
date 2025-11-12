@@ -19,12 +19,13 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <string_view>
 #include <thread>
 
 using namespace racecar;
 
 constexpr bool USE_FULLSCREEN = false;
-constexpr const char* GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf";
 
 int main( int, char*[] ) {
     Context ctx;
@@ -46,6 +47,7 @@ int main( int, char*[] ) {
     }
 
     std::optional<engine::State> engine_opt = engine::initialize( ctx.window, ctx.vulkan );
+
     if ( !engine_opt ) {
         SDL_Log( "[RACECAR] Failed to initialize engine!" );
         return EXIT_FAILURE;
@@ -64,46 +66,52 @@ int main( int, char*[] ) {
 
     // SCENE LOADING/PROCESSING
     scene::Scene scene;
-    geometry::Mesh sceneMesh;
+    geometry::Mesh scene_mesh;
+
     {
-        scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene,
-                          sceneMesh.vertices, sceneMesh.indices );
-        geometry::generate_tangents( sceneMesh );
+        if ( !scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene,
+                                scene_mesh.vertices, scene_mesh.indices ) ) {
+            SDL_Log( "[RACECAR] Failed to load glTF from file path \"%s\"", GLTF_FILE_PATH.data() );
+            return EXIT_FAILURE;
+        }
+
+        geometry::generate_tangents( scene_mesh );
     }
 
-    std::vector<scene::Texture>& material_textures = scene.textures;
-    std::optional<geometry::GPUMeshBuffers> uploaded_mesh_buffer =
-        geometry::upload_mesh( ctx.vulkan, engine, sceneMesh.indices, sceneMesh.vertices );
-    if ( !uploaded_mesh_buffer ) {
-        SDL_Log( "[VMA] Failed to upload mesh" );
+    std::optional<geometry::GPUMeshBuffers> uploaded_scene_mesh_buffer_opt =
+        geometry::upload_mesh( ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
+
+    if ( !uploaded_scene_mesh_buffer_opt ) {
+        SDL_Log( "[RACECAR] Failed to upload scene mesh buffers" );
     }
-    sceneMesh.mesh_buffers = uploaded_mesh_buffer.value();
+
+    scene_mesh.mesh_buffers = uploaded_scene_mesh_buffer_opt.value();
 
     // SHADER LOADING/PROCESSING
     std::optional<VkShaderModule> scene_shader_module_opt =
         vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
+
     if ( !scene_shader_module_opt ) {
-        SDL_Log( "[Engine] Failed to create shader module" );
+        SDL_Log( "[RACECAR] Failed to create shader module" );
         return {};
     }
+
     VkShaderModule& scene_shader_module = scene_shader_module_opt.value();
 
-    UniformBuffer<uniform_buffer::CameraBufferData> camera_buffer =
-        create_uniform_buffer<uniform_buffer::CameraBufferData>(
-            ctx.vulkan, engine, {},
-            VkShaderStageFlagBits( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT ),
-            int(engine.frame_overlap) );
+    UniformBuffer camera_buffer = create_uniform_buffer<uniform_buffer::CameraBufferData>(
+        ctx.vulkan, engine, {},
+        VkShaderStageFlagBits( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT ),
+        static_cast<int>( engine.frame_overlap ) );
 
     // Arbitrary 4 for the max number of images we may need to bind per PBR pass.
-    std::vector<vk::mem::AllocatedImage> images =
-        std::vector<vk::mem::AllocatedImage>( vk::binding::MAX_IMAGES_BINDED );
+    std::vector images = std::vector<vk::mem::AllocatedImage>( vk::binding::MAX_IMAGES_BINDED );
 
     engine::ImagesDescriptor images_descriptor = engine::create_images_descriptor(
         ctx.vulkan, engine, images, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         engine.frame_overlap );
 
     // Simple set up for linear sampler
-    VkSampler nearest_sampler;
+    VkSampler nearest_sampler = VK_NULL_HANDLE;
     {
         VkSamplerCreateInfo sampler_nearest_create_info = {
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -111,8 +119,11 @@ int main( int, char*[] ) {
             .minFilter = VK_FILTER_NEAREST,
         };
 
-        vkCreateSampler( ctx.vulkan.device, &sampler_nearest_create_info, nullptr,
-                         &nearest_sampler );
+        if ( vkCreateSampler( ctx.vulkan.device, &sampler_nearest_create_info, nullptr,
+                              &nearest_sampler ) != VK_SUCCESS ) {
+            SDL_Log( "[RACECAR] Failed to create sampler" );
+            return EXIT_FAILURE;
+        }
     }
 
     ctx.vulkan.destructor_stack.push( ctx.vulkan.device, nearest_sampler, vkDestroySampler );
@@ -124,7 +135,7 @@ int main( int, char*[] ) {
         engine.frame_overlap );
 
     std::optional<engine::Pipeline> scene_pipeline_opt =
-        create_gfx_pipeline( engine, ctx.vulkan, sceneMesh,
+        create_gfx_pipeline( engine, ctx.vulkan, scene_mesh,
                              { camera_buffer.layout( engine.get_frame_index() ),
                                images_descriptor.layout, samplers_descriptor.layout },
                              scene_shader_module );
@@ -135,14 +146,21 @@ int main( int, char*[] ) {
 
     engine::Pipeline& scene_pipeline = scene_pipeline_opt.value();
 
+    std::vector<scene::Texture>& material_textures = scene.textures;
     engine::TaskList task_list;
+
+    engine::GfxTask main_draw;
+    main_draw.clear_screen = true;
+    main_draw.render_target_is_swapchain = true;
+    main_draw.extent = engine.swapchain.extent;
 
     for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
         if ( node->mesh.has_value() ) {
             const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
 
             for ( const scene::Primitive& prim : mesh->primitives ) {
-                const scene::Material& current_material = scene.materials[size_t(prim.material_id)];
+                const scene::Material& current_material =
+                    scene.materials[size_t( prim.material_id )];
                 std::vector<std::optional<scene::Texture>> textures_needed;
 
                 // Lowkey I might refactor this later. Assume the default pipeline is a PBR
@@ -156,15 +174,17 @@ int main( int, char*[] ) {
                         current_material.metallic_roughness_texture_index;
 
                     textures_needed.push_back(
-                        albedo_index ? std::optional{ ( material_textures[size_t(albedo_index.value())] ) }
-                                     : std::nullopt );
+                        albedo_index
+                            ? std::optional{ ( material_textures[size_t( albedo_index.value() )] ) }
+                            : std::nullopt );
                     textures_needed.push_back(
-                        normal_index ? std::optional{ ( material_textures[size_t(normal_index.value())] ) }
-                                     : std::nullopt );
+                        normal_index
+                            ? std::optional{ ( material_textures[size_t( normal_index.value() )] ) }
+                            : std::nullopt );
                     textures_needed.push_back(
                         metallic_roughness_index
                             ? std::optional{ (
-                                  material_textures[size_t(metallic_roughness_index.value())] ) }
+                                  material_textures[size_t( metallic_roughness_index.value() )] ) }
                             : std::nullopt );
 
                 }  // We would continue this if-else chain for all material pipelines based on
@@ -185,21 +205,21 @@ int main( int, char*[] ) {
                 }
 
                 engine::DrawResourceDescriptor draw_descriptor =
-                    engine::DrawResourceDescriptor::from_mesh( sceneMesh, prim );
-                add_draw_task( task_list, {
-                                              .draw_resource_descriptor = draw_descriptor,
-                                              .images_descriptor = images_descriptor,
-                                              .samplers_descriptor = samplers_descriptor,
-                                              .uniform_buffers = { &camera_buffer },
-                                              .textures = textures_sent,
-                                              .pipeline = scene_pipeline,
-                                              .extent = engine.swapchain.extent,
-                                              .clear_screen = true,
-                                              .render_target_is_swapchain = true,
-                                          } );
+                    engine::DrawResourceDescriptor::from_mesh( scene_mesh, prim );
+
+                main_draw.draw_tasks.push_back( {
+                    .draw_resource_descriptor = draw_descriptor,
+                    .images_descriptor = images_descriptor,
+                    .samplers_descriptor = samplers_descriptor,
+                    .uniform_buffers = { &camera_buffer },
+                    .textures = textures_sent,
+                    .pipeline = scene_pipeline,
+                } );
             }
         }
     }
+
+    engine::add_gfx_task( task_list, main_draw );
 
     bool will_quit = false;
     bool stop_drawing = false;

@@ -2,9 +2,9 @@
 
 #include "../geometry/mesh.hpp"
 #include "../scene/scene.hpp"
+#include "images.hpp"
 #include "pipeline.hpp"
 #include "uniform_buffer.hpp"
-#include "images.hpp"
 
 #include <volk.h>
 
@@ -24,33 +24,21 @@ struct DrawResourceDescriptor {
                                              const std::optional<scene::Primitive>& primitive );
 };
 
-/// Descriptor for a draw call.
+/// A draw task represents one Vulkan pipeline, and more specifically, a set of shaders to be used
+/// in the pipeline. For example, you would use one draw task for each material, because each
+/// material uses its own shader module.
 struct DrawTask {
     /// User-defined parameters:
     DrawResourceDescriptor draw_resource_descriptor;
     ImagesDescriptor images_descriptor;
     SamplersDescriptor samplers_descriptor;
-    
+
     std::vector<IUniformBuffer*> uniform_buffers;
     std::vector<vk::mem::AllocatedImage> textures;
 
     Pipeline pipeline = {};
-    VkExtent2D extent = {};
-    bool clear_screen = false;
-
-    bool render_target_is_swapchain = false;
-
-    /// Uninitialized by default below
-    VkImage draw_target = VK_NULL_HANDLE;
-    VkImageView draw_target_view = VK_NULL_HANDLE;
-
-    VkImage depth_image = VK_NULL_HANDLE;
-    VkImageView depth_image_view = VK_NULL_HANDLE;
 };
 
-bool draw( vk::Common& vulkan,
-           const engine::State& engine,
-           const DrawTask& draw_task,
-           const VkCommandBuffer& cmd_buf );
+bool draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf, const VkExtent2D extent );
 
 }  // namespace racecar::engine

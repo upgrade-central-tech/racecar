@@ -136,7 +136,8 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = 1,
         .pColorAttachmentFormats = &engine.swapchain.image_format,
-        .depthAttachmentFormat = engine.depth_images[0].image_format };
+        .depthAttachmentFormat = engine.depth_images[0].image_format,
+    };
 
     VkGraphicsPipelineCreateInfo gfx_pipeline_info = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,

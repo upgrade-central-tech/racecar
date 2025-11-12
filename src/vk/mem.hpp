@@ -16,7 +16,7 @@ struct AllocatedBuffer {
 struct AllocatedImage {
     VkImage image = VK_NULL_HANDLE;
     VkImageView image_view = VK_NULL_HANDLE;
-    VmaAllocation allocation = nullptr;
+    VmaAllocation allocation = VK_NULL_HANDLE;
     VkExtent3D image_extent = {};
     VkFormat image_format = VK_FORMAT_UNDEFINED;
 };

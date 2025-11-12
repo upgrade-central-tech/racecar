@@ -53,7 +53,7 @@ VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask 
     };
 }
 
-VkImageCreateInfo image_create_info( VkFormat format,
+VkImageCreateInfo image_info( VkFormat format,
                                      VkImageUsageFlags usage_flags,
                                      VkExtent3D extent ) {
     return {
@@ -73,7 +73,7 @@ VkImageCreateInfo image_create_info( VkFormat format,
     };
 }
 
-VkImageViewCreateInfo image_view_create_info( VkFormat format,
+VkImageViewCreateInfo image_view_info( VkFormat format,
                                               VkImage image,
                                               VkImageAspectFlags aspect_flags ) {
     VkImageViewCreateInfo info = {

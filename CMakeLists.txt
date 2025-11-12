@@ -37,6 +37,8 @@ add_executable(racecar
   ${ENGINE_DIR}/images.cpp
   ${ENGINE_DIR}/gui.cpp
   ${ENGINE_DIR}/pipeline_barrier.cpp
+  ${ENGINE_DIR}/rwimage.cpp
+  ${ENGINE_DIR}/gfx_task.cpp
 
   ${GEOMETRY_DIR}/mesh.cpp
 
