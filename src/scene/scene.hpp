@@ -19,6 +19,8 @@ enum Material_Types {
     PBR_ALBEDO_MAP_MAT_TYPE,
 };
 
+enum class Color_Space { SRGB, UNORM, SFLOAT };
+
 struct Material {
     glm::vec3 base_color;
     std::optional<int> base_color_texture_index = std::nullopt;
@@ -61,6 +63,7 @@ struct Texture {
     /// Can only be 8, 16, or 32
     int bitsPerChannel = 0;
     int numChannels = 0;
+    Color_Space color_space = Color_Space::UNORM;
 };
 
 /// A primitive is a basic association of geometry data along with a single material.

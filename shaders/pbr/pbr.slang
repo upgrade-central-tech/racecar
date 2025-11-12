@@ -87,7 +87,7 @@ float3 map_normals(float3 normal_map, float4 in_tangent, float3 in_normal) {
     // Map back to [-1, 1] from [0, 1]
     float3 normal_tangent = 2.0f * normal_map - 1.0f;
 
-    return mul(TBN, normal_tangent);
+    return mul(transpose(TBN), normal_tangent);
 }
 
 [shader("fragment")]

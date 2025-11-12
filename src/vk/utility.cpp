@@ -57,6 +57,9 @@ uint32_t bytes_from_format( VkFormat format ) {
         case VK_FORMAT_R8G8B8_UNORM:
             return 3;
 
+        case VK_FORMAT_R8G8B8A8_SRGB:
+            return 4;
+
         case VK_FORMAT_R8G8B8A8_UNORM:
             return 4;
 

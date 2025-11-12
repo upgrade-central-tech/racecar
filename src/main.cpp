@@ -67,8 +67,8 @@ int main( int, char*[] ) {
     scene::Scene scene;
     geometry::Mesh sceneMesh;
     {
-        scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices,
-                      sceneMesh.indices );
+        scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene,
+                          sceneMesh.vertices, sceneMesh.indices );
         geometry::generate_tangents( sceneMesh );
     }
 

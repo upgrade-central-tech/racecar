@@ -24,27 +24,30 @@ static inline glm::vec3 double_array_to_vec3( std::vector<double> arr ) {
 
 // These are all the image formats currently supported. If more formats are required, also add to
 // vk::utility::bytes_from_format
-VkFormat get_vk_format( int bitsPerChannel, int numChannels ) {
-    if ( bitsPerChannel == 32 ) {
+VkFormat get_vk_format( int bits_per_channel, int num_channels, Color_Space color_space ) {
+    if ( bits_per_channel == 32 ) {
         // Assume floating point formats for 32 bits per channel
-        switch ( numChannels ) {
+        switch ( num_channels ) {
             case 4:
                 return VK_FORMAT_R32G32B32A32_SFLOAT;
             default:
                 SDL_Log( "[Scene] Texture loading: Unsupported 32-bit channel count: %i",
-                         numChannels );
+                         num_channels );
         }
-    } else if ( bitsPerChannel == 8 ) {
-        switch ( numChannels ) {
+    } else if ( bits_per_channel == 8 ) {
+        switch ( num_channels ) {
             case 1:
                 return VK_FORMAT_R8_UNORM;
             case 3:
                 return VK_FORMAT_R8G8B8_UNORM;
             case 4:
+                if ( color_space == Color_Space::SRGB ) {
+                    return VK_FORMAT_R8G8B8A8_SRGB;
+                }
                 return VK_FORMAT_R8G8B8A8_UNORM;
             default:
                 SDL_Log( "[Scene] Texture loading: Unsupported 8-bit channel count: %i",
-                         numChannels );
+                         num_channels );
         }
     }
     SDL_Log( "[Scene] Texture loading: Unknown texture format" );
@@ -109,8 +112,8 @@ bool load_gltf( vk::Common& vulkan,
         SDL_Log( "[Scene] GLTF parsing error! %i",
                  loaded_mat.pbrMetallicRoughness.baseColorTexture.index );
 
-        new_mat.metallic = static_cast<float>(loaded_mat.pbrMetallicRoughness.metallicFactor);
-        new_mat.roughness = static_cast<float>(loaded_mat.pbrMetallicRoughness.roughnessFactor);
+        new_mat.metallic = static_cast<float>( loaded_mat.pbrMetallicRoughness.metallicFactor );
+        new_mat.roughness = static_cast<float>( loaded_mat.pbrMetallicRoughness.roughnessFactor );
         new_mat.metallic_roughness_texture_index =
             loaded_mat.pbrMetallicRoughness.metallicRoughnessTexture.index;
         if ( new_mat.metallic_roughness_texture_index.value() == -1 ) {
@@ -119,22 +122,25 @@ bool load_gltf( vk::Common& vulkan,
 
         if ( loaded_mat.extensions.count( "KHR_materials_specular" ) != 0 ) {
             auto specular = loaded_mat.extensions.find( "KHR_materials_specular" )->second;
-            new_mat.specular = static_cast<float>(specular.Get( "specularFactor" ).GetNumberAsDouble());
+            new_mat.specular =
+                static_cast<float>( specular.Get( "specularFactor" ).GetNumberAsDouble() );
             // newMat.specularTint = specular.Get("specularColorFactor")
         }
         if ( loaded_mat.extensions.count( "KHR_materials_ior" ) != 0 ) {
-            new_mat.ior = static_cast<float>(loaded_mat.extensions.find( "KHR_materials_ior" )
-                              ->second.Get( "ior" )
-                              .GetNumberAsDouble());
+            new_mat.ior = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_ior" )
+                                                  ->second.Get( "ior" )
+                                                  .GetNumberAsDouble() );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_clearcoat" ) ) {
-            new_mat.clearcoat = static_cast<float>(loaded_mat.extensions.find( "KHR_materials_clearcoat" )
-                                    ->second.Get( "clearcoatFactor" )
-                                    .GetNumberAsDouble());
-            new_mat.clearcoat_roughness = static_cast<float>(loaded_mat.extensions.find( "KHR_materials_clearcoat" )
-                                              ->second.Get( "clearcoatRoughnessFactor" )
-                                              .GetNumberAsDouble());
+            new_mat.clearcoat =
+                static_cast<float>( loaded_mat.extensions.find( "KHR_materials_clearcoat" )
+                                        ->second.Get( "clearcoatFactor" )
+                                        .GetNumberAsDouble() );
+            new_mat.clearcoat_roughness =
+                static_cast<float>( loaded_mat.extensions.find( "KHR_materials_clearcoat" )
+                                        ->second.Get( "clearcoatRoughnessFactor" )
+                                        .GetNumberAsDouble() );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_sheen" ) ) {
@@ -148,13 +154,15 @@ bool load_gltf( vk::Common& vulkan,
                                                 color_factor.Get( 1 ).GetNumberAsDouble(),
                                                 color_factor.Get( 2 ).GetNumberAsDouble() );
             }
-            new_mat.sheen_roughness = static_cast<float>(sheen.Get( "sheenRoughnessFactor" ).GetNumberAsDouble());
+            new_mat.sheen_roughness =
+                static_cast<float>( sheen.Get( "sheenRoughnessFactor" ).GetNumberAsDouble() );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_transmission" ) ) {
-            new_mat.transmission = static_cast<float>(loaded_mat.extensions.find( "KHR_materials_transmission" )
-                                       ->second.Get( "transmissionFactor" )
-                                       .GetNumberAsDouble());
+            new_mat.transmission =
+                static_cast<float>( loaded_mat.extensions.find( "KHR_materials_transmission" )
+                                        ->second.Get( "transmissionFactor" )
+                                        .GetNumberAsDouble() );
         }
 
         new_mat.emissive = double_array_to_vec3( loaded_mat.emissiveFactor );
@@ -172,7 +180,7 @@ bool load_gltf( vk::Common& vulkan,
         if ( new_mat.normal_texture_index.value() == -1 ) {
             new_mat.normal_texture_index = std::nullopt;
         }
-        new_mat.normal_texture_weight = static_cast<int>(loaded_mat.normalTexture.scale);
+        new_mat.normal_texture_weight = static_cast<int>( loaded_mat.normalTexture.scale );
         new_mat.occulusion_texture_index = loaded_mat.occlusionTexture.index;
         if ( new_mat.occulusion_texture_index.value() == -1 ) {
             new_mat.occulusion_texture_index = std::nullopt;
@@ -193,19 +201,35 @@ bool load_gltf( vk::Common& vulkan,
         new_tex.height = loaded_img.height;
         new_tex.bitsPerChannel = loaded_img.bits;
         new_tex.numChannels = loaded_img.component;
+        scene.textures.push_back( new_tex );
+    }
 
-        VkFormat image_format = get_vk_format( new_tex.bitsPerChannel, new_tex.numChannels );
+    // Mark albedo and emission as SRGB.
+    for ( Material& mat : scene.materials ) {
+        if ( mat.base_color_texture_index.has_value() ) {
+            scene.textures[mat.base_color_texture_index.value()].color_space = Color_Space::SRGB;
+        }
+        if ( mat.emmisive_texture_index.has_value() ) {
+            scene.textures[mat.emmisive_texture_index.value()].color_space = Color_Space::SRGB;
+        }
+    }
 
-        new_tex.data =
-            engine::create_image( vulkan, engine, static_cast<void*>( loaded_img.image.data() ),
-                                 { static_cast<uint32_t>( loaded_img.width ),
-                                   static_cast<uint32_t>( loaded_img.height ), 1 },
-                                 image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
-        if ( !new_tex.data ) {
+    // Upload textures to the GPU
+    for ( size_t i = 0; i < model.textures.size(); i++ ) {
+        Texture& texture = scene.textures[i];
+        tinygltf::Texture& loaded_tex = model.textures[i];
+        tinygltf::Image loaded_img = model.images[loaded_tex.source];
+
+        VkFormat image_format =
+            get_vk_format( texture.bitsPerChannel, texture.numChannels, texture.color_space );
+
+        texture.data = engine::create_image(
+            vulkan, engine, static_cast<void*>( loaded_img.image.data() ),
+            { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
+            image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+        if ( !texture.data ) {
             SDL_Log( "[Scene] GLTF loading: Failed to load texture onto the GPU" );
         }
-
-        scene.textures.push_back( new_tex );
     }
 
     // Used for pairing children and parents in the scene graph
@@ -511,7 +535,8 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string filepath, 
     hdri.bitsPerChannel = 32;  // via stbi_loadf
     hdri.numChannels = 4;      // via stbi_loadf
 
-    VkFormat image_format = get_vk_format( hdri.bitsPerChannel, hdri.numChannels );
+    VkFormat image_format =
+        get_vk_format( hdri.bitsPerChannel, hdri.numChannels, Color_Space::SFLOAT );
     hdri.data = engine::create_image(
         vulkan, engine, static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
