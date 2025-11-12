@@ -88,7 +88,8 @@ struct Mesh {
 
 /// Each node will have either a mesh or a camera
 struct Node {
-    std::variant<std::monostate, std::unique_ptr<Mesh>, std::unique_ptr<Camera>> data;
+    std::optional<std::variant<std::monostate, std::unique_ptr<Mesh>, std::unique_ptr<Camera>>>
+        data;
 
     /// transforms are local
     glm::mat4 transform = glm::mat4();

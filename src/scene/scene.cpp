@@ -479,9 +479,10 @@ bool load_gltf( vk::Common& vulkan,
                     }
                 }
 
-                std::get<std::unique_ptr<Mesh>>( new_node->data )->primitives.push_back( new_prim );
+                std::get<std::unique_ptr<Mesh>>( new_node->data.value() )
+                    ->primitives.push_back( new_prim );
             }
-        } else {  // Presumably the node is a camera
+        } else if ( loaded_node.camera != -1 ) {
             std::unique_ptr<Camera> camera = std::make_unique<Camera>();
             tinygltf::Camera loaded_camera =
                 model.cameras[static_cast<size_t>( loaded_node.camera )];
@@ -501,6 +502,8 @@ bool load_gltf( vk::Common& vulkan,
                 scene.main_camera = camera.get();
             }
             new_node->data = std::move( camera );
+        } else {
+            new_node->data = std::nullopt;
         }
 
         scene.nodes.push_back( std::move( new_node ) );

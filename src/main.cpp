@@ -138,9 +138,10 @@ int main( int, char*[] ) {
     engine::TaskList task_list;
 
     for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
-        if ( std::holds_alternative<std::unique_ptr<scene::Mesh>>( node->data ) ) {
+        if ( node->data.has_value() &&
+             std::holds_alternative<std::unique_ptr<scene::Mesh>>( node->data.value() ) ) {
             std::unique_ptr<scene::Mesh>& mesh =
-                std::get<std::unique_ptr<scene::Mesh>>( node->data );
+                std::get<std::unique_ptr<scene::Mesh>>( node->data.value() );
             for ( scene::Primitive& prim : mesh->primitives ) {
                 scene::Material current_material = scene.materials[prim.material_id];
                 std::vector<std::optional<scene::Texture>> textures_needed;
