@@ -15,7 +15,7 @@ namespace racecar::engine {
 bool execute( State& engine, Context& ctx, TaskList& task_list ) {
     vk::Common& vulkan = ctx.vulkan;
 
-    uint32_t frame_number = engine.get_frame_index();
+    size_t frame_number = engine.get_frame_index();
     FrameData& frame = engine.frames[frame_number];
 
     // Using the maximum 64-bit unsigned integer value effectively disables the timeout
@@ -35,6 +35,9 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         for ( IUniformBuffer* ubuffer : draw_task.uniform_buffers ) {
             ubuffer->update( vulkan, engine.get_frame_index() );
         }
+
+        engine::update_images( vulkan, draw_task.images_descriptor, draw_task.textures,
+                               int(engine.get_frame_index()) );
     }
 
     const VkCommandBufferBeginInfo command_buffer_begin_info =
@@ -129,8 +132,15 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
             engine::update_images( vulkan, task_list.draw_tasks[i].images_descriptor, task_list.draw_tasks[i].textures,
                                    engine.get_frame_index() );
 
+            auto search = std::find_if( task_list.pipeline_barriers.begin(),
+                                          task_list.pipeline_barriers.end(),
+                                          [=]( std::pair<int, PipelineBarrierDescriptor> v ) -> bool {
+                                              return v.first == int( i );
+                                          } );
+            if ( search != task_list.pipeline_barriers.end() ) {
+                run_pipeline_barrier( (*search).second, frame.render_cmdbuf );
+            }
             draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
-            // draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
         }
 
         // GUI render pass

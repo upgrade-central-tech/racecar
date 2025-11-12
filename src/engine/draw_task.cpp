@@ -87,7 +87,7 @@ bool draw( [[maybe_unused]] vk::Common& vulkan,
                               VK_INDEX_TYPE_UINT32 );
 
         vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_descriptor.index_count, 1,
-                          draw_task.draw_resource_descriptor.first_index,
+                          uint32_t(draw_task.draw_resource_descriptor.first_index),
                           draw_task.draw_resource_descriptor.index_buffer_offset, 0 );
     }
 
