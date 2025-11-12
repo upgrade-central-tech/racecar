@@ -52,7 +52,7 @@ struct State {
 
     DescriptorSystem descriptor_system = {};
 
-    size_t get_frame_index() const { return size_t( frame_number % frame_overlap ); };
+    size_t get_frame_index() const;
 };
 
 std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan );

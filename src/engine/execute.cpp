@@ -4,7 +4,6 @@
 #include "../imgui/imgui_impl_vulkan.h"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
-#include "images.hpp"
 #include "task_list.hpp"
 
 #include <glm/ext/matrix_clip_space.hpp>

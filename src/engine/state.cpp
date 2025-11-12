@@ -82,10 +82,9 @@ bool create_depth_images( State& engine, vk::Common& vulkan ) {
             .usage = VMA_MEMORY_USAGE_GPU_ONLY,
             .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) };
 
-        RACECAR_VK_CHECK(
-            vmaCreateImage( vulkan.allocator, &depth_image_info, &image_allocate_info,
-                            &depth_image.image, &depth_image.allocation, nullptr ),
-            "Failed to create depth image" );
+        RACECAR_VK_CHECK( vmaCreateImage( vulkan.allocator, &depth_image_info, &image_allocate_info,
+                                          &depth_image.image, &depth_image.allocation, nullptr ),
+                          "Failed to create depth image" );
 
         SDL_Log( "[ALLOC] Image %p", depth_image.image );
 
@@ -168,6 +167,10 @@ bool create_frame_data( State& engine, vk::Common& vulkan ) {
 
 }  // namespace
 
+size_t State::get_frame_index() const {
+    return size_t( frame_number % frame_overlap );
+}
+
 std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
     State engine = {};
 
@@ -237,7 +240,7 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
 
         .up = glm::vec3( 0.f, 1.f, 0.f ),
 
-        .fov_y = float(glm::radians( 60.0 )),
+        .fov_y = float( glm::radians( 60.0 ) ),
         .aspect_ratio = static_cast<float>( constant::SCREEN_W ) / constant::SCREEN_H,
         .near_plane = 0.1f,
         .far_plane = 100.f,
