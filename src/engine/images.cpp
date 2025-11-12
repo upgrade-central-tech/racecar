@@ -37,7 +37,7 @@ SamplersDescriptor create_samplers_descriptor( vk::Common& vulkan,
     for ( uint32_t frame = 0; frame < frame_overlap; frame++ ) {
         engine::DescriptorWriter writer;
         for ( uint32_t binding = 0; binding < samplers.size(); binding++ ) {
-            write_image( writer, binding, VK_NULL_HANDLE, samplers[binding],
+            write_image( writer, int(binding), VK_NULL_HANDLE, samplers[binding],
                          VK_IMAGE_LAYOUT_UNDEFINED, VK_DESCRIPTOR_TYPE_SAMPLER );
         }
         update_set( writer, vulkan.device, sampler_descriptor.descriptor_sets[frame] );
@@ -82,13 +82,13 @@ void update_images( vk::Common& vulkan,
                     engine::ImagesDescriptor& image_descriptors,
                     std::vector<vk::mem::AllocatedImage>& images,
                     int32_t frame_index ) {
-    VkDescriptorSet image_descriptor_set = image_descriptors.descriptor_sets[frame_index];
+    VkDescriptorSet image_descriptor_set = image_descriptors.descriptor_sets[size_t(frame_index)];
     engine::DescriptorWriter writer;
 
     for ( uint32_t binding = 0; binding < images.size(); binding++ ) {
-        image_descriptors.images[frame_index][binding] = images[binding];
+        image_descriptors.images[size_t(frame_index)][binding] = images[binding];
 
-        write_image( writer, binding, images[binding].image_view, nullptr,  // missing sampler!
+        write_image( writer, int(binding), images[binding].image_view, nullptr,  // missing sampler!
                      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE );
     }
 
