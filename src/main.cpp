@@ -25,7 +25,7 @@ using namespace racecar;
 constexpr int SCREEN_W = 1280;
 constexpr int SCREEN_H = 720;
 constexpr bool USE_FULLSCREEN = false;
-constexpr const char* GLTF_FILE_PATH = "../assets/sponza/sponza.gltf";
+constexpr const char* GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf";
 
 int main( int, char*[] ) {
     Context ctx;

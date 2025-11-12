@@ -10,7 +10,6 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
-
 namespace racecar::engine {
 
 bool execute( State& engine, Context& ctx, TaskList& task_list ) {
@@ -69,17 +68,43 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
     }
 
     {
-        // Make swapchain image writeable
+        // Make swapchain image writeable ( and clear! )
         vkBeginCommandBuffer( frame.start_cmdbuf, &command_buffer_begin_info );
 
+        vk::utility::transition_image( frame.start_cmdbuf, output_image, VK_IMAGE_LAYOUT_UNDEFINED,
+                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
+                                       VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_NONE,
+                                       VK_PIPELINE_STAGE_2_TRANSFER_BIT );
+
+        // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
         vk::utility::transition_image(
-            frame.start_cmdbuf, output_image, VK_IMAGE_LAYOUT_UNDEFINED,
+            frame.start_cmdbuf, out_depth_image.image, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_2_TRANSFER_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_TRANSFER_BIT );
+
+        VkClearColorValue clear_color = { { 1.0f, 1.0f, 1.0f, 1.0f } };
+        VkImageSubresourceRange clear_range =
+            vk::create::image_subresource_range( VK_IMAGE_ASPECT_COLOR_BIT );
+
+        vkCmdClearColorImage( frame.start_cmdbuf, output_image,
+                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &clear_range );
+
+        VkClearDepthStencilValue clear_depth = { 1.0f, 0 };
+        VkImageSubresourceRange clear_depth_range =
+            vk::create::image_subresource_range( VK_IMAGE_ASPECT_DEPTH_BIT );
+
+        vkCmdClearDepthStencilImage( frame.start_cmdbuf, out_depth_image.image,
+                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1,
+                                     &clear_depth_range );
+
+        vk::utility::transition_image(
+            frame.start_cmdbuf, output_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
             VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT );
 
         // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
         vk::utility::transition_image(
-            frame.start_cmdbuf, out_depth_image.image, VK_IMAGE_LAYOUT_UNDEFINED,
+            frame.start_cmdbuf, out_depth_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
             VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
             VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT );
