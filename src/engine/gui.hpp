@@ -14,6 +14,19 @@ namespace racecar::engine::gui {
 /// across frames, and then let ImGui take a reference to it.
 struct Gui {
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
+
+    // Later on when Saahil gets multiple buffers to work relatively easily,
+    // we can just have a struct called DebugSettings that's used to store all bools here.
+    bool enable_albedo_map = true;
+    bool enable_normal_map = false;
+    bool enable_roughess_metal_map = false;
+
+    bool normals_only = false;
+    bool albedo_only = false;
+    bool roughness_metal_only = false;
+
+    bool rotate_on = false;
+    float rotate_speed = 0.005f;
 };
 
 std::optional<Gui> initialize( Context& ctx, const State& engine );

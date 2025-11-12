@@ -24,7 +24,7 @@
 using namespace racecar;
 
 constexpr bool USE_FULLSCREEN = false;
-constexpr const char* GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf";
+constexpr const char* GLTF_FILE_PATH = "../assets/smooth_suzanne.glb";
 
 int main( int, char*[] ) {
     Context ctx;
@@ -92,7 +92,7 @@ int main( int, char*[] ) {
         create_uniform_buffer<uniform_buffer::CameraBufferData>(
             ctx.vulkan, engine, {},
             VkShaderStageFlagBits( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT ),
-            int(engine.frame_overlap) );
+            int( engine.frame_overlap ) );
 
     // Arbitrary 4 for the max number of images we may need to bind per PBR pass.
     std::vector<vk::mem::AllocatedImage> images =
@@ -142,7 +142,8 @@ int main( int, char*[] ) {
             const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
 
             for ( const scene::Primitive& prim : mesh->primitives ) {
-                const scene::Material& current_material = scene.materials[size_t(prim.material_id)];
+                const scene::Material& current_material =
+                    scene.materials[size_t( prim.material_id )];
                 std::vector<std::optional<scene::Texture>> textures_needed;
 
                 // Lowkey I might refactor this later. Assume the default pipeline is a PBR
@@ -156,15 +157,17 @@ int main( int, char*[] ) {
                         current_material.metallic_roughness_texture_index;
 
                     textures_needed.push_back(
-                        albedo_index ? std::optional{ ( material_textures[size_t(albedo_index.value())] ) }
-                                     : std::nullopt );
+                        albedo_index
+                            ? std::optional{ ( material_textures[size_t( albedo_index.value() )] ) }
+                            : std::nullopt );
                     textures_needed.push_back(
-                        normal_index ? std::optional{ ( material_textures[size_t(normal_index.value())] ) }
-                                     : std::nullopt );
+                        normal_index
+                            ? std::optional{ ( material_textures[size_t( normal_index.value() )] ) }
+                            : std::nullopt );
                     textures_needed.push_back(
                         metallic_roughness_index
                             ? std::optional{ (
-                                  material_textures[size_t(metallic_roughness_index.value())] ) }
+                                  material_textures[size_t( metallic_roughness_index.value() )] ) }
                             : std::nullopt );
 
                 }  // We would continue this if-else chain for all material pipelines based on
@@ -240,14 +243,25 @@ int main( int, char*[] ) {
             projection[1][1] *= -1;
 
             // float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
-            glm::mat4 model = glm::mat4( 1.0f );
-            // glm::rotate( glm::mat4( 1.0f ), angle, glm::vec3( 0, 1, 0 ) );  // Y-axis rotation
+            glm::mat4 model = ( !gui.rotate_on )
+                                  ? scene_camera_data.model
+                                  : glm::rotate( scene_camera_data.model, gui.rotate_speed,
+                                                 glm::vec3( 0, 1, 0 ) );  // Y-axis rotation
 
             scene_camera_data.mvp = projection * view * model;
+            scene_camera_data.model = model;
             scene_camera_data.inv_model = glm::inverse( model );
             scene_camera_data.camera_pos = camera::calculate_eye_position( camera );
             scene_camera_data.color = glm::vec3(
                 std::sin( static_cast<float>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
+
+            // Debug params
+            scene_camera_data.flags0 = glm::ivec4( gui.enable_albedo_map, gui.enable_normal_map,
+                                                  gui.enable_roughess_metal_map, gui.normals_only );
+            scene_camera_data.flags1 = glm::ivec4( gui.roughness_metal_only, gui.albedo_only,
+                                                  0, 0 );
+            
+
             camera_buffer.set_data( scene_camera_data );
         }
 

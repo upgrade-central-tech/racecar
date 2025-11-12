@@ -74,6 +74,7 @@ bool create_depth_images( State& engine, vk::Common& vulkan ) {
 
         VkImageUsageFlags depth_image_usages = {};
         depth_image_usages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        depth_image_usages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
         VkImageCreateInfo depth_image_create_info = vk::create::image_create_info(
             depth_image.image_format, depth_image_usages, depth_image.image_extent );

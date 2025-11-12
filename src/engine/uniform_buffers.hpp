@@ -8,11 +8,15 @@ namespace racecar::uniform_buffer {
 // Ensure that all uniform structs are 16 byte aligned!
 struct CameraBufferData {
     glm::mat4 mvp = {};
-    glm::mat4 model = {};
+    glm::mat4 model = glm::mat4(1.0f);
     glm::mat4 inv_model  = {};
     glm::vec3 camera_pos = {};
+    float padding = 0.0f;
     glm::vec3 color = {};
-    float padding;
+    float padding2 = 0.0f;
+
+    glm::ivec4 flags0 = glm::ivec4(0);
+    glm::ivec4 flags1 = glm::ivec4(0);
 };
 
 }  // namespace racecar::uniform_buffer

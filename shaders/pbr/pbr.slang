@@ -21,6 +21,9 @@ struct CameraBufferData {
     float4x4 inv_model;
     float3 camera_pos;
     float3 color;
+    
+    int4 flags0;
+    int4 flags1;
 };
 
 layout(binding = 0, set = 0) ConstantBuffer<CameraBufferData> camera_buffer_data;
@@ -94,9 +97,9 @@ float3 map_normals(float3 normal_map, float4 in_tangent, float3 in_normal) {
 [shader("fragment")]
 float4 fs_main( VertexOutput in ) : SV_Target {
   // Texture samples
-  float3 base_albedo = albedo_map.Sample(nearest_sampler, in.uv).rgb;
+  float3 base_albedo = camera_buffer_data.flags0.x > 0 ? albedo_map.Sample(nearest_sampler, in.uv).rgb : camera_buffer_data.color;
   float3 normal_map_norm = normal_map.Sample(nearest_sampler, in.uv).rgb;
-  float2 metallic_roughness = metallic_roughness_map.Sample(nearest_sampler, in.uv).gb;
+  float2 metallic_roughness = camera_buffer_data.flags0.z > 0 ? metallic_roughness_map.Sample(nearest_sampler, in.uv).gb : float2(0.01f, 0.0f);
 
   // Material properties
   float metallic = metallic_roughness.y;
@@ -105,9 +108,12 @@ float4 fs_main( VertexOutput in ) : SV_Target {
   // Basic vectors
   float3 light_pos = float3(1, 2, 1);
   float3 light = normalize(light_pos - in.position);
+  float3 radiance = float3(1, 1, 1);
+  float attenuation = 1.0f / length(light_pos - in.position);
+  attenuation *= attenuation;
 
   float3 camera_pos = camera_buffer_data.camera_pos;
-  float3 normal = in.normal; // map_normals(normal_map_norm, in.tangent, in.normal);
+  float3 normal = camera_buffer_data.flags0.y > 0 ? map_normals(normal_map_norm, in.tangent, in.normal) : normalize(in.normal);
   float3 view = normalize(camera_pos - in.position);
   float3 half = normalize(view + light);
 
@@ -131,11 +137,15 @@ float4 fs_main( VertexOutput in ) : SV_Target {
   float3 specular = (NDF * F * G) / (4.0f * n_dot_v * n_dot_l);
 
   float3 out_color = (1.0f - F) * diffuse + specular;
-  out_color *= n_dot_l;
+  out_color *= n_dot_l * attenuation * radiance;
 
   // Gamma
   //out_color = out_color / (out_color + float3(1.0f));
   //out_color = pow(out_color, float3(1.0f / 2.2f));
+
+  out_color = (camera_buffer_data.flags0.w > 0) ? normal : out_color;
+  out_color = (camera_buffer_data.flags1.x > 0) ? float3(roughness, metallic, 0.0f) : out_color;
+  out_color = (camera_buffer_data.flags1.y > 0) ? base_albedo : out_color;
 
   return float4(out_color, 1.0);
 }
