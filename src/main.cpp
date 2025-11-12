@@ -258,9 +258,9 @@ int main( int, char*[] )
                 }
 
                 // actually bind the texture handle to the descriptorset
-                engine::update_descriptor_set_image(ctx.vulkan, engine, material_descriptor_sets[size_t(prim.material_id)], textures_sent[0], 0);
-                engine::update_descriptor_set_image(ctx.vulkan, engine, material_descriptor_sets[size_t(prim.material_id)], textures_sent[1], 1);
-                engine::update_descriptor_set_image(ctx.vulkan, engine, material_descriptor_sets[size_t(prim.material_id)], textures_sent[2], 2);
+                for (size_t i = 0; i < textures_sent.size(); i++) {
+                    engine::update_descriptor_set_image(ctx.vulkan, engine, material_descriptor_sets[size_t(prim.material_id)], textures_sent[i], int(i));
+                }
 
                 engine::DrawResourceDescriptor draw_descriptor
                     = engine::DrawResourceDescriptor::from_mesh( scene_mesh, prim );
