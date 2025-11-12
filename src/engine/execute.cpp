@@ -35,9 +35,6 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         for ( IUniformBuffer* ubuffer : draw_task.uniform_buffers ) {
             ubuffer->update( vulkan, engine.get_frame_index() );
         }
-
-        engine::update_images( vulkan, draw_task.images_descriptor, draw_task.textures,
-                               engine.get_frame_index() );
     }
 
     const VkCommandBufferBeginInfo command_buffer_begin_info =
@@ -129,8 +126,11 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
 
         for ( size_t i = 0; i < task_list.draw_tasks.size(); i++ ) {
+            engine::update_images( vulkan, task_list.draw_tasks[i].images_descriptor, task_list.draw_tasks[i].textures,
+                                   engine.get_frame_index() );
+
             draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
-            draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
+            // draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
         }
 
         // GUI render pass

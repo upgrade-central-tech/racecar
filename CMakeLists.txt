@@ -61,7 +61,7 @@ else()
 endif()
 
 if (MSVC)
-  target_compile_options(racecar PRIVATE /W4 /WX -Wno-missing-designated-field-initializers)
+  target_compile_options(racecar PRIVATE /W4 /WX)
 else()
   target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
 endif()

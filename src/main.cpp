@@ -237,10 +237,15 @@ int main( int, char*[] ) {
                                                      camera.near_plane, camera.far_plane );
             projection[1][1] *= -1;
 
-            scene_camera_data.mvp = projection * view;
-            scene_camera_data.inv_model = glm::mat4( 1.f );
-            scene_camera_data.color =
-                glm::vec3( std::sin( engine.rendered_frames * 0.01f ), 0.0f, 0.0f );
+            // float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
+            glm::mat4 model = glm::mat4(1.0f);
+                 // glm::rotate( glm::mat4( 1.0f ), angle, glm::vec3( 0, 1, 0 ) );  // Y-axis rotation
+
+            scene_camera_data.mvp = projection * view * model;
+            scene_camera_data.inv_model = glm::inverse( model );
+            scene_camera_data.camera_pos = camera::calculate_eye_position(camera);
+            scene_camera_data.color = glm::vec3(
+                std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
             camera_buffer.set_data( scene_camera_data );
         }
 

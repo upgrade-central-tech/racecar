@@ -10,6 +10,7 @@ struct CameraBufferData {
     glm::mat4 mvp = {};
     glm::mat4 model = {};
     glm::mat4 inv_model  = {};
+    glm::vec3 camera_pos = {};
     glm::vec3 color = {};
     float padding;
 };

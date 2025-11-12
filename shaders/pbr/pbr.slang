@@ -19,6 +19,7 @@ struct CameraBufferData {
     float4x4 mvp;
     float4x4 model;
     float4x4 inv_model;
+    float3 camera_pos;
     float3 color;
 };
 
@@ -105,8 +106,8 @@ float4 fs_main( VertexOutput in ) : SV_Target {
   float3 light_pos = float3(1, 2, 1);
   float3 light = normalize(light_pos - in.position);
 
-  float3 camera_pos = float3(0, 0, 3);
-  float3 normal = map_normals(normal_map_norm, in.tangent, in.normal);
+  float3 camera_pos = camera_buffer_data.camera_pos;
+  float3 normal = in.normal; // map_normals(normal_map_norm, in.tangent, in.normal);
   float3 view = normalize(camera_pos - in.position);
   float3 half = normalize(view + light);
 
