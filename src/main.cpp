@@ -89,7 +89,8 @@ int main( int, char*[] )
 
     // SHADER LOADING/PROCESSING
     std::optional<VkShaderModule> scene_shader_module_opt
-        = vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
+        // = vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
+        = vk::create::shader_module( ctx.vulkan, "../shaders/deferred/prepass.spv" );
 
     if ( !scene_shader_module_opt ) {
         SDL_Log( "[RACECAR] Failed to create shader module" );
@@ -201,6 +202,29 @@ int main( int, char*[] )
         return false;
     }
 
+    // GBUFFER
+    engine::RWImage GBuffer_Position = engine::create_rwimage( ctx.vulkan, engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false ).value();
+    engine::RWImage GBuffer_Normal = engine::create_rwimage( ctx.vulkan, engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false ).value();
+    engine::RWImage GBuffer_Tangent = engine::create_rwimage( ctx.vulkan, engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false ).value();
+    engine::RWImage GBuffer_UV = engine::create_rwimage( ctx.vulkan, engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false ).value();
+    engine::RWImage GBuffer_Depth = engine::create_rwimage( ctx.vulkan, engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_D32_SFLOAT,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false ).value();
+    // end GBUFFER
+
     engine::Pipeline& scene_pipeline = scene_pipeline_opt.value();
 
     std::vector<scene::Texture>& material_textures = scene.textures;
@@ -208,7 +232,8 @@ int main( int, char*[] )
 
     engine::GfxTask main_draw = {
         .clear_screen = true,
-        .render_target_is_swapchain = true,
+        .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Tangent, GBuffer_UV },
+        .depth_image = GBuffer_Depth,
         .extent = engine.swapchain.extent,
     };
 
