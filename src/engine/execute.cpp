@@ -129,9 +129,6 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
 
         for ( size_t i = 0; i < task_list.draw_tasks.size(); i++ ) {
-            engine::update_images( vulkan, task_list.draw_tasks[i].images_descriptor, task_list.draw_tasks[i].textures,
-                                   engine.get_frame_index() );
-
             auto search = std::find_if( task_list.pipeline_barriers.begin(),
                                           task_list.pipeline_barriers.end(),
                                           [=]( std::pair<int, PipelineBarrierDescriptor> v ) -> bool {
@@ -140,6 +137,10 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
             if ( search != task_list.pipeline_barriers.end() ) {
                 run_pipeline_barrier( (*search).second, frame.render_cmdbuf );
             }
+
+            engine::update_images( vulkan, task_list.draw_tasks[i].images_descriptor, task_list.draw_tasks[i].textures,
+                                   int(engine.get_frame_index()) );
+
             draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
         }
 

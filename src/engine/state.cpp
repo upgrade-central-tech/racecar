@@ -237,7 +237,7 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
 
         .up = glm::vec3( 0.f, 1.f, 0.f ),
 
-        .fov_y = glm::radians( 60.0 ),
+        .fov_y = float(glm::radians( 60.0 )),
         .aspect_ratio = static_cast<float>( constant::SCREEN_W ) / constant::SCREEN_H,
         .near_plane = 0.1f,
         .far_plane = 100.f,
