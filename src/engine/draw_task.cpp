@@ -5,7 +5,7 @@
 namespace racecar::engine {
 
 bool draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
-    const VkExtent2D extent )
+    const VkExtent2D extent, std::vector<std::pair<int, DescriptorSet*>> global_descriptors )
 {
     vkCmdBindPipeline( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.handle );
 
@@ -27,12 +27,21 @@ bool draw( const engine::State& engine, const DrawTask& draw_task, const VkComma
     };
     vkCmdSetScissor( cmd_buf, 0, 1, &scissor );
 
-    for ( size_t i = 0; i < draw_task.descriptor_sets.size(); ++i ) {
-        DescriptorSet* descriptor_set = draw_task.descriptor_sets[i];
+    size_t local_bind = 0;
+    size_t global_bind = 0;
+    for ( size_t i = 0; i < draw_task.descriptor_sets.size() + global_descriptors.size(); ++i ) {
+        if ( global_descriptors[global_bind].first == int(i) ) {
+            // SDL_Log("Global at %d", int(i));
+            global_bind++;
+            continue;
+        }
 
+        // SDL_Log("Local at %d", int(i));
+        DescriptorSet* descriptor_set = draw_task.descriptor_sets[local_bind];
         vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
             draw_task.pipeline.layout, static_cast<uint32_t>( i ), 1,
             &descriptor_set->descriptor_sets[engine.get_frame_index()], 0, nullptr );
+        local_bind++;
     }
 
     vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER,

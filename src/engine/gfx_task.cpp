@@ -45,8 +45,17 @@ void execute_gfx_task(
 
     vkCmdBeginRendering( cmd_buf, &rendering_info );
 
+    for ( size_t i = 0; i < gfx_task.global_descriptor_sets.size(); i++ ) {
+        int bind = gfx_task.global_descriptor_sets[i].first;
+        DescriptorSet* descriptor_set = gfx_task.global_descriptor_sets[i].second;
+        
+        vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            gfx_task.draw_tasks[0].pipeline.layout, static_cast<uint32_t>( bind ), 1,
+            &descriptor_set->descriptor_sets[engine.get_frame_index()], 0, nullptr );
+    }
+
     for ( const DrawTask& draw_task : gfx_task.draw_tasks ) {
-        draw( engine, draw_task, cmd_buf, gfx_task.extent );
+        draw( engine, draw_task, cmd_buf, gfx_task.extent, gfx_task.global_descriptor_sets );
     }
 
     vkCmdEndRendering( cmd_buf );

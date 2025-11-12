@@ -33,6 +33,6 @@ struct DrawTask {
 };
 
 bool draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
-    const VkExtent2D extent );
+    const VkExtent2D extent, std::vector<std::pair<int, DescriptorSet*>> global_descriptors );
 
 } // namespace racecar::engine

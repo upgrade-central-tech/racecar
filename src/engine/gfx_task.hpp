@@ -20,6 +20,8 @@ struct GfxTask {
     RWImage depth_image;
 
     VkExtent2D extent = {};
+
+    std::vector<std::pair<int, DescriptorSet*>> global_descriptor_sets;
 };
 
 std::optional<GfxTask> initialize_gfx_task();

@@ -154,7 +154,7 @@ int main( int, char*[] )
         return EXIT_FAILURE;
     }
 
-    engine::DescriptorSet& sampler_descriptor_opt = sampler_descriptor_set_opt.value();
+    engine::DescriptorSet& sampler_descriptor_set = sampler_descriptor_set_opt.value();
     
 
     // get number of materials
@@ -191,7 +191,7 @@ int main( int, char*[] )
                 // different descriptorset for each draw_task
                 material_descriptor_sets[0].layouts[engine.get_frame_index()],
 
-                sampler_descriptor_opt.layouts[engine.get_frame_index()],
+                sampler_descriptor_set.layouts[engine.get_frame_index()],
             },
             scene_shader_module );
 
@@ -209,6 +209,10 @@ int main( int, char*[] )
         .clear_screen = true,
         .render_target_is_swapchain = true,
         .extent = engine.swapchain.extent,
+        .global_descriptor_sets = {
+            std::pair(0, &camera_descriptor_set),
+            std::pair(2, &sampler_descriptor_set)
+        }
     };
 
     for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
@@ -268,12 +272,14 @@ int main( int, char*[] )
                 // give the material descriptor set to the draw task
                 main_draw.draw_tasks.push_back( {
                     .draw_resource_descriptor = draw_descriptor,
-                    .descriptor_sets = { &camera_descriptor_set, &material_descriptor_sets[size_t(prim.material_id)], &sampler_descriptor_opt },
+                    .descriptor_sets = { &material_descriptor_sets[size_t(prim.material_id)] },
                     .pipeline = scene_pipeline,
                 } );
             }
         }
     }
+
+    SDL_Log("Draw Calls: %d", int(main_draw.draw_tasks.size()));
 
     engine::add_gfx_task( task_list, main_draw );
 
