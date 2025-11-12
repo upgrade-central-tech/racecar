@@ -34,7 +34,6 @@ template <typename T> struct UniformBuffer : IUniformBuffer {
         }
 
         std::memcpy( buffer_[frame_idx].info.pMappedData, &data_, sizeof( T ) );
-
         vmaFlushAllocation( vulkan.allocator, buffer_[frame_idx].allocation, 0, sizeof( T ) );
 
         dirty = false;

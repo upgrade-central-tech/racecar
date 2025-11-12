@@ -47,7 +47,7 @@ void update_descriptor_set_uniform( vk::Common& vulkan, State& engine, Descripto
         VkWriteDescriptorSet write = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = desc_set.descriptor_sets[i],
-            .dstBinding = uint32_t( binding_idx ),
+            .dstBinding = static_cast<uint32_t>( binding_idx ),
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .pBufferInfo = &buffer_info,
@@ -61,22 +61,22 @@ void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorS
     vk::mem::AllocatedImage img, int binding_idx )
 {
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        VkDescriptorImageInfo img_info = {
+        VkDescriptorImageInfo desc_image_info = {
             .sampler = VK_NULL_HANDLE,
             .imageView = img.image_view,
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         };
 
-        VkWriteDescriptorSet write = {
+        VkWriteDescriptorSet write_desc_set = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = desc_set.descriptor_sets[i],
-            .dstBinding = uint32_t( binding_idx ),
+            .dstBinding = static_cast<uint32_t>( binding_idx ),
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .pImageInfo = &img_info,
+            .pImageInfo = &desc_image_info,
         };
 
-        vkUpdateDescriptorSets( vulkan.device, 1, &write, 0, nullptr );
+        vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
     }
 }
 

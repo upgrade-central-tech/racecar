@@ -100,28 +100,38 @@ int main( int, char*[] )
 
     auto camera_buffer_opt = create_uniform_buffer<uniform_buffer::Camera>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-
     if ( !camera_buffer_opt ) {
         SDL_Log( "[RACECAR] Failed to create camera uniform buffer!" );
         return EXIT_FAILURE;
     }
-
     UniformBuffer<uniform_buffer::Camera>& camera_buffer = camera_buffer_opt.value();
 
-    auto camera_descriptor_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+    auto debug_buffer_opt = create_uniform_buffer<uniform_buffer::Debug>(
+        ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+    if ( !debug_buffer_opt ) {
+        SDL_Log( "[RACECAR] Failed to create debug uniform buffer!" );
+        return EXIT_FAILURE;
+    }
+    UniformBuffer<uniform_buffer::Debug>& debug_buffer = debug_buffer_opt.value();
+
+    auto uniform_desc_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-    if ( !camera_descriptor_set_opt ) {
-        SDL_Log( "[RACECAR] Failed to generate camera descriptor set" );
+    if ( !uniform_desc_set_opt ) {
+        SDL_Log( "[RACECAR] Failed to generate uniform descriptor set" );
         return EXIT_FAILURE;
     }
 
-    engine::DescriptorSet& camera_descriptor_set = camera_descriptor_set_opt.value();
+    engine::DescriptorSet& uniform_desc_set = uniform_desc_set_opt.value();
 
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, camera_descriptor_set,
+    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set,
         camera_buffer.buffer( engine.get_frame_index() ).handle, 0,
         sizeof( uniform_buffer::Camera ) );
+
+    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set,
+        debug_buffer.buffer( engine.get_frame_index() ).handle, 1,
+        sizeof( uniform_buffer::Debug ) );
 
     // Simple set up for linear sampler
     VkSampler nearest_sampler = VK_NULL_HANDLE;
@@ -154,16 +164,11 @@ int main( int, char*[] )
     }
 
     engine::DescriptorSet& sampler_descriptor_opt = sampler_descriptor_set_opt.value();
-    
 
-    // get number of materials
     size_t num_materials = scene.materials.size();
-    SDL_Log("NUm materials: %d", int(num_materials));
+    std::vector<engine::DescriptorSet> material_descriptor_sets( num_materials );
 
-    std::vector<engine::DescriptorSet> material_descriptor_sets(num_materials);
-
-    for (size_t i = 0; i < num_materials; i++) {
-        // Albedo, normal, metallic/roughness, test_texture3
+    for ( size_t i = 0; i < num_materials; i++ ) {
         // generate a separate texture descriptor set for each of the materials
         auto textures_descriptor_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
@@ -175,21 +180,18 @@ int main( int, char*[] )
             return EXIT_FAILURE;
         }
 
-        SDL_Log("GOOD");
-
         material_descriptor_sets[i] = textures_descriptor_set_opt.value();
     }
 
     std::optional<engine::Pipeline> scene_pipeline_opt
         = create_gfx_pipeline( engine, ctx.vulkan, scene_mesh,
             {
-                camera_descriptor_set.layouts[engine.get_frame_index()],
+                uniform_desc_set.layouts[engine.get_frame_index()],
 
                 // this is fine: currently, each of our texture sets share the same layout,
                 // so we can just pass in one layout into the pipeline and then bind a
                 // different descriptorset for each draw_task
                 material_descriptor_sets[0].layouts[engine.get_frame_index()],
-
                 sampler_descriptor_opt.layouts[engine.get_frame_index()],
             },
             scene_shader_module );
@@ -257,8 +259,10 @@ int main( int, char*[] )
                 }
 
                 // actually bind the texture handle to the descriptorset
-                for (size_t i = 0; i < textures_sent.size(); i++) {
-                    engine::update_descriptor_set_image(ctx.vulkan, engine, material_descriptor_sets[size_t(prim.material_id)], textures_sent[i], int(i));
+                for ( size_t i = 0; i < textures_sent.size(); i++ ) {
+                    engine::update_descriptor_set_image( ctx.vulkan, engine,
+                        material_descriptor_sets[size_t( prim.material_id )], textures_sent[i],
+                        int( i ) );
                 }
 
                 engine::DrawResourceDescriptor draw_descriptor
@@ -267,7 +271,9 @@ int main( int, char*[] )
                 // give the material descriptor set to the draw task
                 main_draw.draw_tasks.push_back( {
                     .draw_resource_descriptor = draw_descriptor,
-                    .descriptor_sets = { &camera_descriptor_set, &material_descriptor_sets[size_t(prim.material_id)], &sampler_descriptor_opt },
+                    .descriptor_sets
+                    = { &uniform_desc_set, &material_descriptor_sets[size_t( prim.material_id )],
+                        &sampler_descriptor_opt },
                     .pipeline = scene_pipeline,
                 } );
             }
@@ -304,9 +310,9 @@ int main( int, char*[] )
             continue;
         }
 
+        // Update camera uniform buffer
         {
-            // Update the scene block. Hard-coded goodness.
-            uniform_buffer::Camera scene_camera_data = camera_buffer.get_data();
+            uniform_buffer::Camera camera_ub = camera_buffer.get_data();
             camera::OrbitCamera& camera = engine.camera;
 
             glm::mat4 view = camera::calculate_view_matrix( camera );
@@ -314,31 +320,38 @@ int main( int, char*[] )
                 camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
             projection[1][1] *= -1;
 
-            // float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
-            glm::mat4 model = ( !gui.rotate_on )
-                ? scene_camera_data.model
-                : glm::rotate( scene_camera_data.model, gui.rotate_speed,
-                      glm::vec3( 0, 1, 0 ) ); // Y-axis rotation
+            glm::mat4 model = !gui.demo.rotate_on
+                ? camera_ub.model
+                : glm::rotate( camera_ub.model, gui.demo.rotate_speed, glm::vec3( 0, 1, 0 ) );
 
-            scene_camera_data.mvp = projection * view * model;
-            scene_camera_data.model = model;
-            scene_camera_data.inv_model = glm::inverse( model );
-            scene_camera_data.camera_pos = camera::calculate_eye_position( camera );
-            scene_camera_data.color = glm::vec3(
+            camera_ub.mvp = projection * view * model;
+            camera_ub.model = model;
+            camera_ub.inv_model = glm::inverse( model );
+            camera_ub.camera_pos = camera::calculate_eye_position( camera );
+            camera_ub.color = glm::vec3(
                 std::sin( static_cast<float>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
 
-            // Debug params
-            scene_camera_data.flags0 = glm::ivec4( gui.enable_albedo_map, gui.enable_normal_map,
-                gui.enable_roughess_metal_map, gui.normals_only );
-            scene_camera_data.flags1
-                = glm::ivec4( gui.roughness_metal_only, gui.albedo_only, 0, 0 );
+            camera_buffer.set_data( camera_ub );
+            camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
 
-            camera_buffer.set_data( scene_camera_data );
+        // Update debug uniform buffer
+        {
+            uniform_buffer::Debug debug_ub = {
+                .enable_albedo_map = gui.debug.enable_albedo_map,
+                .enable_normal_map = gui.debug.enable_normal_map,
+                .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
+                .normals_only = gui.debug.normals_only,
+                .albedo_only = gui.debug.albedo_only,
+                .roughness_metal_only = gui.debug.roughness_metal_only,
+            };
+
+            debug_buffer.set_data( debug_ub );
+            debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
         engine::gui::update( gui );
 
-        camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
         if ( engine::execute( engine, ctx, task_list ) ) {
             engine.rendered_frames = engine.rendered_frames + 1;
             engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;

@@ -1,22 +1,28 @@
 
 #include <glm/glm.hpp>
 
-/// Stores all uniform buffer structs used for different layouts and shaders.
+/// Stores all uniform buffer structs used for different layouts and shaders. Ensure that all
+/// uniform structs are 16 byte aligned!
 namespace racecar::uniform_buffer {
 
-/// Simple uniform example for setting up camera buffer data
-/// Ensure that all uniform structs are 16 byte aligned!
+/// Camera data
 struct Camera {
     glm::mat4 mvp = {};
     glm::mat4 model = glm::mat4( 1.f );
     glm::mat4 inv_model = {};
     glm::vec3 camera_pos = {};
-    float padding = 0.0f;
+    float padding0 = 0.0f;
     glm::vec3 color = {};
-    float padding2 = 0.0f;
+    float padding1 = 0.0f;
+};
 
-    glm::ivec4 flags0 = glm::ivec4( 0 );
-    glm::ivec4 flags1 = glm::ivec4( 0 );
+struct Debug {
+    bool enable_albedo_map = false;
+    bool enable_normal_map = false;
+    bool enable_roughness_metal_map = false;
+    bool normals_only = false;
+    bool albedo_only = false;
+    bool roughness_metal_only = false;
 };
 
 } // namespace racecar::uniform_buffer

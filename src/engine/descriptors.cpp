@@ -53,7 +53,7 @@ VkDescriptorSetLayout build( const vk::Common& vulkan, VkShaderStageFlags shader
         .pBindings = ds_layout_builder.bindings.data(),
     };
 
-    VkDescriptorSetLayout ds_layout;
+    VkDescriptorSetLayout ds_layout = VK_NULL_HANDLE;
 
     RACECAR_VK_CHECK(
         vkCreateDescriptorSetLayout( vulkan.device, &ds_layout_create_info, nullptr, &ds_layout ),
@@ -110,7 +110,7 @@ VkDescriptorSet allocate( const vk::Common& vulkan, const DescriptorAllocator& d
         .pSetLayouts = &layout,
     };
 
-    VkDescriptorSet descriptor_set;
+    VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
 
     RACECAR_VK_CHECK( vkAllocateDescriptorSets( vulkan.device, &allocate_info, &descriptor_set ),
         "Failed to allocate descriptor sets" );

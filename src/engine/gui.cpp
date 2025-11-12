@@ -89,19 +89,39 @@ void update( Gui& gui )
         float average_fps = io.Framerate;
         ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );
 
-        ImGui::SeparatorText( "DEBUG" );
-        ImGui::Checkbox( "Enable albedo map", &gui.enable_albedo_map );
-        ImGui::Checkbox( "Enable normal map", &gui.enable_normal_map );
-        ImGui::Checkbox( "Enable roughess + metallic map", &gui.enable_roughess_metal_map );
+        ImGui::SeparatorText( "Debug" );
+        ImGui::Checkbox( "Enable albedo map", &gui.debug.enable_albedo_map );
+        ImGui::Checkbox( "Enable normal map", &gui.debug.enable_normal_map );
+        ImGui::Checkbox( "Enable roughess + metallic map", &gui.debug.enable_roughness_metal_map );
 
-        ImGui::Checkbox( "Turn on normals only", &gui.normals_only );
-        ImGui::Checkbox( "Turn on albedo only", &gui.albedo_only );
-        ImGui::Checkbox( "Turn on roughness + metallic only", &gui.roughness_metal_only );
+        if ( !gui.debug.enable_albedo_map ) {
+            ImGui::BeginDisabled();
+        }
+        ImGui::Checkbox( "Turn on albedo only", &gui.debug.albedo_only );
+        if ( !gui.debug.enable_albedo_map ) {
+            ImGui::EndDisabled();
+        }
+
+        if ( !gui.debug.enable_normal_map ) {
+            ImGui::BeginDisabled();
+        }
+        ImGui::Checkbox( "Turn on normals only", &gui.debug.normals_only );
+        if ( !gui.debug.enable_normal_map ) {
+            ImGui::EndDisabled();
+        }
+
+        if ( !gui.debug.enable_roughness_metal_map ) {
+            ImGui::BeginDisabled();
+        }
+        ImGui::Checkbox( "Turn on roughness + metallic only", &gui.debug.roughness_metal_only );
+        if ( !gui.debug.enable_roughness_metal_map ) {
+            ImGui::EndDisabled();
+        }
 
         ImGui::SeparatorText( "Demo Settings" );
-        ImGui::Checkbox( "Rotate on", &gui.rotate_on );
+        ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );
         ImGui::Text( "Spin speed:" );
-        ImGui::SliderFloat( "Min", &gui.rotate_speed, 0, 0.05f );
+        ImGui::SliderFloat( "Min", &gui.demo.rotate_speed, 0, 0.05f );
     }
 
     ImGui::End();
