@@ -195,7 +195,7 @@ bool load_gltf( vk::Common& vulkan,
     // Textures & Load onto GPU
     for ( tinygltf::Texture& loaded_tex : model.textures ) {
         Texture new_tex;
-        tinygltf::Image loaded_img = model.images[loaded_tex.source];
+        tinygltf::Image loaded_img = model.images[size_t(loaded_tex.source)];
 
         new_tex.width = loaded_img.width;
         new_tex.height = loaded_img.height;
@@ -207,10 +207,10 @@ bool load_gltf( vk::Common& vulkan,
     // Mark albedo and emission as SRGB.
     for ( Material& mat : scene.materials ) {
         if ( mat.base_color_texture_index.has_value() ) {
-            scene.textures[mat.base_color_texture_index.value()].color_space = Color_Space::SRGB;
+            scene.textures[size_t(mat.base_color_texture_index.value())].color_space = Color_Space::SRGB;
         }
         if ( mat.emmisive_texture_index.has_value() ) {
-            scene.textures[mat.emmisive_texture_index.value()].color_space = Color_Space::SRGB;
+            scene.textures[size_t(mat.emmisive_texture_index.value())].color_space = Color_Space::SRGB;
         }
     }
 
@@ -218,7 +218,7 @@ bool load_gltf( vk::Common& vulkan,
     for ( size_t i = 0; i < model.textures.size(); i++ ) {
         Texture& texture = scene.textures[i];
         tinygltf::Texture& loaded_tex = model.textures[i];
-        tinygltf::Image loaded_img = model.images[loaded_tex.source];
+        tinygltf::Image loaded_img = model.images[size_t(loaded_tex.source)];
 
         VkFormat image_format =
             get_vk_format( texture.bitsPerChannel, texture.numChannels, texture.color_space );
@@ -327,7 +327,7 @@ bool load_gltf( vk::Common& vulkan,
                     size_t byte_offset = buffer_view.byteOffset;
                     size_t byte_length = buffer_view.byteLength;
 
-                    size_t buffer_id = buffer_view.buffer;
+                    size_t buffer_id = size_t(buffer_view.buffer);
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
 
                     pos.resize( length );
@@ -359,7 +359,7 @@ bool load_gltf( vk::Common& vulkan,
                     size_t byte_offset = buffer_view.byteOffset;
                     size_t byte_length = buffer_view.byteLength;
 
-                    size_t buffer_id = buffer_view.buffer;
+                    size_t buffer_id = size_t(buffer_view.buffer);
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
 
                     nor.resize( length );
@@ -393,7 +393,7 @@ bool load_gltf( vk::Common& vulkan,
                     size_t byte_offset = buffer_view.byteOffset;
                     size_t byte_length = buffer_view.byteLength;
 
-                    size_t buffer_id = buffer_view.buffer;
+                    size_t buffer_id = size_t(buffer_view.buffer);
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
 
                     uv.resize( length );
@@ -448,7 +448,7 @@ bool load_gltf( vk::Common& vulkan,
                     size_t byte_offset = buffer_view.byteOffset;
                     size_t byte_length = buffer_view.byteLength;
 
-                    size_t buffer_id = buffer_view.buffer;
+                    size_t buffer_id = size_t(buffer_view.buffer);
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
 
                     if ( accessor.componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT ) {

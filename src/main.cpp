@@ -93,7 +93,7 @@ int main( int, char*[] ) {
         create_uniform_buffer<uniform_buffer::CameraBufferData>(
             ctx.vulkan, engine, {},
             VkShaderStageFlagBits( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT ),
-            engine.frame_overlap );
+            int(engine.frame_overlap) );
 
     // Arbitrary 4 for the max number of images we may need to bind per PBR pass.
     std::vector<vk::mem::AllocatedImage> images =
@@ -143,7 +143,7 @@ int main( int, char*[] ) {
             std::unique_ptr<scene::Mesh>& mesh =
                 std::get<std::unique_ptr<scene::Mesh>>( node->data.value() );
             for ( scene::Primitive& prim : mesh->primitives ) {
-                scene::Material current_material = scene.materials[prim.material_id];
+                scene::Material current_material = scene.materials[size_t(prim.material_id)];
                 std::vector<std::optional<scene::Texture>> textures_needed;
 
                 // Lowkey I might refactor this later. Assume the default pipeline is a PBR
@@ -158,15 +158,15 @@ int main( int, char*[] ) {
                         current_material.metallic_roughness_texture_index.value();
 
                     textures_needed.push_back(
-                        albedo_index ? std::optional{ ( material_textures[albedo_index.value()] ) }
+                        albedo_index ? std::optional{ ( material_textures[size_t(albedo_index.value())] ) }
                                      : std::nullopt );
                     textures_needed.push_back(
-                        normal_index ? std::optional{ ( material_textures[normal_index.value()] ) }
+                        normal_index ? std::optional{ ( material_textures[size_t(normal_index.value())] ) }
                                      : std::nullopt );
                     textures_needed.push_back(
                         metallic_roughness_index
                             ? std::optional{ (
-                                  material_textures[metallic_roughness_index.value()] ) }
+                                  material_textures[size_t(metallic_roughness_index.value())] ) }
                             : std::nullopt );
 
                 }  // We would continue this if-else chain for all material pipelines based on
@@ -253,7 +253,7 @@ int main( int, char*[] ) {
             scene_camera_data.mvp = projection * view * model;
             scene_camera_data.inv_model = glm::inverse( model );
             scene_camera_data.color = glm::vec3(
-                std::sin( static_cast<uint32_t>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
+                std::sin( static_cast<float>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
             camera_buffer.set_data( scene_camera_data );
         }
 

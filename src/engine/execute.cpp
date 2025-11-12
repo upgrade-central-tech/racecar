@@ -16,7 +16,7 @@ namespace racecar::engine {
 bool execute( State& engine, Context& ctx, TaskList& task_list ) {
     vk::Common& vulkan = ctx.vulkan;
 
-    uint32_t frame_number = engine.get_frame_index();
+    size_t frame_number = engine.get_frame_index();
     FrameData& frame = engine.frames[frame_number];
 
     // Using the maximum 64-bit unsigned integer value effectively disables the timeout
@@ -38,7 +38,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         }
 
         engine::update_images( vulkan, draw_task.images_descriptor, draw_task.textures,
-                               engine.get_frame_index() );
+                               int(engine.get_frame_index()) );
     }
 
     const VkCommandBufferBeginInfo command_buffer_begin_info =
