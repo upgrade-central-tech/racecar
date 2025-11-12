@@ -6,7 +6,9 @@ bool create_descriptor_system( const vk::Common& vulkan,
                                uint32_t frame_overlap,
                                DescriptorSystem& descriptor_system ) {
     std::vector<DescriptorAllocator::PoolSizeRatio> pool_sizes = {
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 } };
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4 },
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 4 } };
 
     descriptor_allocator::init_pool( vulkan, descriptor_system.global_allocator, 50, pool_sizes );
     /// TODO: Free this pool
@@ -34,9 +36,11 @@ bool create_descriptor_system( const vk::Common& vulkan,
     {
         // DescriptorLayoutBuilder camera_builder;
         // descriptor_layout_builder::add_binding( camera_builder, 0,
-                                                // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER );
+        // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER );
+        // descriptor_layout_builder::add_binding( camera_builder, 1,
+        // VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER );
         // descriptor_system.camera_set_layout = descriptor_layout_builder::build(
-            // vulkan, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, camera_builder );
+        // vulkan, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, camera_builder );
 
         /// TODO: This is per frame-information. We're going to hardcode the uniform updates within
         /// the draw loop for simplicity.
@@ -151,6 +155,25 @@ VkDescriptorSet allocate( const vk::Common& vulkan,
 }
 
 }  // namespace descriptor_allocator
+
+void write_image( DescriptorWriter& writer,
+                  int binding,
+                  VkImageView image,
+                  VkSampler sampler,
+                  VkImageLayout layout,
+                  VkDescriptorType type ) {
+    VkDescriptorImageInfo& info = writer.imageInfos.emplace_back(
+        VkDescriptorImageInfo{ .sampler = sampler, .imageView = image, .imageLayout = layout } );
+
+    VkWriteDescriptorSet write = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                   .dstSet = VK_NULL_HANDLE,
+                                   .dstBinding = static_cast<uint32_t>( binding ),
+                                   .descriptorCount = 1,
+                                   .descriptorType = type,
+                                   .pImageInfo = &info };
+
+    writer.writes.push_back( write );
+}
 
 void write_buffer( DescriptorWriter& writer,
                    int binding,

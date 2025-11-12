@@ -69,7 +69,6 @@ template <typename T>
 UniformBuffer<T> create_uniform_buffer( racecar::vk::Common& vulkan, racecar::engine::State& engine, T input, VkShaderStageFlagBits shader_stages, int frame_overlap ) {
     auto data = input;
 
-    
     std::vector<vk::mem::AllocatedBuffer> buffers(frame_overlap);
     for(int i = 0; i < frame_overlap; i++) {
         buffers[i] = vk::mem::create_buffer( vulkan, sizeof(T),

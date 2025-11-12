@@ -47,6 +47,7 @@ struct LayoutResource {
     VkDescriptorSetLayout layout;
     size_t data_size;
     void* source_data;
+    void* image_data = nullptr;
 };
 
 bool create_descriptor_system( const vk::Common& vulkan,
@@ -68,7 +69,9 @@ namespace descriptor_layout_builder {
 void add_binding( DescriptorLayoutBuilder& ds_layout_builder,
                   uint32_t binding,
                   VkDescriptorType type );
+
 void clear( DescriptorLayoutBuilder& ds_layout_builder );
+
 VkDescriptorSetLayout build( const vk::Common& vulkan,
                              VkShaderStageFlags shader_stages,
                              DescriptorLayoutBuilder& ds_layout_builder,
@@ -84,7 +87,9 @@ bool init_pool( const vk::Common& vulkan,
                 DescriptorAllocator& ds_allocator,
                 uint32_t max_sets,
                 std::span<DescriptorAllocator::PoolSizeRatio> poolRatios );
+
 void clear_descriptors( const vk::Common& vulkan, DescriptorAllocator& ds_allocator );
+
 void destroy_pool( const vk::Common& vulkan, DescriptorAllocator& ds_allocator );
 
 VkDescriptorSet allocate( const vk::Common& vulkan,
@@ -100,12 +105,13 @@ struct DescriptorWriter {
     std::vector<VkWriteDescriptorSet> writes;
 };
 
-void write_image( DescriptorWriter descriptor_writer,
+void write_image( DescriptorWriter& writer,
                   int binding,
                   VkImageView image,
                   VkSampler sampler,
                   VkImageLayout layout,
                   VkDescriptorType type );
+                  
 void write_buffer( DescriptorWriter& descriptor_writer,
                    int binding,
                    VkBuffer buffer,

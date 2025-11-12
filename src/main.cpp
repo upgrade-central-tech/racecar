@@ -2,6 +2,7 @@
 #include "context.hpp"
 #include "engine/execute.hpp"
 #include "engine/gui.hpp"
+#include "engine/images.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
@@ -23,7 +24,7 @@
 using namespace racecar;
 
 constexpr bool USE_FULLSCREEN = false;
-constexpr const char* GLTF_FILE_PATH = "../assets/suzanne.glb";
+constexpr const char* GLTF_FILE_PATH = "../assets/sponza/sponza.gltf";
 
 int main( int, char*[] ) {
     Context ctx;
@@ -61,10 +62,16 @@ int main( int, char*[] ) {
 
     engine::gui::Gui& gui = gui_opt.value();
 
-    geometry::Mesh sceneMesh;
+    // SCENE LOADING/PROCESSING
     scene::Scene scene;
-    scene::load_gltf( std::string( GLTF_FILE_PATH ), scene, sceneMesh.vertices, sceneMesh.indices );
+    geometry::Mesh sceneMesh;
+    {
+        scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene,
+                          sceneMesh.vertices, sceneMesh.indices );
+        geometry::generate_tangents( sceneMesh );
+    }
 
+    std::vector<scene::Texture>& material_textures = scene.textures;
     std::optional<geometry::GPUMeshBuffers> uploaded_mesh_buffer =
         geometry::upload_mesh( ctx.vulkan, engine, sceneMesh.indices, sceneMesh.vertices );
     if ( !uploaded_mesh_buffer ) {
@@ -72,8 +79,9 @@ int main( int, char*[] ) {
     }
     sceneMesh.mesh_buffers = uploaded_mesh_buffer.value();
 
+    // SHADER LOADING/PROCESSING
     std::optional<VkShaderModule> scene_shader_module_opt =
-        vk::create::shader_module( ctx.vulkan, "../shaders/world_pos_debug/world_pos_debug.spv" );
+        vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
     if ( !scene_shader_module_opt ) {
         SDL_Log( "[Engine] Failed to create shader module" );
         return {};
@@ -86,10 +94,40 @@ int main( int, char*[] ) {
             VkShaderStageFlagBits( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT ),
             engine.frame_overlap );
 
-    std::optional<engine::Pipeline> scene_pipeline_opt = create_gfx_pipeline(
-        engine, ctx.vulkan, sceneMesh, { camera_buffer.layout( engine.get_frame_index() ) },
-        scene_shader_module );
+    // Arbitrary 4 for the max number of images we may need to bind per PBR pass.
+    std::vector<vk::mem::AllocatedImage> images =
+        std::vector<vk::mem::AllocatedImage>( vk::binding::MAX_IMAGES_BINDED );
 
+    engine::ImagesDescriptor images_descriptor = engine::create_images_descriptor(
+        ctx.vulkan, engine, images, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        engine.frame_overlap );
+
+    // Simple set up for linear sampler
+    VkSampler nearest_sampler;
+    {
+        VkSamplerCreateInfo sampler_nearest_create_info = {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .magFilter = VK_FILTER_NEAREST,
+            .minFilter = VK_FILTER_NEAREST,
+        };
+
+        vkCreateSampler( ctx.vulkan.device, &sampler_nearest_create_info, nullptr,
+                         &nearest_sampler );
+    }
+
+    ctx.vulkan.destructor_stack.push( ctx.vulkan.device, nearest_sampler, vkDestroySampler );
+
+    std::vector<VkSampler> samplers = { nearest_sampler };
+
+    engine::SamplersDescriptor samplers_descriptor = engine::create_samplers_descriptor(
+        ctx.vulkan, engine, samplers, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        engine.frame_overlap );
+
+    std::optional<engine::Pipeline> scene_pipeline_opt =
+        create_gfx_pipeline( engine, ctx.vulkan, sceneMesh,
+                             { camera_buffer.layout( engine.get_frame_index() ),
+                               images_descriptor.layout, samplers_descriptor.layout },
+                             scene_shader_module );
     if ( !scene_pipeline_opt ) {
         SDL_Log( "[Engine] Failed to create pipeline" );
         return false;
@@ -99,18 +137,67 @@ int main( int, char*[] ) {
 
     engine::TaskList task_list;
 
-    for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
-        const std::unique_ptr<scene::Mesh>& mesh = node->data;
+    for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
+        if ( node->mesh.has_value() ) {
+            const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
 
-        for ( const scene::Primitive& prim : mesh->primitives ) {
-            engine::DrawResourceDescriptor desc =
-                engine::DrawResourceDescriptor::from_mesh( sceneMesh, prim );
-            add_draw_task( task_list, { .draw_resource_desc = desc,
-                                        .uniform_buffers = { &camera_buffer },
-                                        .pipeline = scene_pipeline,
-                                        .extent = engine.swapchain.extent,
-                                        .clear_screen = true,
-                                        .render_target_is_swapchain = true } );
+            for ( const scene::Primitive& prim : mesh->primitives ) {
+                const scene::Material& current_material = scene.materials[prim.material_id];
+                std::vector<std::optional<scene::Texture>> textures_needed;
+
+                // Lowkey I might refactor this later. Assume the default pipeline is a PBR
+                // Albedo Map Pipeline
+                if ( current_material.type == scene::Material_Types::PBR_ALBEDO_MAP_MAT_TYPE ) {
+                    std::optional<int> albedo_index = current_material.base_color_texture_index;
+
+                    std::optional<int> normal_index = current_material.normal_texture_index;
+
+                    std::optional<int> metallic_roughness_index =
+                        current_material.metallic_roughness_texture_index;
+
+                    textures_needed.push_back(
+                        albedo_index ? std::optional{ ( material_textures[albedo_index.value()] ) }
+                                     : std::nullopt );
+                    textures_needed.push_back(
+                        normal_index ? std::optional{ ( material_textures[normal_index.value()] ) }
+                                     : std::nullopt );
+                    textures_needed.push_back(
+                        metallic_roughness_index
+                            ? std::optional{ (
+                                  material_textures[metallic_roughness_index.value()] ) }
+                            : std::nullopt );
+
+                }  // We would continue this if-else chain for all material pipelines based on
+                   // needed textures.
+
+                // TODO: Not yet connected with a layout
+                if ( scene.hdri_index.has_value() ) {
+                    textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
+                } else {
+                    textures_needed.push_back( std::nullopt );
+                }
+
+                std::vector<vk::mem::AllocatedImage> textures_sent;
+                for ( std::optional<scene::Texture>& texture : textures_needed ) {
+                    if ( texture && ( textures_sent.size() < images.size() ) ) {
+                        textures_sent.push_back( texture->data.value() );
+                    }
+                }
+
+                engine::DrawResourceDescriptor draw_descriptor =
+                    engine::DrawResourceDescriptor::from_mesh( sceneMesh, prim );
+                add_draw_task( task_list, {
+                                              .draw_resource_descriptor = draw_descriptor,
+                                              .images_descriptor = images_descriptor,
+                                              .samplers_descriptor = samplers_descriptor,
+                                              .uniform_buffers = { &camera_buffer },
+                                              .textures = textures_sent,
+                                              .pipeline = scene_pipeline,
+                                              .extent = engine.swapchain.extent,
+                                              .clear_screen = true,
+                                              .render_target_is_swapchain = true,
+                                          } );
+            }
         }
     }
 

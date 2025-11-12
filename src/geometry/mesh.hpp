@@ -15,6 +15,7 @@ struct Vertex {
     glm::vec4 color;
     glm::vec3 position;
     glm::vec3 normal;
+    glm::vec4 tangent;
     glm::vec2 uv;
 };
 
@@ -35,17 +36,22 @@ struct Mesh {
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
     };
 
-    std::array<VkVertexInputAttributeDescription, 4> attribute_descriptions = { {
+    std::array<VkVertexInputAttributeDescription, 5> attribute_descriptions = { {
         { 0, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof( Vertex, color ) },
         { 1, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, position ) },
         { 2, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, normal ) },
-        { 3, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32_SFLOAT, offsetof( Vertex, uv ) },
+        { 3, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, tangent ) },
+        { 4, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32_SFLOAT, offsetof( Vertex, uv ) },
     } };
-};
+};  
 
 std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
                                            const engine::State& engine,
                                            std::span<uint32_t> indices,
                                            std::span<Vertex> vertices );
+
+/// Should ideally run afer loadGLTF since it's just too annoying 
+/// to generate tangents while geo gets loaded and processed.
+void generate_tangents( Mesh& mesh );
 
 }  // namespace racecar::geometry

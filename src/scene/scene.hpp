@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../engine/images.hpp"
 #include "../geometry/mesh.hpp"
 
 #include <glm/glm.hpp>
@@ -13,7 +14,10 @@ namespace racecar::scene {
 enum Material_Types {
     // fill with types as needed
     DEFAULT_MAT_TYPE,
+    PBR_ALBEDO_MAP_MAT_TYPE,
 };
+
+enum class Color_Space { SRGB, UNORM, SFLOAT };
 
 struct Material {
     glm::vec3 base_color;
@@ -21,7 +25,7 @@ struct Material {
     float metallic = 0.f;
     float roughness = 1.f;
     // typically roughness in G, metallic in B
-    std::optional<int> metallic_roughness_texture_index = -1;
+    std::optional<int> metallic_roughness_texture_index = std::nullopt;
 
     float specular = 0.f;
     glm::vec3 specular_tint = glm::vec3( 1 );
@@ -45,18 +49,19 @@ struct Material {
     // Low priority, usually R channel of rough-metal
     std::optional<int> occulusion_texture_index = std::nullopt;
 
-    bool double_sided = true;                // Low-priority
-    Material_Types type = DEFAULT_MAT_TYPE;  // Can define as needed for easy switching.
+    bool double_sided = true;                       // Low-priority
+    Material_Types type = PBR_ALBEDO_MAP_MAT_TYPE;  // Can define as needed for easy switching.
 };
 
-struct Host_Texture {
-    std::vector<uint8_t> data;
+struct Texture {
+    std::optional<vk::mem::AllocatedImage> data;
 
     int width = 0;
     int height = 0;
     /// Can only be 8, 16, or 32
     int bitsPerChannel = 0;
     int numChannels = 0;
+    Color_Space color_space = Color_Space::UNORM;
 };
 
 /// A primitive is a basic association of geometry data along with a single material.
@@ -81,7 +86,7 @@ struct Mesh {
 
 /// Each node will have either a mesh or a camera
 struct Node {
-    std::unique_ptr<Mesh> data;
+    std::optional<std::unique_ptr<Mesh>> data;
 
     /// transforms are local
     glm::mat4 transform;
@@ -95,16 +100,18 @@ struct Node {
 struct Scene {
     std::vector<std::unique_ptr<Node>> nodes;
     std::vector<Material> materials;
-    std::vector<Host_Texture> textures;
+    std::vector<Texture> textures;
 
     std::optional<size_t> hdri_index = std::nullopt;
 };
 
-bool load_gltf( std::string filepath,
+bool load_gltf( vk::Common& vulkan,
+                engine::State& engine,
+                std::string filepath,
                 Scene& scene,
                 std::vector<geometry::Vertex>& out_vertices,
                 std::vector<uint32_t>& out_indices );
 
-bool load_hdri( std::string filepath, Scene& scene );
+bool load_hdri( vk::Common vulkan, engine::State& engine, std::string filepath, Scene& scene );
 
 }  // namespace racecar::scene
