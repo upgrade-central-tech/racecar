@@ -1,8 +1,5 @@
 #include "mem.hpp"
 
-#include "create.hpp"
-#include "utility.hpp"
-
 namespace racecar::vk::mem {
 
 std::optional<UniformBuffer> create_uniform_buffer( Common& vulkan, size_t data_size ) {
@@ -29,11 +26,6 @@ std::optional<UniformBuffer> create_uniform_buffer( Common& vulkan, size_t data_
 
     return uniform_buffer;
 };
-
-template <typename T>
-bool update_uniform_buffer( UniformBuffer& uniform_buffer, const T& updated_buffer_data ) {
-    memcpy( uniform_buffer.mapped_data, &updated_buffer_data, sizeof( T ) );
-}
 
 std::optional<AllocatedBuffer> create_buffer( Common& vulkan,
                                               size_t alloc_size,

@@ -1,5 +1,7 @@
 #include "scene.hpp"
 
+#include "../engine/images.hpp"
+
 #include <SDL3/SDL.h>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>

@@ -39,10 +39,6 @@ std::optional<UniformBuffer> create_uniform_buffer( Common& vulkan,
                                                     size_t data_size,
                                                     uint32_t binding_slot );
 
-/// WARNING: UNUSED FUNCTION
-template <typename T>
-bool update_uniform_buffer( UniformBuffer& uniform_buffer, const T& updated_buffer_data );
-
 std::optional<mem::AllocatedBuffer> create_buffer( Common& vulkan,
                                                    size_t alloc_size,
                                                    VkBufferUsageFlags usage_flags,

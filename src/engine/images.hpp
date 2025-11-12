@@ -12,10 +12,10 @@ struct SamplersDescriptor {
 };
 
 SamplersDescriptor create_samplers_descriptor( vk::Common& vulkan,
-                                           engine::State& engine,
-                                           const std::vector<VkSampler>& samplers,
-                                           VkShaderStageFlags shader_flags,
-                                           uint32_t frame_overlap );
+                                               engine::State& engine,
+                                               const std::vector<VkSampler>& samplers,
+                                               VkShaderStageFlags shader_flags,
+                                               uint32_t frame_overlap );
 
 struct ImagesDescriptor {
     VkDescriptorSetLayout layout;
