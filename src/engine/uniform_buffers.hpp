@@ -18,11 +18,22 @@ struct Camera {
 
 struct Debug {
     bool enable_albedo_map = false;
+    uint8_t p0[3];
+
     bool enable_normal_map = false;
+    uint8_t p1[3];
+
     bool enable_roughness_metal_map = false;
+    uint8_t p2[3];
+
     bool normals_only = false;
+    uint8_t p3[3];
+
     bool albedo_only = false;
+    uint8_t p4[3];
+
     bool roughness_metal_only = false;
+    uint8_t p5[3];
 };
 
 } // namespace racecar::uniform_buffer
