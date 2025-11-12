@@ -24,9 +24,7 @@ struct GfxTask {
 
 std::optional<GfxTask> initialize_gfx_task();
 
-void execute_gfx_task( const vk::Common& vulkan,
-                       const engine::State& engine,
-                       const VkCommandBuffer& cmd_buf,
-                       GfxTask& gfx_task );
+void execute_gfx_task(
+    const engine::State& engine, const VkCommandBuffer& cmd_buf, GfxTask& gfx_task );
 
-}  // namespace racecar::engine
+} // namespace racecar::engine

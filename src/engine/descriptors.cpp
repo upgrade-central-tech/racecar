@@ -2,54 +2,21 @@
 
 namespace racecar::engine {
 
-bool create_descriptor_system( const vk::Common& vulkan,
-                               uint32_t frame_overlap,
-                               DescriptorSystem& descriptor_system ) {
-    std::vector<DescriptorAllocator::PoolSizeRatio> pool_sizes = {
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 },
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4 },
-        { VK_DESCRIPTOR_TYPE_SAMPLER, 4 } };
+bool create_descriptor_system(
+    const vk::Common& vulkan, uint32_t frame_overlap, DescriptorSystem& descriptor_system )
+{
+    std::vector<DescriptorAllocator::PoolSizeRatio> pool_sizes
+        = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 }, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4 },
+              { VK_DESCRIPTOR_TYPE_SAMPLER, 4 } };
 
     descriptor_allocator::init_pool( vulkan, descriptor_system.global_allocator, 50, pool_sizes );
     /// TODO: Free this pool
 
     descriptor_system.frame_allocators = std::vector<DescriptorAllocator>( frame_overlap );
     for ( uint32_t i = 0; i < frame_overlap; i++ ) {
-        descriptor_allocator::init_pool( vulkan, descriptor_system.frame_allocators[i], 20,
-                                         pool_sizes );
+        descriptor_allocator::init_pool(
+            vulkan, descriptor_system.frame_allocators[i], 50, pool_sizes );
         /// TODO: free this pool
-    }
-
-    // Build the test triangle layout, should be pretty shrimple to work with.
-    // I think my goal is to just have this one be a global that stores a special color.
-    // {
-    //     DescriptorLayoutBuilder triangle_test_builder;
-    //     descriptor_layout_builder::add_binding( triangle_test_builder, 0,
-    //                                             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER );
-    //     descriptor_system.triangle_test_layout = descriptor_layout_builder::build(
-    //         vulkan, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-    //         triangle_test_builder );
-    // }
-
-    // Build the per-frame camera layout. Idea is to introduce a model matrix or some float that
-    // would change over time.
-    {
-        // DescriptorLayoutBuilder camera_builder;
-        // descriptor_layout_builder::add_binding( camera_builder, 0,
-        // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER );
-        // descriptor_layout_builder::add_binding( camera_builder, 1,
-        // VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER );
-        // descriptor_system.camera_set_layout = descriptor_layout_builder::build(
-        // vulkan, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, camera_builder );
-
-        /// TODO: This is per frame-information. We're going to hardcode the uniform updates within
-        /// the draw loop for simplicity.
-        // descriptor_system.camera_buffers = std::vector<vk::mem::UniformBuffer>( frame_overlap );
-        // for ( uint32_t i = 0; i < frame_overlap; i++ ) {
-        //     descriptor_system.camera_buffers[i] = vk::mem::create_uniform_buffer(
-        //         vulkan, &descriptor_system.camera_data, sizeof( vk::mem::CameraBufferData ), 0
-        //         ).value();
-        // }
     }
 
     return true;
@@ -57,9 +24,9 @@ bool create_descriptor_system( const vk::Common& vulkan,
 
 namespace descriptor_layout_builder {
 
-void add_binding( DescriptorLayoutBuilder& ds_layout_builder,
-                  uint32_t binding,
-                  VkDescriptorType type ) {
+void add_binding(
+    DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding, VkDescriptorType type )
+{
     // Stage flags are not set here, will be later in descriptor_layout_builder::build
     VkDescriptorSetLayoutBinding new_binding = {
         .binding = binding,
@@ -70,14 +37,11 @@ void add_binding( DescriptorLayoutBuilder& ds_layout_builder,
     ds_layout_builder.bindings.push_back( new_binding );
 }
 
-void clear( DescriptorLayoutBuilder& ds_layout_builder ) {
-    ds_layout_builder.bindings.clear();
-}
+void clear( DescriptorLayoutBuilder& ds_layout_builder ) { ds_layout_builder.bindings.clear(); }
 
-VkDescriptorSetLayout build( const vk::Common& vulkan,
-                             VkShaderStageFlags shader_stages,
-                             DescriptorLayoutBuilder& ds_layout_builder,
-                             VkDescriptorSetLayoutCreateFlags flags ) {
+VkDescriptorSetLayout build( const vk::Common& vulkan, VkShaderStageFlags shader_stages,
+    DescriptorLayoutBuilder& ds_layout_builder, VkDescriptorSetLayoutCreateFlags flags )
+{
     for ( auto& binding : ds_layout_builder.bindings ) {
         binding.stageFlags |= shader_stages;
     }
@@ -98,18 +62,16 @@ VkDescriptorSetLayout build( const vk::Common& vulkan,
     return ds_layout;
 }
 
-}  // namespace descriptor_layout_builder
+} // namespace descriptor_layout_builder
 
 namespace descriptor_allocator {
 
-bool init_pool( const vk::Common& vulkan,
-                DescriptorAllocator& ds_allocator,
-                uint32_t max_sets,
-                std::span<DescriptorAllocator::PoolSizeRatio> poolRatios ) {
+bool init_pool( const vk::Common& vulkan, DescriptorAllocator& ds_allocator, uint32_t max_sets,
+    std::span<DescriptorAllocator::PoolSizeRatio> poolRatios )
+{
     std::vector<VkDescriptorPoolSize> pool_sizes;
     for ( DescriptorAllocator::PoolSizeRatio ratio : poolRatios ) {
-        pool_sizes.push_back( VkDescriptorPoolSize{
-            .type = ratio.type,
+        pool_sizes.push_back( VkDescriptorPoolSize { .type = ratio.type,
             .descriptorCount = static_cast<uint32_t>( ratio.ratio * max_sets ) } );
     }
 
@@ -128,17 +90,19 @@ bool init_pool( const vk::Common& vulkan,
     return true;
 }
 
-void clear_descriptors( const vk::Common& vulkan, DescriptorAllocator& ds_allocator ) {
+void clear_descriptors( const vk::Common& vulkan, DescriptorAllocator& ds_allocator )
+{
     vkResetDescriptorPool( vulkan.device, ds_allocator.pool, 0 );
 }
 
-void destroy_pool( const vk::Common& vulkan, DescriptorAllocator& ds_allocator ) {
+void destroy_pool( const vk::Common& vulkan, DescriptorAllocator& ds_allocator )
+{
     vkDestroyDescriptorPool( vulkan.device, ds_allocator.pool, nullptr );
 }
 
-VkDescriptorSet allocate( const vk::Common& vulkan,
-                          const DescriptorAllocator& ds_allocator,
-                          VkDescriptorSetLayout layout ) {
+VkDescriptorSet allocate( const vk::Common& vulkan, const DescriptorAllocator& ds_allocator,
+    VkDescriptorSetLayout layout )
+{
     VkDescriptorSetAllocateInfo allocate_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = ds_allocator.pool,
@@ -149,40 +113,39 @@ VkDescriptorSet allocate( const vk::Common& vulkan,
     VkDescriptorSet descriptor_set;
 
     RACECAR_VK_CHECK( vkAllocateDescriptorSets( vulkan.device, &allocate_info, &descriptor_set ),
-                      "Failed to allocate descriptor sets" );
+        "Failed to allocate descriptor sets" );
 
     return descriptor_set;
 }
 
-}  // namespace descriptor_allocator
+} // namespace descriptor_allocator
 
-void write_image( DescriptorWriter& writer,
-                  int binding,
-                  VkImageView image,
-                  VkSampler sampler,
-                  VkImageLayout layout,
-                  VkDescriptorType type ) {
-    VkDescriptorImageInfo& info = writer.imageInfos.emplace_back(
-        VkDescriptorImageInfo{ .sampler = sampler, .imageView = image, .imageLayout = layout } );
+void write_image( DescriptorWriter& writer, int binding, VkImageView image, VkSampler sampler,
+    VkImageLayout layout, VkDescriptorType type )
+{
+    VkDescriptorImageInfo& info = writer.image_infos.emplace_back( VkDescriptorImageInfo {
+        .sampler = sampler,
+        .imageView = image,
+        .imageLayout = layout,
+    } );
 
-    VkWriteDescriptorSet write = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                                   .dstSet = VK_NULL_HANDLE,
-                                   .dstBinding = static_cast<uint32_t>( binding ),
-                                   .descriptorCount = 1,
-                                   .descriptorType = type,
-                                   .pImageInfo = &info };
+    VkWriteDescriptorSet write = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = VK_NULL_HANDLE,
+        .dstBinding = static_cast<uint32_t>( binding ),
+        .descriptorCount = 1,
+        .descriptorType = type,
+        .pImageInfo = &info,
+    };
 
     writer.writes.push_back( write );
 }
 
-void write_buffer( DescriptorWriter& writer,
-                   int binding,
-                   VkBuffer buffer,
-                   size_t size,
-                   size_t offset,
-                   VkDescriptorType type ) {
-    VkDescriptorBufferInfo& info = writer.bufferInfos.emplace_back(
-        VkDescriptorBufferInfo{ .buffer = buffer, .offset = offset, .range = size } );
+void write_buffer( DescriptorWriter& writer, int binding, VkBuffer buffer, size_t size,
+    size_t offset, VkDescriptorType type )
+{
+    VkDescriptorBufferInfo& info = writer.buffer_infos.emplace_back(
+        VkDescriptorBufferInfo { .buffer = buffer, .offset = offset, .range = size } );
 
     VkWriteDescriptorSet write = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -195,13 +158,14 @@ void write_buffer( DescriptorWriter& writer,
     writer.writes.push_back( write );
 }
 
-void update_set( DescriptorWriter& writer, VkDevice device, VkDescriptorSet set ) {
+void update_set( DescriptorWriter& writer, VkDevice device, VkDescriptorSet set )
+{
     for ( VkWriteDescriptorSet& write : writer.writes ) {
         write.dstSet = set;
     }
 
-    vkUpdateDescriptorSets( device, static_cast<uint32_t>( writer.writes.size() ),
-                            writer.writes.data(), 0, nullptr );
+    vkUpdateDescriptorSets(
+        device, static_cast<uint32_t>( writer.writes.size() ), writer.writes.data(), 0, nullptr );
 }
 
-}  // namespace racecar::engine
+} // namespace racecar::engine

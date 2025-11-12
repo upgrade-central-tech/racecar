@@ -4,10 +4,9 @@
 
 namespace racecar::engine {
 
-bool draw( const engine::State& engine,
-           const DrawTask& draw_task,
-           const VkCommandBuffer& cmd_buf,
-           const VkExtent2D extent ) {
+bool draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
+    const VkExtent2D extent )
+{
     vkCmdBindPipeline( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.handle );
 
     // Dynamically set viewport state
@@ -28,48 +27,40 @@ bool draw( const engine::State& engine,
     };
     vkCmdSetScissor( cmd_buf, 0, 1, &scissor );
 
-    /// TODO: This just overrides the first layout set with the last uniform buffer. Need to fix
-    /// so it reads one buffer.
-    for ( IUniformBuffer* buffer : draw_task.uniform_buffers ) {
+    for ( size_t i = 0; i < draw_task.descriptor_sets.size(); ++i ) {
+        DescriptorSet* descriptor_set = draw_task.descriptor_sets[i];
+
         vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                 draw_task.pipeline.layout, vk::binding::UNIFORM_BUFFER_SET, 1,
-                                 buffer->descriptor( engine.get_frame_index() ), 0, nullptr );
+            draw_task.pipeline.layout, static_cast<uint32_t>( i ), 1,
+            &descriptor_set->descriptor_sets[engine.get_frame_index()], 0, nullptr );
     }
 
-    vkCmdBindDescriptorSets(
-        cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.layout, 1, 1,
-        &draw_task.images_descriptor.descriptor_sets[engine.get_frame_index()], 0, nullptr );
-
-    vkCmdBindDescriptorSets(
-        cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.layout, 2, 1,
-        &draw_task.samplers_descriptor.descriptor_sets[engine.get_frame_index()], 0, nullptr );
-
-    vkCmdBindVertexBuffers(
-        cmd_buf, vk::binding::VERTEX_BUFFER,
+    vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER,
         static_cast<uint32_t>( draw_task.draw_resource_descriptor.vertex_buffers.size() ),
         draw_task.draw_resource_descriptor.vertex_buffers.data(),
         draw_task.draw_resource_descriptor.vertex_buffer_offsets.data() );
 
-    vkCmdBindIndexBuffer( cmd_buf, draw_task.draw_resource_descriptor.index_buffer, 0,
-                          VK_INDEX_TYPE_UINT32 );
+    vkCmdBindIndexBuffer(
+        cmd_buf, draw_task.draw_resource_descriptor.index_buffer, 0, VK_INDEX_TYPE_UINT32 );
 
     vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_descriptor.index_count, 1,
-                      uint32_t( draw_task.draw_resource_descriptor.first_index ),
-                      draw_task.draw_resource_descriptor.index_buffer_offset, 0 );
+        uint32_t( draw_task.draw_resource_descriptor.first_index ),
+        draw_task.draw_resource_descriptor.index_buffer_offset, 0 );
 
     return true;
 }
 
 DrawResourceDescriptor DrawResourceDescriptor::from_mesh(
-    const geometry::Mesh& mesh,
-    const std::optional<scene::Primitive>& primitive ) {
-    engine::DrawResourceDescriptor draw_mesh_desc{
+    const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive )
+{
+    engine::DrawResourceDescriptor draw_mesh_desc = {
         .vertex_buffers = { mesh.mesh_buffers.vertex_buffer.value().handle },
         .index_buffer = mesh.mesh_buffers.index_buffer.value().handle,
         .vertex_buffer_offsets = { 0 },
         .index_buffer_offset = 0,
         .first_index = 0,
-        .index_count = static_cast<uint32_t>( mesh.indices.size() ) };
+        .index_count = static_cast<uint32_t>( mesh.indices.size() ),
+    };
 
     if ( primitive.has_value() ) {
         draw_mesh_desc.first_index = primitive->ind_offset;
@@ -80,4 +71,4 @@ DrawResourceDescriptor DrawResourceDescriptor::from_mesh(
     return draw_mesh_desc;
 }
 
-}  // namespace racecar::engine
+} // namespace racecar::engine

@@ -58,4 +58,4 @@ struct State {
 std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan );
 void free( State& engine, vk::Common& vulkan );
 
-}  // namespace racecar::engine
+} // namespace racecar::engine

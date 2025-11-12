@@ -12,4 +12,4 @@ std::optional<SDL_Window*> initialize( int screen_w, int screen_h, bool fullscre
 /// Must be called after `Racecar::clean_up` to properly free Vulkan resources.
 void free( SDL_Window* window );
 
-}  // namespace racecar::sdl
+} // namespace racecar::sdl

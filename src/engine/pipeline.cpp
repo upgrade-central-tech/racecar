@@ -10,11 +10,10 @@ namespace racecar::engine {
 constexpr std::string_view VERTEX_ENTRY_NAME = "vs_main";
 constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
-std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
-                                             const vk::Common& vulkan,
-                                             const std::optional<const geometry::Mesh>& mesh,
-                                             const std::vector<VkDescriptorSetLayout>& layouts,
-                                             VkShaderModule shader_module ) {
+std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
+    const std::optional<const geometry::Mesh>& mesh,
+    const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module )
+{
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = 0,
@@ -26,8 +25,8 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
     if ( mesh.has_value() && mesh->mesh_buffers.vertex_buffer_address ) {
         vertex_input_info.vertexBindingDescriptionCount = 1,
         vertex_input_info.pVertexBindingDescriptions = &mesh->vertex_binding_description;
-        vertex_input_info.vertexAttributeDescriptionCount =
-            static_cast<uint32_t>( mesh->attribute_descriptions.size() );
+        vertex_input_info.vertexAttributeDescriptionCount
+            = static_cast<uint32_t>( mesh->attribute_descriptions.size() );
         vertex_input_info.pVertexAttributeDescriptions = mesh->attribute_descriptions.data();
     }
 
@@ -67,11 +66,13 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
 
     VkPipelineDepthStencilStateCreateInfo depth_stencil_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable = VK_FALSE,
-        .depthWriteEnable = VK_FALSE,
+        .depthTestEnable = VK_TRUE,
+        .depthWriteEnable = VK_TRUE,
         .depthCompareOp = VK_COMPARE_OP_LESS,
         .depthBoundsTestEnable = VK_FALSE,
         .stencilTestEnable = VK_FALSE,
+        .minDepthBounds = 0.f,
+        .maxDepthBounds = 1.f,
     };
 
     VkPipelineMultisampleStateCreateInfo multisample_info = {
@@ -80,10 +81,9 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         .sampleShadingEnable = VK_FALSE,
     };
 
-    VkPipelineColorBlendAttachmentState color_blend_attachment_info = {
-        .blendEnable = VK_FALSE,
-        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT };
+    VkPipelineColorBlendAttachmentState color_blend_attachment_info = { .blendEnable = VK_FALSE,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
+            | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT };
 
     VkPipelineColorBlendStateCreateInfo color_blend_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
@@ -101,34 +101,23 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
         pipeline_layout_info.pSetLayouts = layouts.data();
     }
 
-    // Force depth testing on, will refactor this out and hopefully
-    // remove this chunk when we add a pipeline builder.
-    {
-        depth_stencil_info.depthTestEnable = VK_TRUE;
-        depth_stencil_info.depthWriteEnable = true;
-        depth_stencil_info.depthBoundsTestEnable = VK_FALSE;
-        depth_stencil_info.stencilTestEnable = VK_FALSE;
-        depth_stencil_info.front = {};
-        depth_stencil_info.back = {};
-        depth_stencil_info.minDepthBounds = 0.0f;
-        depth_stencil_info.maxDepthBounds = 1.0f;
-    }
+    VkPipelineLayout gfx_layout = VK_NULL_HANDLE;
 
-    VkPipelineLayout gfx_layout = nullptr;
-
-    if ( VkResult result =
-             vkCreatePipelineLayout( vulkan.device, &pipeline_layout_info, nullptr, &gfx_layout );
-         result != VK_SUCCESS ) {
+    if ( VkResult result
+        = vkCreatePipelineLayout( vulkan.device, &pipeline_layout_info, nullptr, &gfx_layout );
+        result ) {
         SDL_Log( "[Vulkan] Failed to create pipeline layout | Error code: %d", result );
         vkDestroyShaderModule( vulkan.device, shader_module, nullptr );
         return {};
     }
 
+    vulkan.destructor_stack.push( vulkan.device, gfx_layout, vkDestroyPipelineLayout );
+
     std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages = {
-        vk::create::pipeline_shader_stage_info( VK_SHADER_STAGE_VERTEX_BIT, shader_module,
-                                                VERTEX_ENTRY_NAME ),
-        vk::create::pipeline_shader_stage_info( VK_SHADER_STAGE_FRAGMENT_BIT, shader_module,
-                                                FRAGMENT_ENTRY_NAME ),
+        vk::create::pipeline_shader_stage_info(
+            VK_SHADER_STAGE_VERTEX_BIT, shader_module, VERTEX_ENTRY_NAME ),
+        vk::create::pipeline_shader_stage_info(
+            VK_SHADER_STAGE_FRAGMENT_BIT, shader_module, FRAGMENT_ENTRY_NAME ),
     };
 
     // Use dynamic rendering instead of manually creating render passes
@@ -159,8 +148,10 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
     Pipeline gfx_pipeline;
 
     RACECAR_VK_CHECK( vkCreateGraphicsPipelines( vulkan.device, nullptr, 1, &gfx_pipeline_info,
-                                                 nullptr, &gfx_pipeline.handle ),
-                      "Failed to create graphics pipeline" );
+                          nullptr, &gfx_pipeline.handle ),
+        "Failed to create graphics pipeline" );
+
+    vulkan.destructor_stack.push( vulkan.device, gfx_pipeline.handle, vkDestroyPipeline );
 
     vkDestroyShaderModule( vulkan.device, shader_module, nullptr );
 
@@ -169,9 +160,4 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine,
     return gfx_pipeline;
 }
 
-void free_pipeline( const vk::Common& vulkan, Pipeline& pipeline ) {
-    vkDestroyPipeline( vulkan.device, pipeline.handle, nullptr );
-    vkDestroyPipelineLayout( vulkan.device, pipeline.layout, nullptr );
-}
-
-}  // namespace racecar::engine
+} // namespace racecar::engine

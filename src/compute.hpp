@@ -22,4 +22,4 @@ void add_compute_call( const ComputeTask& compute_call );
 std::optional<ComputeCall> create_compute_call( const VkShaderModule& compute_shader );
 void dispatch_compute_call( const ComputeTask& task );
 
-}  // namespace racecar::engine
+} // namespace racecar::engine

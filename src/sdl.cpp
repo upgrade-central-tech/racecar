@@ -2,7 +2,8 @@
 
 namespace racecar::sdl {
 
-std::optional<SDL_Window*> initialize( int screen_w, int screen_h, bool fullscreen ) {
+std::optional<SDL_Window*> initialize( int screen_w, int screen_h, bool fullscreen )
+{
     if ( !SDL_Init( SDL_INIT_VIDEO ) ) {
         SDL_Log( "[SDL] Could not initialize: %s", SDL_GetError() );
         return {};
@@ -22,9 +23,10 @@ std::optional<SDL_Window*> initialize( int screen_w, int screen_h, bool fullscre
     }
 }
 
-void free( SDL_Window* window ) {
+void free( SDL_Window* window )
+{
     SDL_DestroyWindow( window );
     SDL_Quit();
 }
 
-}  // namespace racecar::sdl
+} // namespace racecar::sdl

@@ -1,14 +1,15 @@
 #pragma once
 
 #include <volk.h>
+
 #include <vector>
+
 
 namespace racecar::engine {
 
-    /// Abstraction
+/// Abstraction
 struct RWTexture {
     std::vector<VkImage>
 };
 
 }
-

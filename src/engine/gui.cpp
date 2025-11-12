@@ -6,7 +6,8 @@
 
 namespace racecar::engine::gui {
 
-std::optional<Gui> initialize( Context& ctx, const State& engine ) {
+std::optional<Gui> initialize( Context& ctx, const State& engine )
+{
     VkDescriptorPoolSize pool_size = {
         .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE,
@@ -22,12 +23,12 @@ std::optional<Gui> initialize( Context& ctx, const State& engine ) {
 
     Gui gui;
 
-    RACECAR_VK_CHECK( vkCreateDescriptorPool( ctx.vulkan.device, &descriptor_pool_info, nullptr,
-                                              &gui.descriptor_pool ),
-                      "[engine::gui::initialize] Failed to create descriptor pool" );
+    RACECAR_VK_CHECK( vkCreateDescriptorPool(
+                          ctx.vulkan.device, &descriptor_pool_info, nullptr, &gui.descriptor_pool ),
+        "[engine::gui::initialize] Failed to create descriptor pool" );
 
-    ctx.vulkan.destructor_stack.push( ctx.vulkan.device, gui.descriptor_pool,
-                                      vkDestroyDescriptorPool );
+    ctx.vulkan.destructor_stack.push(
+        ctx.vulkan.device, gui.descriptor_pool, vkDestroyDescriptorPool );
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -70,13 +71,15 @@ std::optional<Gui> initialize( Context& ctx, const State& engine ) {
     return gui;
 }
 
-void process_event( const SDL_Event* event ) {
+void process_event( const SDL_Event* event )
+{
     // We may want to expand this function later. For now, it serves to remove any ImGui header
     // includes in non-GUI related files.
     ImGui_ImplSDL3_ProcessEvent( event );
 }
 
-void update( Gui& gui ) {
+void update( Gui& gui )
+{
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
@@ -105,10 +108,11 @@ void update( Gui& gui ) {
     ImGui::Render();
 }
 
-void free() {
+void free()
+{
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 }
 
-}  // namespace racecar::engine::gui
+} // namespace racecar::engine::gui

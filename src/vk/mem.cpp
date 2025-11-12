@@ -2,35 +2,9 @@
 
 namespace racecar::vk::mem {
 
-std::optional<UniformBuffer> create_uniform_buffer( Common& vulkan, size_t data_size ) {
-    UniformBuffer uniform_buffer = {
-        // uniform_data can potentially be out of scope.
-        // Shouldn't be a problem at all if we keep everything in main's scope (ideally no heap mem,
-        // then).
-        .data_size = data_size,
-    };
-
-    std::optional<AllocatedBuffer> allocated_buffer = create_buffer(
-        vulkan, data_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
-
-    if ( !allocated_buffer ) {
-        SDL_Log( "[Vulkan] Failed to create uniform buffer" );
-        return {};
-    }
-
-    uniform_buffer.buffer = allocated_buffer.value();
-
-    RACECAR_VK_CHECK( vmaMapMemory( vulkan.allocator, uniform_buffer.buffer.allocation,
-                                    &uniform_buffer.mapped_data ),
-                      "Failed to set up map pointer to GPU uniform buffer data" );
-
-    return uniform_buffer;
-};
-
-std::optional<AllocatedBuffer> create_buffer( Common& vulkan,
-                                              size_t alloc_size,
-                                              VkBufferUsageFlags usage_flags,
-                                              VmaMemoryUsage memory_usage ) {
+std::optional<AllocatedBuffer> create_buffer(
+    Common& vulkan, size_t alloc_size, VkBufferUsageFlags usage_flags, VmaMemoryUsage memory_usage )
+{
     // We may want to adjust the sharingMode to be adjustable depending on use-case.
     // As long as buffers are separated between graphics and compute queues,
     // VK_SHARING_MODE_EXCLUSIVE is fine.
@@ -50,9 +24,8 @@ std::optional<AllocatedBuffer> create_buffer( Common& vulkan,
 
     AllocatedBuffer new_buffer;
 
-    RACECAR_VK_CHECK(
-        vmaCreateBuffer( vulkan.allocator, &buffer_info, &vma_alloc_info, &new_buffer.handle,
-                         &new_buffer.allocation, &new_buffer.info ),
+    RACECAR_VK_CHECK( vmaCreateBuffer( vulkan.allocator, &buffer_info, &vma_alloc_info,
+                          &new_buffer.handle, &new_buffer.allocation, &new_buffer.info ),
         "Failed to create GPU buffer" );
 
     vulkan.destructor_stack.push_free_vmabuffer( vulkan.allocator, new_buffer );
@@ -60,4 +33,4 @@ std::optional<AllocatedBuffer> create_buffer( Common& vulkan,
     return new_buffer;
 }
 
-}  // namespace racecar::vk::mem
+} // namespace racecar::vk::mem

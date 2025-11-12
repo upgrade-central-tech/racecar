@@ -34,14 +34,7 @@ struct UniformBuffer {
     void* mapped_data = nullptr;
 };
 
-std::optional<UniformBuffer> create_uniform_buffer( Common& vulkan,
-                                                    const void* uniform_data,
-                                                    size_t data_size,
-                                                    uint32_t binding_slot );
+std::optional<mem::AllocatedBuffer> create_buffer( Common& vulkan, size_t alloc_size,
+    VkBufferUsageFlags usage_flags, VmaMemoryUsage memory_usage );
 
-std::optional<mem::AllocatedBuffer> create_buffer( Common& vulkan,
-                                                   size_t alloc_size,
-                                                   VkBufferUsageFlags usage_flags,
-                                                   VmaMemoryUsage memory_usage );
-
-}  // namespace racecar::vk::mem
+} // namespace racecar::vk::mem

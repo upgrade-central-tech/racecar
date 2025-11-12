@@ -9,15 +9,13 @@
 
 #include <optional>
 
-
 /// Custom define based on VK_CHECK, just with our SDL_Log. Feel free to tweak this.
-#define RACECAR_VK_CHECK( vk_fn, message )                              \
-    do {                                                                \
-        VkResult result = vk_fn;                                        \
-        if ( result != VK_SUCCESS ) {                                   \
-            SDL_Log( "[Vulkan] %s | Error code: %d", message, result ); \
-            return {};                                                  \
-        }                                                               \
+#define RACECAR_VK_CHECK( vk_fn, message )                                                         \
+    do {                                                                                           \
+        if ( VkResult result = vk_fn; result ) {                                                   \
+            SDL_Log( "[Vulkan] %s | Error code: %d", message, result );                            \
+            return {};                                                                             \
+        }                                                                                          \
     } while ( 0 )
 
 namespace racecar::vk {
@@ -26,15 +24,9 @@ namespace racecar::vk {
 namespace binding {
 
 constexpr int VERTEX_BUFFER = 0;
-constexpr int CAMERA_BUFFER = 0;
-
-constexpr int UNIFORM_BUFFER_SET = 0;
-constexpr int TEXTURE_BUFFER_SET = 1;
-constexpr int SAMPLER_BUFFER_SET = 2;
-
 constexpr int MAX_IMAGES_BINDED = 4;
 
-}  // namespace binding
+} // namespace binding
 
 /// Stores common Vulkan-related objects.
 struct Common {
@@ -53,4 +45,4 @@ struct Common {
 std::optional<Common> initialize( SDL_Window* window );
 void free( Common& vulkan );
 
-}  // namespace racecar::vk
+} // namespace racecar::vk

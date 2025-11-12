@@ -34,4 +34,4 @@ void process_event( const SDL_Event* event );
 void update( Gui& gui );
 void free();
 
-}  // namespace racecar::engine::gui
+} // namespace racecar::engine::gui

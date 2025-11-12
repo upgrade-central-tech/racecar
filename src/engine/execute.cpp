@@ -11,7 +11,8 @@
 
 namespace racecar::engine {
 
-bool execute( State& engine, Context& ctx, TaskList& task_list ) {
+bool execute( State& engine, Context& ctx, TaskList& task_list )
+{
     vk::Common& vulkan = ctx.vulkan;
 
     size_t frame_number = engine.get_frame_index();
@@ -19,34 +20,26 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
 
     // Using the maximum 64-bit unsigned integer value effectively disables the timeout
     RACECAR_VK_CHECK( vkWaitForFences( vulkan.device, 1, &frame.render_fence, VK_TRUE,
-                                       std::numeric_limits<uint64_t>::max() ),
-                      "Failed to wait for frame render fence" );
+                          std::numeric_limits<uint64_t>::max() ),
+        "Failed to wait for frame render fence" );
 
     // Manually reset previous frame's render fence to an unsignaled state
     RACECAR_VK_CHECK( vkResetFences( vulkan.device, 1, &frame.render_fence ),
-                      "Failed to reset frame render fence" );
+        "Failed to reset frame render fence" );
 
     vkResetCommandBuffer( frame.start_cmdbuf, 0 );
     vkResetCommandBuffer( frame.render_cmdbuf, 0 );
     vkResetCommandBuffer( frame.end_cmdbuf, 0 );
 
-    for ( GfxTask& gfx_task : task_list.gfx_tasks ) {
-        for ( DrawTask& draw_task : gfx_task.draw_tasks ) {
-            for ( IUniformBuffer* ubuffer : draw_task.uniform_buffers ) {
-                ubuffer->update( vulkan, engine.get_frame_index() );
-            }
-        }
-    }
-
-    VkCommandBufferBeginInfo command_buffer_begin_info =
-        vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
+    VkCommandBufferBeginInfo command_buffer_begin_info
+        = vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
 
     // Request swapchain index.
     uint32_t output_swapchain_index = 0;
-    RACECAR_VK_CHECK( vkAcquireNextImageKHR(
-                          vulkan.device, engine.swapchain, std::numeric_limits<uint64_t>::max(),
-                          frame.acquire_start_smp, nullptr, &output_swapchain_index ),
-                      "Failed to acquire next image from swapchain" );
+    RACECAR_VK_CHECK( vkAcquireNextImageKHR( vulkan.device, engine.swapchain,
+                          std::numeric_limits<uint64_t>::max(), frame.acquire_start_smp, nullptr,
+                          &output_swapchain_index ),
+        "Failed to acquire next image from swapchain" );
 
     const VkImage& output_image = engine.swapchain_images[output_swapchain_index];
     const VkImageView& output_image_view = engine.swapchain_image_views[output_swapchain_index];
@@ -58,8 +51,8 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
     // for any render target rendering to the screen, set the dynamic output
     for ( GfxTask& gfx_task : task_list.gfx_tasks ) {
         if ( gfx_task.render_target_is_swapchain ) {
-            gfx_task.color_attachments = {
-                { { { .image = output_image, .image_view = output_image_view } } } };
+            gfx_task.color_attachments
+                = { { { { .image = output_image, .image_view = output_image_view } } } };
             gfx_task.depth_image = { { out_depth_image } };
         }
     }
@@ -69,40 +62,37 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         vkBeginCommandBuffer( frame.start_cmdbuf, &command_buffer_begin_info );
 
         vk::utility::transition_image( frame.start_cmdbuf, output_image, VK_IMAGE_LAYOUT_UNDEFINED,
-                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
-                                       VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_NONE,
-                                       VK_PIPELINE_STAGE_2_TRANSFER_BIT );
-
-        // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
-        vk::utility::transition_image(
-            frame.start_cmdbuf, out_depth_image.image, VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_2_TRANSFER_WRITE_BIT,
             VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_TRANSFER_BIT );
 
+        // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
+        vk::utility::transition_image( frame.start_cmdbuf, out_depth_image.image,
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
+            VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_NONE,
+            VK_PIPELINE_STAGE_2_TRANSFER_BIT );
+
         VkClearColorValue clear_color = { { 1.0f, 1.0f, 1.0f, 1.0f } };
-        VkImageSubresourceRange clear_range =
-            vk::create::image_subresource_range( VK_IMAGE_ASPECT_COLOR_BIT );
+        VkImageSubresourceRange clear_range
+            = vk::create::image_subresource_range( VK_IMAGE_ASPECT_COLOR_BIT );
 
         vkCmdClearColorImage( frame.start_cmdbuf, output_image,
-                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &clear_range );
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &clear_range );
 
         VkClearDepthStencilValue clear_depth = { 1.0f, 0 };
-        VkImageSubresourceRange clear_depth_range =
-            vk::create::image_subresource_range( VK_IMAGE_ASPECT_DEPTH_BIT );
+        VkImageSubresourceRange clear_depth_range
+            = vk::create::image_subresource_range( VK_IMAGE_ASPECT_DEPTH_BIT );
 
         vkCmdClearDepthStencilImage( frame.start_cmdbuf, out_depth_image.image,
-                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1,
-                                     &clear_depth_range );
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &clear_depth_range );
 
-        vk::utility::transition_image(
-            frame.start_cmdbuf, output_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-            VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT );
+        vk::utility::transition_image( frame.start_cmdbuf, output_image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0,
+            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT );
 
         // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
-        vk::utility::transition_image(
-            frame.start_cmdbuf, out_depth_image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
+        vk::utility::transition_image( frame.start_cmdbuf, out_depth_image.image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
             VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
             VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT );
 
@@ -127,15 +117,16 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
 
         for ( size_t i = 0; i < task_list.gfx_tasks.size(); i++ ) {
             auto search = std::find_if( task_list.pipeline_barriers.begin(),
-                                        task_list.pipeline_barriers.end(),
-                                        [=]( std::pair<int, PipelineBarrierDescriptor> v ) -> bool {
-                                            return v.first == int( i );
-                                        } );
+                task_list.pipeline_barriers.end(),
+                [=]( std::pair<int, PipelineBarrierDescriptor> v ) -> bool {
+                    return v.first == int( i );
+                } );
+
             if ( search != task_list.pipeline_barriers.end() ) {
                 run_pipeline_barrier( ( *search ).second, frame.render_cmdbuf );
             }
 
-            execute_gfx_task( vulkan, engine, frame.render_cmdbuf, task_list.gfx_tasks[i] );
+            execute_gfx_task( engine, frame.render_cmdbuf, task_list.gfx_tasks[i] );
         }
 
         // GUI render pass
@@ -182,9 +173,9 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
 
     {
         vkBeginCommandBuffer( frame.end_cmdbuf, &command_buffer_begin_info );
-        vk::utility::transition_image(
-            frame.end_cmdbuf, output_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 0,
+        vk::utility::transition_image( frame.end_cmdbuf, output_image,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 0,
             VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT );
         vkEndCommandBuffer( frame.end_cmdbuf );
@@ -212,10 +203,10 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         .pImageIndices = &output_swapchain_index,
     };
 
-    RACECAR_VK_CHECK( vkQueuePresentKHR( vulkan.graphics_queue, &present_info ),
-                      "Failed to present to screen" );
+    RACECAR_VK_CHECK(
+        vkQueuePresentKHR( vulkan.graphics_queue, &present_info ), "Failed to present to screen" );
 
     return true;
 }
 
-}  // namespace racecar::engine
+} // namespace racecar::engine

@@ -6,7 +6,7 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#define GLM_ENABLE_EXPERIMENTAL  // Needed for quaternion.hpp
+#define GLM_ENABLE_EXPERIMENTAL // Needed for quaternion.hpp
 #include <glm/gtx/quaternion.hpp>
 
 #include <filesystem>
@@ -20,48 +20,46 @@
 
 namespace racecar::scene {
 
-static inline glm::vec3 double_array_to_vec3( std::vector<double> arr ) {
+static inline glm::vec3 double_array_to_vec3( std::vector<double> arr )
+{
     return glm::vec3( arr[0], arr[1], arr[2] );
 }
 
 // These are all the image formats currently supported. If more formats are required, also add to
 // vk::utility::bytes_from_format
-VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color_space ) {
+VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color_space )
+{
     if ( bits_per_channel == 32 ) {
         // Assume floating point formats for 32 bits per channel
         switch ( num_channels ) {
-            case 4:
-                return VK_FORMAT_R32G32B32A32_SFLOAT;
-            default:
-                SDL_Log( "[Scene] Texture loading: Unsupported 32-bit channel count: %i",
-                         num_channels );
+        case 4:
+            return VK_FORMAT_R32G32B32A32_SFLOAT;
+        default:
+            SDL_Log(
+                "[Scene] Texture loading: Unsupported 32-bit channel count: %i", num_channels );
         }
     } else if ( bits_per_channel == 8 ) {
         switch ( num_channels ) {
-            case 1:
-                return VK_FORMAT_R8_UNORM;
-            case 3:
-                return VK_FORMAT_R8G8B8_UNORM;
-            case 4:
-                if ( color_space == ColorSpace::SRGB ) {
-                    return VK_FORMAT_R8G8B8A8_SRGB;
-                }
-                return VK_FORMAT_R8G8B8A8_UNORM;
-            default:
-                SDL_Log( "[Scene] Texture loading: Unsupported 8-bit channel count: %i",
-                         num_channels );
+        case 1:
+            return VK_FORMAT_R8_UNORM;
+        case 3:
+            return VK_FORMAT_R8G8B8_UNORM;
+        case 4:
+            if ( color_space == ColorSpace::SRGB ) {
+                return VK_FORMAT_R8G8B8A8_SRGB;
+            }
+            return VK_FORMAT_R8G8B8A8_UNORM;
+        default:
+            SDL_Log( "[Scene] Texture loading: Unsupported 8-bit channel count: %i", num_channels );
         }
     }
     SDL_Log( "[Scene] Texture loading: Unknown texture format" );
     return VK_FORMAT_R8G8B8A8_UNORM;
 }
 
-bool load_gltf( vk::Common& vulkan,
-                engine::State& engine,
-                std::string file_path,
-                Scene& scene,
-                std::vector<geometry::Vertex>& out_global_vertices,
-                std::vector<uint32_t>& out_global_indices ) {
+bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path, Scene& scene,
+    std::vector<geometry::Vertex>& out_global_vertices, std::vector<uint32_t>& out_global_indices )
+{
     std::filesystem::path path( file_path );
 
     if ( !std::filesystem::exists( path ) ) {
@@ -84,7 +82,7 @@ bool load_gltf( vk::Common& vulkan,
     // Binary files
     if ( ext == ".glb" ) {
         has_loaded_successfully = loader.LoadBinaryFromFile( &model, &err, &warn, file_path );
-    } else {  // ASCII files
+    } else { // ASCII files
         has_loaded_successfully = loader.LoadASCIIFromFile( &model, &err, &warn, file_path );
     }
 
@@ -104,45 +102,46 @@ bool load_gltf( vk::Common& vulkan,
     // TODO @terskayl: Add Material Loading
     // Materials
     for ( tinygltf::Material& loaded_mat : model.materials ) {
-        Material new_mat;
-        new_mat.base_color =
-            double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );
+        Material new_mat = {};
+        
+        new_mat.base_color
+            = double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );
         new_mat.base_color_texture_index = loaded_mat.pbrMetallicRoughness.baseColorTexture.index;
         if ( new_mat.base_color_texture_index.value() == -1 ) {
             new_mat.base_color_texture_index = std::nullopt;
         }
         SDL_Log( "[Scene] GLTF parsing error! %i",
-                 loaded_mat.pbrMetallicRoughness.baseColorTexture.index );
+            loaded_mat.pbrMetallicRoughness.baseColorTexture.index );
 
         new_mat.metallic = static_cast<float>( loaded_mat.pbrMetallicRoughness.metallicFactor );
         new_mat.roughness = static_cast<float>( loaded_mat.pbrMetallicRoughness.roughnessFactor );
-        new_mat.metallic_roughness_texture_index =
-            loaded_mat.pbrMetallicRoughness.metallicRoughnessTexture.index;
+        new_mat.metallic_roughness_texture_index
+            = loaded_mat.pbrMetallicRoughness.metallicRoughnessTexture.index;
         if ( new_mat.metallic_roughness_texture_index.value() == -1 ) {
             new_mat.metallic_roughness_texture_index = std::nullopt;
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_specular" ) != 0 ) {
             auto specular = loaded_mat.extensions.find( "KHR_materials_specular" )->second;
-            new_mat.specular =
-                static_cast<float>( specular.Get( "specularFactor" ).GetNumberAsDouble() );
+            new_mat.specular
+                = static_cast<float>( specular.Get( "specularFactor" ).GetNumberAsDouble() );
             // newMat.specularTint = specular.Get("specularColorFactor")
         }
         if ( loaded_mat.extensions.count( "KHR_materials_ior" ) != 0 ) {
             new_mat.ior = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_ior" )
-                                                  ->second.Get( "ior" )
-                                                  .GetNumberAsDouble() );
+                    ->second.Get( "ior" )
+                    .GetNumberAsDouble() );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_clearcoat" ) ) {
-            new_mat.clearcoat =
-                static_cast<float>( loaded_mat.extensions.find( "KHR_materials_clearcoat" )
-                                        ->second.Get( "clearcoatFactor" )
-                                        .GetNumberAsDouble() );
-            new_mat.clearcoat_roughness =
-                static_cast<float>( loaded_mat.extensions.find( "KHR_materials_clearcoat" )
-                                        ->second.Get( "clearcoatRoughnessFactor" )
-                                        .GetNumberAsDouble() );
+            new_mat.clearcoat
+                = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_clearcoat" )
+                        ->second.Get( "clearcoatFactor" )
+                        .GetNumberAsDouble() );
+            new_mat.clearcoat_roughness
+                = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_clearcoat" )
+                        ->second.Get( "clearcoatRoughnessFactor" )
+                        .GetNumberAsDouble() );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_sheen" ) ) {
@@ -153,18 +152,18 @@ bool load_gltf( vk::Common& vulkan,
 
             if ( color_factor.IsArray() && color_factor.Size() == 3 ) {
                 new_mat.sheen_tint = glm::vec3( color_factor.Get( 0 ).GetNumberAsDouble(),
-                                                color_factor.Get( 1 ).GetNumberAsDouble(),
-                                                color_factor.Get( 2 ).GetNumberAsDouble() );
+                    color_factor.Get( 1 ).GetNumberAsDouble(),
+                    color_factor.Get( 2 ).GetNumberAsDouble() );
             }
-            new_mat.sheen_roughness =
-                static_cast<float>( sheen.Get( "sheenRoughnessFactor" ).GetNumberAsDouble() );
+            new_mat.sheen_roughness
+                = static_cast<float>( sheen.Get( "sheenRoughnessFactor" ).GetNumberAsDouble() );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_transmission" ) ) {
-            new_mat.transmission =
-                static_cast<float>( loaded_mat.extensions.find( "KHR_materials_transmission" )
-                                        ->second.Get( "transmissionFactor" )
-                                        .GetNumberAsDouble() );
+            new_mat.transmission
+                = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_transmission" )
+                        ->second.Get( "transmissionFactor" )
+                        .GetNumberAsDouble() );
         }
 
         new_mat.emissive = double_array_to_vec3( loaded_mat.emissiveFactor );
@@ -197,7 +196,7 @@ bool load_gltf( vk::Common& vulkan,
     // Textures & Load onto GPU
     for ( tinygltf::Texture& loaded_tex : model.textures ) {
         Texture new_tex;
-        tinygltf::Image loaded_img = model.images[size_t(loaded_tex.source)];
+        tinygltf::Image loaded_img = model.images[size_t( loaded_tex.source )];
 
         new_tex.width = loaded_img.width;
         new_tex.height = loaded_img.height;
@@ -209,10 +208,12 @@ bool load_gltf( vk::Common& vulkan,
     // Mark albedo and emission as SRGB.
     for ( Material& mat : scene.materials ) {
         if ( mat.base_color_texture_index.has_value() ) {
-            scene.textures[size_t(mat.base_color_texture_index.value())].color_space = ColorSpace::SRGB;
+            scene.textures[size_t( mat.base_color_texture_index.value() )].color_space
+                = ColorSpace::SRGB;
         }
         if ( mat.emmisive_texture_index.has_value() ) {
-            scene.textures[size_t(mat.emmisive_texture_index.value())].color_space = ColorSpace::SRGB;
+            scene.textures[size_t( mat.emmisive_texture_index.value() )].color_space
+                = ColorSpace::SRGB;
         }
     }
 
@@ -220,13 +221,13 @@ bool load_gltf( vk::Common& vulkan,
     for ( size_t i = 0; i < model.textures.size(); i++ ) {
         Texture& texture = scene.textures[i];
         tinygltf::Texture& loaded_tex = model.textures[i];
-        tinygltf::Image loaded_img = model.images[size_t(loaded_tex.source)];
+        tinygltf::Image loaded_img = model.images[size_t( loaded_tex.source )];
 
-        VkFormat image_format =
-            get_vk_format( texture.bits_per_channel, texture.num_channels, texture.color_space );
+        VkFormat image_format
+            = get_vk_format( texture.bits_per_channel, texture.num_channels, texture.color_space );
 
-        texture.data = engine::create_image(
-            vulkan, engine, static_cast<void*>( loaded_img.image.data() ),
+        texture.data = engine::create_image( vulkan, engine,
+            static_cast<void*>( loaded_img.image.data() ),
             { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
             image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
         if ( !texture.data ) {
@@ -244,9 +245,8 @@ bool load_gltf( vk::Common& vulkan,
         // Get node transform
         if ( loaded_node.matrix.size() ) {
             std::vector<double> mat = loaded_node.matrix;
-            new_node->transform =
-                glm::mat4( mat[0], mat[1], mat[2], mat[3], mat[4], mat[5], mat[6], mat[7], mat[8],
-                           mat[9], mat[10], mat[11], mat[12], mat[13], mat[14], mat[15] );
+            new_node->transform = glm::mat4( mat[0], mat[1], mat[2], mat[3], mat[4], mat[5], mat[6],
+                mat[7], mat[8], mat[9], mat[10], mat[11], mat[12], mat[13], mat[14], mat[15] );
         } else {
             // Attempt to recover from individual transforms
 
@@ -256,25 +256,24 @@ bool load_gltf( vk::Common& vulkan,
 
             if ( loaded_node.translation.size() ) {
                 translation = glm::vec3( loaded_node.translation[0], loaded_node.translation[1],
-                                         loaded_node.translation[2] );
+                    loaded_node.translation[2] );
             }
             if ( loaded_node.rotation.size() ) {
                 // GLM's quat expects WXYZ order, but GLTF uses XYZW order
                 rotation = glm::quat( static_cast<float>( loaded_node.rotation[3] ),
-                                      static_cast<float>( loaded_node.rotation[0] ),
-                                      static_cast<float>( loaded_node.rotation[1] ),
-                                      static_cast<float>( loaded_node.rotation[2] ) );
+                    static_cast<float>( loaded_node.rotation[0] ),
+                    static_cast<float>( loaded_node.rotation[1] ),
+                    static_cast<float>( loaded_node.rotation[2] ) );
             }
             if ( loaded_node.scale.size() ) {
-                scale =
-                    glm::vec3( loaded_node.scale[0], loaded_node.scale[1], loaded_node.scale[2] );
+                scale
+                    = glm::vec3( loaded_node.scale[0], loaded_node.scale[1], loaded_node.scale[2] );
             }
 
             // Combine translate, rotation, and scale
             // Build transform: translate * rotate * scale
-            new_node->transform = glm::translate( glm::mat4( 1.0f ), translation ) *
-                                  glm::mat4_cast( rotation ) *
-                                  glm::scale( glm::mat4( 1.0f ), scale );
+            new_node->transform = glm::translate( glm::mat4( 1.0f ), translation )
+                * glm::mat4_cast( rotation ) * glm::scale( glm::mat4( 1.0f ), scale );
         }
 
         new_node->inv_transform = glm::inverse( new_node->transform );
@@ -295,10 +294,9 @@ bool load_gltf( vk::Common& vulkan,
                 Primitive new_prim;
                 new_prim.material_id = loaded_prim.material;
                 if ( loaded_prim.mode != 4 ) {
-                    SDL_Log(
-                        "[Scene] GLTF Loading: Mesh detected that uses a mode other than "
-                        "TRIANGLES. This is "
-                        "currently unsupported." );
+                    SDL_Log( "[Scene] GLTF Loading: Mesh detected that uses a mode other than "
+                             "TRIANGLES. This is "
+                             "currently unsupported." );
                 }
 
                 std::vector<glm::vec3> pos;
@@ -307,30 +305,28 @@ bool load_gltf( vk::Common& vulkan,
 
                 if ( loaded_prim.attributes.count( "POSITION" ) > 0 ) {
                     int accessor_id = loaded_prim.attributes["POSITION"];
-                    tinygltf::Accessor accessor =
-                        model.accessors[static_cast<size_t>( accessor_id )];
+                    tinygltf::Accessor accessor
+                        = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
-                        SDL_Log(
-                            "[Scene] GLTF Loading: Expected all vertex attributes to be float "
-                            "- "
-                            "unsupported "
-                            "component type detected" );
+                        SDL_Log( "[Scene] GLTF Loading: Expected all vertex attributes to be float "
+                                 "- "
+                                 "unsupported "
+                                 "component type detected" );
                     }
                     if ( accessor.type != TINYGLTF_TYPE_VEC3 ) {
-                        SDL_Log(
-                            "[Scene] GLTF Loading: Expected all positions to be in vec3 - "
-                            "unsupported type "
-                            "detected" );
+                        SDL_Log( "[Scene] GLTF Loading: Expected all positions to be in vec3 - "
+                                 "unsupported type "
+                                 "detected" );
                     }
 
-                    tinygltf::BufferView buffer_view =
-                        model.bufferViews[static_cast<size_t>( buffer_view_id )];
+                    tinygltf::BufferView buffer_view
+                        = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
-                    size_t byte_length = accessor.count * 3 * sizeof( float );  // vec3f
+                    size_t byte_length = accessor.count * 3 * sizeof( float ); // vec3f
 
-                    size_t buffer_id = size_t(buffer_view.buffer);
+                    size_t buffer_id = size_t( buffer_view.buffer );
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
 
                     pos.resize( length );
@@ -339,30 +335,28 @@ bool load_gltf( vk::Common& vulkan,
 
                 if ( loaded_prim.attributes.count( "NORMAL" ) > 0 ) {
                     int accessor_id = loaded_prim.attributes["NORMAL"];
-                    tinygltf::Accessor accessor =
-                        model.accessors[static_cast<size_t>( accessor_id )];
+                    tinygltf::Accessor accessor
+                        = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
-                        SDL_Log(
-                            "[Scene] GLTF Loading: Expected all vertex attributes to be float "
-                            "- "
-                            "unsupported "
-                            "component type detected" );
+                        SDL_Log( "[Scene] GLTF Loading: Expected all vertex attributes to be float "
+                                 "- "
+                                 "unsupported "
+                                 "component type detected" );
                     }
                     if ( accessor.type != TINYGLTF_TYPE_VEC3 ) {
-                        SDL_Log(
-                            "[Scene] GLTF Loading: Expected all normals to be in vec3 - "
-                            "unsupported type "
-                            "detected" );
+                        SDL_Log( "[Scene] GLTF Loading: Expected all normals to be in vec3 - "
+                                 "unsupported type "
+                                 "detected" );
                     }
 
-                    tinygltf::BufferView buffer_view =
-                        model.bufferViews[static_cast<size_t>( buffer_view_id )];
+                    tinygltf::BufferView buffer_view
+                        = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
-                    size_t byte_length = accessor.count * 3 * sizeof( float );  // vec3f
+                    size_t byte_length = accessor.count * 3 * sizeof( float ); // vec3f
 
-                    size_t buffer_id = size_t(buffer_view.buffer);
+                    size_t buffer_id = size_t( buffer_view.buffer );
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
 
                     nor.resize( length );
@@ -372,31 +366,29 @@ bool load_gltf( vk::Common& vulkan,
                 // Currently only accepting one uv coordinate per primative.
                 if ( loaded_prim.attributes.count( "TEXCOORD_0" ) > 0 ) {
                     int accessor_id = loaded_prim.attributes["TEXCOORD_0"];
-                    tinygltf::Accessor accessor =
-                        model.accessors[static_cast<size_t>( accessor_id )];
+                    tinygltf::Accessor accessor
+                        = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
-                        SDL_Log(
-                            "[Scene] GLTF Loading: Expected all vertex attributes to be float "
-                            "- "
-                            "unsupported "
-                            "component type detected" );
+                        SDL_Log( "[Scene] GLTF Loading: Expected all vertex attributes to be float "
+                                 "- "
+                                 "unsupported "
+                                 "component type detected" );
                     }
                     if ( accessor.type != TINYGLTF_TYPE_VEC2 ) {
-                        SDL_Log(
-                            "[Scene] GLTF Loading: Expected all uvs to be in vec2 - "
-                            "unsupported "
-                            "type "
-                            "detected" );
+                        SDL_Log( "[Scene] GLTF Loading: Expected all uvs to be in vec2 - "
+                                 "unsupported "
+                                 "type "
+                                 "detected" );
                     }
 
-                    tinygltf::BufferView buffer_view =
-                        model.bufferViews[static_cast<size_t>( buffer_view_id )];
+                    tinygltf::BufferView buffer_view
+                        = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
-                    size_t byte_length = accessor.count * 2 * sizeof( float );  // vec2f
+                    size_t byte_length = accessor.count * 2 * sizeof( float ); // vec2f
 
-                    size_t buffer_id = size_t(buffer_view.buffer);
+                    size_t buffer_id = size_t( buffer_view.buffer );
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
 
                     uv.resize( length );
@@ -404,8 +396,8 @@ bool load_gltf( vk::Common& vulkan,
                 }
 
                 // Assume position data always exists
-                if ( ( pos.size() != nor.size() && nor.size() != 0 ) ||
-                     ( pos.size() != uv.size() && uv.size() != 0 ) ) {
+                if ( ( pos.size() != nor.size() && nor.size() != 0 )
+                    || ( pos.size() != uv.size() && uv.size() != 0 ) ) {
                     SDL_Log(
                         "[Scene] GLTF Loading: WARN, nonzero nor or uv count does not match up "
                         "with pos count" );
@@ -433,24 +425,23 @@ bool load_gltf( vk::Common& vulkan,
 
                 if ( loaded_prim.indices != -1 ) {
                     int accessor_id = loaded_prim.indices;
-                    tinygltf::Accessor accessor =
-                        model.accessors[static_cast<size_t>( accessor_id )];
+                    tinygltf::Accessor accessor
+                        = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
 
                     if ( accessor.type != TINYGLTF_TYPE_SCALAR ) {
-                        SDL_Log(
-                            "[Scene] GLTF Loading: Expected all indices to be scalars - "
-                            "unsupported type "
-                            "detected" );
+                        SDL_Log( "[Scene] GLTF Loading: Expected all indices to be scalars - "
+                                 "unsupported type "
+                                 "detected" );
                     }
 
-                    tinygltf::BufferView buffer_view =
-                        model.bufferViews[static_cast<size_t>( buffer_view_id )];
+                    tinygltf::BufferView buffer_view
+                        = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     new_prim.ind_offset = static_cast<int>( out_global_indices.size() );
                     new_prim.ind_count = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
 
-                    size_t buffer_id = size_t(buffer_view.buffer);
+                    size_t buffer_id = size_t( buffer_view.buffer );
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
 
                     if ( accessor.componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT ) {
@@ -466,17 +457,16 @@ bool load_gltf( vk::Common& vulkan,
                         size_t byte_length = accessor.count * sizeof( uint32_t );
                         std::vector<uint32_t> ind( new_prim.ind_count );
                         std::memcpy( ind.data(), buffer.data.data() + byte_offset, byte_length );
-                        out_global_indices.insert( out_global_indices.end(), ind.begin(),
-                                                   ind.end() );
+                        out_global_indices.insert(
+                            out_global_indices.end(), ind.begin(), ind.end() );
                     } else {
-                        SDL_Log(
-                            "[Scene] GLTF Loading: Expected all indices to either be a "
-                            "unsigned "
-                            "short or an "
-                            "unsigned int - unsupported component type detected" );
+                        SDL_Log( "[Scene] GLTF Loading: Expected all indices to either be a "
+                                 "unsigned "
+                                 "short or an "
+                                 "unsigned int - unsupported component type detected" );
                     }
-                } else {  // If there are no indices, assume position vector will lay out all
-                          // triangles
+                } else { // If there are no indices, assume position vector will lay out all
+                         // triangles
                     new_prim.is_indexed = false;
                     for ( size_t i = 0; i < pos.size(); i++ ) {
                         out_global_indices.push_back( static_cast<unsigned int>( i ) );
@@ -507,7 +497,8 @@ bool load_gltf( vk::Common& vulkan,
     return true;
 }
 
-bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene ) {
+bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene )
+{
     int x = 0, y = 0, channels = 0;
     float* hdriData = stbi_loadf( file_path.c_str(), &x, &y, &channels, 4 );
 
@@ -519,13 +510,12 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
     Texture hdri;
     hdri.width = x;
     hdri.height = y;
-    hdri.bits_per_channel = 32;  // via stbi_loadf
-    hdri.num_channels = 4;      // via stbi_loadf
+    hdri.bits_per_channel = 32; // via stbi_loadf
+    hdri.num_channels = 4; // via stbi_loadf
 
-    VkFormat image_format =
-        get_vk_format( hdri.bits_per_channel, hdri.num_channels, ColorSpace::SFLOAT );
-    hdri.data = engine::create_image(
-        vulkan, engine, static_cast<void*>( hdriData ),
+    VkFormat image_format
+        = get_vk_format( hdri.bits_per_channel, hdri.num_channels, ColorSpace::SFLOAT );
+    hdri.data = engine::create_image( vulkan, engine, static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
         image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
@@ -534,4 +524,4 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
     return true;
 }
 
-}  // namespace racecar::scene
+} // namespace racecar::scene

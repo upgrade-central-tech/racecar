@@ -10,9 +10,9 @@
 
 namespace racecar::scene {
 
-enum MaterialTypes {
-    DEFAULT_MAT_TYPE,
-    PBR_ALBEDO_MAP_MAT_TYPE,
+enum class MaterialType {
+    DEFAULT,
+    PBR_ALBEDO_MAP,
 };
 
 enum class ColorSpace { SRGB, UNORM, SFLOAT };
@@ -48,8 +48,8 @@ struct Material {
     // Low priority, usually R channel of rough-metal
     std::optional<int> occulusion_texture_index = std::nullopt;
 
-    bool double_sided = true;                      // Low-priority
-    MaterialTypes type = PBR_ALBEDO_MAP_MAT_TYPE;  // Can define as needed for easy switching.
+    bool double_sided = true; // Low-priority
+    MaterialType type = MaterialType::PBR_ALBEDO_MAP; // Can define as needed for easy switching.
 };
 
 struct Texture {
@@ -58,7 +58,7 @@ struct Texture {
     int width = 0;
     int height = 0;
 
-    int bits_per_channel = 0;  ///< Can only be 8, 16, or 32.
+    int bits_per_channel = 0; ///< Can only be 8, 16, or 32.
     int num_channels = 0;
 
     ColorSpace color_space = ColorSpace::UNORM;
@@ -103,13 +103,9 @@ struct Scene {
     std::optional<size_t> hdri_index;
 };
 
-bool load_gltf( vk::Common& vulkan,
-                engine::State& engine,
-                std::string file_path,
-                Scene& scene,
-                std::vector<geometry::Vertex>& out_vertices,
-                std::vector<uint32_t>& out_indices );
+bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path, Scene& scene,
+    std::vector<geometry::Vertex>& out_vertices, std::vector<uint32_t>& out_indices );
 
 bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene );
 
-}  // namespace racecar::scene
+} // namespace racecar::scene

@@ -13,6 +13,6 @@ struct TaskList {
 };
 
 void add_gfx_task( TaskList& task_list, GfxTask task );
-bool add_pipeline_barrier( PipelineBarrierDescriptor barrier );
+void add_pipeline_barrier( PipelineBarrierDescriptor barrier );
 
 }  // namespace racecar::engine

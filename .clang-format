@@ -1,9 +1,10 @@
-BasedOnStyle: Chromium
+BasedOnStyle: WebKit
 
 ColumnLimit: 100
 InsertNewlineAtEOF: true
 WrapNamespaceBodyWithEmptyLines: Always
 SeparateDefinitionBlocks: Always
+NamespaceIndentation: None
 
 UseTab: Never
 IndentWidth: 4 

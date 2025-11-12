@@ -43,15 +43,13 @@ struct Mesh {
         { 3, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, tangent ) },
         { 4, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32_SFLOAT, offsetof( Vertex, uv ) },
     } };
-};  
+};
 
-std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
-                                           const engine::State& engine,
-                                           std::span<uint32_t> indices,
-                                           std::span<Vertex> vertices );
+std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan, const engine::State& engine,
+    std::span<uint32_t> indices, std::span<Vertex> vertices );
 
-/// Should ideally run afer `scene::load_gltf` since it's just too annoying 
+/// Should ideally run afer `scene::load_gltf` since it's just too annoying
 /// to generate tangents while geo gets loaded and processed.
 void generate_tangents( Mesh& mesh );
 
-}  // namespace racecar::geometry
+} // namespace racecar::geometry

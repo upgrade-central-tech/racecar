@@ -4,19 +4,17 @@
 
 namespace racecar::geometry {
 
-std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
-                                           const engine::State& engine,
-                                           std::span<uint32_t> indices,
-                                           std::span<Vertex> vertices ) {
+std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan, const engine::State& engine,
+    std::span<uint32_t> indices, std::span<Vertex> vertices )
+{
     const size_t vertex_buffer_size = vertices.size() * sizeof( Vertex );
     const size_t index_buffer_size = indices.size() * sizeof( uint32_t );
 
     GPUMeshBuffers new_mesh_buffers;
 
-    new_mesh_buffers.vertex_buffer = vk::mem::create_buffer(
-        vulkan, vertex_buffer_size,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    new_mesh_buffers.vertex_buffer = vk::mem::create_buffer( vulkan, vertex_buffer_size,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VMA_MEMORY_USAGE_CPU_TO_GPU );
 
     if ( !new_mesh_buffers.vertex_buffer ) {
@@ -29,13 +27,12 @@ std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
         .buffer = new_mesh_buffers.vertex_buffer->handle,
     };
 
-    new_mesh_buffers.vertex_buffer_address =
-        vkGetBufferDeviceAddress( vulkan.device, &device_address_info );
+    new_mesh_buffers.vertex_buffer_address
+        = vkGetBufferDeviceAddress( vulkan.device, &device_address_info );
 
-    new_mesh_buffers.index_buffer =
-        vk::mem::create_buffer( vulkan, index_buffer_size,
-                                VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                VMA_MEMORY_USAGE_GPU_ONLY );
+    new_mesh_buffers.index_buffer = vk::mem::create_buffer( vulkan, index_buffer_size,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VMA_MEMORY_USAGE_GPU_ONLY );
 
     if ( !new_mesh_buffers.index_buffer ) {
         SDL_Log( "[Vulkan] Failed to create index buffer" );
@@ -43,9 +40,9 @@ std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
     }
 
     // Need to upload this to the buffer, analogous to DX12 default + upload heap
-    std::optional<vk::mem::AllocatedBuffer> staging =
-        vk::mem::create_buffer( vulkan, vertex_buffer_size + index_buffer_size,
-                                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY );
+    std::optional<vk::mem::AllocatedBuffer> staging
+        = vk::mem::create_buffer( vulkan, vertex_buffer_size + index_buffer_size,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY );
 
     if ( !staging.has_value() ) {
         SDL_Log( "[Vulkan] Failed to create index buffer" );
@@ -68,7 +65,7 @@ std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
             };
 
             vkCmdCopyBuffer( command_buffer, staging->handle,
-                             new_mesh_buffers.vertex_buffer->handle, 1, &vertexCopy );
+                new_mesh_buffers.vertex_buffer->handle, 1, &vertexCopy );
 
             VkBufferCopy indexCopy = {
                 .srcOffset = vertex_buffer_size,
@@ -77,7 +74,7 @@ std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
             };
 
             vkCmdCopyBuffer( command_buffer, staging->handle, new_mesh_buffers.index_buffer->handle,
-                             1, &indexCopy );
+                1, &indexCopy );
         } );
 
     // Map GPU buffer temporarily for debug
@@ -92,7 +89,8 @@ std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan,
     return new_mesh_buffers;
 }
 
-void generate_tangents( Mesh& mesh ) {
+void generate_tangents( Mesh& mesh )
+{
     std::vector<geometry::Vertex>& vertices = mesh.vertices;
     std::vector<uint32_t>& indices = mesh.indices;
 
@@ -126,9 +124,10 @@ void generate_tangents( Mesh& mesh ) {
         glm::vec3 bitangent = f * ( -deltaUV2.x * edge1 + deltaUV1.x * edge2 );
 
         float w = glm::dot( normalize( glm::cross( vertices[i0].normal, tangent ) ),
-                            normalize( bitangent ) ) < 0.0f
-                      ? -1.0f
-                      : 0.0f;
+                      normalize( bitangent ) )
+                < 0.0f
+            ? -1.0f
+            : 0.0f;
 
         vertices[i0].tangent += glm::vec4( tangent, w );
         vertices[i1].tangent += glm::vec4( tangent, w );
@@ -137,8 +136,8 @@ void generate_tangents( Mesh& mesh ) {
 
     for ( geometry::Vertex& vertex : vertices ) {
         glm::vec normal = glm::normalize( vertex.normal );
-        glm::vec3 tangent =
-            glm::normalize( glm::vec3( vertex.tangent.x, vertex.tangent.y, vertex.tangent.z ) );
+        glm::vec3 tangent
+            = glm::normalize( glm::vec3( vertex.tangent.x, vertex.tangent.y, vertex.tangent.z ) );
         float tangent_w = vertex.tangent.w < 0.0f ? -1.0f : 1.0f;
 
         tangent = glm::normalize( tangent - normal * glm::dot( normal, tangent ) );
@@ -147,4 +146,4 @@ void generate_tangents( Mesh& mesh ) {
     }
 }
 
-}  // namespace racecar::geometry
+} // namespace racecar::geometry
