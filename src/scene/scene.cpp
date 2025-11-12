@@ -324,8 +324,8 @@ bool load_gltf( vk::Common& vulkan,
                     tinygltf::BufferView buffer_view =
                         model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
-                    size_t byte_offset = buffer_view.byteOffset;
-                    size_t byte_length = buffer_view.byteLength;
+                    size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
+                    size_t byte_length = accessor.count * 3 * sizeof( float );  // vec3f
 
                     size_t buffer_id = buffer_view.buffer;
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
@@ -356,8 +356,8 @@ bool load_gltf( vk::Common& vulkan,
                     tinygltf::BufferView buffer_view =
                         model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
-                    size_t byte_offset = buffer_view.byteOffset;
-                    size_t byte_length = buffer_view.byteLength;
+                    size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
+                    size_t byte_length = accessor.count * 3 * sizeof( float );  // vec3f
 
                     size_t buffer_id = buffer_view.buffer;
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
@@ -390,8 +390,8 @@ bool load_gltf( vk::Common& vulkan,
                     tinygltf::BufferView buffer_view =
                         model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
-                    size_t byte_offset = buffer_view.byteOffset;
-                    size_t byte_length = buffer_view.byteLength;
+                    size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
+                    size_t byte_length = accessor.count * 2 * sizeof( float );  // vec2f
 
                     size_t buffer_id = buffer_view.buffer;
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
@@ -445,13 +445,13 @@ bool load_gltf( vk::Common& vulkan,
                         model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     new_prim.ind_offset = static_cast<int>( out_global_indices.size() );
                     new_prim.ind_count = accessor.count;
-                    size_t byte_offset = buffer_view.byteOffset;
-                    size_t byte_length = buffer_view.byteLength;
+                    size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
 
                     size_t buffer_id = buffer_view.buffer;
                     tinygltf::Buffer buffer = model.buffers[buffer_id];
 
                     if ( accessor.componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT ) {
+                        size_t byte_length = accessor.count * sizeof( uint16_t );
                         std::vector<uint16_t> ind( new_prim.ind_count );
 
                         std::memcpy( ind.data(), buffer.data.data() + byte_offset, byte_length );
@@ -460,6 +460,7 @@ bool load_gltf( vk::Common& vulkan,
                             out_global_indices.push_back( static_cast<uint32_t>( index ) );
                         }
                     } else if ( accessor.componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT ) {
+                        size_t byte_length = accessor.count * sizeof( uint32_t );
                         std::vector<uint32_t> ind( new_prim.ind_count );
                         std::memcpy( ind.data(), buffer.data.data() + byte_offset, byte_length );
                         out_global_indices.insert( out_global_indices.end(), ind.begin(),

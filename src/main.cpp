@@ -25,7 +25,7 @@ using namespace racecar;
 constexpr int SCREEN_W = 1280;
 constexpr int SCREEN_H = 720;
 constexpr bool USE_FULLSCREEN = false;
-constexpr const char* GLTF_FILE_PATH = "../assets/smooth_suzanne.glb";
+constexpr const char* GLTF_FILE_PATH = "../assets/sponza/sponza.gltf";
 
 int main( int, char*[] ) {
     Context ctx;
@@ -149,13 +149,12 @@ int main( int, char*[] ) {
                 // Lowkey I might refactor this later. Assume the default pipeline is a PBR
                 // Albedo Map Pipeline
                 if ( current_material.type == scene::Material_Types::PBR_ALBEDO_MAP_MAT_TYPE ) {
-                    std::optional<int> albedo_index =
-                        current_material.base_color_texture_index.value();
+                    std::optional<int> albedo_index = current_material.base_color_texture_index;
 
-                    std::optional<int> normal_index = current_material.normal_texture_index.value();
+                    std::optional<int> normal_index = current_material.normal_texture_index;
 
                     std::optional<int> metallic_roughness_index =
-                        current_material.metallic_roughness_texture_index.value();
+                        current_material.metallic_roughness_texture_index;
 
                     textures_needed.push_back(
                         albedo_index ? std::optional{ ( material_textures[albedo_index.value()] ) }
