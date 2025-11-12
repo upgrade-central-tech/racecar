@@ -1,5 +1,7 @@
 #pragma once
 
+#include "context.hpp"
+
 #include <SDL3/SDL_events.h>
 #include <glm/glm.hpp>
 
@@ -27,6 +29,8 @@ void rotate_azimuth( OrbitCamera& cam, float radians );
 
 /// Keeps polar in the range [-π/2, π/2].
 void rotate_polar( OrbitCamera& cam, float radians );
+
+void move_along_view( OrbitCamera& cam, float delta );
 void move_horizontal( OrbitCamera& cam, float delta );
 void move_vertical( OrbitCamera& cam, float delta );
 void zoom( OrbitCamera& cam, float delta );
@@ -37,7 +41,8 @@ glm::mat4 calculate_proj_matrix( const OrbitCamera& cam );
 glm::mat4 calculate_view_proj_matrix( const OrbitCamera& cam );
 glm::vec3 calculate_eye_position( const OrbitCamera& cam );
 
-/// TODO: this should probably be moved to its own thing
-void process_event( const SDL_Event* event, OrbitCamera& cam );
+/// TODO: this should probably be moved to another namespace (like orbit_camera)
+void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam );
+void process_input( OrbitCamera& cam );
 
 }  // namespace racecar::camera
