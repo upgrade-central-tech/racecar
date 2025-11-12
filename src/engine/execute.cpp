@@ -104,7 +104,14 @@ bool execute( State& engine, Context& ctx, TaskList& task_list ) {
         vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
 
         for ( size_t i = 0; i < task_list.draw_tasks.size(); i++ ) {
-            draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
+            auto search = std::find_if( task_list.pipeline_barriers.begin(),
+                                          task_list.pipeline_barriers.end(),
+                                          [=]( std::pair<int, PipelineBarrierDescriptor> v ) -> bool {
+                                              return v.first == int( i );
+                                          } );
+            if ( search != task_list.pipeline_barriers.end() ) {
+                run_pipeline_barrier( (*search).second, frame.render_cmdbuf );
+            }
             draw( vulkan, engine, task_list.draw_tasks[i], frame.render_cmdbuf );
         }
 
