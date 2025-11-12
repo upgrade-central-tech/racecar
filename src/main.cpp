@@ -149,10 +149,11 @@ int main( int, char*[] ) {
     std::vector<scene::Texture>& material_textures = scene.textures;
     engine::TaskList task_list;
 
-    engine::GfxTask main_draw;
-    main_draw.clear_screen = true;
-    main_draw.render_target_is_swapchain = true;
-    main_draw.extent = engine.swapchain.extent;
+    engine::GfxTask main_draw = {
+        .clear_screen = true,
+        .render_target_is_swapchain = true,
+        .extent = engine.swapchain.extent,
+    };
 
     for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
         if ( node->mesh.has_value() ) {

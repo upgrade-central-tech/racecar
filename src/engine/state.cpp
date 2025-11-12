@@ -168,7 +168,7 @@ bool create_frame_data( State& engine, vk::Common& vulkan ) {
 }  // namespace
 
 size_t State::get_frame_index() const {
-    return size_t( frame_number % frame_overlap );
+    return static_cast<size_t>( frame_number % frame_overlap );
 }
 
 std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
