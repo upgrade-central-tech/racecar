@@ -1,5 +1,6 @@
 #include "state.hpp"
 
+#include "../constants.hpp"
 #include "../vk/create.hpp"
 
 #include <algorithm>
@@ -86,7 +87,7 @@ bool create_depth_images( State& engine, vk::Common& vulkan ) {
                             &depth_image.image, &depth_image.allocation, nullptr ),
             "Failed to create depth image" );
 
-        SDL_Log("[ALLOC] Image %p", depth_image.image);
+        SDL_Log( "[ALLOC] Image %p", depth_image.image );
 
         VkImageViewCreateInfo depth_view_create_info = vk::create::image_view_create_info(
             depth_image.image_format, depth_image.image, VK_IMAGE_ASPECT_DEPTH_BIT );
@@ -227,28 +228,26 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan ) {
         return {};
     }
 
-    {
-        scene::Camera& camera = engine.global_camera;
+    engine.camera = {
+        .center = glm::vec3( 0.f, 0.f, 0.f ),
+        .radius = 3.f,
 
-        camera.eye = glm::vec3( 0, 0, 3 );
-        camera.look_at = glm::vec3( 0, 0, 0 );
-        camera.up = glm::vec3( 0, 1, 0 );
-        camera.forward = glm::normalize( camera.look_at - camera.eye );
-        camera.right = glm::normalize( glm::cross( camera.forward, camera.up ) );
-        camera.velocity = glm::vec3( 0 );
+        .azimuth = 0.f,
+        .polar = 0.f,
 
-        camera.fov_y = glm::radians( 60.0 );
-        camera.aspect_ratio = 1280.0 / 720.0;
-        camera.near_plane = 0.1;
-        camera.far_plane = 100.0;
-    }
+        .up = glm::vec3( 0.f, 1.f, 0.f ),
+
+        .fov_y = glm::radians( 60.0 ),
+        .aspect_ratio = static_cast<float>( constant::SCREEN_W ) / constant::SCREEN_H,
+        .near_plane = 0.1f,
+        .far_plane = 100.f,
+    };
 
     return engine;
 }
 
-void free( State& engine, [[maybe_unused]] vk::Common& vulkan ) {
+void free( State& engine, vk::Common& vulkan ) {
     vulkan.destructor_stack.execute_cleanup();
-
     engine.swapchain.destroy_image_views( engine.swapchain_image_views );
     vkb::destroy_swapchain( engine.swapchain );
 }

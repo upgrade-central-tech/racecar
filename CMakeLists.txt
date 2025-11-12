@@ -18,6 +18,7 @@ set(IMGUI_DIR "${THIRD_PARTY_DIR}/imgui")
 add_executable(racecar
   ${SRC_DIR}/main.cpp
   ${SRC_DIR}/sdl.cpp
+  ${SRC_DIR}/orbit_camera.cpp
 
   ${VK_DIR}/common.cpp
   ${VK_DIR}/create.cpp
@@ -39,7 +40,6 @@ add_executable(racecar
   ${GEOMETRY_DIR}/mesh.cpp
 
   ${SCENE_DIR}/scene.cpp
-  ${SCENE_DIR}/camera.cpp
 
   # Third party libraries not part of our vcpkg system
   ${IMGUI_DIR}/imgui_demo.cpp

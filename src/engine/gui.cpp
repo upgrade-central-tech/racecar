@@ -70,7 +70,7 @@ std::optional<Gui> initialize( Context& ctx, const State& engine ) {
     return gui;
 }
 
-void process_events( const SDL_Event* event ) {
+void process_event( const SDL_Event* event ) {
     // We may want to expand this function later. For now, it serves to remove any ImGui header
     // includes in non-GUI related files.
     ImGui_ImplSDL3_ProcessEvent( event );
@@ -85,10 +85,9 @@ void update( Gui& ) {
         const ImGuiIO& io = ImGui::GetIO();
         float average_fps = io.Framerate;
         ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );
-
-        ImGui::End();
     }
 
+    ImGui::End();
     ImGui::Render();
 }
 

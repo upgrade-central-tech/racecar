@@ -1,32 +1,29 @@
 #pragma once
 
-#include "../engine/images.hpp"
 #include "../geometry/mesh.hpp"
-#include "camera.hpp"
 
 #include <glm/glm.hpp>
+#include <tiny_gltf.h>
 
 #include <memory>
 #include <string>
-#include <tiny_gltf.h>
-#include <variant>
 
 namespace racecar::scene {
 
-enum Material_Types {
-    // fill with types as needed
+enum MaterialTypes {
     DEFAULT_MAT_TYPE,
     PBR_ALBEDO_MAP_MAT_TYPE,
 };
 
-enum class Color_Space { SRGB, UNORM, SFLOAT };
+enum class ColorSpace { SRGB, UNORM, SFLOAT };
 
 struct Material {
     glm::vec3 base_color;
     std::optional<int> base_color_texture_index = std::nullopt;
     float metallic = 0.f;
     float roughness = 1.f;
-    // typically roughness in G, metallic in B
+
+    /// Typically roughness in G, metallic in B
     std::optional<int> metallic_roughness_texture_index = std::nullopt;
 
     float specular = 0.f;
@@ -51,8 +48,8 @@ struct Material {
     // Low priority, usually R channel of rough-metal
     std::optional<int> occulusion_texture_index = std::nullopt;
 
-    bool double_sided = true;                       // Low-priority
-    Material_Types type = PBR_ALBEDO_MAP_MAT_TYPE;  // Can define as needed for easy switching.
+    bool double_sided = true;                      // Low-priority
+    MaterialTypes type = PBR_ALBEDO_MAP_MAT_TYPE;  // Can define as needed for easy switching.
 };
 
 struct Texture {
@@ -63,7 +60,7 @@ struct Texture {
     /// Can only be 8, 16, or 32
     int bitsPerChannel = 0;
     int numChannels = 0;
-    Color_Space color_space = Color_Space::UNORM;
+    ColorSpace color_space = ColorSpace::UNORM;
 };
 
 /// A primitive is a basic association of geometry data along with a single material.
@@ -88,13 +85,12 @@ struct Mesh {
 
 /// Each node will have either a mesh or a camera
 struct Node {
-    std::optional<std::variant<std::monostate, std::unique_ptr<Mesh>, std::unique_ptr<Camera>>>
-        data;
+    std::optional<std::unique_ptr<scene::Mesh>> mesh;
 
     /// transforms are local
-    glm::mat4 transform = glm::mat4();
-    glm::mat4 inv_transform = glm::mat4();
-    glm::mat4 inv_transpose = glm::mat4();
+    glm::mat4 transform;
+    glm::mat4 inv_transform;
+    glm::mat4 inv_transpose;
 
     Node* parent = nullptr;
     std::vector<Node*> children;
@@ -102,11 +98,10 @@ struct Node {
 
 struct Scene {
     std::vector<std::unique_ptr<Node>> nodes;
-    Camera* main_camera = nullptr;
     std::vector<Material> materials;
     std::vector<Texture> textures;
 
-    std::optional<size_t> hdri_index = std::nullopt;
+    std::optional<size_t> hdri_index;
 };
 
 bool load_gltf( vk::Common& vulkan,
