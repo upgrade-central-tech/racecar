@@ -89,41 +89,39 @@ int main( int, char*[] ) {
     std::optional<engine::Pipeline> scene_pipeline_opt = create_gfx_pipeline(
         engine, ctx.vulkan, sceneMesh, { camera_buffer.layout( engine.get_frame_index() ) },
         scene_shader_module );
+
     if ( !scene_pipeline_opt ) {
         SDL_Log( "[Engine] Failed to create pipeline" );
         return false;
     }
+
     engine::Pipeline& scene_pipeline = scene_pipeline_opt.value();
 
     engine::TaskList task_list;
 
-    for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
-        if ( std::holds_alternative<std::unique_ptr<scene::Mesh>>( node->data ) ) {
-            std::unique_ptr<scene::Mesh>& mesh =
-                std::get<std::unique_ptr<scene::Mesh>>( node->data );
-            for ( scene::Primitive& prim : mesh->primitives ) {
-                engine::DrawResourceDescriptor desc =
-                    engine::DrawResourceDescriptor::from_mesh( sceneMesh, prim );
-                add_draw_task( task_list, {
-                                              .draw_resource_desc = desc,
-                                              .uniform_buffers = { &camera_buffer },
-                                              .pipeline = scene_pipeline,
-                                              .extent = engine.swapchain.extent,
-                                              .clear_screen = true,
-                                              .render_target_is_swapchain = true,
-                                          } );
-            }
+    for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
+        const std::unique_ptr<scene::Mesh>& mesh = node->data;
+
+        for ( const scene::Primitive& prim : mesh->primitives ) {
+            engine::DrawResourceDescriptor desc =
+                engine::DrawResourceDescriptor::from_mesh( sceneMesh, prim );
+            add_draw_task( task_list, { .draw_resource_desc = desc,
+                                        .uniform_buffers = { &camera_buffer },
+                                        .pipeline = scene_pipeline,
+                                        .extent = engine.swapchain.extent,
+                                        .clear_screen = true,
+                                        .render_target_is_swapchain = true } );
         }
     }
 
     bool will_quit = false;
     bool stop_drawing = false;
-    SDL_Event event;
+    SDL_Event event = {};
 
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
             engine::gui::process_event( &event );
-            camera::process_event( &event, engine.current_camera );
+            camera::process_event( &event, engine.camera );
 
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;
@@ -145,18 +143,15 @@ int main( int, char*[] ) {
         {
             // Update the scene block. Hard-coded goodness.
             uniform_buffer::CameraBufferData scene_camera_data = camera_buffer.get_data();
-            camera::Camera& camera = engine.current_camera;
+            camera::OrbitCamera& camera = engine.camera;
 
-            glm::mat4 view = glm::lookAt( camera.eye, camera.look_at, camera.up );
+            glm::mat4 view = camera::calculate_view_matrix( camera );
             glm::mat4 projection = glm::perspective( camera.fov_y, camera.aspect_ratio,
                                                      camera.near_plane, camera.far_plane );
             projection[1][1] *= -1;
 
-            float angle = static_cast<float>( engine.rendered_frames ) * 0.001f;  // in radians
-            glm::mat4 model = glm::rotate( glm::mat4( 1.f ), angle, glm::vec3( 0.f, 1.f, 0.f ) );
-
-            scene_camera_data.mvp = projection * view * model;
-            scene_camera_data.inv_model = glm::inverse( model );
+            scene_camera_data.mvp = projection * view;
+            scene_camera_data.inv_model = glm::mat4( 1.f );
             scene_camera_data.color =
                 glm::vec3( std::sin( engine.rendered_frames * 0.01f ), 0.0f, 0.0f );
             camera_buffer.set_data( scene_camera_data );

@@ -395,28 +395,8 @@ bool load_gltf( std::string filepath,
                     }
                 }
 
-                std::get<std::unique_ptr<Mesh>>( new_node->data )->primitives.push_back( new_prim );
+                new_node->data->primitives.push_back( new_prim );
             }
-        } else {  // Presumably the node is a camera
-            std::unique_ptr<camera::Camera> camera = std::make_unique<camera::Camera>();
-            tinygltf::Camera loaded_camera =
-                model.cameras[static_cast<size_t>( loaded_node.camera )];
-            camera->aspect_ratio = loaded_camera.perspective.aspectRatio;
-            camera->near_plane = loaded_camera.perspective.znear;
-            camera->far_plane = loaded_camera.perspective.zfar;
-            camera->fov_y = loaded_camera.perspective.yfov;
-            camera->view_mat = new_node->transform;
-            camera->forward = glm::normalize(
-                glm::vec3( new_node->transform * glm::vec4( 0.f, 0.f, -1.f, 0.f ) ) );
-            camera->up = glm::normalize(
-                glm::vec3( new_node->transform * glm::vec4( 0.f, 1.f, 0.f, 0.f ) ) );
-            camera->right = glm::normalize( glm::cross( camera->forward, camera->up ) );
-
-            // The main camera will be the first camera loaded.
-            if ( scene.main_camera == nullptr ) {
-                scene.main_camera = camera.get();
-            }
-            new_node->data = std::move( camera );
         }
 
         scene.nodes.push_back( std::move( new_node ) );

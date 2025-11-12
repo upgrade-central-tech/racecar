@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../scene/camera.hpp"
+#include "../orbit_camera.hpp"
 #include "../vk/common.hpp"
 #include "../vk/mem.hpp"
 #include "descriptors.hpp"
@@ -38,9 +38,7 @@ struct State {
 
     std::vector<vk::mem::AllocatedImage> depth_images;
 
-    /// The glTF file we load our scene from may define multiple cameras. Also, we initialize
-    /// a default camera when no file has been loaded yet. See `engine::initialize()`.
-    camera::Camera current_camera = {};
+    camera::OrbitCamera camera;
 
     uint32_t frame_overlap = 1;
     uint32_t frame_number = 0;

@@ -1,14 +1,12 @@
 #pragma once
 
 #include "../geometry/mesh.hpp"
-#include "camera.hpp"
 
 #include <glm/glm.hpp>
+#include <tiny_gltf.h>
 
 #include <memory>
 #include <string>
-#include <tiny_gltf.h>
-#include <variant>
 
 namespace racecar::scene {
 
@@ -83,12 +81,12 @@ struct Mesh {
 
 /// Each node will have either a mesh or a camera
 struct Node {
-    std::variant<std::monostate, std::unique_ptr<Mesh>, std::unique_ptr<camera::Camera>> data;
+    std::unique_ptr<Mesh> data;
 
     /// transforms are local
-    glm::mat4 transform = glm::mat4();
-    glm::mat4 inv_transform = glm::mat4();
-    glm::mat4 inv_transpose = glm::mat4();
+    glm::mat4 transform;
+    glm::mat4 inv_transform;
+    glm::mat4 inv_transpose;
 
     Node* parent = nullptr;
     std::vector<Node*> children;
@@ -96,7 +94,6 @@ struct Node {
 
 struct Scene {
     std::vector<std::unique_ptr<Node>> nodes;
-    camera::Camera* main_camera = nullptr;
     std::vector<Material> materials;
     std::vector<Host_Texture> textures;
 
