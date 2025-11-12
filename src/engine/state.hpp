@@ -40,7 +40,7 @@ struct State {
     camera::OrbitCamera camera;
 
     uint32_t frame_overlap = 1;
-    uint32_t frame_number = 0;
+    uint32_t frame_number = 1;
     uint32_t rendered_frames = 0;
 
     ImmediateSubmit immediate_submit = {};
@@ -52,7 +52,7 @@ struct State {
 
     DescriptorSystem descriptor_system = {};
 
-    size_t get_frame_index() const { return size_t(frame_number % frame_overlap); };
+    size_t get_frame_index() const { return size_t( frame_number % frame_overlap ); };
 };
 
 std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan );

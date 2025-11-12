@@ -10,10 +10,12 @@ void execute_gfx_task( const vk::Common& vulkan,
 
     std::vector<VkRenderingAttachmentInfo> color_attachment_infos;
 
+    size_t framedata_idx = gfx_task.render_target_is_swapchain ? 0 : engine.get_frame_index();
+
     for ( const RWImage& img : gfx_task.color_attachments ) {
         color_attachment_infos.push_back( {
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-            .imageView = img.images[engine.get_frame_index()].image_view,
+            .imageView = img.images[framedata_idx].image_view,
             .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             .loadOp =
                 gfx_task.clear_screen ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
@@ -24,7 +26,7 @@ void execute_gfx_task( const vk::Common& vulkan,
 
     VkRenderingAttachmentInfo depth_attachment_info = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = gfx_task.depth_image.images[engine.get_frame_index()].image_view,
+        .imageView = gfx_task.depth_image.images[framedata_idx].image_view,
         .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         .loadOp = gfx_task.clear_screen ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
