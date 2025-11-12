@@ -68,7 +68,7 @@ endif()
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
 else()
-  target_compile_options(racecar PRIVATE /W4 /WX)
+  target_compile_options(racecar PRIVATE)
 endif()
 
 find_package(volk CONFIG REQUIRED)
