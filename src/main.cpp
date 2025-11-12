@@ -3,7 +3,6 @@
 #include "engine/descriptor_set.hpp"
 #include "engine/execute.hpp"
 #include "engine/gui.hpp"
-#include "engine/images.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
@@ -99,7 +98,7 @@ int main( int, char*[] )
 
     VkShaderModule& scene_shader_module = scene_shader_module_opt.value();
 
-    auto camera_buffer_opt = create_uniform_buffer<uniform_buffer::CameraBufferData>(
+    auto camera_buffer_opt = create_uniform_buffer<uniform_buffer::Camera>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
     if ( !camera_buffer_opt ) {
@@ -107,7 +106,7 @@ int main( int, char*[] )
         return EXIT_FAILURE;
     }
 
-    UniformBuffer<uniform_buffer::CameraBufferData>& camera_buffer = camera_buffer_opt.value();
+    UniformBuffer<uniform_buffer::Camera>& camera_buffer = camera_buffer_opt.value();
 
     auto camera_descriptor_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
@@ -122,7 +121,7 @@ int main( int, char*[] )
 
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, camera_descriptor_set,
         camera_buffer.buffer( engine.get_frame_index() ).handle, 0,
-        sizeof( uniform_buffer::CameraBufferData ) );
+        sizeof( uniform_buffer::Camera ) );
 
     // Simple set up for linear sampler
     VkSampler nearest_sampler = VK_NULL_HANDLE;
@@ -307,7 +306,7 @@ int main( int, char*[] )
 
         {
             // Update the scene block. Hard-coded goodness.
-            uniform_buffer::CameraBufferData scene_camera_data = camera_buffer.get_data();
+            uniform_buffer::Camera scene_camera_data = camera_buffer.get_data();
             camera::OrbitCamera& camera = engine.camera;
 
             glm::mat4 view = camera::calculate_view_matrix( camera );

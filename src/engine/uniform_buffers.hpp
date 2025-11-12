@@ -1,12 +1,12 @@
 
 #include <glm/glm.hpp>
 
-/// Support hpp storing all uniform buffer structs used for different layouts and shaders.
+/// Stores all uniform buffer structs used for different layouts and shaders.
 namespace racecar::uniform_buffer {
 
 /// Simple uniform example for setting up camera buffer data
 /// Ensure that all uniform structs are 16 byte aligned!
-struct CameraBufferData {
+struct Camera {
     glm::mat4 mvp = {};
     glm::mat4 model = glm::mat4( 1.f );
     glm::mat4 inv_model = {};
