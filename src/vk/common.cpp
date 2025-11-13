@@ -81,8 +81,8 @@ vkb::Instance create_instance()
     vkb::Result<vkb::Instance> instance_ret = instance_builder.build();
 
     if ( !instance_ret ) {
-        throw Exception( "[vkb] Failed to create Vulkan instance. Error: {}",
-            instance_ret.error().message().c_str() );
+        throw Exception(
+            "[vkb] Failed to create Vulkan instance. Error: {}", instance_ret.error().message() );
     }
 
     return instance_ret.value();
@@ -132,7 +132,7 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     }
 
     vkb::PhysicalDevice& phys_device = phys_selector_ret.value();
-    const char* phys_name = phys_device.name.c_str();
+    const std::string& phys_name = phys_device.name;
     vkb::DeviceBuilder device_builder( phys_device );
     vkb::Result<vkb::Device> device_ret = device_builder.build();
 
@@ -203,8 +203,8 @@ Common initialize( SDL_Window* window )
                 = vulkan.device.get_queue( vkb::QueueType::graphics );
 
             if ( !gfx_queue_res ) {
-                throw Exception( "[vkb] Failed to get graphics queue: {}",
-                    gfx_queue_res.error().message().c_str() );
+                throw Exception(
+                    "[vkb] Failed to get graphics queue: {}", gfx_queue_res.error().message() );
             }
 
             vulkan.graphics_queue = std::move( gfx_queue_res.value() );
@@ -216,7 +216,7 @@ Common initialize( SDL_Window* window )
 
             if ( !gfx_queue_family_res ) {
                 throw Exception( "[vkb] Failed to get graphics queue family: {}",
-                    gfx_queue_family_res.error().message().c_str() );
+                    gfx_queue_family_res.error().message() );
             }
 
             vulkan.graphics_queue_family = gfx_queue_family_res.value();

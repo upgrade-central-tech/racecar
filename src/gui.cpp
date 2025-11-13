@@ -1,44 +1,51 @@
 #include "gui.hpp"
 
-#include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 
-namespace racecar::engine::gui {
+namespace racecar::gui {
 
-std::optional<Gui> initialize( Context& ctx, const State& engine )
+Gui initialize( Context& ctx, const engine::State& engine )
 {
-    VkDescriptorPoolSize pool_size = {
-        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE,
-    };
-
-    VkDescriptorPoolCreateInfo descriptor_pool_info = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-        .maxSets = pool_size.descriptorCount,
-        .poolSizeCount = 1,
-        .pPoolSizes = &pool_size,
-    };
-
     Gui gui;
 
-    RACECAR_VK_CHECK( vkCreateDescriptorPool(
-                          ctx.vulkan.device, &descriptor_pool_info, nullptr, &gui.descriptor_pool ),
-        "[engine::gui::initialize] Failed to create descriptor pool" );
+    {
+        VkDescriptorPoolSize pool_size = {
+            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE,
+        };
 
-    ctx.vulkan.destructor_stack.push(
-        ctx.vulkan.device, gui.descriptor_pool, vkDestroyDescriptorPool );
+        VkDescriptorPoolCreateInfo descriptor_pool_info = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+            .maxSets = pool_size.descriptorCount,
+            .poolSizeCount = 1,
+            .pPoolSizes = &pool_size,
+        };
+
+        vk::check( vkCreateDescriptorPool(
+                       ctx.vulkan.device, &descriptor_pool_info, nullptr, &gui.descriptor_pool ),
+            "[gui] Failed to create descriptor pool" );
+        ctx.vulkan.destructor_stack.push(
+            ctx.vulkan.device, gui.descriptor_pool, vkDestroyDescriptorPool );
+    }
 
     IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    gui.ctx = ImGui::CreateContext();
+
+    if ( !gui.ctx ) {
+        throw Exception( "[ImGui] Failed to create context" );
+    }
 
     // Enable keyboard controls
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
     ImGui::StyleColorsDark();
-    ImGui_ImplSDL3_InitForVulkan( ctx.window );
+
+    if ( !ImGui_ImplSDL3_InitForVulkan( ctx.window ) ) {
+        throw Exception( "[ImGui] Failed to init SDL3 impl for Vulkan" );
+    }
 
     {
         ImGui_ImplVulkan_InitInfo init_info = {
@@ -65,8 +72,12 @@ std::optional<Gui> initialize( Context& ctx, const State& engine )
 
         };
 
-        ImGui_ImplVulkan_Init( &init_info );
+        if ( !ImGui_ImplVulkan_Init( &init_info ) ) {
+            throw Exception( "[ImGui] Failed to init Vulkan impl" );
+        }
     }
+
+    log::info( "[gui] Initialized!" );
 
     return gui;
 }
@@ -94,29 +105,8 @@ void update( Gui& gui )
         ImGui::Checkbox( "Enable normal map", &gui.debug.enable_normal_map );
         ImGui::Checkbox( "Enable roughess + metallic map", &gui.debug.enable_roughness_metal_map );
 
-        if ( !gui.debug.enable_albedo_map ) {
-            ImGui::BeginDisabled();
-        }
         ImGui::Checkbox( "Turn on albedo only", &gui.debug.albedo_only );
-        if ( !gui.debug.enable_albedo_map ) {
-            ImGui::EndDisabled();
-        }
-
-        if ( !gui.debug.enable_normal_map ) {
-            ImGui::BeginDisabled();
-        }
         ImGui::Checkbox( "Turn on normals only", &gui.debug.normals_only );
-        if ( !gui.debug.enable_normal_map ) {
-            ImGui::EndDisabled();
-        }
-
-        if ( !gui.debug.enable_roughness_metal_map ) {
-            ImGui::BeginDisabled();
-        }
-        ImGui::Checkbox( "Turn on roughness + metallic only", &gui.debug.roughness_metal_only );
-        if ( !gui.debug.enable_roughness_metal_map ) {
-            ImGui::EndDisabled();
-        }
 
         ImGui::SeparatorText( "Demo Settings" );
         ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );

@@ -2,12 +2,12 @@
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
 #include "engine/execute.hpp"
-#include "engine/gui.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
 #include "exception.hpp"
+#include "gui.hpp"
 #include "log.hpp"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
@@ -33,14 +33,20 @@ int main( int, char*[] )
     Context ctx;
 
     try {
-
         ctx.window = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, USE_FULLSCREEN ),
         ctx.vulkan = vk::initialize( ctx.window );
 
-        vkDeviceWaitIdle( ctx.vulkan.device );
+        engine::State engine = engine::initialize( ctx );
+        gui::Gui gui = gui::initialize( ctx, engine );
 
-        vk::free( ctx.vulkan );
-        sdl::free( ctx.window );
+        {
+            vkDeviceWaitIdle( ctx.vulkan.device );
+            gui::free();
+            engine::free( engine );
+            ctx.vulkan.destructor_stack.execute_cleanup();
+            vk::free( ctx.vulkan );
+            sdl::free( ctx.window );
+        }
     } catch ( const Exception& ex ) {
         log::error( "[RACECAR] {}", ex.what() );
         return EXIT_FAILURE;
@@ -53,24 +59,6 @@ int main( int, char*[] )
     }
 
     return EXIT_SUCCESS;
-
-    std::optional<engine::State> engine_opt = engine::initialize( ctx.window, ctx.vulkan );
-
-    if ( !engine_opt ) {
-        log::error( "[RACECAR] Failed to initialize engine" );
-        return EXIT_FAILURE;
-    }
-
-    engine::State& engine = engine_opt.value();
-
-    std::optional<engine::gui::Gui> gui_opt = engine::gui::initialize( ctx, engine );
-
-    if ( !gui_opt ) {
-        log::error( "[RACECAR] Failed to initialize GUI" );
-        return EXIT_FAILURE;
-    }
-
-    engine::gui::Gui& gui = gui_opt.value();
 
     // SCENE LOADING/PROCESSING
     scene::Scene scene;
@@ -368,9 +356,6 @@ int main( int, char*[] )
         // Make new screen visible
         SDL_UpdateWindowSurface( ctx.window );
     }
-
-    engine::gui::free();
-    engine::free( engine, ctx.vulkan );
 
     return EXIT_SUCCESS;
 }

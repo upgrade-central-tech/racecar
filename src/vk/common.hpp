@@ -9,6 +9,7 @@
 #include <volk.h>
 #include <VkBootstrap.h>
 
+#include <source_location>
 #include <string_view>
 
 /// Custom define based on VK_CHECK.
@@ -22,10 +23,12 @@
 
 namespace racecar::vk {
 
-inline constexpr void check( VkResult result, std::string_view message )
+inline constexpr void check( VkResult result, std::string_view message,
+    const std::source_location& loc = std::source_location::current() )
 {
     if ( result ) {
-        throw Exception( "[Vulkan] {} ({})", message, static_cast<int>( result ) );
+        throw Exception( "[vk] [{}({}:{})] {} (code {})", loc.file_name(), loc.line(), loc.column(),
+            message, static_cast<int>( result ) );
     }
 }
 

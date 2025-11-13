@@ -7,16 +7,17 @@
 namespace racecar::engine {
 
 struct ImmediateSubmit {
-    VkFence immediate_fence = VK_NULL_HANDLE;
-    VkCommandBuffer immediate_command_buffer = VK_NULL_HANDLE;
-    VkCommandPool immediate_command_pool = VK_NULL_HANDLE;
+    VkFence fence = VK_NULL_HANDLE;
+    VkCommandBuffer cmd_buf = VK_NULL_HANDLE;
+    VkCommandPool cmd_pool = VK_NULL_HANDLE;
 };
+
+void create_immediate_commands( ImmediateSubmit& immediate_submit, vk::Common& vulkan );
 
 /// Used for immediate command buffer calls, used for stuff like uploading buffer mem, etc.
 bool immediate_submit( const vk::Common& vulkan, const ImmediateSubmit& immediate_submit,
     std::function<void( VkCommandBuffer command_buffer )>&& function );
-bool create_immediate_commands( ImmediateSubmit& immediate_submit, const vk::Common& vulkan );
-bool create_immediate_sync_structures(
-    ImmediateSubmit& immediate_submit, const vk::Common& vulkan );
+
+void create_immediate_sync_structures( ImmediateSubmit& immediate_submit, vk::Common& vulkan );
 
 } // namespace racecar::engine
