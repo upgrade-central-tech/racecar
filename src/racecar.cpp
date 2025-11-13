@@ -59,19 +59,10 @@ void run( bool use_fullscreen )
 
     VkShaderModule& scene_shader_module = scene_shader_module_opt.value();
 
-    auto camera_buffer_opt = create_uniform_buffer<uniform_buffer::Camera>(
+    UniformBuffer camera_buffer = create_uniform_buffer<uniform_buffer::Camera>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-    if ( !camera_buffer_opt ) {
-        throw Exception( "Failed to create camera uniform buffer!" );
-    }
-    UniformBuffer<uniform_buffer::Camera>& camera_buffer = camera_buffer_opt.value();
-
-    auto debug_buffer_opt = create_uniform_buffer<uniform_buffer::Debug>(
+    UniformBuffer debug_buffer = create_uniform_buffer<uniform_buffer::Debug>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-    if ( !debug_buffer_opt ) {
-        throw Exception( "Failed to create debug uniform buffer!" );
-    }
-    UniformBuffer<uniform_buffer::Debug>& debug_buffer = debug_buffer_opt.value();
 
     auto uniform_desc_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },

@@ -3,6 +3,8 @@
 #include "../vk/common.hpp"
 #include "state.hpp"
 
+#include <optional>
+
 namespace racecar::engine {
 
 std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan, engine::State& engine,
