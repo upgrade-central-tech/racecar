@@ -249,16 +249,14 @@ int main( int, char*[] )
 
             // Update debug uniform buffer
             {
-                ub_data::Debug debug_ub = {
+                ub_debug.set_data( {
                     .enable_albedo_map = gui.debug.enable_albedo_map,
                     .enable_normal_map = gui.debug.enable_normal_map,
                     .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
                     .normals_only = gui.debug.normals_only,
                     .albedo_only = gui.debug.albedo_only,
                     .roughness_metal_only = gui.debug.roughness_metal_only,
-                };
-
-                ub_debug.set_data( debug_ub );
+                } );
                 ub_debug.update( ctx.vulkan, engine.get_frame_index() );
             }
 
