@@ -7,6 +7,7 @@
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
+#include "exception.hpp"
 #include "log.hpp"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
@@ -30,14 +31,30 @@ constexpr std::string_view GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf";
 int main( int, char*[] )
 {
     Context ctx;
+    bool success = true;
 
-    if ( std::optional<SDL_Window*> window_opt
-        = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, USE_FULLSCREEN );
-        !window_opt ) {
-        log::error( "[RACECAR] Could not initialize SDL" );
-        return EXIT_FAILURE;
+    try {
+        ctx = {
+            .window = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, USE_FULLSCREEN ),
+        };
+
+    } catch ( const Exception& ex ) {
+        log::error( "[RACECAR] {}", ex.what() );
+        success = false;
+    } catch ( const std::exception& ex ) {
+        log::error( "[RACECAR] Caught standard exception: {}", ex.what() );
+        success = false;
+    } catch ( ... ) {
+        log::error( "[RACECAR] Caught an unknown exception" );
+        success = false;
+    }
+
+    sdl::free( ctx.window );
+
+    if ( success ) {
+        return EXIT_SUCCESS;
     } else {
-        ctx.window = window_opt.value();
+        return EXIT_FAILURE;
     }
 
     if ( std::optional<vk::Common> vulkan_opt = vk::initialize( ctx.window ); !vulkan_opt ) {
@@ -367,7 +384,6 @@ int main( int, char*[] )
     engine::gui::free();
     engine::free( engine, ctx.vulkan );
     vk::free( ctx.vulkan );
-    sdl::free( ctx.window );
 
     return EXIT_SUCCESS;
 }
