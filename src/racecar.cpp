@@ -51,9 +51,9 @@ void run( bool use_fullscreen )
     VkShaderModule scene_shader_module
         = vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH );
 
-    UniformBuffer camera_buffer = create_uniform_buffer<uniform_buffer::Camera>(
+    UniformBuffer camera_buffer = create_uniform_buffer<ub_data::Camera>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-    UniformBuffer debug_buffer = create_uniform_buffer<uniform_buffer::Debug>(
+    UniformBuffer debug_buffer = create_uniform_buffer<ub_data::Debug>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
     auto uniform_desc_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
@@ -67,12 +67,10 @@ void run( bool use_fullscreen )
     engine::DescriptorSet& uniform_desc_set = uniform_desc_set_opt.value();
 
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set,
-        camera_buffer.buffer( engine.get_frame_index() ).handle, 0,
-        sizeof( uniform_buffer::Camera ) );
+        camera_buffer.buffer( engine.get_frame_index() ).handle, 0, sizeof( ub_data::Camera ) );
 
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set,
-        debug_buffer.buffer( engine.get_frame_index() ).handle, 1,
-        sizeof( uniform_buffer::Debug ) );
+        debug_buffer.buffer( engine.get_frame_index() ).handle, 1, sizeof( ub_data::Debug ) );
 
     // Simple set up for linear sampler
     VkSampler nearest_sampler = VK_NULL_HANDLE;
@@ -249,7 +247,7 @@ void run( bool use_fullscreen )
 
         // Update camera uniform buffer
         {
-            uniform_buffer::Camera camera_ub = camera_buffer.get_data();
+            ub_data::Camera camera_ub = camera_buffer.get_data();
             camera::OrbitCamera& camera = engine.camera;
 
             glm::mat4 view = camera::calculate_view_matrix( camera );
@@ -274,7 +272,7 @@ void run( bool use_fullscreen )
 
         // Update debug uniform buffer
         {
-            uniform_buffer::Debug debug_ub = {
+            ub_data::Debug debug_ub = {
                 .enable_albedo_map = gui.debug.enable_albedo_map,
                 .enable_normal_map = gui.debug.enable_normal_map,
                 .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
