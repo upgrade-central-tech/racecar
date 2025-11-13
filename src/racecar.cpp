@@ -17,6 +17,7 @@
 #include <glm/ext/matrix_transform.hpp>
 
 #include <chrono>
+#include <filesystem>
 #include <string_view>
 #include <thread>
 
@@ -36,15 +37,8 @@ void run( bool use_fullscreen )
     // SCENE LOADING/PROCESSING
     scene::Scene scene;
     geometry::Mesh scene_mesh;
-
-    {
-        if ( !scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene,
-                 scene_mesh.vertices, scene_mesh.indices ) ) {
-            throw Exception( "Failed to load glTF from file path \"{}\"", GLTF_FILE_PATH );
-        }
-
-        geometry::generate_tangents( scene_mesh );
-    }
+    scene::load_gltf(
+        ctx.vulkan, engine, GLTF_FILE_PATH, scene, scene_mesh.vertices, scene_mesh.indices );
 
     std::optional<geometry::GPUMeshBuffers> uploaded_scene_mesh_buffer_opt
         = geometry::upload_mesh( ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
