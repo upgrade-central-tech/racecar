@@ -17,6 +17,7 @@ set(IMGUI_DIR "${THIRD_PARTY_DIR}/imgui")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
+  ${SRC_DIR}/racecar.cpp
   ${SRC_DIR}/sdl.cpp
   ${SRC_DIR}/orbit_camera.cpp
   ${SRC_DIR}/gui.cpp
