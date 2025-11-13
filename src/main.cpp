@@ -7,6 +7,7 @@
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
+#include "log.hpp"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
@@ -33,14 +34,14 @@ int main( int, char*[] )
     if ( std::optional<SDL_Window*> window_opt
         = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, USE_FULLSCREEN );
         !window_opt ) {
-        SDL_Log( "[RACECAR] Could not initialize SDL!" );
+        log::error( "[RACECAR] Could not initialize SDL" );
         return EXIT_FAILURE;
     } else {
         ctx.window = window_opt.value();
     }
 
     if ( std::optional<vk::Common> vulkan_opt = vk::initialize( ctx.window ); !vulkan_opt ) {
-        SDL_Log( "[RACECAR] Could not initialize Vulkan!" );
+        log::error( "[RACECAR] Could not initialize Vulkan" );
         return EXIT_FAILURE;
     } else {
         ctx.vulkan = vulkan_opt.value();
@@ -49,7 +50,7 @@ int main( int, char*[] )
     std::optional<engine::State> engine_opt = engine::initialize( ctx.window, ctx.vulkan );
 
     if ( !engine_opt ) {
-        SDL_Log( "[RACECAR] Failed to initialize engine!" );
+        log::error( "[RACECAR] Failed to initialize engine" );
         return EXIT_FAILURE;
     }
 
@@ -58,7 +59,7 @@ int main( int, char*[] )
     std::optional<engine::gui::Gui> gui_opt = engine::gui::initialize( ctx, engine );
 
     if ( !gui_opt ) {
-        SDL_Log( "[RACECAR] Failed to initialize GUI!" );
+        log::error( "[RACECAR] Failed to initialize GUI" );
         return EXIT_FAILURE;
     }
 
@@ -71,7 +72,7 @@ int main( int, char*[] )
     {
         if ( !scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene,
                  scene_mesh.vertices, scene_mesh.indices ) ) {
-            SDL_Log( "[RACECAR] Failed to load glTF from file path \"%s\"", GLTF_FILE_PATH.data() );
+            log::error( "[RACECAR] Failed to load glTF from file path \"{}\"", GLTF_FILE_PATH );
             return EXIT_FAILURE;
         }
 
@@ -82,7 +83,7 @@ int main( int, char*[] )
         = geometry::upload_mesh( ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
 
     if ( !uploaded_scene_mesh_buffer_opt ) {
-        SDL_Log( "[RACECAR] Failed to upload scene mesh buffers" );
+        log::error( "[RACECAR] Failed to upload scene mesh buffers" );
     }
 
     scene_mesh.mesh_buffers = uploaded_scene_mesh_buffer_opt.value();
@@ -92,7 +93,7 @@ int main( int, char*[] )
         = vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
 
     if ( !scene_shader_module_opt ) {
-        SDL_Log( "[RACECAR] Failed to create shader module" );
+        log::error( "[RACECAR] Failed to create shader module" );
         return EXIT_FAILURE;
     }
 
@@ -101,7 +102,7 @@ int main( int, char*[] )
     auto camera_buffer_opt = create_uniform_buffer<uniform_buffer::Camera>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
     if ( !camera_buffer_opt ) {
-        SDL_Log( "[RACECAR] Failed to create camera uniform buffer!" );
+        log::error( "[RACECAR] Failed to create camera uniform buffer!" );
         return EXIT_FAILURE;
     }
     UniformBuffer<uniform_buffer::Camera>& camera_buffer = camera_buffer_opt.value();
@@ -109,7 +110,7 @@ int main( int, char*[] )
     auto debug_buffer_opt = create_uniform_buffer<uniform_buffer::Debug>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
     if ( !debug_buffer_opt ) {
-        SDL_Log( "[RACECAR] Failed to create debug uniform buffer!" );
+        log::error( "[RACECAR] Failed to create debug uniform buffer!" );
         return EXIT_FAILURE;
     }
     UniformBuffer<uniform_buffer::Debug>& debug_buffer = debug_buffer_opt.value();
@@ -119,7 +120,7 @@ int main( int, char*[] )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     if ( !uniform_desc_set_opt ) {
-        SDL_Log( "[RACECAR] Failed to generate uniform descriptor set" );
+        log::error( "[RACECAR] Failed to generate uniform descriptor set" );
         return EXIT_FAILURE;
     }
 
@@ -144,7 +145,7 @@ int main( int, char*[] )
 
         if ( vkCreateSampler(
                  ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &nearest_sampler ) ) {
-            SDL_Log( "[RACECAR] Failed to create sampler" );
+            log::error( "[RACECAR] Failed to create sampler" );
             return EXIT_FAILURE;
         }
     }
@@ -159,7 +160,7 @@ int main( int, char*[] )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     if ( !sampler_descriptor_set_opt ) {
-        SDL_Log( "[RACECAR] Failed to generate texture descriptor set" );
+        log::error( "[RACECAR] Failed to generate texture descriptor set" );
         return EXIT_FAILURE;
     }
 
@@ -176,7 +177,7 @@ int main( int, char*[] )
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
         if ( !textures_descriptor_set_opt ) {
-            SDL_Log( "[RACECAR] Failed to generate texture descriptor set" );
+            log::error( "[RACECAR] Failed to generate texture descriptor set" );
             return EXIT_FAILURE;
         }
 
@@ -197,8 +198,8 @@ int main( int, char*[] )
             scene_shader_module );
 
     if ( !scene_pipeline_opt ) {
-        SDL_Log( "[Engine] Failed to create pipeline" );
-        return false;
+        log::error( "[Engine] Failed to create pipeline" );
+        return EXIT_FAILURE;
     }
 
     engine::Pipeline& scene_pipeline = scene_pipeline_opt.value();

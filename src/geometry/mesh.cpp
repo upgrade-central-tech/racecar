@@ -1,6 +1,7 @@
 #include "mesh.hpp"
 
 #include "../engine/imm_submit.hpp"
+#include "../log.hpp"
 
 namespace racecar::geometry {
 
@@ -18,7 +19,7 @@ std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan, const engine::Sta
         VMA_MEMORY_USAGE_CPU_TO_GPU );
 
     if ( !new_mesh_buffers.vertex_buffer ) {
-        SDL_Log( "[Vulkan] Failed to create vertex buffer" );
+        log::error( "[Vulkan] Failed to create vertex buffer" );
         return {};
     }
 
@@ -35,7 +36,7 @@ std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan, const engine::Sta
         VMA_MEMORY_USAGE_GPU_ONLY );
 
     if ( !new_mesh_buffers.index_buffer ) {
-        SDL_Log( "[Vulkan] Failed to create index buffer" );
+        log::error( "[Vulkan] Failed to create index buffer" );
         return {};
     }
 
@@ -45,7 +46,7 @@ std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan, const engine::Sta
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY );
 
     if ( !staging.has_value() ) {
-        SDL_Log( "[Vulkan] Failed to create index buffer" );
+        log::error( "[Vulkan] Failed to create index buffer" );
         return {};
     }
 

@@ -1,19 +1,20 @@
 #pragma once
 
 #include "../engine/destructor_stack.hpp"
+#include "../log.hpp"
 #include "vma.hpp"
 
-#include <SDL3/SDL.h>
+#include <SDL3/SDL_video.h>
 #include <volk.h>
 #include <VkBootstrap.h>
 
 #include <optional>
 
-/// Custom define based on VK_CHECK, just with our SDL_Log. Feel free to tweak this.
+/// Custom define based on VK_CHECK.
 #define RACECAR_VK_CHECK( vk_fn, message )                                                         \
     do {                                                                                           \
         if ( VkResult result = vk_fn; result ) {                                                   \
-            SDL_Log( "[Vulkan] %s | Error code: %d", message, result );                            \
+            log::error( "[Vulkan] {}, error code: {}", message, static_cast<int>( result ) );      \
             return {};                                                                             \
         }                                                                                          \
     } while ( 0 )

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../log.hpp"
 #include "../vk/mem.hpp"
 
-#include <SDL3/SDL.h>
 #include <volk.h>
 
 #include <optional>
@@ -64,7 +64,7 @@ std::optional<UniformBuffer<T>> create_uniform_buffer(
             vulkan, sizeof( T ), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
 
         if ( !buffer_opt ) {
-            SDL_Log( "[create_uniform_buffer] Failed to create buffer %zu for swapchain", i );
+            log::error( "[create_uniform_buffer] Failed to create buffer {} for swapchain", i );
             return {};
         }
 

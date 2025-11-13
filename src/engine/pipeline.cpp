@@ -1,5 +1,6 @@
 #include "pipeline.hpp"
 
+#include "../log.hpp"
 #include "../vk/create.hpp"
 #include "state.hpp"
 
@@ -106,7 +107,8 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine, vk::Co
     if ( VkResult result
         = vkCreatePipelineLayout( vulkan.device, &pipeline_layout_info, nullptr, &gfx_layout );
         result ) {
-        SDL_Log( "[Vulkan] Failed to create pipeline layout | Error code: %d", result );
+        log::error( "[Vulkan] Failed to create pipeline layout | Error code: {}",
+            static_cast<int>( result ) );
         vkDestroyShaderModule( vulkan.device, shader_module, nullptr );
         return {};
     }

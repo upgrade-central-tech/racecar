@@ -1,5 +1,6 @@
 #include "images.hpp"
 
+#include "../log.hpp"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
 
@@ -12,11 +13,9 @@ std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan, engine:
         = create_allocated_image( vulkan, engine, data, size, format, usage, mipmapped );
 
     if ( !allocated_image ) {
-        SDL_Log( "[engine::create_image] Failed to allocate new image" );
+        log::error( "Failed to create image" );
         return {};
     }
-
-    SDL_Log( "[engine::create_image] Last alloc called!" );
 
     return allocated_image;
 };
@@ -46,7 +45,7 @@ std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan, VkExt
                           &allocated_image.image, &allocated_image.allocation, nullptr ),
         "Failed to create VMA image" );
 
-    SDL_Log( "[engine::allocate_image] Image %p", allocated_image.image );
+    log::info( "Allocated image {}", static_cast<void*>( allocated_image.image ) );
 
     VkImageAspectFlags aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -78,7 +77,7 @@ std::optional<vk::mem::AllocatedImage> create_allocated_image( vk::Common& vulka
         vulkan, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
 
     if ( !upload_buffer ) {
-        SDL_Log( "[Vulkan] Failed to create upload buffer" );
+        log::error( "[Vulkan] Failed to create upload buffer" );
         return {};
     }
 
