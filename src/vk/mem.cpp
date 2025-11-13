@@ -2,7 +2,7 @@
 
 namespace racecar::vk::mem {
 
-std::optional<AllocatedBuffer> create_buffer(
+AllocatedBuffer create_buffer(
     Common& vulkan, size_t alloc_size, VkBufferUsageFlags usage_flags, VmaMemoryUsage memory_usage )
 {
     // We may want to adjust the sharingMode to be adjustable depending on use-case.
@@ -24,10 +24,9 @@ std::optional<AllocatedBuffer> create_buffer(
 
     AllocatedBuffer new_buffer;
 
-    RACECAR_VK_CHECK( vmaCreateBuffer( vulkan.allocator, &buffer_info, &vma_alloc_info,
-                          &new_buffer.handle, &new_buffer.allocation, &new_buffer.info ),
-        "Failed to create GPU buffer" );
-
+    vk::check( vmaCreateBuffer( vulkan.allocator, &buffer_info, &vma_alloc_info, &new_buffer.handle,
+                   &new_buffer.allocation, &new_buffer.info ),
+        "[VMA] Failed to create GPU buffer" );
     vulkan.destructor_stack.push_free_vmabuffer( vulkan.allocator, new_buffer );
 
     return new_buffer;

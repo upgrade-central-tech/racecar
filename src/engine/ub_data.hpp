@@ -1,9 +1,11 @@
 
 #include <glm/glm.hpp>
 
+#include <cstdint>
+
 /// Stores all uniform buffer structs used for different layouts and shaders. Ensure that all
 /// uniform structs are 16 byte aligned!
-namespace racecar::uniform_buffer {
+namespace racecar::ub_data {
 
 /// Camera data
 struct Camera {

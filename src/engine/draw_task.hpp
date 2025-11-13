@@ -20,7 +20,7 @@ struct DrawResourceDescriptor {
     uint32_t index_count;
 
     static DrawResourceDescriptor from_mesh(
-        const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive );
+        const geometry::Mesh& mesh, const scene::Primitive& primitive );
 };
 
 /// A draw task represents one Vulkan pipeline, and more specifically, the shader to be used
@@ -32,7 +32,7 @@ struct DrawTask {
     Pipeline pipeline = {};
 };
 
-bool draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
+void draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
     const VkExtent2D extent );
 
 } // namespace racecar::engine

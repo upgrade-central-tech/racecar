@@ -20,15 +20,15 @@ struct Vertex {
 };
 
 struct GPUMeshBuffers {
-    std::optional<vk::mem::AllocatedBuffer> index_buffer;
-    std::optional<vk::mem::AllocatedBuffer> vertex_buffer;
+    vk::mem::AllocatedBuffer index_buffer;
+    vk::mem::AllocatedBuffer vertex_buffer;
     VkDeviceAddress vertex_buffer_address = 0;
 };
 
 struct Mesh {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-    GPUMeshBuffers mesh_buffers;
+    GPUMeshBuffers buffers;
 
     VkVertexInputBindingDescription vertex_binding_description = {
         .binding = vk::binding::VERTEX_BUFFER,
@@ -45,7 +45,7 @@ struct Mesh {
     } };
 };
 
-std::optional<GPUMeshBuffers> upload_mesh( vk::Common& vulkan, const engine::State& engine,
+GPUMeshBuffers upload_mesh( vk::Common& vulkan, const engine::State& engine,
     std::span<uint32_t> indices, std::span<Vertex> vertices );
 
 /// Should ideally run afer `scene::load_gltf` since it's just too annoying

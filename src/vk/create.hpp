@@ -5,7 +5,6 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include <filesystem>
-#include <optional>
 #include <string_view>
 
 namespace racecar::vk::create {
@@ -35,7 +34,7 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_info(
     VkShaderStageFlagBits flags, VkShaderModule shader_module, std::string_view name );
 
 /// Creates shader module from the specified file path. Path is relative to the executable.
-std::optional<VkShaderModule> shader_module( Common& vulkan, std::filesystem::path shader_path );
+VkShaderModule shader_module( Common& vulkan, std::filesystem::path shader_path );
 
 struct CreateSubmitInfoDescriptor {
     VkCommandBuffer command_buffer = VK_NULL_HANDLE;

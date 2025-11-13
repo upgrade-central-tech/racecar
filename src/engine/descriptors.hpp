@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../vk/common.hpp"
-#include "uniform_buffers.hpp"
+#include "ub_data.hpp"
 
 #include <deque>
 #include <span>
@@ -56,8 +56,9 @@ void add_binding(
 
 void clear( DescriptorLayoutBuilder& ds_layout_builder );
 
-VkDescriptorSetLayout build( const vk::Common& vulkan, VkShaderStageFlags shader_stages,
-    DescriptorLayoutBuilder& ds_layout_builder, VkDescriptorSetLayoutCreateFlags flags = 0 );
+VkDescriptorSetLayout build( vk::Common& vulkan, DescriptorLayoutBuilder& ds_layout_builder,
+    VkShaderStageFlags shader_stage_flags,
+    VkDescriptorSetLayoutCreateFlags layout_create_flags = 0 );
 
 } // namespace descriptor_layout_builder
 
@@ -70,8 +71,8 @@ void init_pool( vk::Common& vulkan, DescriptorAllocator& ds_allocator, uint32_t 
 
 void clear_descriptors( const vk::Common& vulkan, DescriptorAllocator& ds_allocator );
 
-VkDescriptorSet allocate( const vk::Common& vulkan, const DescriptorAllocator& ds_allocator,
-    VkDescriptorSetLayout layout );
+VkDescriptorSet allocate(
+    vk::Common& vulkan, const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout );
 
 } // namespace descriptor_allocator
 

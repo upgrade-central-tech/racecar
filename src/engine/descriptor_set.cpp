@@ -5,30 +5,32 @@
 
 namespace racecar::engine {
 
-std::optional<DescriptorSet> generate_descriptor_set( const vk::Common& vulkan,
-    const engine::State& engine, const std::vector<VkDescriptorType>& types,
-    VkShaderStageFlags shader_stage_flags )
+DescriptorSet generate_descriptor_set( vk::Common& vulkan, const engine::State& engine,
+    const std::vector<VkDescriptorType>& types, VkShaderStageFlags shader_stage_flags )
 {
-    DescriptorSet desc_set;
+    const size_t num_frames = engine.swapchain_images.size();
+
+    DescriptorSet desc_set = {
+        .handles = std::vector<VkDescriptorSet>( num_frames ),
+        .layouts = std::vector<VkDescriptorSetLayout>( num_frames ),
+    };
 
     engine::DescriptorLayoutBuilder builder;
-    size_t num_frames = engine.swapchain_images.size();
-
-    desc_set.layouts = std::vector<VkDescriptorSetLayout>( num_frames );
-    desc_set.descriptor_sets = std::vector<VkDescriptorSet>( num_frames );
 
     for ( uint32_t i = 0; i < static_cast<uint32_t>( types.size() ); ++i ) {
         engine::descriptor_layout_builder::add_binding( builder, i, types[i] );
     }
 
     for ( size_t i = 0; i < num_frames; ++i ) {
-        desc_set.layouts[i]
-            = engine::descriptor_layout_builder::build( vulkan, shader_stage_flags, builder );
-    }
-
-    for ( size_t i = 0; i < num_frames; ++i ) {
-        desc_set.descriptor_sets[i] = engine::descriptor_allocator::allocate(
-            vulkan, engine.descriptor_system.frame_allocators[i], desc_set.layouts[i] );
+        try {
+            desc_set.layouts[i]
+                = engine::descriptor_layout_builder::build( vulkan, builder, shader_stage_flags );
+            desc_set.handles[i] = engine::descriptor_allocator::allocate(
+                vulkan, engine.descriptor_system.frame_allocators[i], desc_set.layouts[i] );
+        } catch ( const Exception& ex ) {
+            log::error( "[DescriptorSet] Failed to generate" );
+            throw;
+        }
     }
 
     return desc_set;
@@ -46,7 +48,7 @@ void update_descriptor_set_uniform( vk::Common& vulkan, State& engine, Descripto
 
         VkWriteDescriptorSet write = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = desc_set.descriptor_sets[i],
+            .dstSet = desc_set.handles[i],
             .dstBinding = static_cast<uint32_t>( binding_idx ),
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -69,7 +71,7 @@ void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorS
 
         VkWriteDescriptorSet write_desc_set = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = desc_set.descriptor_sets[i],
+            .dstSet = desc_set.handles[i],
             .dstBinding = static_cast<uint32_t>( binding_idx ),
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,

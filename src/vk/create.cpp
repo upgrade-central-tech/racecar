@@ -1,7 +1,5 @@
 #include "create.hpp"
 
-#include "../log.hpp"
-
 #include <SDL3/SDL.h>
 
 #include <fstream>
@@ -147,23 +145,21 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_info(
     };
 }
 
-std::optional<VkShaderModule> shader_module( Common& vulkan, std::filesystem::path shader_path )
+VkShaderModule shader_module( Common& vulkan, std::filesystem::path shader_path )
 {
     if ( !std::filesystem::exists( shader_path ) ) {
-        log::error( "[Shader] \"{}\" does not exist!", shader_path.string().c_str() );
-        return {};
+        throw Exception( "[shader] Cannot find \"{}\"", shader_path.string() );
     }
 
     std::ifstream file( shader_path.string(), std::ios::ate | std::ios::binary );
 
     if ( !file.is_open() ) {
-        log::error( "[Shader] Could not open file \"{}\"",
-            std::filesystem::absolute( shader_path ).string().c_str() );
-        return {};
+        throw Exception(
+            "[shader] Cannot open \"{}\"", std::filesystem::absolute( shader_path ).string() );
     }
 
     // Use read position to determine size of file and pre-allocate buffer
-    std::size_t file_size = static_cast<std::size_t>( file.tellg() );
+    size_t file_size = static_cast<size_t>( file.tellg() );
     std::vector<char> shader_buffer( file_size );
 
     file.seekg( 0 );
@@ -178,11 +174,11 @@ std::optional<VkShaderModule> shader_module( Common& vulkan, std::filesystem::pa
         .pCode = reinterpret_cast<const uint32_t*>( shader_buffer.data() ),
     };
 
-    VkShaderModule shader_module;
+    VkShaderModule shader_module = VK_NULL_HANDLE;
 
     // We don't immediately add the shader module to the destructor stack because we destroy it at
     // the end of the pipeline creation instead
-    RACECAR_VK_CHECK( vkCreateShaderModule( vulkan.device, &create_info, nullptr, &shader_module ),
+    vk::check( vkCreateShaderModule( vulkan.device, &create_info, nullptr, &shader_module ),
         "Failed to create shader module" );
 
     return shader_module;

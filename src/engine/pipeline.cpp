@@ -1,6 +1,5 @@
 #include "pipeline.hpp"
 
-#include "../log.hpp"
 #include "../vk/create.hpp"
 #include "state.hpp"
 
@@ -11,7 +10,7 @@ namespace racecar::engine {
 constexpr std::string_view VERTEX_ENTRY_NAME = "vs_main";
 constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
-std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
+Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     const std::optional<const geometry::Mesh>& mesh,
     const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module )
 {
@@ -23,7 +22,7 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine, vk::Co
         .pVertexAttributeDescriptions = nullptr,
     };
 
-    if ( mesh.has_value() && mesh->mesh_buffers.vertex_buffer_address ) {
+    if ( mesh && mesh->buffers.vertex_buffer_address ) {
         vertex_input_info.vertexBindingDescriptionCount = 1,
         vertex_input_info.pVertexBindingDescriptions = &mesh->vertex_binding_description;
         vertex_input_info.vertexAttributeDescriptionCount
@@ -102,18 +101,12 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine, vk::Co
         pipeline_layout_info.pSetLayouts = layouts.data();
     }
 
-    VkPipelineLayout gfx_layout = VK_NULL_HANDLE;
+    Pipeline gfx_pipeline;
 
-    if ( VkResult result
-        = vkCreatePipelineLayout( vulkan.device, &pipeline_layout_info, nullptr, &gfx_layout );
-        result ) {
-        log::error( "[Vulkan] Failed to create pipeline layout | Error code: {}",
-            static_cast<int>( result ) );
-        vkDestroyShaderModule( vulkan.device, shader_module, nullptr );
-        return {};
-    }
-
-    vulkan.destructor_stack.push( vulkan.device, gfx_layout, vkDestroyPipelineLayout );
+    vk::check( vkCreatePipelineLayout(
+                   vulkan.device, &pipeline_layout_info, nullptr, &gfx_pipeline.layout ),
+        "Failed to create pipeline layout" );
+    vulkan.destructor_stack.push( vulkan.device, gfx_pipeline.layout, vkDestroyPipelineLayout );
 
     std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages = {
         vk::create::pipeline_shader_stage_info(
@@ -143,21 +136,14 @@ std::optional<Pipeline> create_gfx_pipeline( const engine::State& engine, vk::Co
         .pDepthStencilState = &depth_stencil_info,
         .pColorBlendState = &color_blend_info,
         .pDynamicState = &dynamic_state_info,
-        .layout = gfx_layout,
+        .layout = gfx_pipeline.layout,
         .renderPass = nullptr,
     };
 
-    Pipeline gfx_pipeline;
-
-    RACECAR_VK_CHECK( vkCreateGraphicsPipelines( vulkan.device, nullptr, 1, &gfx_pipeline_info,
-                          nullptr, &gfx_pipeline.handle ),
+    vk::check( vkCreateGraphicsPipelines(
+                   vulkan.device, nullptr, 1, &gfx_pipeline_info, nullptr, &gfx_pipeline.handle ),
         "Failed to create graphics pipeline" );
-
     vulkan.destructor_stack.push( vulkan.device, gfx_pipeline.handle, vkDestroyPipeline );
-
-    vkDestroyShaderModule( vulkan.device, shader_module, nullptr );
-
-    gfx_pipeline.layout = gfx_layout;
 
     return gfx_pipeline;
 }

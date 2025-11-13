@@ -107,6 +107,7 @@ void update( Gui& gui )
 
         ImGui::Checkbox( "Turn on albedo only", &gui.debug.albedo_only );
         ImGui::Checkbox( "Turn on normals only", &gui.debug.normals_only );
+        ImGui::Checkbox( "Turn on roughness + metallic only", &gui.debug.roughness_metal_only );
 
         ImGui::SeparatorText( "Demo Settings" );
         ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );

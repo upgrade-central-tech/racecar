@@ -39,182 +39,99 @@ int main( int, char*[] )
         engine::State engine = engine::initialize( ctx );
         gui::Gui gui = gui::initialize( ctx, engine );
 
-        {
-            vkDeviceWaitIdle( ctx.vulkan.device );
-            gui::free();
-            engine::free( engine );
-            ctx.vulkan.destructor_stack.execute_cleanup();
-            vk::free( ctx.vulkan );
-            sdl::free( ctx.window );
-        }
-    } catch ( const Exception& ex ) {
-        log::error( "[RACECAR] {}", ex.what() );
-        return EXIT_FAILURE;
-    } catch ( const std::exception& ex ) {
-        log::error( "[RACECAR] Caught standard exception: {}", ex.what() );
-        return EXIT_FAILURE;
-    } catch ( ... ) {
-        log::error( "[RACECAR] Caught an unknown exception" );
-        return EXIT_FAILURE;
-    }
+        // SCENE LOADING/PROCESSING
+        scene::Scene scene;
+        geometry::Mesh mesh;
 
-    return EXIT_SUCCESS;
-
-    // SCENE LOADING/PROCESSING
-    scene::Scene scene;
-    geometry::Mesh scene_mesh;
-
-    {
-        if ( !scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene,
-                 scene_mesh.vertices, scene_mesh.indices ) ) {
-            log::error( "[RACECAR] Failed to load glTF from file path \"{}\"", GLTF_FILE_PATH );
-            return EXIT_FAILURE;
+        if ( !scene::load_gltf(
+                 ctx.vulkan, engine, GLTF_FILE_PATH, scene, mesh.vertices, mesh.indices ) ) {
+            throw Exception( "Failed to load glTF from \"{}\"", GLTF_FILE_PATH );
         }
 
-        geometry::generate_tangents( scene_mesh );
-    }
+        geometry::generate_tangents( mesh );
+        mesh.buffers = geometry::upload_mesh( ctx.vulkan, engine, mesh.indices, mesh.vertices );
 
-    std::optional<geometry::GPUMeshBuffers> uploaded_scene_mesh_buffer_opt
-        = geometry::upload_mesh( ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
+        // SHADER LOADING/PROCESSING
+        VkShaderModule shader_module
+            = vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
 
-    if ( !uploaded_scene_mesh_buffer_opt ) {
-        log::error( "[RACECAR] Failed to upload scene mesh buffers" );
-    }
+        UniformBuffer ub_camera = create_uniform_buffer<ub_data::Camera>(
+            ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+        UniformBuffer ub_debug = create_uniform_buffer<ub_data::Debug>(
+            ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
-    scene_mesh.mesh_buffers = uploaded_scene_mesh_buffer_opt.value();
-
-    // SHADER LOADING/PROCESSING
-    std::optional<VkShaderModule> scene_shader_module_opt
-        = vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
-
-    if ( !scene_shader_module_opt ) {
-        log::error( "[RACECAR] Failed to create shader module" );
-        return EXIT_FAILURE;
-    }
-
-    VkShaderModule& scene_shader_module = scene_shader_module_opt.value();
-
-    auto camera_buffer_opt = create_uniform_buffer<uniform_buffer::Camera>(
-        ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-    if ( !camera_buffer_opt ) {
-        log::error( "[RACECAR] Failed to create camera uniform buffer!" );
-        return EXIT_FAILURE;
-    }
-    UniformBuffer<uniform_buffer::Camera>& camera_buffer = camera_buffer_opt.value();
-
-    auto debug_buffer_opt = create_uniform_buffer<uniform_buffer::Debug>(
-        ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-    if ( !debug_buffer_opt ) {
-        log::error( "[RACECAR] Failed to create debug uniform buffer!" );
-        return EXIT_FAILURE;
-    }
-    UniformBuffer<uniform_buffer::Debug>& debug_buffer = debug_buffer_opt.value();
-
-    auto uniform_desc_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
-
-    if ( !uniform_desc_set_opt ) {
-        log::error( "[RACECAR] Failed to generate uniform descriptor set" );
-        return EXIT_FAILURE;
-    }
-
-    engine::DescriptorSet& uniform_desc_set = uniform_desc_set_opt.value();
-
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set,
-        camera_buffer.buffer( engine.get_frame_index() ).handle, 0,
-        sizeof( uniform_buffer::Camera ) );
-
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set,
-        debug_buffer.buffer( engine.get_frame_index() ).handle, 1,
-        sizeof( uniform_buffer::Debug ) );
-
-    // Simple set up for linear sampler
-    VkSampler nearest_sampler = VK_NULL_HANDLE;
-    {
-        VkSamplerCreateInfo sampler_nearest_create_info = {
-            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .magFilter = VK_FILTER_NEAREST,
-            .minFilter = VK_FILTER_NEAREST,
-        };
-
-        if ( vkCreateSampler(
-                 ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &nearest_sampler ) ) {
-            log::error( "[RACECAR] Failed to create sampler" );
-            return EXIT_FAILURE;
-        }
-    }
-
-    ctx.vulkan.destructor_stack.push( ctx.vulkan.device, nearest_sampler, vkDestroySampler );
-
-    std::vector<VkSampler> samplers = { nearest_sampler };
-
-    auto sampler_descriptor_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
-            VK_DESCRIPTOR_TYPE_SAMPLER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
-
-    if ( !sampler_descriptor_set_opt ) {
-        log::error( "[RACECAR] Failed to generate texture descriptor set" );
-        return EXIT_FAILURE;
-    }
-
-    engine::DescriptorSet& sampler_descriptor_opt = sampler_descriptor_set_opt.value();
-
-    size_t num_materials = scene.materials.size();
-    std::vector<engine::DescriptorSet> material_descriptor_sets( num_materials );
-
-    for ( size_t i = 0; i < num_materials; i++ ) {
-        // generate a separate texture descriptor set for each of the materials
-        auto textures_descriptor_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set( ctx.vulkan,
+            engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-        if ( !textures_descriptor_set_opt ) {
-            log::error( "[RACECAR] Failed to generate texture descriptor set" );
-            return EXIT_FAILURE;
+        {
+            VkBuffer handle = ub_camera.buffer( engine.get_frame_index() ).handle;
+            engine::update_descriptor_set_uniform(
+                ctx.vulkan, engine, uniform_desc_set, handle, 0, sizeof( ub_data::Camera ) );
+            engine::update_descriptor_set_uniform(
+                ctx.vulkan, engine, uniform_desc_set, handle, 1, sizeof( ub_data::Debug ) );
         }
 
-        material_descriptor_sets[i] = textures_descriptor_set_opt.value();
-    }
+        // Simple set up for linear sampler
+        VkSampler nearest_sampler = VK_NULL_HANDLE;
+        {
+            VkSamplerCreateInfo sampler_nearest_create_info = {
+                .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                .magFilter = VK_FILTER_NEAREST,
+                .minFilter = VK_FILTER_NEAREST,
+            };
 
-    std::optional<engine::Pipeline> scene_pipeline_opt
-        = create_gfx_pipeline( engine, ctx.vulkan, scene_mesh,
+            vk::check( vkCreateSampler( ctx.vulkan.device, &sampler_nearest_create_info, nullptr,
+                           &nearest_sampler ),
+                "Failed to create sampler" );
+            ctx.vulkan.destructor_stack.push(
+                ctx.vulkan.device, nearest_sampler, vkDestroySampler );
+        }
+
+        engine::DescriptorSet sampler_desc_set
+            = engine::generate_descriptor_set( ctx.vulkan, engine,
+                { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
+                    VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER },
+                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+        size_t num_materials = scene.materials.size();
+        std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
+
+        for ( size_t i = 0; i < num_materials; i++ ) {
+            // Generate a separate texture descriptor set for each of the materials
+            material_desc_sets[i] = engine::generate_descriptor_set( ctx.vulkan, engine,
+                { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+        }
+
+        engine::Pipeline pipeline = create_gfx_pipeline( engine, ctx.vulkan, mesh,
             {
                 uniform_desc_set.layouts[engine.get_frame_index()],
-
                 // this is fine: currently, each of our texture sets share the same layout,
                 // so we can just pass in one layout into the pipeline and then bind a
                 // different descriptorset for each draw_task
-                material_descriptor_sets[0].layouts[engine.get_frame_index()],
-                sampler_descriptor_opt.layouts[engine.get_frame_index()],
+                material_desc_sets[0].layouts[engine.get_frame_index()],
+                sampler_desc_set.layouts[engine.get_frame_index()],
             },
-            scene_shader_module );
+            shader_module );
 
-    if ( !scene_pipeline_opt ) {
-        log::error( "[Engine] Failed to create pipeline" );
-        return EXIT_FAILURE;
-    }
+        std::vector<scene::Texture>& material_textures = scene.textures;
+        engine::TaskList task_list;
+        engine::GfxTask main_gfx_task = {
+            .clear_screen = true,
+            .render_target_is_swapchain = true,
+            .extent = engine.swapchain.extent,
+        };
 
-    engine::Pipeline& scene_pipeline = scene_pipeline_opt.value();
+        for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
+            if ( !node->mesh.has_value() ) {
+                continue;
+            }
 
-    std::vector<scene::Texture>& material_textures = scene.textures;
-    engine::TaskList task_list;
-
-    engine::GfxTask main_draw = {
-        .clear_screen = true,
-        .render_target_is_swapchain = true,
-        .extent = engine.swapchain.extent,
-    };
-
-    for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
-        if ( node->mesh.has_value() ) {
-            const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
-
-            for ( const scene::Primitive& prim : mesh->primitives ) {
+            for ( const scene::Primitive& primitive : node->mesh.value()->primitives ) {
                 const scene::Material& current_material
-                    = scene.materials[static_cast<size_t>( prim.material_id )];
+                    = scene.materials[static_cast<size_t>( primitive.material_id )];
 
                 std::vector<std::optional<scene::Texture>> textures_needed;
 
@@ -257,104 +174,122 @@ int main( int, char*[] )
                 // actually bind the texture handle to the descriptorset
                 for ( size_t i = 0; i < textures_sent.size(); i++ ) {
                     engine::update_descriptor_set_image( ctx.vulkan, engine,
-                        material_descriptor_sets[size_t( prim.material_id )], textures_sent[i],
-                        int( i ) );
+                        material_desc_sets[static_cast<size_t>( primitive.material_id )],
+                        textures_sent[i], static_cast<int>( i ) );
                 }
 
                 engine::DrawResourceDescriptor draw_descriptor
-                    = engine::DrawResourceDescriptor::from_mesh( scene_mesh, prim );
+                    = engine::DrawResourceDescriptor::from_mesh( mesh, primitive );
 
                 // give the material descriptor set to the draw task
-                main_draw.draw_tasks.push_back( {
+                main_gfx_task.draw_tasks.push_back( {
                     .draw_resource_descriptor = draw_descriptor,
-                    .descriptor_sets
-                    = { &uniform_desc_set, &material_descriptor_sets[size_t( prim.material_id )],
-                        &sampler_descriptor_opt },
-                    .pipeline = scene_pipeline,
+                    .descriptor_sets = { &uniform_desc_set,
+                        &material_desc_sets[static_cast<size_t>( primitive.material_id )],
+                        &sampler_desc_set },
+                    .pipeline = pipeline,
                 } );
             }
         }
-    }
 
-    engine::add_gfx_task( task_list, main_draw );
+        engine::add_gfx_task( task_list, main_gfx_task );
 
-    bool will_quit = false;
-    bool stop_drawing = false;
-    SDL_Event event = {};
+        bool will_quit = false;
+        bool stop_drawing = false;
+        SDL_Event event = {};
 
-    while ( !will_quit ) {
-        while ( SDL_PollEvent( &event ) ) {
-            engine::gui::process_event( &event );
-            camera::process_event( ctx, &event, engine.camera );
+        while ( !will_quit ) {
+            while ( SDL_PollEvent( &event ) ) {
+                gui::process_event( &event );
+                camera::process_event( ctx, &event, engine.camera );
 
-            if ( event.type == SDL_EVENT_QUIT ) {
-                will_quit = true;
+                if ( event.type == SDL_EVENT_QUIT ) {
+                    will_quit = true;
+                }
+
+                if ( event.type == SDL_EVENT_WINDOW_MINIMIZED ) {
+                    stop_drawing = true;
+                } else if ( event.type == SDL_EVENT_WINDOW_RESTORED ) {
+                    stop_drawing = false;
+                }
             }
 
-            if ( event.type == SDL_EVENT_WINDOW_MINIMIZED ) {
-                stop_drawing = true;
-            } else if ( event.type == SDL_EVENT_WINDOW_RESTORED ) {
-                stop_drawing = false;
+            camera::process_input( engine.camera );
+
+            // Don't draw if we're minimized
+            if ( stop_drawing ) {
+                std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+                continue;
             }
+
+            // Update camera uniform buffer
+            {
+                ub_data::Camera camera_ub = ub_camera.get_data();
+                camera::OrbitCamera& camera = engine.camera;
+
+                glm::mat4 view = camera::calculate_view_matrix( camera );
+                glm::mat4 projection = glm::perspective(
+                    camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
+                projection[1][1] *= -1;
+
+                glm::mat4 model = !gui.demo.rotate_on
+                    ? camera_ub.model
+                    : glm::rotate( camera_ub.model, gui.demo.rotate_speed, glm::vec3( 0, 1, 0 ) );
+
+                camera_ub.mvp = projection * view * model;
+                camera_ub.model = model;
+                camera_ub.inv_model = glm::inverse( model );
+                camera_ub.camera_pos = camera::calculate_eye_position( camera );
+                camera_ub.color = glm::vec3(
+                    std::sin( static_cast<float>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
+
+                ub_camera.set_data( camera_ub );
+                ub_camera.update( ctx.vulkan, engine.get_frame_index() );
+            }
+
+            // Update debug uniform buffer
+            {
+                ub_data::Debug debug_ub = {
+                    .enable_albedo_map = gui.debug.enable_albedo_map,
+                    .enable_normal_map = gui.debug.enable_normal_map,
+                    .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
+                    .normals_only = gui.debug.normals_only,
+                    .albedo_only = gui.debug.albedo_only,
+                    .roughness_metal_only = gui.debug.roughness_metal_only,
+                };
+
+                ub_debug.set_data( debug_ub );
+                ub_debug.update( ctx.vulkan, engine.get_frame_index() );
+            }
+
+            gui::update( gui );
+
+            if ( engine::execute( engine, ctx, task_list ) ) {
+                engine.rendered_frames = engine.rendered_frames + 1;
+                engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
+            }
+
+            // Make new screen visible
+            SDL_UpdateWindowSurface( ctx.window );
         }
 
-        camera::process_input( engine.camera );
-
-        // Don't draw if we're minimized
-        if ( stop_drawing ) {
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-            continue;
-        }
-
-        // Update camera uniform buffer
         {
-            uniform_buffer::Camera camera_ub = camera_buffer.get_data();
-            camera::OrbitCamera& camera = engine.camera;
-
-            glm::mat4 view = camera::calculate_view_matrix( camera );
-            glm::mat4 projection = glm::perspective(
-                camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
-            projection[1][1] *= -1;
-
-            glm::mat4 model = !gui.demo.rotate_on
-                ? camera_ub.model
-                : glm::rotate( camera_ub.model, gui.demo.rotate_speed, glm::vec3( 0, 1, 0 ) );
-
-            camera_ub.mvp = projection * view * model;
-            camera_ub.model = model;
-            camera_ub.inv_model = glm::inverse( model );
-            camera_ub.camera_pos = camera::calculate_eye_position( camera );
-            camera_ub.color = glm::vec3(
-                std::sin( static_cast<float>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
-
-            camera_buffer.set_data( camera_ub );
-            camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
+            vkDeviceWaitIdle( ctx.vulkan.device );
+            gui::free();
+            engine::free( engine );
+            ctx.vulkan.destructor_stack.execute_cleanup();
+            vk::free( ctx.vulkan );
+            sdl::free( ctx.window );
         }
-
-        // Update debug uniform buffer
-        {
-            uniform_buffer::Debug debug_ub = {
-                .enable_albedo_map = gui.debug.enable_albedo_map,
-                .enable_normal_map = gui.debug.enable_normal_map,
-                .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
-                .normals_only = gui.debug.normals_only,
-                .albedo_only = gui.debug.albedo_only,
-                .roughness_metal_only = gui.debug.roughness_metal_only,
-            };
-
-            debug_buffer.set_data( debug_ub );
-            debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        }
-
-        engine::gui::update( gui );
-
-        if ( engine::execute( engine, ctx, task_list ) ) {
-            engine.rendered_frames = engine.rendered_frames + 1;
-            engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
-        }
-
-        // Make new screen visible
-        SDL_UpdateWindowSurface( ctx.window );
+    } catch ( const Exception& ex ) {
+        log::error( "[RACECAR] {}", ex.what() );
+        return EXIT_FAILURE;
+    } catch ( const std::exception& ex ) {
+        log::error( "[RACECAR] Caught standard exception: {}", ex.what() );
+        return EXIT_FAILURE;
+    } catch ( ... ) {
+        log::error( "[RACECAR] Caught an unknown exception" );
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

@@ -4,7 +4,7 @@
 
 namespace racecar::engine {
 
-bool draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
+void draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
     const VkExtent2D extent )
 {
     vkCmdBindPipeline( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.handle );
@@ -32,7 +32,7 @@ bool draw( const engine::State& engine, const DrawTask& draw_task, const VkComma
 
         vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
             draw_task.pipeline.layout, static_cast<uint32_t>( i ), 1,
-            &descriptor_set->descriptor_sets[engine.get_frame_index()], 0, nullptr );
+            &descriptor_set->handles[engine.get_frame_index()], 0, nullptr );
     }
 
     vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER,
@@ -46,27 +46,19 @@ bool draw( const engine::State& engine, const DrawTask& draw_task, const VkComma
     vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_descriptor.index_count, 1,
         uint32_t( draw_task.draw_resource_descriptor.first_index ),
         draw_task.draw_resource_descriptor.index_buffer_offset, 0 );
-
-    return true;
 }
 
 DrawResourceDescriptor DrawResourceDescriptor::from_mesh(
-    const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive )
+    const geometry::Mesh& mesh, const scene::Primitive& primitive )
 {
     engine::DrawResourceDescriptor draw_mesh_desc = {
-        .vertex_buffers = { mesh.mesh_buffers.vertex_buffer.value().handle },
-        .index_buffer = mesh.mesh_buffers.index_buffer.value().handle,
+        .vertex_buffers = { mesh.buffers.vertex_buffer.handle },
+        .index_buffer = mesh.buffers.index_buffer.handle,
         .vertex_buffer_offsets = { 0 },
-        .index_buffer_offset = 0,
-        .first_index = 0,
-        .index_count = static_cast<uint32_t>( mesh.indices.size() ),
+        .index_buffer_offset = primitive.vertex_offset,
+        .first_index = primitive.ind_offset,
+        .index_count = static_cast<uint32_t>( primitive.ind_count ),
     };
-
-    if ( primitive.has_value() ) {
-        draw_mesh_desc.first_index = primitive->ind_offset;
-        draw_mesh_desc.index_buffer_offset = primitive->vertex_offset;
-        draw_mesh_desc.index_count = static_cast<uint32_t>( primitive->ind_count );
-    }
 
     return draw_mesh_desc;
 }
