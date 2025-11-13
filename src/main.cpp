@@ -31,22 +31,16 @@ constexpr std::string_view GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf";
 int main( int, char*[] )
 {
     Context ctx;
+    engine::State engine;
+    gui::Gui gui;
 
     try {
         ctx.window = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, USE_FULLSCREEN ),
         ctx.vulkan = vk::initialize( ctx.window );
 
-        engine::State engine = engine::initialize( ctx );
-        gui::Gui gui = gui::initialize( ctx, engine );
+        engine = engine::initialize( ctx );
+        gui = gui::initialize( ctx, engine );
 
-        {
-            vkDeviceWaitIdle( ctx.vulkan.device );
-            gui::free();
-            engine::free( engine );
-            ctx.vulkan.destructor_stack.execute_cleanup();
-            vk::free( ctx.vulkan );
-            sdl::free( ctx.window );
-        }
     } catch ( const Exception& ex ) {
         log::error( "[RACECAR] {}", ex.what() );
         return EXIT_FAILURE;
@@ -57,8 +51,6 @@ int main( int, char*[] )
         log::error( "[RACECAR] Caught an unknown exception" );
         return EXIT_FAILURE;
     }
-
-    return EXIT_SUCCESS;
 
     // SCENE LOADING/PROCESSING
     scene::Scene scene;
@@ -284,7 +276,7 @@ int main( int, char*[] )
 
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
-            engine::gui::process_event( &event );
+            gui::process_event( &event );
             camera::process_event( ctx, &event, engine.camera );
 
             if ( event.type == SDL_EVENT_QUIT ) {
@@ -346,7 +338,7 @@ int main( int, char*[] )
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        engine::gui::update( gui );
+        gui::update( gui );
 
         if ( engine::execute( engine, ctx, task_list ) ) {
             engine.rendered_frames = engine.rendered_frames + 1;
@@ -356,6 +348,13 @@ int main( int, char*[] )
         // Make new screen visible
         SDL_UpdateWindowSurface( ctx.window );
     }
+
+    vkDeviceWaitIdle( ctx.vulkan.device );
+    gui::free();
+    engine::free( engine );
+    ctx.vulkan.destructor_stack.execute_cleanup();
+    vk::free( ctx.vulkan );
+    sdl::free( ctx.window );
 
     return EXIT_SUCCESS;
 }
