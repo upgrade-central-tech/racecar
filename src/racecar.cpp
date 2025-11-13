@@ -39,15 +39,8 @@ void run( bool use_fullscreen )
     geometry::Mesh scene_mesh;
     scene::load_gltf(
         ctx.vulkan, engine, GLTF_FILE_PATH, scene, scene_mesh.vertices, scene_mesh.indices );
-
-    std::optional<geometry::GPUMeshBuffers> uploaded_scene_mesh_buffer_opt
+    scene_mesh.mesh_buffers
         = geometry::upload_mesh( ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
-
-    if ( !uploaded_scene_mesh_buffer_opt ) {
-        log::error( "[RACECAR] Failed to upload scene mesh buffers" );
-    }
-
-    scene_mesh.mesh_buffers = uploaded_scene_mesh_buffer_opt.value();
 
     // SHADER LOADING/PROCESSING
     std::optional<VkShaderModule> scene_shader_module_opt
