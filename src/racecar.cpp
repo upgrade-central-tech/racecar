@@ -27,14 +27,11 @@ static constexpr std::string_view GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf
 void run( bool use_fullscreen )
 {
     Context ctx;
-    engine::State engine;
-    gui::Gui gui;
-
     ctx.window = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, use_fullscreen ),
     ctx.vulkan = vk::initialize( ctx.window );
 
-    engine = engine::initialize( ctx );
-    gui = gui::initialize( ctx, engine );
+    engine::State engine = engine::initialize( ctx );
+    gui::Gui gui = gui::initialize( ctx, engine );
 
     // SCENE LOADING/PROCESSING
     scene::Scene scene;
@@ -43,8 +40,7 @@ void run( bool use_fullscreen )
     {
         if ( !scene::load_gltf( ctx.vulkan, engine, std::string( GLTF_FILE_PATH ), scene,
                  scene_mesh.vertices, scene_mesh.indices ) ) {
-            throw Exception(
-                "[RACECAR] Failed to load glTF from file path \"{}\"", GLTF_FILE_PATH );
+            throw Exception( "Failed to load glTF from file path \"{}\"", GLTF_FILE_PATH );
         }
 
         geometry::generate_tangents( scene_mesh );
@@ -64,7 +60,7 @@ void run( bool use_fullscreen )
         = vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
 
     if ( !scene_shader_module_opt ) {
-        throw Exception( "[RACECAR] Failed to create shader module" );
+        throw Exception( "Failed to create shader module" );
     }
 
     VkShaderModule& scene_shader_module = scene_shader_module_opt.value();
@@ -72,14 +68,14 @@ void run( bool use_fullscreen )
     auto camera_buffer_opt = create_uniform_buffer<uniform_buffer::Camera>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
     if ( !camera_buffer_opt ) {
-        throw Exception( "[RACECAR] Failed to create camera uniform buffer!" );
+        throw Exception( "Failed to create camera uniform buffer!" );
     }
     UniformBuffer<uniform_buffer::Camera>& camera_buffer = camera_buffer_opt.value();
 
     auto debug_buffer_opt = create_uniform_buffer<uniform_buffer::Debug>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
     if ( !debug_buffer_opt ) {
-        throw Exception( "[RACECAR] Failed to create debug uniform buffer!" );
+        throw Exception( "Failed to create debug uniform buffer!" );
     }
     UniformBuffer<uniform_buffer::Debug>& debug_buffer = debug_buffer_opt.value();
 
@@ -88,7 +84,7 @@ void run( bool use_fullscreen )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     if ( !uniform_desc_set_opt ) {
-        throw Exception( "[RACECAR] Failed to generate uniform descriptor set" );
+        throw Exception( "Failed to generate uniform descriptor set" );
     }
 
     engine::DescriptorSet& uniform_desc_set = uniform_desc_set_opt.value();
@@ -112,7 +108,7 @@ void run( bool use_fullscreen )
 
         if ( vkCreateSampler(
                  ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &nearest_sampler ) ) {
-            throw Exception( "[RACECAR] Failed to create sampler" );
+            throw Exception( "Failed to create sampler" );
         }
     }
 
@@ -126,7 +122,7 @@ void run( bool use_fullscreen )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     if ( !sampler_descriptor_set_opt ) {
-        throw Exception( "[RACECAR] Failed to generate texture descriptor set" );
+        throw Exception( "Failed to generate texture descriptor set" );
     }
 
     engine::DescriptorSet& sampler_descriptor_opt = sampler_descriptor_set_opt.value();
@@ -142,7 +138,7 @@ void run( bool use_fullscreen )
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
         if ( !textures_descriptor_set_opt ) {
-            throw Exception( "[RACECAR] Failed to generate texture descriptor set" );
+            throw Exception( "Failed to generate texture descriptor set" );
         }
 
         material_descriptor_sets[i] = textures_descriptor_set_opt.value();
