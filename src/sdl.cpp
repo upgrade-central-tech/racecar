@@ -1,11 +1,13 @@
 #include "sdl.hpp"
 
+#include "log.hpp"
+
 namespace racecar::sdl {
 
 std::optional<SDL_Window*> initialize( int screen_w, int screen_h, bool fullscreen )
 {
     if ( !SDL_Init( SDL_INIT_VIDEO ) ) {
-        SDL_Log( "[SDL] Could not initialize: %s", SDL_GetError() );
+        log::error( "[SDL] Could not initialize: {}", SDL_GetError() );
         return {};
     }
 
@@ -16,7 +18,7 @@ std::optional<SDL_Window*> initialize( int screen_w, int screen_h, bool fullscre
     }
 
     if ( SDL_Window* window = SDL_CreateWindow( "RACECAR", screen_w, screen_h, flags ); !window ) {
-        SDL_Log( "[SDL] Could not create window: %s", SDL_GetError() );
+        log::error( "[SDL] Could not create window: {}", SDL_GetError() );
         return {};
     } else {
         return window;

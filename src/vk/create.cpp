@@ -1,5 +1,7 @@
 #include "create.hpp"
 
+#include "../log.hpp"
+
 #include <SDL3/SDL.h>
 
 #include <fstream>
@@ -148,14 +150,14 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_info(
 std::optional<VkShaderModule> shader_module( Common& vulkan, std::filesystem::path shader_path )
 {
     if ( !std::filesystem::exists( shader_path ) ) {
-        SDL_Log( "[Shader] \"%s\" does not exist!", shader_path.string().c_str() );
+        log::error( "[Shader] \"{}\" does not exist!", shader_path.string().c_str() );
         return {};
     }
 
     std::ifstream file( shader_path.string(), std::ios::ate | std::ios::binary );
 
     if ( !file.is_open() ) {
-        SDL_Log( "[Shader] Could not open file \"%s\"",
+        log::error( "[Shader] Could not open file \"{}\"",
             std::filesystem::absolute( shader_path ).string().c_str() );
         return {};
     }

@@ -1,5 +1,6 @@
 #include "rwimage.hpp"
 
+#include "../log.hpp"
 #include "images.hpp"
 
 #include <SDL3/SDL.h>
@@ -15,8 +16,8 @@ std::optional<RWImage> create_rwimage( vk::Common& vulkan, const engine::State& 
         if ( auto allocated_image_opt
             = allocate_image( vulkan, extent, format, usage_flags, mipmapped );
             !allocated_image_opt ) {
-            SDL_Log( "[engine::create_rwimage] Failed to create AllocatedImage %zu for "
-                     "swapchain",
+            log::error( "[engine::create_rwimage] Failed to create AllocatedImage {} for "
+                        "swapchain",
                 i + 1 );
             return {};
         } else {

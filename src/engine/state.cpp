@@ -1,6 +1,7 @@
 #include "state.hpp"
 
 #include "../constants.hpp"
+#include "../log.hpp"
 #include "../vk/create.hpp"
 
 #include <algorithm>
@@ -23,7 +24,7 @@ std::optional<vkb::Swapchain> create_swapchain( SDL_Window* window, const vk::Co
         int height = 0;
 
         if ( !SDL_GetWindowSizeInPixels( window, &width, &height ) ) {
-            SDL_Log( "[SDL] SDL_GetWindowSizeInPixels: %s", SDL_GetError() );
+            log::error( "[SDL] SDL_GetWindowSizeInPixels: {}", SDL_GetError() );
             return {};
         }
 
@@ -46,13 +47,13 @@ std::optional<vkb::Swapchain> create_swapchain( SDL_Window* window, const vk::Co
 
     if ( !swapchain_ret ) {
         auto swapchain_error = static_cast<vkb::SwapchainError>( swapchain_ret.error().value() );
-        SDL_Log( "[vkb] Swapchain creation failed: %s", vkb::to_string( swapchain_error ) );
+        log::error( "[vkb] Swapchain creation failed: {}", vkb::to_string( swapchain_error ) );
         return {};
     }
 
     const vkb::Swapchain& swapchain = swapchain_ret.value();
 
-    SDL_Log( "[Engine] Initial swapchain extent: %d×%d", swapchain.extent.width,
+    log::info( "[Engine] Initial swapchain extent: {}×{}", swapchain.extent.width,
         swapchain.extent.height );
 
     return swapchain;
@@ -86,7 +87,7 @@ bool create_depth_images( State& engine, vk::Common& vulkan )
                               &depth_image.image, &depth_image.allocation, nullptr ),
             "Failed to create depth image" );
 
-        SDL_Log( "[ALLOC] Image %p", depth_image.image );
+        log::info( "Allocated depth image {}", static_cast<void*>( depth_image.image ) );
 
         VkImageViewCreateInfo depth_view_create_info = vk::create::image_view_info(
             depth_image.image_format, depth_image.image, VK_IMAGE_ASPECT_DEPTH_BIT );
@@ -178,7 +179,7 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan )
 
     if ( std::optional<vkb::Swapchain> swapchain_opt = create_swapchain( window, vulkan );
         !swapchain_opt ) {
-        SDL_Log( "[Engine] Failed to create swapchain" );
+        log::error( "[Engine] Failed to create swapchain" );
         return {};
     } else {
         engine.swapchain = std::move( swapchain_opt.value() );
@@ -186,7 +187,8 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan )
 
     if ( vkb::Result<std::vector<VkImage>> images_res = engine.swapchain.get_images();
         !images_res ) {
-        SDL_Log( "[vkb] Failed to get swapchain images: %s", images_res.error().message().c_str() );
+        log::error(
+            "[vkb] Failed to get swapchain images: {}", images_res.error().message().c_str() );
         return {};
     } else {
         engine.swapchain_images = std::move( images_res.value() );
@@ -194,7 +196,7 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan )
 
     if ( vkb::Result<std::vector<VkImageView>> image_views_res = engine.swapchain.get_image_views();
         !image_views_res ) {
-        SDL_Log( "[vkb] Failed to get swapchain image views: %s",
+        log::error( "[vkb] Failed to get swapchain image views: {}",
             image_views_res.error().message().c_str() );
         return {};
     } else {
@@ -203,7 +205,7 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan )
 
     VkCommandPoolCreateInfo graphics_command_pool_info = vk::create::command_pool_info(
         vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
-        
+
     RACECAR_VK_CHECK( vkCreateCommandPool(
                           vulkan.device, &graphics_command_pool_info, nullptr, &engine.cmd_pool ),
         "Failed to create command pool" );
@@ -211,27 +213,27 @@ std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan )
     vulkan.destructor_stack.push( vulkan.device, engine.cmd_pool, vkDestroyCommandPool );
 
     if ( !create_frame_data( engine, vulkan ) ) {
-        SDL_Log( "[Engine] Failed to create frame data" );
+        log::error( "[Engine] Failed to create frame data" );
         return {};
     }
 
     if ( !create_depth_images( engine, vulkan ) ) {
-        SDL_Log( "[Engine] Failed to create depth images/views" );
+        log::error( "[Engine] Failed to create depth images/views" );
         return {};
     }
 
     if ( !create_immediate_commands( engine.immediate_submit, vulkan ) ) {
-        SDL_Log( "[Engine] Failed to create immediate command buffer" );
+        log::error( "[Engine] Failed to create immediate command buffer" );
         return {};
     }
 
     if ( !create_immediate_sync_structures( engine.immediate_submit, vulkan ) ) {
-        SDL_Log( "[Engine] Failed to create immediate command sync fence" );
+        log::error( "[Engine] Failed to create immediate command sync fence" );
         return {};
     }
 
     if ( !create_descriptor_system( vulkan, engine.frame_overlap, engine.descriptor_system ) ) {
-        SDL_Log( "[Engine] Failed to create descriptor system" );
+        log::error( "[Engine] Failed to create descriptor system" );
         return {};
     }
 
