@@ -31,38 +31,28 @@ constexpr std::string_view GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf";
 int main( int, char*[] )
 {
     Context ctx;
-    bool success = true;
 
     try {
-        ctx = {
-            .window = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, USE_FULLSCREEN ),
-        };
 
+        ctx.window = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, USE_FULLSCREEN ),
+        ctx.vulkan = vk::initialize( ctx.window );
+
+        vkDeviceWaitIdle( ctx.vulkan.device );
+
+        vk::free( ctx.vulkan );
+        sdl::free( ctx.window );
     } catch ( const Exception& ex ) {
         log::error( "[RACECAR] {}", ex.what() );
-        success = false;
+        return EXIT_FAILURE;
     } catch ( const std::exception& ex ) {
         log::error( "[RACECAR] Caught standard exception: {}", ex.what() );
-        success = false;
+        return EXIT_FAILURE;
     } catch ( ... ) {
         log::error( "[RACECAR] Caught an unknown exception" );
-        success = false;
-    }
-
-    sdl::free( ctx.window );
-
-    if ( success ) {
-        return EXIT_SUCCESS;
-    } else {
         return EXIT_FAILURE;
     }
 
-    if ( std::optional<vk::Common> vulkan_opt = vk::initialize( ctx.window ); !vulkan_opt ) {
-        log::error( "[RACECAR] Could not initialize Vulkan" );
-        return EXIT_FAILURE;
-    } else {
-        ctx.vulkan = vulkan_opt.value();
-    }
+    return EXIT_SUCCESS;
 
     std::optional<engine::State> engine_opt = engine::initialize( ctx.window, ctx.vulkan );
 
@@ -379,11 +369,8 @@ int main( int, char*[] )
         SDL_UpdateWindowSurface( ctx.window );
     }
 
-    vkDeviceWaitIdle( ctx.vulkan.device );
-
     engine::gui::free();
     engine::free( engine, ctx.vulkan );
-    vk::free( ctx.vulkan );
 
     return EXIT_SUCCESS;
 }

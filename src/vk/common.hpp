@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../engine/destructor_stack.hpp"
+#include "../exception.hpp"
 #include "../log.hpp"
 #include "vma.hpp"
 
@@ -8,7 +9,7 @@
 #include <volk.h>
 #include <VkBootstrap.h>
 
-#include <optional>
+#include <string_view>
 
 /// Custom define based on VK_CHECK.
 #define RACECAR_VK_CHECK( vk_fn, message )                                                         \
@@ -20,6 +21,13 @@
     } while ( 0 )
 
 namespace racecar::vk {
+
+inline constexpr void check( VkResult result, std::string_view message )
+{
+    if ( result ) {
+        throw Exception( "[Vulkan] {} ({})", message, static_cast<int>( result ) );
+    }
+}
 
 /// Binding defines.
 namespace binding {
@@ -43,7 +51,7 @@ struct Common {
     DestructorStack destructor_stack;
 };
 
-std::optional<Common> initialize( SDL_Window* window );
+Common initialize( SDL_Window* window );
 void free( Common& vulkan );
 
 } // namespace racecar::vk
