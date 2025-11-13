@@ -23,7 +23,12 @@
 
 namespace racecar {
 
-static constexpr std::string_view GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf";
+namespace {
+
+constexpr std::string_view GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf";
+constexpr std::string_view SHADER_MODULE_PATH = "../shaders/pbr/pbr.spv";
+
+}
 
 void run( bool use_fullscreen )
 {
@@ -43,14 +48,8 @@ void run( bool use_fullscreen )
         = geometry::upload_mesh( ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
 
     // SHADER LOADING/PROCESSING
-    std::optional<VkShaderModule> scene_shader_module_opt
-        = vk::create::shader_module( ctx.vulkan, "../shaders/pbr/pbr.spv" );
-
-    if ( !scene_shader_module_opt ) {
-        throw Exception( "Failed to create shader module" );
-    }
-
-    VkShaderModule& scene_shader_module = scene_shader_module_opt.value();
+    VkShaderModule scene_shader_module
+        = vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH );
 
     UniformBuffer camera_buffer = create_uniform_buffer<uniform_buffer::Camera>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
