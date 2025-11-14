@@ -60,10 +60,8 @@ void run( bool use_fullscreen )
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set,
-        camera_buffer.buffer( engine.get_frame_index() ).handle, 0, sizeof( ub_data::Camera ) );
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set,
-        debug_buffer.buffer( engine.get_frame_index() ).handle, 1, sizeof( ub_data::Debug ) );
+    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, camera_buffer, 0 );
+    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, debug_buffer, 1 );
 
     // Simple set up for linear sampler
     VkSampler nearest_sampler = VK_NULL_HANDLE;

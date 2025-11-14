@@ -36,29 +36,6 @@ DescriptorSet generate_descriptor_set( vk::Common& vulkan, const engine::State& 
     return desc_set;
 }
 
-void update_descriptor_set_uniform( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
-    VkBuffer handle, int binding_idx, VkDeviceSize range )
-{
-    for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        VkDescriptorBufferInfo buffer_info = {
-            .buffer = handle,
-            .offset = 0,
-            .range = range,
-        };
-
-        VkWriteDescriptorSet write = {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = desc_set.descriptor_sets[i],
-            .dstBinding = static_cast<uint32_t>( binding_idx ),
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pBufferInfo = &buffer_info,
-        };
-
-        vkUpdateDescriptorSets( vulkan.device, 1, &write, 0, nullptr );
-    }
-}
-
 void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     vk::mem::AllocatedImage img, int binding_idx )
 {
