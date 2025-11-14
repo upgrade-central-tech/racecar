@@ -60,24 +60,26 @@ void run( bool use_fullscreen )
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, debug_buffer, 1 );
 
     // Simple set up for linear sampler
-    VkSampler nearest_sampler = VK_NULL_HANDLE;
+    VkSampler linear_sampler = VK_NULL_HANDLE;
     {
         VkSamplerCreateInfo sampler_nearest_create_info = {
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .magFilter = VK_FILTER_NEAREST,
-            .minFilter = VK_FILTER_NEAREST,
+            .magFilter = VK_FILTER_LINEAR,
+            .minFilter = VK_FILTER_LINEAR,
         };
 
         vk::check( vkCreateSampler(
-                       ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &nearest_sampler ),
+                       ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &linear_sampler ),
             "Failed to create sampler" );
-        ctx.vulkan.destructor_stack.push( ctx.vulkan.device, nearest_sampler, vkDestroySampler );
+        ctx.vulkan.destructor_stack.push( ctx.vulkan.device, linear_sampler, vkDestroySampler );
     }
 
     engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
             VK_DESCRIPTOR_TYPE_SAMPLER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+    
+    engine::update_descriptor_set_sampler( ctx.vulkan, engine, sampler_desc_set, linear_sampler, 0 );
 
     size_t num_materials = scene.materials.size();
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
