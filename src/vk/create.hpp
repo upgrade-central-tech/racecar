@@ -20,7 +20,8 @@ VkSemaphoreCreateInfo semaphore_info();
 
 VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask );
 
-VkImageCreateInfo image_info( VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent );
+VkImageCreateInfo image_info(
+    VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags, VkExtent3D extent );
 VkImageViewCreateInfo image_view_info(
     VkFormat format, VkImage image, VkImageAspectFlags aspect_flags );
 

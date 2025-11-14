@@ -59,11 +59,12 @@ VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask 
     };
 }
 
-VkImageCreateInfo image_info( VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent )
+VkImageCreateInfo image_info(
+    VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags, VkExtent3D extent )
 {
     return {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType = VK_IMAGE_TYPE_2D,
+        .imageType = image_type,
 
         .format = format,
         .extent = extent,
