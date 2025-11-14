@@ -109,83 +109,93 @@ void run( bool use_fullscreen )
         throw;
     }
 
-    std::vector<scene::Texture>& material_textures = scene.textures;
     engine::TaskList task_list;
 
-    engine::GfxTask main_draw = {
-        .clear_screen = true,
-        .render_target_is_swapchain = true,
-        .extent = engine.swapchain.extent,
-    };
+    {
+        engine::GfxTask main_gfx_task = {
+            .clear_screen = true,
+            .render_target_is_swapchain = true,
+            .extent = engine.swapchain.extent,
+        };
 
-    for ( std::unique_ptr<scene::Node>& node : scene.nodes ) {
-        if ( node->mesh.has_value() ) {
-            const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
+        for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
+            if ( node->mesh.has_value() ) {
+                const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
 
-            for ( const scene::Primitive& prim : mesh->primitives ) {
-                const scene::Material& current_material
-                    = scene.materials[static_cast<size_t>( prim.material_id )];
+                for ( const scene::Primitive& prim : mesh->primitives ) {
+                    const scene::Material& current_material
+                        = scene.materials[static_cast<size_t>( prim.material_id )];
+                    std::vector<std::optional<scene::Texture>> textures_needed;
 
-                std::vector<std::optional<scene::Texture>> textures_needed;
+                    switch ( current_material.type ) {
+                    case scene::MaterialType::PBR_ALBEDO_MAP: {
+                        std::optional<int> albedo_index = current_material.base_color_texture_index;
+                        std::optional<int> normal_index = current_material.normal_texture_index;
+                        std::optional<int> metallic_roughness_index
+                            = current_material.metallic_roughness_texture_index;
 
-                if ( current_material.type == scene::MaterialType::PBR_ALBEDO_MAP ) {
-                    std::optional<int> albedo_index = current_material.base_color_texture_index;
-                    std::optional<int> normal_index = current_material.normal_texture_index;
-                    std::optional<int> metallic_roughness_index
-                        = current_material.metallic_roughness_texture_index;
+                        textures_needed.push_back( albedo_index
+                                ? std::optional { ( scene
+                                          .textures[static_cast<size_t>( albedo_index.value() )] ) }
+                                : std::nullopt );
+                        textures_needed.push_back( normal_index
+                                ? std::optional { ( scene
+                                          .textures[static_cast<size_t>( normal_index.value() )] ) }
+                                : std::nullopt );
+                        textures_needed.push_back( metallic_roughness_index
+                                ? std::optional { ( scene.textures[static_cast<size_t>(
+                                      metallic_roughness_index.value() )] ) }
+                                : std::nullopt );
 
-                    textures_needed.push_back( albedo_index
-                            ? std::optional { (
-                                  material_textures[static_cast<size_t>( albedo_index.value() )] ) }
-                            : std::nullopt );
-                    textures_needed.push_back( normal_index
-                            ? std::optional { (
-                                  material_textures[static_cast<size_t>( normal_index.value() )] ) }
-                            : std::nullopt );
-                    textures_needed.push_back( metallic_roughness_index
-                            ? std::optional { ( material_textures[static_cast<size_t>(
-                                  metallic_roughness_index.value() )] ) }
-                            : std::nullopt );
-
-                } // We would continue this if-else chain for all material pipelines based on
-                  // needed textures.
-
-                // TODO: Not yet connected with a layout
-                if ( scene.hdri_index.has_value() ) {
-                    textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
-                } else {
-                    textures_needed.push_back( std::nullopt );
-                }
-
-                std::vector<vk::mem::AllocatedImage> textures_sent;
-                for ( std::optional<scene::Texture>& texture : textures_needed ) {
-                    if ( texture && ( textures_sent.size() < vk::binding::MAX_IMAGES_BINDED ) ) {
-                        textures_sent.push_back( texture->data.value() );
+                        break;
                     }
-                }
 
-                // actually bind the texture handle to the descriptorset
-                for ( size_t i = 0; i < textures_sent.size(); i++ ) {
-                    engine::update_descriptor_set_image( ctx.vulkan, engine,
-                        material_desc_sets[size_t( prim.material_id )], textures_sent[i],
-                        int( i ) );
-                }
+                    default:
+                        throw Exception( "[main_gfx_task] Unhandled material type" );
+                    }
 
-                engine::DrawResourceDescriptor draw_descriptor
-                    = engine::DrawResourceDescriptor::from_mesh( scene_mesh, prim );
+                    // TODO: Not yet connected with a layout
+                    if ( scene.hdri_index.has_value() ) {
+                        textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
+                    } else {
+                        textures_needed.push_back( std::nullopt );
+                    }
 
-                // give the material descriptor set to the draw task
-                main_draw.draw_tasks.push_back( {
+                    std::vector<vk::mem::AllocatedImage> textures_sent;
+
+                    for ( std::optional<scene::Texture>& texture : textures_needed ) {
+                        if ( texture
+                            && ( textures_sent.size() < vk::binding::MAX_IMAGES_BINDED ) ) {
+                            textures_sent.push_back( texture->data.value() );
+                        }
+                    }
+
+                    // Actually bind the texture handle to the descriptorset
+                    for ( size_t i = 0; i < textures_sent.size(); i++ ) {
+                        engine::update_descriptor_set_image( ctx.vulkan, engine,
+                            material_desc_sets[static_cast<size_t>( prim.material_id )],
+                            textures_sent[i], static_cast<int>( i ) );
+                    }
+
+                    engine::DrawResourceDescriptor draw_descriptor
+                        = engine::DrawResourceDescriptor::from_mesh( scene_mesh, prim );
+
+                    // give the material descriptor set to the draw task
+                    main_gfx_task.draw_tasks.push_back( {
                     .draw_resource_descriptor = draw_descriptor,
-                    .descriptor_sets = { &uniform_desc_set,
-                        &material_desc_sets[size_t( prim.material_id )], &sampler_desc_set },
+                    .descriptor_sets = {
+                        &uniform_desc_set,
+                        &material_desc_sets[static_cast<size_t>( prim.material_id )],
+                        &sampler_desc_set,
+                    },
                     .pipeline = scene_pipeline,
                 } );
+                }
             }
         }
-    }
 
-    engine::add_gfx_task( task_list, main_draw );
+        engine::add_gfx_task( task_list, main_gfx_task );
+    }
 
     bool will_quit = false;
     bool stop_drawing = false;
