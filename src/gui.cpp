@@ -103,10 +103,11 @@ void update( Gui& gui )
         ImGui::SeparatorText( "Debug" );
         ImGui::Checkbox( "Enable albedo map", &gui.debug.enable_albedo_map );
         ImGui::Checkbox( "Enable normal map", &gui.debug.enable_normal_map );
-        ImGui::Checkbox( "Enable roughess + metallic map", &gui.debug.enable_roughness_metal_map );
+        ImGui::Checkbox( "Enable roughness + metallic map", &gui.debug.enable_roughness_metal_map );
 
         ImGui::Checkbox( "Turn on albedo only", &gui.debug.albedo_only );
         ImGui::Checkbox( "Turn on normals only", &gui.debug.normals_only );
+        ImGui::Checkbox( "Turn on roughness + metallic only", &gui.debug.roughness_metal_only );
 
         ImGui::SeparatorText( "Demo Settings" );
         ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );
