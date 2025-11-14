@@ -234,7 +234,7 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
         texture.data = engine::create_image( vulkan, engine,
             static_cast<void*>( loaded_img.image.data() ),
             { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
-            image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+            image_format, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT, false );
         if ( !texture.data ) {
             log::error( "[Scene] GLTF loading: Failed to load texture onto the GPU" );
         }
@@ -522,7 +522,7 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
         = get_vk_format( hdri.bits_per_channel, hdri.num_channels, ColorSpace::SFLOAT );
     hdri.data = engine::create_image( vulkan, engine, static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
-        image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+        image_format, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     scene.textures.push_back( hdri );
     scene.hdri_index = scene.textures.size() - 1;

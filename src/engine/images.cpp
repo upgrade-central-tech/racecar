@@ -9,7 +9,8 @@ namespace racecar::engine {
 namespace {
 
 vk::mem::AllocatedImage create_allocated_image( vk::Common& vulkan, engine::State& engine,
-    void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage, bool mipmapped )
+    void* data, VkExtent3D extent, VkFormat format, VkImageType image_type, VkImageUsageFlags usage,
+    bool mipmapped )
 {
     const size_t data_size
         = extent.depth * extent.width * extent.height * vk::utility::bytes_from_format( format );
@@ -22,7 +23,7 @@ vk::mem::AllocatedImage create_allocated_image( vk::Common& vulkan, engine::Stat
 
         std::memcpy( upload_buffer.info.pMappedData, data, data_size );
 
-        new_image = allocate_image( vulkan, extent, format,
+        new_image = allocate_image( vulkan, extent, format, image_type,
             usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped );
 
         engine::immediate_submit(
@@ -63,23 +64,24 @@ vk::mem::AllocatedImage create_allocated_image( vk::Common& vulkan, engine::Stat
 }
 
 vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine, void* data,
-    VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped )
+    VkExtent3D size, VkFormat format, VkImageType image_type, VkImageUsageFlags usage,
+    bool mipmapped )
 {
-    vk::mem::AllocatedImage allocated_image
-        = create_allocated_image( vulkan, engine, data, size, format, usage, mipmapped );
+    vk::mem::AllocatedImage allocated_image = create_allocated_image(
+        vulkan, engine, data, size, format, image_type, usage, mipmapped );
 
     return allocated_image;
 };
 
 vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
-    VkImageUsageFlags usage, bool mipmapped )
+    VkImageType image_type, VkImageUsageFlags usage, bool mipmapped )
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
         .image_format = format,
     };
 
-    VkImageCreateInfo image_info = vk::create::image_info( format, usage, extent );
+    VkImageCreateInfo image_info = vk::create::image_info( format, image_type, usage, extent );
 
     if ( mipmapped ) {
         image_info.mipLevels = static_cast<uint32_t>( std::floor(
