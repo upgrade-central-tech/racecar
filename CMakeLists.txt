@@ -17,8 +17,10 @@ set(IMGUI_DIR "${THIRD_PARTY_DIR}/imgui")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
+  ${SRC_DIR}/racecar.cpp
   ${SRC_DIR}/sdl.cpp
   ${SRC_DIR}/orbit_camera.cpp
+  ${SRC_DIR}/gui.cpp
 
   ${VK_DIR}/common.cpp
   ${VK_DIR}/create.cpp
@@ -35,7 +37,6 @@ add_executable(racecar
   ${ENGINE_DIR}/destructor_stack.cpp
   ${ENGINE_DIR}/descriptors.cpp
   ${ENGINE_DIR}/images.cpp
-  ${ENGINE_DIR}/gui.cpp
   ${ENGINE_DIR}/pipeline_barrier.cpp
   ${ENGINE_DIR}/rwimage.cpp
   ${ENGINE_DIR}/gfx_task.cpp
