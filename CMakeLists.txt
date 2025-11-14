@@ -43,6 +43,7 @@ add_executable(racecar
   ${ENGINE_DIR}/descriptor_set.cpp
 
   ${GEOMETRY_DIR}/mesh.cpp
+  ${GEOMETRY_DIR}/procedural.cpp
 
   ${SCENE_DIR}/scene.cpp
 )

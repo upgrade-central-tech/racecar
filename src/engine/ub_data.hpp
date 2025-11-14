@@ -36,4 +36,9 @@ struct Debug {
     uint8_t p5[3];
 };
 
+struct RaymarchBufferData {
+    float step_size;
+    uint8_t p0[3];
+};
+
 } // namespace racecar::uniform_buffer

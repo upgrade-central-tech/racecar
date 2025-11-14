@@ -8,6 +8,7 @@
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
+#include "geometry/procedural.hpp"
 #include "gui.hpp"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
@@ -25,8 +26,8 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/sponza/Sponza.gltf";
-constexpr std::string_view SHADER_MODULE_PATH = "../shaders/pbr/pbr.spv";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/cube.glb";
+constexpr std::string_view SHADER_MODULE_PATH = "../shaders/raymarch/raymarch.spv";
 
 }
 
@@ -51,6 +52,8 @@ void run( bool use_fullscreen )
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
     UniformBuffer debug_buffer = create_uniform_buffer<ub_data::Debug>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+    // UniformBuffer raymarch_buffer = create_uniform_buffer<ub_data::RaymarchBufferData>(
+    //     ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
     engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
@@ -58,6 +61,7 @@ void run( bool use_fullscreen )
 
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, camera_buffer, 0 );
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, debug_buffer, 1 );
+    // engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, raymarch_buffer, 2 );
 
     // Simple set up for linear sampler
     VkSampler nearest_sampler = VK_NULL_HANDLE;
@@ -90,6 +94,18 @@ void run( bool use_fullscreen )
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
     }
 
+    engine::DescriptorSet raymarch_tex_sets;
+    {
+        raymarch_tex_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+        vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D( ctx.vulkan, engine );
+
+        engine::update_descriptor_set_image(
+            ctx.vulkan, engine, raymarch_tex_sets, test_data_3D, 0 );
+    }
+
     engine::Pipeline scene_pipeline;
 
     try {
@@ -101,6 +117,7 @@ void run( bool use_fullscreen )
                 // so we can just pass in one layout into the pipeline and then bind a
                 // different descriptorset for each draw_task
                 material_desc_sets[0].layouts[frame_index],
+                raymarch_tex_sets.layouts[frame_index],
                 sampler_desc_set.layouts[frame_index],
             },
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
@@ -186,6 +203,7 @@ void run( bool use_fullscreen )
                     .descriptor_sets = {
                         &uniform_desc_set,
                         &material_desc_sets[static_cast<size_t>( prim.material_id )],
+                        &raymarch_tex_sets,
                         &sampler_desc_set,
                     },
                     .pipeline = scene_pipeline,
@@ -264,6 +282,15 @@ void run( bool use_fullscreen )
             debug_buffer.set_data( debug_ub );
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
+
+        // {
+        //     ub_data::RaymarchBufferData raymarch_ub = {
+        //         .step_size = 1,
+        //     };
+
+        //     raymarch_buffer.set_data( raymarch_ub );
+        //     raymarch_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        // }
 
         gui::update( gui );
 
