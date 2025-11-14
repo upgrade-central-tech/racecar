@@ -5,30 +5,32 @@
 
 namespace racecar::engine {
 
-std::optional<DescriptorSet> generate_descriptor_set( const vk::Common& vulkan,
-    const engine::State& engine, const std::vector<VkDescriptorType>& types,
-    VkShaderStageFlags shader_stage_flags )
+DescriptorSet generate_descriptor_set( vk::Common& vulkan, const engine::State& engine,
+    const std::vector<VkDescriptorType>& types, VkShaderStageFlags shader_stage_flags )
 {
-    DescriptorSet desc_set;
+    const size_t num_frames = engine.swapchain_images.size();
 
-    engine::DescriptorLayoutBuilder builder;
-    size_t num_frames = engine.swapchain_images.size();
+    DescriptorSet desc_set = {
+        .descriptor_sets = std::vector<VkDescriptorSet>( num_frames ),
+        .layouts = std::vector<VkDescriptorSetLayout>( num_frames ),
+    };
 
-    desc_set.layouts = std::vector<VkDescriptorSetLayout>( num_frames );
-    desc_set.descriptor_sets = std::vector<VkDescriptorSet>( num_frames );
+    try {
+        engine::DescriptorLayoutBuilder builder;
 
-    for ( uint32_t i = 0; i < static_cast<uint32_t>( types.size() ); ++i ) {
-        engine::descriptor_layout_builder::add_binding( builder, i, types[i] );
-    }
+        for ( uint32_t i = 0; i < static_cast<uint32_t>( types.size() ); ++i ) {
+            engine::descriptor_layout_builder::add_binding( builder, i, types[i] );
+        }
 
-    for ( size_t i = 0; i < num_frames; ++i ) {
-        desc_set.layouts[i]
-            = engine::descriptor_layout_builder::build( vulkan, shader_stage_flags, builder );
-    }
-
-    for ( size_t i = 0; i < num_frames; ++i ) {
-        desc_set.descriptor_sets[i] = engine::descriptor_allocator::allocate(
-            vulkan, engine.descriptor_system.frame_allocators[i], desc_set.layouts[i] );
+        for ( size_t i = 0; i < num_frames; ++i ) {
+            desc_set.layouts[i]
+                = engine::descriptor_layout_builder::build( vulkan, shader_stage_flags, builder );
+            desc_set.descriptor_sets[i] = engine::descriptor_allocator::allocate(
+                vulkan, engine.descriptor_system.frame_allocators[i], desc_set.layouts[i] );
+        }
+    } catch ( const Exception& ex ) {
+        log::error( "[DescriptorSet] Failed to generate" );
+        throw;
     }
 
     return desc_set;

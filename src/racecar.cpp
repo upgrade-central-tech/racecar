@@ -56,19 +56,12 @@ void run( bool use_fullscreen )
     UniformBuffer debug_buffer = create_uniform_buffer<ub_data::Debug>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
-    auto uniform_desc_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
+    engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-    if ( !uniform_desc_set_opt ) {
-        throw Exception( "Failed to generate uniform descriptor set" );
-    }
-
-    engine::DescriptorSet& uniform_desc_set = uniform_desc_set_opt.value();
-
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set,
         camera_buffer.buffer( engine.get_frame_index() ).handle, 0, sizeof( ub_data::Camera ) );
-
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set,
         debug_buffer.buffer( engine.get_frame_index() ).handle, 1, sizeof( ub_data::Debug ) );
 
@@ -89,34 +82,20 @@ void run( bool use_fullscreen )
 
     ctx.vulkan.destructor_stack.push( ctx.vulkan.device, nearest_sampler, vkDestroySampler );
 
-    std::vector<VkSampler> samplers = { nearest_sampler };
-
-    auto sampler_descriptor_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
+    engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
             VK_DESCRIPTOR_TYPE_SAMPLER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-    if ( !sampler_descriptor_set_opt ) {
-        throw Exception( "Failed to generate texture descriptor set" );
-    }
-
-    engine::DescriptorSet& sampler_descriptor_opt = sampler_descriptor_set_opt.value();
-
     size_t num_materials = scene.materials.size();
-    std::vector<engine::DescriptorSet> material_descriptor_sets( num_materials );
+    std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
 
     for ( size_t i = 0; i < num_materials; i++ ) {
-        // generate a separate texture descriptor set for each of the materials
-        auto textures_descriptor_set_opt = engine::generate_descriptor_set( ctx.vulkan, engine,
+        // Generate a separate texture descriptor set for each of the materials
+        material_desc_sets[i] = engine::generate_descriptor_set( ctx.vulkan, engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
-
-        if ( !textures_descriptor_set_opt ) {
-            throw Exception( "Failed to generate texture descriptor set" );
-        }
-
-        material_descriptor_sets[i] = textures_descriptor_set_opt.value();
     }
 
     std::optional<engine::Pipeline> scene_pipeline_opt
@@ -127,8 +106,8 @@ void run( bool use_fullscreen )
                 // this is fine: currently, each of our texture sets share the same layout,
                 // so we can just pass in one layout into the pipeline and then bind a
                 // different descriptorset for each draw_task
-                material_descriptor_sets[0].layouts[engine.get_frame_index()],
-                sampler_descriptor_opt.layouts[engine.get_frame_index()],
+                material_desc_sets[0].layouts[engine.get_frame_index()],
+                sampler_desc_set.layouts[engine.get_frame_index()],
             },
             scene_shader_module );
 
@@ -196,7 +175,7 @@ void run( bool use_fullscreen )
                 // actually bind the texture handle to the descriptorset
                 for ( size_t i = 0; i < textures_sent.size(); i++ ) {
                     engine::update_descriptor_set_image( ctx.vulkan, engine,
-                        material_descriptor_sets[size_t( prim.material_id )], textures_sent[i],
+                        material_desc_sets[size_t( prim.material_id )], textures_sent[i],
                         int( i ) );
                 }
 
@@ -206,9 +185,8 @@ void run( bool use_fullscreen )
                 // give the material descriptor set to the draw task
                 main_draw.draw_tasks.push_back( {
                     .draw_resource_descriptor = draw_descriptor,
-                    .descriptor_sets
-                    = { &uniform_desc_set, &material_descriptor_sets[size_t( prim.material_id )],
-                        &sampler_descriptor_opt },
+                    .descriptor_sets = { &uniform_desc_set,
+                        &material_desc_sets[size_t( prim.material_id )], &sampler_desc_set },
                     .pipeline = scene_pipeline,
                 } );
             }

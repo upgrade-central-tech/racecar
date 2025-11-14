@@ -33,30 +33,30 @@ void add_binding(
         .descriptorCount = 1,
     };
 
-    ds_layout_builder.bindings.push_back( new_binding );
+    ds_layout_builder.bindings.push_back( std::move( new_binding ) );
 }
 
 void clear( DescriptorLayoutBuilder& ds_layout_builder ) { ds_layout_builder.bindings.clear(); }
 
-VkDescriptorSetLayout build( const vk::Common& vulkan, VkShaderStageFlags shader_stages,
-    DescriptorLayoutBuilder& ds_layout_builder, VkDescriptorSetLayoutCreateFlags flags )
+VkDescriptorSetLayout build( vk::Common& vulkan, VkShaderStageFlags shader_stage_flags,
+    DescriptorLayoutBuilder& ds_layout_builder, VkDescriptorSetLayoutCreateFlags ds_layout_flags )
 {
     for ( auto& binding : ds_layout_builder.bindings ) {
-        binding.stageFlags |= shader_stages;
+        binding.stageFlags |= shader_stage_flags;
     }
 
     VkDescriptorSetLayoutCreateInfo ds_layout_create_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .flags = flags,
+        .flags = ds_layout_flags,
         .bindingCount = static_cast<uint32_t>( ds_layout_builder.bindings.size() ),
         .pBindings = ds_layout_builder.bindings.data(),
     };
 
     VkDescriptorSetLayout ds_layout = VK_NULL_HANDLE;
-
-    RACECAR_VK_CHECK(
+    vk::check(
         vkCreateDescriptorSetLayout( vulkan.device, &ds_layout_create_info, nullptr, &ds_layout ),
-        "Failed to create descriptor set layout!" );
+        "Failed to create descriptor set layout" );
+    vulkan.destructor_stack.push( vulkan.device, ds_layout, vkDestroyDescriptorSetLayout );
 
     return ds_layout;
 }
@@ -94,8 +94,8 @@ void clear_descriptors( const vk::Common& vulkan, DescriptorAllocator& ds_alloca
     vkResetDescriptorPool( vulkan.device, ds_allocator.pool, 0 );
 }
 
-VkDescriptorSet allocate( const vk::Common& vulkan, const DescriptorAllocator& ds_allocator,
-    VkDescriptorSetLayout layout )
+VkDescriptorSet allocate(
+    vk::Common& vulkan, const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout )
 {
     VkDescriptorSetAllocateInfo allocate_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -105,9 +105,13 @@ VkDescriptorSet allocate( const vk::Common& vulkan, const DescriptorAllocator& d
     };
 
     VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
-
-    RACECAR_VK_CHECK( vkAllocateDescriptorSets( vulkan.device, &allocate_info, &descriptor_set ),
-        "Failed to allocate descriptor sets" );
+    vk::check( vkAllocateDescriptorSets( vulkan.device, &allocate_info, &descriptor_set ),
+        "Failed to allocate descriptor set" );
+    /// TODO: destroy descriptor set
+    // vulkan.destructor_stack.destructors.push( [=]() {
+    //     VkDescriptorSet descriptor_set_copy = descriptor_set;
+    //     vkFreeDescriptorSets( vulkan.device, ds_allocator.pool, 1, &descriptor_set_copy );
+    // } );
 
     return descriptor_set;
 }
