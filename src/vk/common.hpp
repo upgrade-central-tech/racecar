@@ -2,7 +2,6 @@
 
 #include "../engine/destructor_stack.hpp"
 #include "../exception.hpp"
-#include "../log.hpp"
 #include "vma.hpp"
 
 #include <SDL3/SDL_video.h>
@@ -11,15 +10,6 @@
 
 #include <source_location>
 #include <string_view>
-
-/// Custom define based on VK_CHECK.
-#define RACECAR_VK_CHECK( vk_fn, message )                                                         \
-    do {                                                                                           \
-        if ( VkResult result = vk_fn; result ) {                                                   \
-            log::error( "[Vulkan] {}, error code: {}", message, static_cast<int>( result ) );      \
-            return {};                                                                             \
-        }                                                                                          \
-    } while ( 0 )
 
 namespace racecar::vk {
 

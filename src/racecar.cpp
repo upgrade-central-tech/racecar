@@ -267,10 +267,9 @@ void run( bool use_fullscreen )
 
         gui::update( gui );
 
-        if ( engine::execute( engine, ctx, task_list ) ) {
-            engine.rendered_frames = engine.rendered_frames + 1;
-            engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
-        }
+        engine::execute( engine, ctx, task_list );
+        engine.rendered_frames = engine.rendered_frames + 1;
+        engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
 
         // Make new screen visible
         SDL_UpdateWindowSurface( ctx.window );
