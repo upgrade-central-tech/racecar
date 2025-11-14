@@ -85,7 +85,7 @@ bool check_ray_bbox_intersection( float3 local_origin, float3 local_dir, float3 
     float3 t_far = max( t_low, t_high );
 
     t_min = max( t_close.x, max( t_close.y, t_close.z ) );
-    t_max = min( t_far.x, max( t_far.y, t_far.z ) );
+    t_max = min( t_far.x, min( t_far.y, t_far.z ) );
 
     return max( 0.0f, t_min ) <= t_max;
 }
@@ -108,22 +108,18 @@ float raymarch( float3 view, float3 origin )
         return 0.0f;
     }
 
+    int steps = 40;
     float t = 0.0f;
-    float step_size = 0.01f;
+    float step_size = ( t_max - t_min ) / (float)steps;
     float accumulated = 0.0f;
 
-    for ( int step = 0; step < 20; step++ ) {
+    for ( float t = t_min; t < t_max; t += step_size ) {
         float3 marched_pos = local_origin + local_dir * t;
 
         float3 sample_uv = get_texture_position( marched_pos );
-        float density = volume_data.Sample( nearest_sampler, sample_uv ).r;
+        float density = 0.50f * volume_data.Sample( nearest_sampler, sample_uv ).r;
 
         accumulated += density * step_size;
-        t += step_size;
-
-        if ( t > t_max ) {
-            break;
-        }
     }
 
     return accumulated;
@@ -143,5 +139,7 @@ float4 fs_main( VertexOutput in )
 
     float output_density = raymarch( view, world_pos );
 
-    return float4( float3( output_density), 1.0f );
+    return float4( float3( output_density ), 1.0f );
 }
+
+

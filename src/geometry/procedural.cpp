@@ -7,7 +7,7 @@ namespace racecar::geometry {
 
 vk::mem::AllocatedImage generate_test_3D( vk::Common& vulkan, engine::State& engine )
 {
-    const uint32_t block_size = 8;
+    const uint32_t block_size = 32;
     const uint32_t dim = 128;
 
     // Allocate a 4-channel float texture (RGBA)
