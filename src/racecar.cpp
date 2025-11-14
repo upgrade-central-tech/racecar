@@ -72,13 +72,11 @@ void run( bool use_fullscreen )
             .minFilter = VK_FILTER_NEAREST,
         };
 
-        if ( vkCreateSampler(
-                 ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &nearest_sampler ) ) {
-            throw Exception( "Failed to create sampler" );
-        }
+        vk::check( vkCreateSampler(
+                       ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &nearest_sampler ),
+            "Failed to create sampler" );
+        ctx.vulkan.destructor_stack.push( ctx.vulkan.device, nearest_sampler, vkDestroySampler );
     }
-
-    ctx.vulkan.destructor_stack.push( ctx.vulkan.device, nearest_sampler, vkDestroySampler );
 
     engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
