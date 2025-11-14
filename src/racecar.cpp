@@ -47,10 +47,6 @@ void run( bool use_fullscreen )
     scene_mesh.mesh_buffers
         = geometry::upload_mesh( ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
 
-    // SHADER LOADING/PROCESSING
-    VkShaderModule scene_shader_module
-        = vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH );
-
     UniformBuffer camera_buffer = create_uniform_buffer<ub_data::Camera>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
     UniformBuffer debug_buffer = create_uniform_buffer<ub_data::Debug>(
@@ -94,24 +90,24 @@ void run( bool use_fullscreen )
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
     }
 
-    std::optional<engine::Pipeline> scene_pipeline_opt
-        = create_gfx_pipeline( engine, ctx.vulkan, scene_mesh,
-            {
-                uniform_desc_set.layouts[engine.get_frame_index()],
+    engine::Pipeline scene_pipeline;
 
-                // this is fine: currently, each of our texture sets share the same layout,
+    try {
+        size_t frame_index = engine.get_frame_index();
+        scene_pipeline = create_gfx_pipeline( engine, ctx.vulkan, scene_mesh,
+            {
+                uniform_desc_set.layouts[frame_index],
+                // This is fine: currently, each of our texture sets share the same layout,
                 // so we can just pass in one layout into the pipeline and then bind a
                 // different descriptorset for each draw_task
-                material_desc_sets[0].layouts[engine.get_frame_index()],
-                sampler_desc_set.layouts[engine.get_frame_index()],
+                material_desc_sets[0].layouts[frame_index],
+                sampler_desc_set.layouts[frame_index],
             },
-            scene_shader_module );
-
-    if ( !scene_pipeline_opt ) {
-        throw Exception( "[Engine] Failed to create pipeline" );
+            vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
+    } catch ( const Exception& ex ) {
+        log::error( "Failed to create graphics pipeline: {}", ex.what() );
+        throw;
     }
-
-    engine::Pipeline& scene_pipeline = scene_pipeline_opt.value();
 
     std::vector<scene::Texture>& material_textures = scene.textures;
     engine::TaskList task_list;
