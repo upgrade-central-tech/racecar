@@ -1,5 +1,7 @@
 #include "descriptors.hpp"
 
+#include "../log.hpp"
+
 namespace racecar::engine {
 
 void create_descriptor_system(
