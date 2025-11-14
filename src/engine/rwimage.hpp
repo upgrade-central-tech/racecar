@@ -5,7 +5,6 @@
 
 #include <volk.h>
 
-#include <optional>
 #include <vector>
 
 namespace racecar::engine {
@@ -16,7 +15,7 @@ struct RWImage {
     std::vector<vk::mem::AllocatedImage> images;
 };
 
-std::optional<RWImage> create_rwimage( vk::Common& vulkan, const engine::State& engine,
-    VkExtent3D extent, VkFormat format, VkImageUsageFlags usage_flags, bool mipmapped );
+RWImage create_rwimage( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,
+    VkFormat format, VkImageUsageFlags usage_flags, bool mipmapped );
 
 } // namespace racecar::engine
