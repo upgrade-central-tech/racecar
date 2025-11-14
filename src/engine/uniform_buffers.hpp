@@ -36,4 +36,10 @@ struct Debug {
     uint8_t p5[3];
 };
 
+struct MaterialParams {
+    glm::vec4 albedo = {};
+    
+    glm::vec4 metallic_roughness = {};
+};
+
 } // namespace racecar::uniform_buffer

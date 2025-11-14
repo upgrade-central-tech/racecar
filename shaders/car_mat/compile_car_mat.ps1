@@ -1,0 +1,2 @@
+# Assumes compiler is on your PATH (which it should be)
+slangc.exe "$PSScriptRoot\car_mat.slang" -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name -entry vs_main -entry fs_main -o "$PSScriptRoot\car_mat.spv"
