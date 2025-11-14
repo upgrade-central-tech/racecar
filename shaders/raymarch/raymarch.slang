@@ -37,11 +37,10 @@ struct DebugData {
 }
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
-layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
-// Nothing used in set 1 currently.
+layout( binding = 0, set = 1 ) ConstantBuffer<DebugData> debug_data;
 
-layout( binding = 0, set = 2 ) Texture3D<float> volume_data;
+layout( binding = 0, set = 2 ) Texture3D<float4> volume_data;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
@@ -110,23 +109,16 @@ float raymarch( float3 view, float3 origin )
     }
 
     float t = 0.0f;
-    float step_size = 0.10f;
+    float step_size = 0.01f;
     float accumulated = 0.0f;
-
-    float3 sphere_origin = float3( 0 );
-    float sphere_radius = 0.5f;
 
     for ( int step = 0; step < 20; step++ ) {
         float3 marched_pos = local_origin + local_dir * t;
 
         float3 sample_uv = get_texture_position( marched_pos );
-        float density = volume_data.Sample( nearest_sampler, float3(0, 0, 0) ).r;
+        float density = volume_data.Sample( nearest_sampler, sample_uv ).r;
 
-        if ( density > 0.0f ) {
-            return 1.0f;
-        }
-
-        accumulated += density * 200.0f;
+        accumulated += density * step_size;
         t += step_size;
 
         if ( t > t_max ) {
@@ -151,7 +143,5 @@ float4 fs_main( VertexOutput in )
 
     float output_density = raymarch( view, world_pos );
 
-    float3 output = output_density;
-
-    return float4( in.uv, 0.0, 1.0 );
+    return float4( float3( output_density), 1.0f );
 }

@@ -80,12 +80,12 @@ VkImageCreateInfo image_info(
 }
 
 VkImageViewCreateInfo image_view_info(
-    VkFormat format, VkImage image, VkImageAspectFlags aspect_flags )
+    VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags )
 {
     VkImageViewCreateInfo info = { .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
 
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .viewType = image_view,
         .format = format,
 
         .subresourceRange = {

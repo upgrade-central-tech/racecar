@@ -16,7 +16,7 @@ struct Gui {
     ImGuiContext* ctx = nullptr;
 
     struct DebugData {
-        bool enable_albedo_map = true;
+        bool enable_albedo_map = false;
         bool enable_normal_map = false;
         bool enable_roughness_metal_map = true;
 

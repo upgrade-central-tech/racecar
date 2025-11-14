@@ -103,8 +103,11 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
     }
 
     {
+        // Let's just assume there are binary results
+        VkImageViewType image_view_type = (image_type == VK_IMAGE_TYPE_2D) ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
+
         VkImageViewCreateInfo image_view_info
-            = vk::create::image_view_info( format, allocated_image.image,
+            = vk::create::image_view_info( format, allocated_image.image, image_view_type,
                 format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT
                                                : VK_IMAGE_ASPECT_COLOR_BIT );
         image_view_info.subresourceRange.levelCount = image_info.mipLevels;

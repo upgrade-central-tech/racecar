@@ -135,7 +135,7 @@ void create_depth_images( State& engine, vk::Common& vulkan )
         depth_image_usages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
         VkImageCreateInfo depth_image_info = vk::create::image_info(
-            depth_image.image_format, depth_image_usages, depth_image.image_extent );
+            depth_image.image_format, VK_IMAGE_TYPE_2D, depth_image_usages, depth_image.image_extent );
         VmaAllocationCreateInfo image_allocate_info = { .usage = VMA_MEMORY_USAGE_GPU_ONLY,
             .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) };
 
@@ -146,7 +146,7 @@ void create_depth_images( State& engine, vk::Common& vulkan )
         log::info( "[VMA] Allocated depth image {}", static_cast<void*>( depth_image.image ) );
 
         VkImageViewCreateInfo depth_view_create_info = vk::create::image_view_info(
-            depth_image.image_format, depth_image.image, VK_IMAGE_ASPECT_DEPTH_BIT );
+            depth_image.image_format, depth_image.image, VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT );
 
         vk::check( vkCreateImageView(
                        vulkan.device, &depth_view_create_info, nullptr, &depth_image.image_view ),
