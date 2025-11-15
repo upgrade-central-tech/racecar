@@ -12,7 +12,6 @@ namespace racecar::geometry {
 
 /// Vertex struct, not optimally arranged to fit 16 bytes.
 struct Vertex {
-    glm::vec4 color;
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec4 tangent;
@@ -36,12 +35,11 @@ struct Mesh {
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
     };
 
-    std::array<VkVertexInputAttributeDescription, 5> attribute_descriptions = { {
-        { 0, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof( Vertex, color ) },
-        { 1, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, position ) },
-        { 2, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, normal ) },
-        { 3, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, tangent ) },
-        { 4, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32_SFLOAT, offsetof( Vertex, uv ) },
+    std::array<VkVertexInputAttributeDescription, 4> attribute_descriptions = { {
+        { 0, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, position ) },
+        { 1, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, normal ) },
+        { 2, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, offsetof( Vertex, tangent ) },
+        { 3, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32_SFLOAT, offsetof( Vertex, uv ) },
     } };
 };
 
