@@ -9,10 +9,6 @@ void transition_image( VkCommandBuffer command_buffer, VkImage image, VkImageLay
     VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask,
     VkImageAspectFlags aspect_flags )
 {
-    [[maybe_unused]] VkImageAspectFlags aspect_mask
-        = new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                                                 : VK_IMAGE_ASPECT_COLOR_BIT;
-
     VkImageMemoryBarrier2 image_barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 

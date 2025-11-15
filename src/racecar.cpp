@@ -186,14 +186,14 @@ void run( bool use_fullscreen )
 
                     // give the material descriptor set to the draw task
                     sponza_gfx_task.draw_tasks.push_back( {
-                    .draw_resource_descriptor = draw_descriptor,
-                    .descriptor_sets = {
-                        &uniform_desc_set,
-                        &material_desc_sets[static_cast<size_t>( prim.material_id )],
-                        &sampler_desc_set,
-                    },
-                    .pipeline = scene_pipeline,
-                } );
+                        .draw_resource_descriptor = draw_descriptor,
+                        .descriptor_sets = {
+                            &uniform_desc_set,
+                            &material_desc_sets[static_cast<size_t>( prim.material_id )],
+                            &sampler_desc_set,
+                        },
+                        .pipeline = scene_pipeline,
+                    } );
                 }
             }
         }
