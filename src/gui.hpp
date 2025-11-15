@@ -16,9 +16,15 @@ struct Gui {
     ImGuiContext* ctx = nullptr;
 
     struct DebugData {
+        glm::vec4 color = glm::vec4(0.85f, 0.0f, 0.0f, 1.0f);
+        float roughness;
+        float metallic;
+        float clearcoat_roughness = 0.30f;
+        float clearcoat_weight = 1.0f;
+
         bool enable_albedo_map = false;
         bool enable_normal_map = false;
-        bool enable_roughness_metal_map = true;
+        bool enable_roughness_metal_map = false;
 
         bool normals_only = false;
         bool albedo_only = false;

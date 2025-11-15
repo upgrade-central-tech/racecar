@@ -24,6 +24,11 @@ struct CameraBufferData {
 };
 
 struct DebugData {
+    float4 color;
+
+    // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
+    float4 packed_data0;
+
     bool enable_albedo_map;
     bool enable_normal_map;
     bool enable_roughness_metal_map;
@@ -39,7 +44,9 @@ layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
 layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
 layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 
-layout( binding = 0, set = 2 ) SamplerState nearest_sampler;
+layout( binding = 0, set = 2 ) Texture3D<float4> volume_data;
+
+layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
 static const float PI = 3.14159265359;
 
@@ -63,22 +70,20 @@ VertexOutput vs_main( VertexInput input )
     return output;
 }
 
-float DistributionGGX( float n_dot_h, float roughness )
+float DistributionGGX( float n_dot_h, float alpha )
 {
-    float alpha = roughness * roughness;
     float alpha2 = max( alpha * alpha, 0.001f );
 
     float n_dot_h_2 = n_dot_h * n_dot_h;
     float denom = ( n_dot_h_2 ) * ( alpha2 - 1.0f ) + 1.0f;
 
-    return alpha2 / ( denom * denom );
+    return alpha2 / ( PI * denom * denom );
 }
 
 float GeometrySchlick( float theta, float k ) { return theta / ( theta * ( 1.0f - k ) + k ); }
 
-float GeometrySmith( float n_dot_v, float n_dot_l, float roughness )
+float GeometrySmith( float n_dot_v, float n_dot_l, float alpha )
 {
-    float alpha = roughness * roughness;
     float num = ( alpha + 1.0f );
     float k = ( num * num ) / 8.0f;
 
@@ -104,6 +109,13 @@ float3 map_normals( float3 normal_map, float4 in_tangent, float3 in_normal )
     return mul( transpose( TBN ), normal_tangent );
 }
 
+float DistributionGTR( float alpha, float h_dot_l )
+{
+    float alpha_2 = alpha * alpha;
+    return ( alpha_2 - 1.0f )
+        / ( PI * log( alpha_2 ) * ( 1.0f + ( alpha_2 - 1.0f ) * ( h_dot_l * h_dot_l ) ) );
+}
+
 [shader( "fragment" )]
 float4 fs_main( VertexOutput in )
     : SV_Target
@@ -111,11 +123,13 @@ float4 fs_main( VertexOutput in )
     // Texture samples
     float3 base_albedo = debug_data.enable_albedo_map
         ? albedo_map.Sample( nearest_sampler, in.uv ).rgb
-        : camera_buffer_data.color;
+        : debug_data.color.rgb;
+
     float3 normal_map_norm = normal_map.Sample( nearest_sampler, in.uv ).rgb;
+
     float2 metallic_roughness = debug_data.enable_roughness_metal_map
         ? metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb
-        : float2( 0.01f, 0.0f );
+        : float2( debug_data.packed_data0.x, debug_data.packed_data0.y );
 
     // Material properties
     float metallic = metallic_roughness.y;
@@ -139,33 +153,65 @@ float4 fs_main( VertexOutput in )
     F0 = lerp( F0, base_albedo, metallic );
 
     // Essential dot products
-    float n_dot_v = max( dot( normal, view ), 0.0f );
-    float n_dot_h = max( dot( normal, half ), 0.0f );
-    float n_dot_l = max( dot( normal, light ), 0.0f );
+    float n_dot_v = ( dot( normal, view ) );
+    float n_dot_h = ( dot( normal, half ) );
+    float n_dot_l = ( dot( normal, light ) );
+    float h_dot_l = ( dot( half, light ) );
+    float v_dot_h = ( dot( view, half ) );
 
-    // Diffuse reflection
-    float3 diffuse_albedo = base_albedo;
-    float3 diffuse = diffuse_albedo;
+    float clamped_n_dot_v = max( n_dot_v, 0.0f );
+    float clamped_n_dot_h = max( n_dot_h, 0.0f );
+    float clamped_n_dot_l = max( n_dot_l, 0.0f );
+    float clamped_h_dot_l = max( h_dot_l, 0.0f );
+    float clamped_v_dot_h = max( v_dot_h, 0.0f );
 
+    ////////////////////////////////////////////////////////////////
     // Specular reflection
-    float NDF = DistributionGGX( n_dot_h, roughness );
-    float G = GeometrySmith( n_dot_v, n_dot_l, roughness );
-    float3 F = FresnelSchlick( n_dot_h, F0 );
+    ////////////////////////////////////////////////////////////////
 
-    float3 specular = ( NDF * F * G ) / ( 4.0f * n_dot_v * n_dot_l );
+    // Base specular
+    float alpha = roughness * roughness;
+    float NDF = DistributionGGX( clamped_n_dot_h, alpha );
+    float G = GeometrySmith( clamped_n_dot_v, clamped_n_dot_l, alpha );
+    float3 F = FresnelSchlick( clamped_n_dot_h, F0 );
 
-    float3 out_color = ( 1.0f - F ) * diffuse + specular;
-    out_color *= n_dot_l * attenuation * radiance;
+    float3 base_specular = ( NDF * G * F ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
 
-    // Gamma
-    // out_color = out_color / (out_color + float3(1.0f));
-    // out_color = pow(out_color, float3(1.0f / 2.2f));
+    // Clearcoat evaluation
+    float clearcoat = debug_data.packed_data0.w;
+    float cc_roughness = debug_data.packed_data0.z;
+    float alpha_cc = cc_roughness * cc_roughness;
+    float D_cc = DistributionGTR( lerp( 0.1f, 0.001f, alpha_cc ), abs( n_dot_h ) );
+    float G_cc = GeometrySmith( clamped_n_dot_v, clamped_n_dot_l, alpha_cc );
+    float3 F_cc = FresnelSchlick( clamped_v_dot_h, float3( 0.04 ) );
+    float3 specular_cc
+        = ( F_cc * D_cc * G_cc ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
+    float3 clearcoat_specular = clearcoat * 1.0f * specular_cc;
 
-    out_color = debug_data.normals_only ? normal : out_color;
-    out_color = debug_data.roughness_metal_only ? float3( roughness, metallic, 0.0f ) : out_color;
-    out_color = debug_data.albedo_only ? base_albedo : out_color;
+    float3 specular_final = max( clearcoat_specular + (1.0f - F_cc) * base_specular, 0.0f );
+
+    ////////////////////////////////////////////////////////////////
+    // Diffuse reflection
+    // Based on Disney 2012 diffuse model:
+    // https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf
+    ////////////////////////////////////////////////////////////////
+
+    float3 lambert = base_albedo / PI;
+
+    // Fresnel weights
+    float F_l = pow( 1.0f - clamped_n_dot_l, 5.0f );
+    float F_v = pow( 1.0f - clamped_n_dot_v, 5.0f );
+    float F_D90 = 0.5f + 2.0f * roughness * clamped_h_dot_l * clamped_h_dot_l;
+
+    float3 diffuse_final
+        = lambert * ( 1.0f + ( F_D90 - 1.0f ) * F_l ) * ( 1.0f + ( F_D90 - 1.0f ) * F_v );
+    // float3 diffuse_final = lambert;
+
+    ////////////////////////////////////////////////////////////////
+    // Composite results
+    ////////////////////////////////////////////////////////////////
+    float3 base_color = diffuse_final + specular_final;
+    float3 out_color = base_color * clamped_n_dot_l * ( radiance * 1.5f );
 
     return float4( out_color, 1.0 );
 }
-
-

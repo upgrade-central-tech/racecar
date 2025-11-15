@@ -26,8 +26,8 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/cube.glb";
-constexpr std::string_view SHADER_MODULE_PATH = "../shaders/raymarch/raymarch.spv";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
+constexpr std::string_view SHADER_MODULE_PATH = "../shaders/car_mat/car_mat.spv";
 
 }
 
@@ -257,8 +257,7 @@ void run( bool use_fullscreen )
             camera_ub.model = model;
             camera_ub.inv_model = glm::inverse( model );
             camera_ub.camera_pos = camera::calculate_eye_position( camera );
-            camera_ub.color = glm::vec3(
-                std::sin( static_cast<float>( engine.rendered_frames ) * 0.01f ), 0.0f, 0.0f );
+            camera_ub.color = glm::vec3( 0.85f, 0.0f, 0.0f );
 
             camera_buffer.set_data( camera_ub );
             camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
@@ -267,6 +266,9 @@ void run( bool use_fullscreen )
         // Update debug uniform buffer
         {
             ub_data::Debug debug_ub = {
+                .color = gui.debug.color,
+                .packed_data0 = glm::vec4( gui.debug.roughness, gui.debug.metallic,
+                    gui.debug.clearcoat_roughness, gui.debug.clearcoat_weight ),
                 .enable_albedo_map = gui.debug.enable_albedo_map,
                 .enable_normal_map = gui.debug.enable_normal_map,
                 .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,

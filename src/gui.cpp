@@ -102,6 +102,13 @@ void update( Gui& gui )
         float average_fps = io.Framerate;
         ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );
 
+        ImGui::SeparatorText( "Material Settings" );
+        ImGui::ColorEdit4( "Base color", &gui.debug.color[0] );
+        ImGui::SliderFloat( "Roughness", &gui.debug.roughness, 0, 1.0f );
+        ImGui::SliderFloat( "Metallic", &gui.debug.metallic, 0, 1.0f );
+        ImGui::SliderFloat( "Clearcoat Roughness", &gui.debug.clearcoat_roughness, 0, 1.0f );
+        ImGui::SliderFloat( "Clearcoat Weight", &gui.debug.clearcoat_weight, 0, 1.0f );
+
         ImGui::SeparatorText( "Debug" );
         ImGui::Checkbox( "Enable albedo map", &gui.debug.enable_albedo_map );
         ImGui::Checkbox( "Enable normal map", &gui.debug.enable_normal_map );
