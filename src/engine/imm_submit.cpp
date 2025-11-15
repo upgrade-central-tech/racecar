@@ -1,5 +1,6 @@
 #include "imm_submit.hpp"
 
+#include "../log.hpp"
 #include "../vk/create.hpp"
 
 namespace racecar::engine {
@@ -38,21 +39,24 @@ void create_immediate_commands( ImmediateSubmit& immediate_submit, vk::Common& v
 {
     VkCommandPoolCreateInfo command_pool_info = vk::create::command_pool_info(
         vulkan.graphics_queue_family, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
-
     vk::check( vkCreateCommandPool(
                    vulkan.device, &command_pool_info, nullptr, &immediate_submit.cmd_pool ),
         "Failed to create immediate command pool" );
+    vulkan.destructor_stack.push( vulkan.device, immediate_submit.cmd_pool, vkDestroyCommandPool );
+
+    log::info( "[engine] Created immediate command pool {}",
+        static_cast<void*>( immediate_submit.cmd_pool ) );
 
     VkCommandBufferAllocateInfo command_buffer_allocate_info
         = vk::create::command_buffer_allocate_info( immediate_submit.cmd_pool, 1 );
-
     vk::check( vkAllocateCommandBuffers(
                    vulkan.device, &command_buffer_allocate_info, &immediate_submit.cmd_buf ),
         "Failed to allocate immediate command buffer" );
-
     vulkan.destructor_stack.push_free_cmd_bufs(
         vulkan.device, immediate_submit.cmd_pool, { immediate_submit.cmd_buf } );
-    vulkan.destructor_stack.push( vulkan.device, immediate_submit.cmd_pool, vkDestroyCommandPool );
+
+    log::info( "[engine] Created immediate command buffer {}",
+        static_cast<void*>( immediate_submit.cmd_buf ) );
 };
 
 void create_immediate_sync_structures( ImmediateSubmit& immediate_submit, vk::Common& vulkan )
