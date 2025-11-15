@@ -74,7 +74,7 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
     };
 
     VkImageCreateInfo image_info
-        = vk::create::image_info( format, image_type, mip_levels, array_layers, usage, extent );
+        = vk::create::image_info( format, image_type, mip_levels, array_layers, usage_flags, extent );
 
     if ( mipmapped ) {
         image_info.mipLevels = static_cast<uint32_t>( std::floor(

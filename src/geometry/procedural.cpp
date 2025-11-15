@@ -6,7 +6,6 @@
 #include "../vk/mem.hpp"
 #include "../vk/utility.hpp"
 
-
 // scene.hpp has the define for STB_IMAGE_IMPLEMENTATION... not sure if this works?
 #include "../scene/scene.hpp"
 #include "../stb_image.h"
@@ -141,9 +140,9 @@ vk::mem::AllocatedImage host_prefilter_cubemap( [[maybe_unused]] std::filesystem
     };
 
     // Parse the data somehow
-    std::vector<std::vector<uint16_t>> face_data(layer_count);
-    for ( uint32_t tile = 0; tile < layer_count; tile++ ) { 
-        face_data[tile] = load_image_to_float16(faces[tile]);
+    std::vector<std::vector<uint16_t>> face_data( layer_count );
+    for ( uint32_t tile = 0; tile < layer_count; tile++ ) {
+        face_data[tile] = load_image_to_float16( faces[tile] );
     }
 
     // Need to upload all of these
@@ -181,7 +180,7 @@ vk::mem::AllocatedImage host_prefilter_cubemap( [[maybe_unused]] std::filesystem
                 vk::utility::transition_image( command_buffer, cubemap_image.image,
                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
                     VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT );
+                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
 
                 vkCmdCopyBufferToImage( command_buffer, upload_buffer.handle, cubemap_image.image,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layer_count, copy_regions.data() );
@@ -189,7 +188,8 @@ vk::mem::AllocatedImage host_prefilter_cubemap( [[maybe_unused]] std::filesystem
                 vk::utility::transition_image( command_buffer, cubemap_image.image,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT );
+                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT );
             } );
 
     } catch ( const Exception& ex ) {
