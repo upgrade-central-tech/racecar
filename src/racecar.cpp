@@ -29,6 +29,7 @@ namespace {
 constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/car_mat/car_mat.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
+constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
 }
 
@@ -103,16 +104,19 @@ void run( bool use_fullscreen )
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D( ctx.vulkan, engine );
-
     engine::update_descriptor_set_image( ctx.vulkan, engine, raymarch_tex_sets, test_data_3D, 0 );
 
-    engine::DescriptorSet cubemap_sets;
-    cubemap_sets
-        = engine::generate_descriptor_set( ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+    engine::DescriptorSet lut_sets;
+    lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-    vk::mem::AllocatedImage test_cubemap = geometry::create_cubemap( TEST_CUBEMAP_PATH, ctx.vulkan, engine);
-    engine::update_descriptor_set_image( ctx.vulkan, engine, cubemap_sets, test_cubemap, 0 );
+    vk::mem::AllocatedImage test_cubemap
+        = geometry::create_cubemap( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
+    vk::mem::AllocatedImage lut_brdf
+        = geometry::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
+    engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, test_cubemap, 0 );
+    engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 1 );
 
     engine::Pipeline scene_pipeline;
 
@@ -122,7 +126,7 @@ void run( bool use_fullscreen )
             {
                 uniform_desc_set.layouts[frame_index],
                 material_desc_sets[0].layouts[frame_index],
-                cubemap_sets.layouts[frame_index],
+                lut_sets.layouts[frame_index],
                 sampler_desc_set.layouts[frame_index],
             },
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
@@ -209,7 +213,7 @@ void run( bool use_fullscreen )
                         .descriptor_sets = {
                             &uniform_desc_set,
                             &material_desc_sets[static_cast<size_t>( prim.material_id )],
-                            &cubemap_sets,
+                            &lut_sets,
                             &sampler_desc_set,
                         },
                         .pipeline = scene_pipeline,

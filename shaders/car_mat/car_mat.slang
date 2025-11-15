@@ -44,8 +44,9 @@ layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
 layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
 layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 
-// Cubemaps
+// Cubemaps + LUTs
 layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
+layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
@@ -189,7 +190,7 @@ float4 fs_main( VertexOutput in )
         = ( F_cc * D_cc * G_cc ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
     float3 clearcoat_specular = clearcoat * 1.0f * specular_cc;
 
-    float3 specular_final = max( clearcoat_specular + (1.0f - F_cc) * base_specular, 0.0f );
+    float3 specular_final = max( clearcoat_specular + ( 1.0f - F_cc ) * base_specular, 0.0f );
 
     ////////////////////////////////////////////////////////////////
     // Diffuse reflection
@@ -215,5 +216,9 @@ float4 fs_main( VertexOutput in )
     float3 cubemap_sample = cubemap.Sample( nearest_sampler, reflect( -view, normal ) ).rgb;
     float3 out_color = base_color * clamped_n_dot_l * ( radiance * 1.5f ) + cubemap_sample;
 
-    return float4( cubemap_sample, 1.0 );
+    float2 brdf = BRDF_LUT.Sample( nearest_sampler, in.uv ).rg;
+
+    return float4( brdf, 0.0f, 1.0 );
 }
+
+

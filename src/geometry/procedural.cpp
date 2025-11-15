@@ -129,7 +129,6 @@ vk::mem::AllocatedImage create_cubemap( [[maybe_unused]] std::filesystem::path f
 
     // hardcode file paths for now because screw you
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
-
     std::vector<std::string> faces = {
         abs_file_path + "/nx.png",
         abs_file_path + "/ny.png",
@@ -198,6 +197,41 @@ vk::mem::AllocatedImage create_cubemap( [[maybe_unused]] std::filesystem::path f
     }
 
     return cubemap_image;
+}
+
+vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common& vulkan,
+    engine::State& engine, int desired_channels, VkFormat image_format )
+{
+    vk::mem::AllocatedImage allocated_image;
+    std::string abs_file_path = std::filesystem::absolute( file_path ).string();
+
+    int width, height, channels;
+    unsigned char* pixels
+        = stbi_load( abs_file_path.c_str(), &width, &height, &channels, 3 );
+
+    /// TODO: error checking
+    /// TODO: This only supports 16bit floats! this needs to be extended much furhter
+    ///       to support loading of any arbitrary formats.
+    std::vector<uint16_t> half_data( static_cast<uint32_t>( width * height * desired_channels ) );
+
+    for ( int i = 0; i < width * height; i++ ) {
+        float r = pixels[i * 3] / 255.0f;
+        float g = pixels[i * 3 + 1] / 255.0f;
+
+        half_data[static_cast<size_t>(i * desired_channels)] = vk::utility::float_to_half( r );
+        half_data[static_cast<size_t>(i * desired_channels + 1)] = vk::utility::float_to_half( g );
+    }
+
+    stbi_image_free( pixels );
+
+    // From half_data, upload to GPU
+    bool is_mipmapped = false;
+    allocated_image = engine::create_image( vulkan, engine, half_data.data(),
+        { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 }, image_format,
+        VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        is_mipmapped );
+
+    return allocated_image;
 }
 
 }
