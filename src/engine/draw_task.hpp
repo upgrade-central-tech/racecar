@@ -7,6 +7,8 @@
 
 #include <volk.h>
 
+#include <optional>
+
 namespace racecar::engine {
 
 struct DrawResourceDescriptor {

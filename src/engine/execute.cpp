@@ -49,11 +49,13 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
 
     SwapchainSemaphores& swapchain_semaphores = engine.swapchain_semaphores[output_swapchain_index];
 
-    // for any render target rendering to the screen, set the dynamic output
+    // For any render target rendering to the screen, set the dynamic output
     for ( GfxTask& gfx_task : task_list.gfx_tasks ) {
         if ( gfx_task.render_target_is_swapchain ) {
-            gfx_task.color_attachments
-                = { { { { .image = output_image, .image_view = output_image_view } } } };
+            gfx_task.color_attachments = {
+                RWImage {
+                    .images = { { .image = output_image, .image_view = output_image_view } } },
+            };
             gfx_task.depth_image = { { out_depth_image } };
         }
     }
