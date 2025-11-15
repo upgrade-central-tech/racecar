@@ -6,11 +6,12 @@ namespace racecar::vk::utility {
 
 void transition_image( VkCommandBuffer command_buffer, VkImage image, VkImageLayout old_layout,
     VkImageLayout new_layout, VkAccessFlags2 src_access_mask, VkAccessFlags2 dst_access_mask,
-    VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask )
+    VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask,
+    VkImageAspectFlags aspect_flags )
 {
-    VkImageAspectFlags aspect_mask = new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
-        ? VK_IMAGE_ASPECT_DEPTH_BIT
-        : VK_IMAGE_ASPECT_COLOR_BIT;
+    [[maybe_unused]] VkImageAspectFlags aspect_mask
+        = new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                                                 : VK_IMAGE_ASPECT_COLOR_BIT;
 
     VkImageMemoryBarrier2 image_barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -32,7 +33,7 @@ void transition_image( VkCommandBuffer command_buffer, VkImage image, VkImageLay
         .newLayout = new_layout,
 
         .image = image,
-        .subresourceRange = vk::create::image_subresource_range( aspect_mask ),
+        .subresourceRange = vk::create::image_subresource_range( aspect_flags ),
     };
 
     VkDependencyInfo dependency_info = {

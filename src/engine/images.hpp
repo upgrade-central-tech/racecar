@@ -6,10 +6,10 @@
 namespace racecar::engine {
 
 vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine, void* data,
-    VkExtent3D size, VkFormat format, VkImageType image_type, VkImageUsageFlags usage,
+    VkExtent3D size, VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags,
     bool mipmapped );
 
 vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
-    VkImageType image_type, VkImageUsageFlags usage, bool mipmapped );
+    VkImageType image_type, VkImageUsageFlags usage_flags, bool mipmapped );
 
 } // namespace racecar::engine
