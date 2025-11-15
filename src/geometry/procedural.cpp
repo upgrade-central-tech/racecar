@@ -1,10 +1,12 @@
 #include "procedural.hpp"
 
+#include "../engine/descriptor_set.hpp"
 #include "../engine/images.hpp"
 #include "../log.hpp"
 #include "../vk/create.hpp"
 #include "../vk/mem.hpp"
 #include "../vk/utility.hpp"
+
 
 // scene.hpp has the define for STB_IMAGE_IMPLEMENTATION... not sure if this works?
 #include "../scene/scene.hpp"
@@ -197,6 +199,58 @@ vk::mem::AllocatedImage create_cubemap( [[maybe_unused]] std::filesystem::path f
     }
 
     return cubemap_image;
+}
+
+vk::mem::AllocatedImage create_prefiltered_cubemap(
+    vk::Common& vulkan, engine::State& engine, int roughness_levels )
+{
+    uint32_t width = 256;
+    uint32_t height = 256;
+
+    [[maybe_unused]]vk::mem::AllocatedImage prefiltered_cubemap = allocate_cube_map( vulkan, { width, height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT, static_cast<uint32_t>( roughness_levels ) );
+
+    // Maybe split the sampler and the input image to something else?
+    engine::DescriptorSet prefilter_desc = engine::generate_descriptor_set( vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+        VK_SHADER_STAGE_COMPUTE_BIT );
+    
+    // Replace this when saahil gets to making compute work, that mf
+    VkPipelineLayoutCreateInfo compute_pipeline_layout_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 1,
+        .pSetLayouts = prefilter_desc.layouts.data(),
+    };
+
+    VkPipelineLayout compute_pipeline_layout;
+    vkCreatePipelineLayout( vulkan.device, &compute_pipeline_layout_info, nullptr, &compute_pipeline_layout );
+
+    [[maybe_unused]] VkComputePipelineCreateInfo compute_pipeline_info = {
+        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        .layout = compute_pipeline_layout,
+    };
+
+    return prefiltered_cubemap;
+
+    // VkShaderModule computeShader;
+
+    // compute_pipeline_info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    // compute_pipeline_info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    // compute_pipeline_info.stage.module = computeShader;
+    // compute_pipeline_info.stage.pName = "main";
+
+    // VkPipeline compute_pipeline;
+    // vkCreateComputePipelines( vulkan.device, VK_NULL_HANDLE, 1, &compute_pipeline_info, nullptr, &compute_pipeline);
+
+    // for ( int mip_level = 0; mip_level < roughness_levels; mip_level++ ) {
+    //     uint32_t mip_width = width >> mip_level;
+    //     uint32_t mip_height = height >> mip_level;
+
+    //     float roughness
+    //         = static_cast<float>( mip_level ) / static_cast<float>( roughness_levels - 1 );
+    // }
+
+
 }
 
 vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common& vulkan,
