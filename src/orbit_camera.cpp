@@ -81,6 +81,10 @@ glm::mat4 calculate_view_proj_matrix( const OrbitCamera& cam )
 
 void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam )
 {
+    if ( ImGui::GetIO().WantCaptureMouse ) {
+        return;
+    }
+
     switch ( event->type ) {
     case SDL_EVENT_MOUSE_BUTTON_DOWN: {
         SDL_SetWindowRelativeMouseMode( ctx.window, true );
