@@ -39,11 +39,13 @@ struct DebugData {
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
+// Material stuff strictly
 layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
 layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
 layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 
-layout( binding = 0, set = 2 ) Texture3D<float4> volume_data;
+// Cubemaps
+layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
@@ -210,7 +212,8 @@ float4 fs_main( VertexOutput in )
     // Composite results
     ////////////////////////////////////////////////////////////////
     float3 base_color = diffuse_final + specular_final;
-    float3 out_color = base_color * clamped_n_dot_l * ( radiance * 1.5f );
+    float3 cubemap_sample = cubemap.Sample( nearest_sampler, reflect( -view, normal ) ).rgb;
+    float3 out_color = base_color * clamped_n_dot_l * ( radiance * 1.5f ) + cubemap_sample;
 
-    return float4( out_color, 1.0 );
+    return float4( cubemap_sample, 1.0 );
 }

@@ -28,6 +28,7 @@ namespace {
 
 constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/car_mat/car_mat.spv";
+constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 
 }
 
@@ -105,6 +106,14 @@ void run( bool use_fullscreen )
 
     engine::update_descriptor_set_image( ctx.vulkan, engine, raymarch_tex_sets, test_data_3D, 0 );
 
+    engine::DescriptorSet cubemap_sets;
+    cubemap_sets
+        = engine::generate_descriptor_set( ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+    vk::mem::AllocatedImage test_cubemap = geometry::create_cubemap( TEST_CUBEMAP_PATH, ctx.vulkan, engine);
+    engine::update_descriptor_set_image( ctx.vulkan, engine, cubemap_sets, test_cubemap, 0 );
+
     engine::Pipeline scene_pipeline;
 
     try {
@@ -113,7 +122,7 @@ void run( bool use_fullscreen )
             {
                 uniform_desc_set.layouts[frame_index],
                 material_desc_sets[0].layouts[frame_index],
-                raymarch_tex_sets.layouts[frame_index],
+                cubemap_sets.layouts[frame_index],
                 sampler_desc_set.layouts[frame_index],
             },
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
@@ -200,6 +209,7 @@ void run( bool use_fullscreen )
                         .descriptor_sets = {
                             &uniform_desc_set,
                             &material_desc_sets[static_cast<size_t>( prim.material_id )],
+                            &cubemap_sets,
                             &sampler_desc_set,
                         },
                         .pipeline = scene_pipeline,

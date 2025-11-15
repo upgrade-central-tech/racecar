@@ -115,7 +115,7 @@ std::vector<uint16_t> load_image_to_float16( const std::string& global_path )
     return half_data;
 }
 
-vk::mem::AllocatedImage host_prefilter_cubemap( [[maybe_unused]] std::filesystem::path file_path,
+vk::mem::AllocatedImage create_cubemap( [[maybe_unused]] std::filesystem::path file_path,
     [[maybe_unused]] vk::Common& vulkan, [[maybe_unused]] engine::State& engine )
 {
     // Parse the cubemap for each face individually. Somehow log important info?
