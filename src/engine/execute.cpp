@@ -11,7 +11,7 @@
 
 namespace racecar::engine {
 
-bool execute( State& engine, Context& ctx, TaskList& task_list )
+void execute( State& engine, Context& ctx, TaskList& task_list )
 {
     vk::Common& vulkan = ctx.vulkan;
 
@@ -19,12 +19,12 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
     FrameData& frame = engine.frames[frame_number];
 
     // Using the maximum 64-bit unsigned integer value effectively disables the timeout
-    RACECAR_VK_CHECK( vkWaitForFences( vulkan.device, 1, &frame.render_fence, VK_TRUE,
-                          std::numeric_limits<uint64_t>::max() ),
+    vk::check( vkWaitForFences( vulkan.device, 1, &frame.render_fence, VK_TRUE,
+                   std::numeric_limits<uint64_t>::max() ),
         "Failed to wait for frame render fence" );
 
     // Manually reset previous frame's render fence to an unsignaled state
-    RACECAR_VK_CHECK( vkResetFences( vulkan.device, 1, &frame.render_fence ),
+    vk::check( vkResetFences( vulkan.device, 1, &frame.render_fence ),
         "Failed to reset frame render fence" );
 
     vkResetCommandBuffer( frame.start_cmdbuf, 0 );
@@ -36,9 +36,10 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
 
     // Request swapchain index.
     uint32_t output_swapchain_index = 0;
-    RACECAR_VK_CHECK( vkAcquireNextImageKHR( vulkan.device, engine.swapchain,
-                          std::numeric_limits<uint64_t>::max(), frame.acquire_start_smp, nullptr,
-                          &output_swapchain_index ),
+
+    vk::check( vkAcquireNextImageKHR( vulkan.device, engine.swapchain,
+                   std::numeric_limits<uint64_t>::max(), frame.acquire_start_smp, nullptr,
+                   &output_swapchain_index ),
         "Failed to acquire next image from swapchain" );
 
     const VkImage& output_image = engine.swapchain_images[output_swapchain_index];
@@ -108,8 +109,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
     } );
     VkSubmitInfo2 start_submit_info = vk::create::submit_info_from_all( start_submit_info_all );
 
-    RACECAR_VK_CHECK(
-        vkQueueSubmit2( vulkan.graphics_queue, 1, &start_submit_info, VK_NULL_HANDLE ),
+    vk::check( vkQueueSubmit2( vulkan.graphics_queue, 1, &start_submit_info, VK_NULL_HANDLE ),
         "Graphics queue submit failed" );
 
     {
@@ -167,8 +167,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
     } );
     VkSubmitInfo2 render_submit_info = vk::create::submit_info_from_all( render_submit_info_all );
 
-    RACECAR_VK_CHECK(
-        vkQueueSubmit2( vulkan.graphics_queue, 1, &render_submit_info, VK_NULL_HANDLE ),
+    vk::check( vkQueueSubmit2( vulkan.graphics_queue, 1, &render_submit_info, VK_NULL_HANDLE ),
         "Graphics queue submit failed" );
 
     {
@@ -190,8 +189,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
     } );
     VkSubmitInfo2 end_submit_info = vk::create::submit_info_from_all( end_submit_info_all );
 
-    RACECAR_VK_CHECK(
-        vkQueueSubmit2( vulkan.graphics_queue, 1, &end_submit_info, frame.render_fence ),
+    vk::check( vkQueueSubmit2( vulkan.graphics_queue, 1, &end_submit_info, frame.render_fence ),
         "Graphics queue submit failed" );
 
     VkPresentInfoKHR present_info = {
@@ -203,10 +201,8 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
         .pImageIndices = &output_swapchain_index,
     };
 
-    RACECAR_VK_CHECK(
+    vk::check(
         vkQueuePresentKHR( vulkan.graphics_queue, &present_info ), "Failed to present to screen" );
-
-    return true;
 }
 
 } // namespace racecar::engine

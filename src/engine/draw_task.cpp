@@ -54,8 +54,8 @@ DrawResourceDescriptor DrawResourceDescriptor::from_mesh(
     const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive )
 {
     engine::DrawResourceDescriptor draw_mesh_desc = {
-        .vertex_buffers = { mesh.mesh_buffers.vertex_buffer.value().handle },
-        .index_buffer = mesh.mesh_buffers.index_buffer.value().handle,
+        .vertex_buffers = { mesh.mesh_buffers.vertex_buffer.handle },
+        .index_buffer = mesh.mesh_buffers.index_buffer.handle,
         .vertex_buffer_offsets = { 0 },
         .index_buffer_offset = 0,
         .first_index = 0,

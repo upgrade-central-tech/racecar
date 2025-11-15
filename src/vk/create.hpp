@@ -5,7 +5,6 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include <filesystem>
-#include <optional>
 #include <string_view>
 
 namespace racecar::vk::create {
@@ -21,9 +20,10 @@ VkSemaphoreCreateInfo semaphore_info();
 
 VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask );
 
-VkImageCreateInfo image_info( VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent );
+VkImageCreateInfo image_info(
+    VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags, VkExtent3D extent );
 VkImageViewCreateInfo image_view_info(
-    VkFormat format, VkImage image, VkImageAspectFlags aspect_flags );
+    VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags );
 
 VkSemaphoreSubmitInfo semaphore_submit_info(
     VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore );
@@ -35,7 +35,10 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_info(
     VkShaderStageFlagBits flags, VkShaderModule shader_module, std::string_view name );
 
 /// Creates shader module from the specified file path. Path is relative to the executable.
-std::optional<VkShaderModule> shader_module( Common& vulkan, std::filesystem::path shader_path );
+///
+/// Note that the destruction of the shader module is pushed into the destructor stack. Depending on
+/// what we want (e.g. destroying after pipeline creation) this may not be what we want.
+VkShaderModule shader_module( Common& vulkan, std::filesystem::path shader_path );
 
 struct CreateSubmitInfoDescriptor {
     VkCommandBuffer command_buffer = VK_NULL_HANDLE;

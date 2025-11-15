@@ -8,6 +8,6 @@ namespace racecar::engine {
 
 /// Performed every frame. Calls everything (compute and graphics).
 /// If you want to run any call, add it into execute (this will be loooong).
-bool execute( State& engine, Context& ctx, TaskList& task_list );
+void execute( State& engine, Context& ctx, TaskList& task_list );
 
 } // namespace racecar::engine

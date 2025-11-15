@@ -61,20 +61,19 @@ VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color
     return VK_FORMAT_R8G8B8A8_UNORM;
 }
 
-bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path, Scene& scene,
-    std::vector<geometry::Vertex>& out_global_vertices, std::vector<uint32_t>& out_global_indices )
+void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,
+    Scene& scene, std::vector<geometry::Vertex>& out_global_vertices,
+    std::vector<uint32_t>& out_global_indices )
 {
-    std::filesystem::path path( file_path );
-
-    if ( !std::filesystem::exists( path ) ) {
-        log::error( "[Scene] File does not exist" );
-        return false;
+    if ( !std::filesystem::exists( file_path ) ) {
+        throw Exception(
+            "[Scene] File \"{}\" does not exist", std::filesystem::absolute( file_path ).string() );
     }
 
-    std::string ext = path.extension().string();
+    std::string ext = file_path.extension().string();
+
     if ( ext != ".gltf" && ext != ".glb" ) {
-        log::error( "[Scene] Invalid file extension loaded" );
-        return false;
+        throw Exception( "[Scene] Invalid file extension loaded: {}", ext );
     }
 
     tinygltf::Model model;
@@ -85,9 +84,11 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
     bool has_loaded_successfully = false;
     // Binary files
     if ( ext == ".glb" ) {
-        has_loaded_successfully = loader.LoadBinaryFromFile( &model, &err, &warn, file_path );
+        has_loaded_successfully
+            = loader.LoadBinaryFromFile( &model, &err, &warn, file_path.string() );
     } else { // ASCII files
-        has_loaded_successfully = loader.LoadASCIIFromFile( &model, &err, &warn, file_path );
+        has_loaded_successfully
+            = loader.LoadASCIIFromFile( &model, &err, &warn, file_path.string() );
     }
 
     // Check for errors and warnings
@@ -100,11 +101,9 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
     }
 
     if ( !has_loaded_successfully ) {
-        log::warn( "[Scene] An error occurred while loading the scene" );
+        throw Exception( "[Scene] An error occurred while loading the scene" );
     }
 
-    // TODO @terskayl: Add Material Loading
-    // Materials
     for ( tinygltf::Material& loaded_mat : model.materials ) {
         Material new_mat = {};
 
@@ -235,7 +234,7 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
         texture.data = engine::create_image( vulkan, engine,
             static_cast<void*>( loaded_img.image.data() ),
             { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
-            image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+            image_format, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT, false );
         if ( !texture.data ) {
             log::error( "[Scene] GLTF loading: Failed to load texture onto the GPU" );
         }
@@ -501,8 +500,6 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
             node->children.push_back( child_node.get() );
         }
     }
-
-    return true;
 }
 
 bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene )
@@ -525,7 +522,7 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
         = get_vk_format( hdri.bits_per_channel, hdri.num_channels, ColorSpace::SFLOAT );
     hdri.data = engine::create_image( vulkan, engine, static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
-        image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+        image_format, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     scene.textures.push_back( hdri );
     scene.hdri_index = scene.textures.size() - 1;

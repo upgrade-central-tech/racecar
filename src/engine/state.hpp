@@ -1,14 +1,12 @@
 #pragma once
 
+#include "../context.hpp"
 #include "../orbit_camera.hpp"
-#include "../vk/common.hpp"
 #include "../vk/mem.hpp"
 #include "descriptors.hpp"
 #include "imm_submit.hpp"
 
 #include <SDL3/SDL.h>
-
-#include <optional>
 
 namespace racecar::engine {
 
@@ -22,8 +20,6 @@ struct FrameData {
     VkSemaphore acquire_start_smp = VK_NULL_HANDLE;
     VkSemaphore start_render_smp = VK_NULL_HANDLE;
     VkSemaphore render_end_smp = VK_NULL_HANDLE;
-
-    vk::mem::UniformBuffer triangle_uniform_buffer;
 };
 
 struct SwapchainSemaphores {
@@ -55,7 +51,7 @@ struct State {
     size_t get_frame_index() const;
 };
 
-std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan );
-void free( State& engine, vk::Common& vulkan );
+State initialize( Context& ctx );
+void free( State& engine );
 
 } // namespace racecar::engine

@@ -27,7 +27,7 @@ struct DestructorStack {
         }
     }
 
-    void push_free_cmdbufs(
+    void push_free_cmd_bufs(
         VkDevice device, VkCommandPool pool, const std::vector<VkCommandBuffer>& buffers );
 
     void push_free_vmabuffer(

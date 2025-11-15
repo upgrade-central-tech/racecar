@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <tiny_gltf.h>
 
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -103,8 +104,8 @@ struct Scene {
     std::optional<size_t> hdri_index;
 };
 
-bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path, Scene& scene,
-    std::vector<geometry::Vertex>& out_vertices, std::vector<uint32_t>& out_indices );
+void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,
+    Scene& scene, std::vector<geometry::Vertex>& out_vertices, std::vector<uint32_t>& out_indices );
 
 bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene );
 

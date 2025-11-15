@@ -3,7 +3,7 @@
 
 /// Stores all uniform buffer structs used for different layouts and shaders. Ensure that all
 /// uniform structs are 16 byte aligned!
-namespace racecar::uniform_buffer {
+namespace racecar::ub_data {
 
 /// Camera data
 struct Camera {
@@ -36,10 +36,9 @@ struct Debug {
     uint8_t p5[3];
 };
 
-struct MaterialParams {
-    glm::vec4 albedo = {};
-    
-    glm::vec4 metallic_roughness = {};
+struct RaymarchBufferData {
+    float step_size;
+    uint8_t p0[3];
 };
 
 } // namespace racecar::uniform_buffer

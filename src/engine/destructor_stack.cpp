@@ -13,7 +13,7 @@ void DestructorStack::execute_cleanup()
     }
 }
 
-void DestructorStack::push_free_cmdbufs(
+void DestructorStack::push_free_cmd_bufs(
     VkDevice device, VkCommandPool pool, const std::vector<VkCommandBuffer>& buffers )
 {
     if ( !buffers.empty() && pool != VK_NULL_HANDLE ) {
