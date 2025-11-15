@@ -23,7 +23,7 @@ vk::mem::AllocatedImage create_allocated_image( vk::Common& vulkan, engine::Stat
 
         std::memcpy( upload_buffer.info.pMappedData, data, data_size );
 
-        new_image = allocate_image( vulkan, extent, format, image_type,
+        new_image = allocate_image( vulkan, extent, format, image_type, 1, 1,
             usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped );
 
         engine::immediate_submit(
@@ -74,14 +74,16 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
 };
 
 vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
-    VkImageType image_type, VkImageUsageFlags usage, bool mipmapped )
+    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers, VkImageUsageFlags usage,
+    bool mipmapped )
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
         .image_format = format,
     };
 
-    VkImageCreateInfo image_info = vk::create::image_info( format, image_type, usage, extent );
+    VkImageCreateInfo image_info
+        = vk::create::image_info( format, image_type, mip_levels, array_layers, usage, extent );
 
     if ( mipmapped ) {
         image_info.mipLevels = static_cast<uint32_t>( std::floor(
@@ -104,7 +106,8 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
 
     {
         // Let's just assume there are binary results
-        VkImageViewType image_view_type = (image_type == VK_IMAGE_TYPE_2D) ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
+        VkImageViewType image_view_type
+            = ( image_type == VK_IMAGE_TYPE_2D ) ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
 
         VkImageViewCreateInfo image_view_info
             = vk::create::image_view_info( format, allocated_image.image, image_view_type,

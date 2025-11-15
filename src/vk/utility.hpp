@@ -17,4 +17,6 @@ void transition_image( VkCommandBuffer command_buffer, VkImage image, VkImageLay
 
 uint32_t bytes_from_format( VkFormat format );
 
+uint16_t float_to_half( float f );
+
 } // namespace racecar::vk::utility

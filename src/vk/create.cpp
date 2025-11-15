@@ -60,7 +60,7 @@ VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask 
 }
 
 VkImageCreateInfo image_info(
-    VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags, VkExtent3D extent )
+    VkFormat format, VkImageType image_type, uint32_t mip_levels, uint32_t array_layers, VkImageUsageFlags usage_flags, VkExtent3D extent )
 {
     return {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -69,8 +69,8 @@ VkImageCreateInfo image_info(
         .format = format,
         .extent = extent,
 
-        .mipLevels = 1,
-        .arrayLayers = 1,
+        .mipLevels = mip_levels,
+        .arrayLayers = array_layers,
 
         // Samples is used for MSAA
         .samples = VK_SAMPLE_COUNT_1_BIT,

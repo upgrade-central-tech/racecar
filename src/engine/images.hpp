@@ -10,6 +10,7 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
     bool mipmapped );
 
 vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
-    VkImageType image_type, VkImageUsageFlags usage, bool mipmapped );
+    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers, VkImageUsageFlags usage,
+    bool mipmapped );
 
 } // namespace racecar::engine

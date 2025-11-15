@@ -2,10 +2,13 @@
 
 #include "../vk/mem.hpp"
 #include "../engine/state.hpp"
+#include <filesystem>
 
 namespace racecar::geometry {
 
 /// Generates a 3D textured checkered block.
 vk::mem::AllocatedImage generate_test_3D( vk::Common& vulkan, engine::State& engine );
+
+vk::mem::AllocatedImage host_prefilter_cubemap ( std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine );
 
 }
