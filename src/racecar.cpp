@@ -78,8 +78,9 @@ void run( bool use_fullscreen )
         { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
             VK_DESCRIPTOR_TYPE_SAMPLER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
-    
-    engine::update_descriptor_set_sampler( ctx.vulkan, engine, sampler_desc_set, linear_sampler, 0 );
+
+    engine::update_descriptor_set_sampler(
+        ctx.vulkan, engine, sampler_desc_set, linear_sampler, 0 );
 
     size_t num_materials = scene.materials.size();
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
@@ -114,8 +115,9 @@ void run( bool use_fullscreen )
     engine::TaskList task_list;
 
     {
-        engine::GfxTask main_gfx_task = {
-            .clear_screen = true,
+        engine::GfxTask sponza_gfx_task = {
+            .clear_color = { { { 0.f, 0.f, 1.f, 1.f } } },
+            .clear_depth = 1.f,
             .render_target_is_swapchain = true,
             .extent = engine.swapchain.extent,
         };
@@ -183,7 +185,7 @@ void run( bool use_fullscreen )
                         = engine::DrawResourceDescriptor::from_mesh( scene_mesh, prim );
 
                     // give the material descriptor set to the draw task
-                    main_gfx_task.draw_tasks.push_back( {
+                    sponza_gfx_task.draw_tasks.push_back( {
                     .draw_resource_descriptor = draw_descriptor,
                     .descriptor_sets = {
                         &uniform_desc_set,
@@ -196,7 +198,7 @@ void run( bool use_fullscreen )
             }
         }
 
-        engine::add_gfx_task( task_list, main_gfx_task );
+        engine::add_gfx_task( task_list, sponza_gfx_task );
     }
 
     bool will_quit = false;

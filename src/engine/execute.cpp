@@ -118,7 +118,7 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
         for ( size_t i = 0; i < task_list.gfx_tasks.size(); i++ ) {
             auto search = std::find_if( task_list.pipeline_barriers.begin(),
                 task_list.pipeline_barriers.end(),
-                [=]( std::pair<int, PipelineBarrierDescriptor> v ) -> bool {
+                [=]( const std::pair<int, PipelineBarrierDescriptor>& v ) -> bool {
                     return v.first == int( i );
                 } );
 
