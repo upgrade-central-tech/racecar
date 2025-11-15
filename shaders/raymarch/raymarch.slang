@@ -37,8 +37,11 @@ struct DebugData {
 }
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
+layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
-layout( binding = 0, set = 1 ) ConstantBuffer<DebugData> debug_data;
+layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
+layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
+layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 
 layout( binding = 0, set = 2 ) Texture3D<float4> volume_data;
 

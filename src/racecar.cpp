@@ -59,13 +59,8 @@ void run( bool use_fullscreen )
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-    engine::DescriptorSet uniform_desc_set2 = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
-
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, camera_buffer, 0 );
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set2, debug_buffer, 0 );
-    // engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, raymarch_buffer, 2 );
+    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, debug_buffer, 1 );
 
     // Simple set up for linear sampler
     VkSampler linear_sampler = VK_NULL_HANDLE;
@@ -86,8 +81,9 @@ void run( bool use_fullscreen )
         { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
             VK_DESCRIPTOR_TYPE_SAMPLER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
-    
-    engine::update_descriptor_set_sampler( ctx.vulkan, engine, sampler_desc_set, linear_sampler, 0 );
+
+    engine::update_descriptor_set_sampler(
+        ctx.vulkan, engine, sampler_desc_set, linear_sampler, 0 );
 
     size_t num_materials = scene.materials.size();
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
@@ -101,15 +97,13 @@ void run( bool use_fullscreen )
     }
 
     engine::DescriptorSet raymarch_tex_sets;
-    raymarch_tex_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+    raymarch_tex_sets
+        = engine::generate_descriptor_set( ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D( ctx.vulkan, engine );
 
-    // do i have to upddate this every fucking frame?? like what's the issue??
-    engine::update_descriptor_set_image(
-        ctx.vulkan, engine, raymarch_tex_sets, test_data_3D, 0 );
+    engine::update_descriptor_set_image( ctx.vulkan, engine, raymarch_tex_sets, test_data_3D, 0 );
 
     engine::Pipeline scene_pipeline;
 
@@ -118,7 +112,7 @@ void run( bool use_fullscreen )
         scene_pipeline = create_gfx_pipeline( engine, ctx.vulkan, scene_mesh,
             {
                 uniform_desc_set.layouts[frame_index],
-                uniform_desc_set2.layouts[frame_index],
+                material_desc_sets[0].layouts[frame_index],
                 raymarch_tex_sets.layouts[frame_index],
                 sampler_desc_set.layouts[frame_index],
             },
@@ -204,7 +198,7 @@ void run( bool use_fullscreen )
                     .draw_resource_descriptor = draw_descriptor,
                     .descriptor_sets = {
                         &uniform_desc_set,
-                        &uniform_desc_set2,
+                        &material_desc_sets[static_cast<size_t>( prim.material_id )],
                         &raymarch_tex_sets,
                         &sampler_desc_set,
                     },
