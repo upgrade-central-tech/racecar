@@ -11,13 +11,13 @@ namespace racecar::engine {
 
 struct DrawResourceDescriptor {
     std::vector<VkBuffer> vertex_buffers;
-    VkBuffer index_buffer;
+    VkBuffer index_buffer = VK_NULL_HANDLE;
 
     std::vector<VkDeviceSize> vertex_buffer_offsets;
-    int32_t index_buffer_offset;
-    int32_t first_index;
+    int32_t index_buffer_offset = 0;
+    int32_t first_index = 0;
 
-    uint32_t index_count;
+    uint32_t index_count = 0;
 
     static DrawResourceDescriptor from_mesh(
         const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive );
@@ -32,7 +32,7 @@ struct DrawTask {
     Pipeline pipeline = {};
 };
 
-bool draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
+void draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
     const VkExtent2D extent );
 
 } // namespace racecar::engine
