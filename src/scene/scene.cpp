@@ -420,13 +420,13 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
                     } else {
                         new_vertex.normal = glm::vec3( 0, 0, 1 );
                     }
+
                     if ( i < uv.size() ) {
                         new_vertex.uv = uv[i];
                     } else {
                         new_vertex.uv = glm::vec2( 0.5, 0.5 );
                     }
-                    new_vertex.color = glm::vec4( 0, 0, 0, 1 );
-                    // Vertex Colors are currently not supported.
+
                     out_global_vertices.push_back( new_vertex );
                 }
 
