@@ -206,8 +206,7 @@ vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common&
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
 
     int width, height, channels;
-    unsigned char* pixels
-        = stbi_load( abs_file_path.c_str(), &width, &height, &channels, 3 );
+    unsigned char* pixels = stbi_load( abs_file_path.c_str(), &width, &height, &channels, 4 );
 
     /// TODO: error checking
     /// TODO: This only supports 16bit floats! this needs to be extended much furhter
@@ -215,11 +214,25 @@ vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common&
     std::vector<uint16_t> half_data( static_cast<uint32_t>( width * height * desired_channels ) );
 
     for ( int i = 0; i < width * height; i++ ) {
-        float r = pixels[i * 3] / 255.0f;
-        float g = pixels[i * 3 + 1] / 255.0f;
+        float r = pixels[i * 4] / 255.0f;
+        float g = pixels[i * 4 + 1] / 255.0f;
+        [[maybe_unused]] float b = pixels[i * 4 + 2] / 255.0f;
+        [[maybe_unused]] float a = pixels[i * 4 + 3] / 255.0f;
 
-        half_data[static_cast<size_t>(i * desired_channels)] = vk::utility::float_to_half( r );
-        half_data[static_cast<size_t>(i * desired_channels + 1)] = vk::utility::float_to_half( g );
+        half_data[static_cast<size_t>( i * desired_channels )] = vk::utility::float_to_half( r );
+
+        if ( desired_channels > 1 ) {
+            half_data[static_cast<size_t>( i * desired_channels + 1 )]
+                = vk::utility::float_to_half( g );
+        }
+        if ( desired_channels > 2 ) {
+            half_data[static_cast<size_t>( i * desired_channels + 2 )]
+                = vk::utility::float_to_half( b );
+        }
+        if ( desired_channels > 3 ) {
+            half_data[static_cast<size_t>( i * desired_channels + 3 )]
+                = vk::utility::float_to_half( a );
+        }
     }
 
     stbi_image_free( pixels );

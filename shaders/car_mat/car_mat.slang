@@ -177,7 +177,17 @@ float4 fs_main( VertexOutput in )
     float G = GeometrySmith( clamped_n_dot_v, clamped_n_dot_l, alpha );
     float3 F = FresnelSchlick( clamped_n_dot_h, F0 );
 
-    float3 base_specular = ( NDF * G * F ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
+    float2 brdf_uv = float2( clamped_n_dot_v, roughness );
+    float2 brdf = BRDF_LUT.Sample( nearest_sampler, brdf_uv ).rg;
+
+    // So far only the first mip exists. Will need some more complicated efforts to
+    // get this stuff to work with roughness.
+    float3 precomputed_lo_specular = cubemap.Sample( nearest_sampler, reflect( -view, normal ) ).rgb;
+
+    // Point-light solution is found via:
+    // float3 base_specular = ( NDF * G * F ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
+    // We use Split-sum approximation instead:
+    float3 base_specular = precomputed_lo_specular * ( F0 * brdf.x + brdf.y );
 
     // Clearcoat evaluation
     float clearcoat = debug_data.packed_data0.w;
@@ -188,8 +198,13 @@ float4 fs_main( VertexOutput in )
     float3 F_cc = FresnelSchlick( clamped_v_dot_h, float3( 0.04 ) );
     float3 specular_cc
         = ( F_cc * D_cc * G_cc ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
-    float3 clearcoat_specular = clearcoat * 1.0f * specular_cc;
 
+    // brdf_cc needs to be prefiltered using the GTR1 (Generalized Trowbridge Reitz) NDF
+    float3 F0_cc = float3( 0.04f );
+    float2 brdf_cc = brdf;
+    float3 precomputed_specular_cc = precomputed_lo_specular * ( F0_cc * brdf.x + brdf.y );
+
+    float3 clearcoat_specular = clearcoat * 1.0f * precomputed_specular_cc;
     float3 specular_final = max( clearcoat_specular + ( 1.0f - F_cc ) * base_specular, 0.0f );
 
     ////////////////////////////////////////////////////////////////
@@ -213,12 +228,9 @@ float4 fs_main( VertexOutput in )
     // Composite results
     ////////////////////////////////////////////////////////////////
     float3 base_color = diffuse_final + specular_final;
-    float3 cubemap_sample = cubemap.Sample( nearest_sampler, reflect( -view, normal ) ).rgb;
-    float3 out_color = base_color * clamped_n_dot_l * ( radiance * 1.5f ) + cubemap_sample;
+    float3 out_color = base_color * clamped_n_dot_l * ( radiance * 1.5f );
 
-    float2 brdf = BRDF_LUT.Sample( nearest_sampler, in.uv ).rg;
-
-    return float4( brdf, 0.0f, 1.0 );
+    return float4( out_color, 1.0f );
 }
 
 
