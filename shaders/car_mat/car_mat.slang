@@ -30,6 +30,8 @@ struct DebugData {
 
     // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
     float4 packed_data0;
+    // Pack: glint roughness, 
+    float4 packed_data1;
 
     bool enable_albedo_map;
     bool enable_normal_map;
@@ -123,9 +125,6 @@ float4 fs_main( VertexOutput in )
     float3 view = normalize( camera_pos - in.position );
     float3 half = normalize( view + light );
 
-    float3 F0 = float3( 0.04f );
-    F0 = lerp( F0, base_albedo, metallic );
-
     // Essential dot products
     float n_dot_v = ( dot( normal, view ) );
     float n_dot_h = ( dot( normal, half ) );
@@ -142,6 +141,16 @@ float4 fs_main( VertexOutput in )
     ////////////////////////////////////////////////////////////////
     // Specular reflection
     ////////////////////////////////////////////////////////////////
+#if 1
+    base_albedo = lerp( float3( 0.3, 0.1, 0.82 ), float3( 0.8, 0.3, 0.5 ), pow( clamped_n_dot_h, 5.0f ) );
+#endif
+
+    // So far only the first mip exists. Will need some more complicated efforts to
+    // get this stuff to work with roughness.
+    float3 precomputed_lo_specular = cubemap.Sample( nearest_sampler, reflect( -view, normal ) ).rgb;
+
+    float3 F0 = float3( 0.04f );
+    F0 = lerp( F0, base_albedo * precomputed_lo_specular, metallic );
 
     // Base specular
     float alpha = roughness * roughness;
@@ -151,10 +160,6 @@ float4 fs_main( VertexOutput in )
 
     float2 brdf_uv = float2( clamped_n_dot_v, roughness );
     float2 brdf = BRDF_LUT.Sample( nearest_sampler, brdf_uv ).rg;
-
-    // So far only the first mip exists. Will need some more complicated efforts to
-    // get this stuff to work with roughness.
-    float3 precomputed_lo_specular = cubemap.Sample( nearest_sampler, reflect( -view, normal ) ).rgb;
 
     // Point-light solution is found via:
 #if USE_GLINTS
