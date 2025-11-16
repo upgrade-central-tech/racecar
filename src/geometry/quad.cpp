@@ -15,7 +15,7 @@ Mesh create( vk::Common& vulkan, const engine::State& engine )
                 glm::vec2( -1.f, 1.f ),
                 glm::vec2( 1.f, 1.f ),
             },
-            .indices = {0, 1, 2, 1, 3, 2},
+            .indices = {2, 1, 0, 2, 3, 1},
     };
 
     const size_t vertex_buffer_size = mesh.vertices.size() * sizeof( Vertex );

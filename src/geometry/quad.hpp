@@ -27,8 +27,8 @@ struct Mesh {
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
     };
 
-    std::array<VkVertexInputAttributeDescription, 4> attribute_descriptions = { {
-        { 0, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+    std::array<VkVertexInputAttributeDescription, 1> attribute_descriptions = { {
+        { 0, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32_SFLOAT, 0 },
     } };
 };
 
