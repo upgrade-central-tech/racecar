@@ -182,8 +182,8 @@ float4 fs_main( VertexOutput in )
     // Based on Disney 2012 diffuse model:
     // https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf
     ////////////////////////////////////////////////////////////////
-
-    float3 lambert = base_albedo / PI;
+    float3 diffuse_color = lerp( float3( 0.3, 0.1, 0.82 ), float3( 0.8, 0.3, 0.5 ), pow(clamped_n_dot_h, 5.0f) );
+    float3 lambert = diffuse_color / PI;
 
     // Fresnel weights
     float F_l = pow( 1.0f - clamped_n_dot_l, 5.0f );
