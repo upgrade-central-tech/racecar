@@ -137,16 +137,38 @@ void run( bool use_fullscreen )
         throw;
     }
 
-    geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
-
-    [[maybe_unused]] VkPipelineVertexInputStateCreateInfo test
-        = engine::get_vertex_input_state_create_info( quad_mesh );
-
     engine::TaskList task_list;
 
     {
+        geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+
+        engine::GfxTask atmosphere_gfx_task = {
+            .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
+            .clear_depth = 1.f,
+            .render_target_is_swapchain = true,
+            .extent = engine.swapchain.extent,
+        };
+
+        engine::Pipeline atmosphere_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
+            engine::get_vertex_input_state_create_info( quad_mesh ), {},
+            vk::create::shader_module( ctx.vulkan, "../shaders/atmosphere/atmosphere.spv" ) );
+
+        atmosphere_gfx_task.draw_tasks.push_back( {
+            .draw_resource_descriptor =
+                {
+                    .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
+                    .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
+                    .vertex_buffer_offsets = { 0 },
+                    .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
+                },
+            .pipeline = atmosphere_pipeline,
+        } );
+
+        engine::add_gfx_task( task_list, atmosphere_gfx_task );
+    }
+
+    {
         engine::GfxTask sponza_gfx_task = {
-            .clear_color = { { { 0.f, 0.f, 1.f, 1.f } } },
             .clear_depth = 1.f,
             .render_target_is_swapchain = true,
             .extent = engine.swapchain.extent,
