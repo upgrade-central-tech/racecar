@@ -30,6 +30,17 @@ struct Debug {
     uint32_t padding0[2];
 };
 
+struct SHData {
+    // Packs all 9 spherical harmonics
+    glm::vec4 coeff0 = {};
+    glm::vec4 coeff1 = {};
+    glm::vec4 coeff2 = {};
+    glm::vec4 coeff3 = {};
+    glm::vec4 coeff4 = {};
+    glm::vec4 coeff5 = {};
+    glm::vec4 coeff6 = {};
+};
+
 struct RaymarchBufferData {
     float step_size;
     uint8_t p0[3];

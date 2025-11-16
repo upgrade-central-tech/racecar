@@ -1,4 +1,5 @@
 #define USE_GLINTS 1
+#define USE_SH_IRRADIANCE 1
 
 struct VertexInput {
     float3 position : POSITION;
@@ -36,6 +37,17 @@ struct DebugData {
     bool normals_only;
     bool albedo_only;
     bool roughness_metal_only;
+};
+
+// God help us all.
+struct SHData {
+    float4 coeff0;
+    float4 coeff1;
+    float4 coeff2;
+    float4 coeff3;
+    float4 coeff4;
+    float4 coeff5;
+    float4 coeff6;
 }
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
@@ -49,7 +61,8 @@ layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 // Cubemaps + LUTs
 layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
 layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
-layout( binding = 2, set = 2 ) Texture2D<float4> _Glint2023NoiseMap;
+layout( binding = 2, set = 2 ) ConstantBuffer<SHData> sh_data;
+layout( binding = 3, set = 2 ) Texture2D<float4> _Glint2023NoiseMap;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
@@ -192,13 +205,17 @@ float4 fs_main( VertexOutput in )
 
     float3 diffuse_final
         = lambert * ( 1.0f + ( F_D90 - 1.0f ) * F_l ) * ( 1.0f + ( F_D90 - 1.0f ) * F_v );
-    // float3 diffuse_final = lambert;
 
     ////////////////////////////////////////////////////////////////
     // Composite results
     ////////////////////////////////////////////////////////////////
-    float3 base_color = diffuse_final + specular_final;
-    float3 out_color = base_color * clamped_n_dot_l * ( radiance * 1.5f );
+    float3 base_color = ( diffuse_final + max( ( 1.0f - F_cc ) * base_specular, 0.0f ) ) * clamped_n_dot_l * ( radiance * 1.5f );
+    float3 out_color = base_color + clearcoat_specular;
+
+#if USE_SH_IRRADIANCE
+    float3 irradiance = eval_SH( sh_data, normal );
+    out_color += irradiance;
+#endif
 
     return float4( out_color, 1.0f );
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <volk.h>
+#include <glm/glm.hpp>
 
 namespace racecar::vk::utility {
 
@@ -19,7 +20,11 @@ void transition_image( VkCommandBuffer command_buffer, VkImage image, VkImageLay
 uint32_t bytes_from_format( VkFormat format );
 
 uint16_t float_to_half( float f );
+float half_to_float( uint16_t h );
 
+// SH helper funcs
+float eval_SH( uint32_t lm_index, glm::vec3 direction );
+float area_element( float x, float y );
 
 // Glint helper funcs, later to be removed once compute is setup
 uint32_t coord_to_flat( uint32_t coord );

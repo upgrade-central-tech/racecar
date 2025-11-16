@@ -48,7 +48,7 @@ vk::mem::AllocatedImage generate_glint_noise( vk::Common& vulkan, engine::State&
 {
     uint32_t dim = 512;
     std::vector<float> noise_data( dim * dim * 4 );
-    
+
     // I think we'd call some compute thing later on to do this.
     return engine::create_image( vulkan, engine, static_cast<void*>( noise_data.data() ),
         { dim, dim, dim }, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TYPE_2D,
@@ -113,7 +113,6 @@ vk::mem::AllocatedImage allocate_cube_map(
 std::vector<uint16_t> load_image_to_float16( const std::string& global_path )
 {
     int width, height, channels;
-
     float* pixels = stbi_loadf( global_path.c_str(), &width, &height, &channels, 4 );
 
     /// TODO: error checking
@@ -310,6 +309,114 @@ vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common&
         is_mipmapped );
 
     return allocated_image;
+}
+
+std::vector<float> load_image_to_float( const std::string& global_path )
+{
+    int width, height, channels;
+    float* pixels = stbi_loadf( global_path.c_str(), &width, &height, &channels, 4 );
+
+    std::vector<float> float_data(
+        static_cast<uint32_t>( width ) * static_cast<uint32_t>( height ) * 4U );
+    for ( size_t i = 0; i < static_cast<size_t>( width * height * 4 ); i++ ) {
+        float_data[i] = pixels[i];
+    }
+
+    stbi_image_free( pixels );
+    return float_data;
+}
+
+std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
+{
+    // Same funcs as the cube map creator
+    const size_t layer_count = 6;
+    uint32_t tile_width = 256;
+    uint32_t tile_height = 256;
+
+    // hardcode file paths for now because screw you
+    std::string abs_file_path = std::filesystem::absolute( file_path ).string();
+    std::vector<std::string> faces = {
+        abs_file_path + "/nx.png",
+        abs_file_path + "/ny.png",
+        abs_file_path + "/nz.png",
+        abs_file_path + "/px.png",
+        abs_file_path + "/py.png",
+        abs_file_path + "/pz.png",
+    };
+
+    // Parse the data somehow
+    std::vector<std::vector<float>> face_data( layer_count );
+    for ( uint32_t tile = 0; tile < layer_count; tile++ ) {
+        face_data[tile] = load_image_to_float( faces[tile] );
+    }
+
+    std::vector<glm::vec3> sh_coefficients( 9, glm::vec3( 0.0f ) );
+
+    // SH prefiltering... this is a bit confusing, so I'll just follow Ravi's integral
+    // key idea is to find L_{lm}, s.t it's an integral over the sphere where:
+    // - L(theta, phi) is a pixel value in the environment map,
+    // - Y_{lm} are weighted SH functions, already computed/derived for us
+
+    std::vector<std::vector<glm::vec3>> face_directions = {
+        { glm::vec3( -1, 0, 0 ), glm::vec3( 0, 0, 1.0f ), glm::vec3( 0, -1, 0 ) }, // nx
+        { glm::vec3( 0, -1, 0 ), glm::vec3( 1.0f, 0, 0 ), glm::vec3( 0, 0, -1 ) }, // ny
+        { glm::vec3( 0, 0, -1 ), glm::vec3( 1.0f, 0, 0.0f ), glm::vec3( 0, -1.0f, 0 ) }, // nz
+        { glm::vec3( 1, 0, 0 ), glm::vec3( 0, 0, -1.0f ), glm::vec3( 0, -1, 0 ) }, // px
+        { glm::vec3( 0, 1, 0 ), glm::vec3( 1.0f, 0, 0 ), glm::vec3( 0, 0, 1.0f ) }, // py
+        { glm::vec3( 0, 0, 1 ), glm::vec3( 1.0f, 0, 0 ), glm::vec3( 0, -1, 0 ) }, // pz
+    };
+
+    for ( uint32_t face = 0; face < 6; face++ ) {
+        for ( uint32_t pixel = 0; pixel < tile_width * tile_height; pixel++ ) {
+            // Get color of the cubemap, assume 4 channel data result from face_data parse
+            glm::vec3 color = glm::vec3( face_data[face][pixel * 4], face_data[face][pixel * 4 + 1],
+                face_data[face][pixel * 4 + 2] );
+
+            // Convert cubemap direction
+            uint32_t x = pixel % tile_width;
+            uint32_t y = pixel / tile_width;
+
+            float u = 2.0f * ( static_cast<float>( x ) + 0.5f ) / static_cast<float>( tile_width )
+                - 1.0f;
+            float v = 2.0f * ( static_cast<float>( y ) + 0.5f ) / static_cast<float>( tile_height )
+                - 1.0f;
+
+            glm::vec3 direction = face_directions[face][0] + face_directions[face][1] * u
+                + face_directions[face][2] * v;
+            direction = glm::normalize( direction );
+
+            // Calcualte projected solid angle
+            // https://www.rorydriscoll.com/2012/01/15/cubemap-texel-solid-angle/
+            float inv_size = 1.0f / static_cast<float>( tile_width );
+            float x0 = u - inv_size;
+            float y0 = v - inv_size;
+            float x1 = u + inv_size;
+            float y1 = v + inv_size;
+            float solid_angle = vk::utility::area_element( x0, y0 )
+                - vk::utility::area_element( x0, y1 ) - vk::utility::area_element( x1, y0 )
+                + vk::utility::area_element( x1, y1 );
+
+            // Populate coefficienets using a given pixel contribution
+            // Go up to third order, so 3^2
+            for ( int l = 0; l < 3; l++ ) {
+                for ( int m = -l; m <= l; m++ ) {
+                    int index = l * ( l + 1 ) + m;
+                    uint32_t uindex = static_cast<uint32_t>(index);
+
+                    sh_coefficients[uindex]
+                        += ( color * vk::utility::eval_SH( uindex, direction ) * solid_angle );
+                }
+            }
+        }
+    }
+
+    for ( size_t i = 0; i < sh_coefficients.size(); i++ ) {
+        // Normalize over the surface area of the sphere, 4 * PI...
+        // I don't want to do anything nasty with figuring out why M_PI isn't here.
+        sh_coefficients[i] *= 1.0f / ( 4.0f * 3.14159265358979323846f );
+    }
+
+    return sh_coefficients;
 }
 
 }

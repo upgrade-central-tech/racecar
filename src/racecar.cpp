@@ -26,7 +26,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/paint_tester.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/car_mat/car_mat.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
@@ -108,15 +108,27 @@ void run( bool use_fullscreen )
 
     engine::DescriptorSet lut_sets;
     lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     vk::mem::AllocatedImage test_cubemap
         = geometry::create_cubemap( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
     vk::mem::AllocatedImage lut_brdf
         = geometry::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
+    
+
+    UniformBuffer sh_buffer = create_uniform_buffer<ub_data::SHData>(
+        ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+    std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );
+
+    for (size_t i = 0; i < sh_coefficients.size(); ++i)
+    {
+        log::info("SH coeff: {}, {}, {}", sh_coefficients[i].x, sh_coefficients[i].y, sh_coefficients[i].z);
+    }
+
     engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, test_cubemap, 0 );
     engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 1 );
+    engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 2 );
 
     engine::Pipeline scene_pipeline;
 
@@ -139,7 +151,7 @@ void run( bool use_fullscreen )
 
     {
         engine::GfxTask sponza_gfx_task = {
-            .clear_color = { { { 0.f, 0.f, 1.f, 1.f } } },
+            .clear_color = { { { 0.f, 0.f, 0.f, 1.f } } },
             .clear_depth = 1.f,
             .render_target_is_swapchain = true,
             .extent = engine.swapchain.extent,
@@ -295,14 +307,21 @@ void run( bool use_fullscreen )
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        // {
-        //     ub_data::RaymarchBufferData raymarch_ub = {
-        //         .step_size = 1,
-        //     };
+        // This is rather silly, but I guess we need to update the uniform buffer for SH everytime I suppose.
+        {
+            ub_data::SHData SH_ub = {
+                .coeff0 = glm::vec4( sh_coefficients[0].r, sh_coefficients[0].g, sh_coefficients[0].b, sh_coefficients[1].r ),
+                .coeff1 = glm::vec4( sh_coefficients[1].g, sh_coefficients[1].b, sh_coefficients[2].r, sh_coefficients[2].g ),
+                .coeff2 = glm::vec4( sh_coefficients[2].b, sh_coefficients[3].r, sh_coefficients[3].g, sh_coefficients[3].b),
+                .coeff3 = glm::vec4( sh_coefficients[4].r, sh_coefficients[4].g, sh_coefficients[4].b, sh_coefficients[5].r),
+                .coeff4 = glm::vec4( sh_coefficients[5].g, sh_coefficients[5].b, sh_coefficients[6].r, sh_coefficients[6].g ),
+                .coeff5 = glm::vec4( sh_coefficients[6].b, sh_coefficients[7].r, sh_coefficients[7].g, sh_coefficients[7].b),
+                .coeff6 = glm::vec4( sh_coefficients[8].r, sh_coefficients[8].g, sh_coefficients[8].b, 0.0f),
+            };
 
-        //     raymarch_buffer.set_data( raymarch_ub );
-        //     raymarch_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        // }
+            sh_buffer.set_data( SH_ub );
+            sh_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
 
         gui::update( gui );
 

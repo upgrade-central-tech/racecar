@@ -67,3 +67,37 @@ float3 world_to_local( float3 world_dir, float3 normal )
 
     return mul( transpose( TBN ), world_dir );
 }
+
+//=======================================================================================
+// Spherical Harmonics
+//=======================================================================================
+
+// https://patapom.com/blog/SHPortal/
+float3 eval_SH( SHData data, float3 direction )
+{
+    float x = direction.x;
+    float y = direction.y;
+    float z = direction.z;
+
+    float c1 = 0.429043;
+    float c2 = 0.511664;
+    float c3 = 0.743125;
+    float c4 = 0.886227;
+    float c5 = 0.247708;
+
+    float3 L00 = float3( data.coeff0.rgb );
+    float3 L1n1 = float3( data.coeff0.a, data.coeff1.rg );
+    float3 L10 = float3( data.coeff1.ba, data.coeff2.r );
+    float3 L11 = float3( data.coeff2.gba );
+    float3 L2n2 = float3( data.coeff3.rgb );
+    float3 L2n1 = float3( data.coeff3.a, data.coeff4.rg );
+    float3 L20 = float3( data.coeff4.ba, data.coeff5.r );
+    float3 L21 = float3( data.coeff5.gba );
+    float3 L22 = float3( data.coeff6.rgb );
+    
+    return c1 * L22 * ( x * x - y * y ) + c3 * L20 * ( z * z ) + c4 * L00 - c5 * L20
+        + 2.0f * c1 * ( L2n2 * x * y + L21 * x * z + L2n1 * y * z )
+        + 2.0f * c2 * ( L11 * x + L1n1 * y + L10 * z );
+}
+
+
