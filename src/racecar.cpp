@@ -26,7 +26,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/material_ball.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/car_mat/car_mat.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";

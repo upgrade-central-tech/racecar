@@ -217,7 +217,7 @@ float4 fs_main( VertexOutput in )
     out_color += irradiance;
 #endif
 
-    return float4( out_color, 1.0f );
+    return float4( irradiance, 1.0f );
 }
 
 

@@ -91,15 +91,15 @@ float eval_SH( uint32_t lm_index, glm::vec3 direction )
     if ( lm_index == 3 ) // 1,  1
         return 0.488603f * direction.x;
     if ( lm_index == 4 ) // 2, -2
-        return 1.092548f * direction.x * direction.y;
+        return 1.092548f * ( direction.x * direction.y );
     if ( lm_index == 5 ) // 2, -1
-        return 1.092548f * direction.y * direction.z;
+        return 1.092548f * ( direction.y * direction.z );
     if ( lm_index == 6 ) // 2,  0
-        return 0.315392f * 3.0f * ( direction.z * direction.z ) - 1.0f;
+        return 0.315392f * ( 3.0f * ( direction.z * direction.z ) - 1.0f );
     if ( lm_index == 7 ) // 2,  1
-        return 1.092548f * direction.x * direction.z;
+        return 1.092548f * ( direction.x * direction.z );
     if ( lm_index == 8 ) // 2,  2
-        return 0.546274f * ( direction.x * direction.x ) - ( direction.y * direction.y );
+        return 0.546274f * ( ( direction.x * direction.x ) - ( direction.y * direction.y ) );
     
     return -1.0f;
 }

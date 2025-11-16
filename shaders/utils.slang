@@ -94,10 +94,10 @@ float3 eval_SH( SHData data, float3 direction )
     float3 L20 = float3( data.coeff4.ba, data.coeff5.r );
     float3 L21 = float3( data.coeff5.gba );
     float3 L22 = float3( data.coeff6.rgb );
-    
-    return c1 * L22 * ( x * x - y * y ) + c3 * L20 * ( z * z ) + c4 * L00 - c5 * L20
-        + 2.0f * c1 * ( L2n2 * x * y + L21 * x * z + L2n1 * y * z )
-        + 2.0f * c2 * ( L11 * x + L1n1 * y + L10 * z );
+
+    return ( c1 * L22 * ( x * x - y * y ) ) + ( c3 * L20 * ( z * z ) ) + ( c4 * L00 - c5 * L20 )
+        + ( 2.0f * c1 * ( L2n2 * x * y + L21 * x * z + L2n1 * y * z ) )
+        + ( 2.0f * c2 * ( L11 * x + L1n1 * y + L10 * z ) );
 }
 
 
