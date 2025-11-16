@@ -7,7 +7,6 @@
 #include "../vk/mem.hpp"
 #include "../vk/utility.hpp"
 
-
 // scene.hpp has the define for STB_IMAGE_IMPLEMENTATION... not sure if this works?
 #include "../scene/scene.hpp"
 #include "../stb_image.h"
@@ -43,6 +42,17 @@ vk::mem::AllocatedImage generate_test_3D( vk::Common& vulkan, engine::State& eng
         { dim, dim, dim },
         VK_FORMAT_R32G32B32A32_SFLOAT, // 4-channel float
         VK_IMAGE_TYPE_3D, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, false );
+}
+
+vk::mem::AllocatedImage generate_glint_noise( vk::Common& vulkan, engine::State& engine )
+{
+    uint32_t dim = 512;
+    std::vector<float> noise_data( dim * dim * 4 );
+    
+    // I think we'd call some compute thing later on to do this.
+    return engine::create_image( vulkan, engine, static_cast<void*>( noise_data.data() ),
+        { dim, dim, dim }, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, false );
 }
 
 vk::mem::AllocatedImage allocate_cube_map(
@@ -207,14 +217,15 @@ vk::mem::AllocatedImage create_prefiltered_cubemap(
     uint32_t width = 256;
     uint32_t height = 256;
 
-    [[maybe_unused]]vk::mem::AllocatedImage prefiltered_cubemap = allocate_cube_map( vulkan, { width, height, 1 },
-        VK_FORMAT_R16G16B16A16_SFLOAT, static_cast<uint32_t>( roughness_levels ) );
+    [[maybe_unused]] vk::mem::AllocatedImage prefiltered_cubemap
+        = allocate_cube_map( vulkan, { width, height, 1 }, VK_FORMAT_R16G16B16A16_SFLOAT,
+            static_cast<uint32_t>( roughness_levels ) );
 
     // Maybe split the sampler and the input image to something else?
     engine::DescriptorSet prefilter_desc = engine::generate_descriptor_set( vulkan, engine,
         { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
         VK_SHADER_STAGE_COMPUTE_BIT );
-    
+
     // Replace this when saahil gets to making compute work, that mf
     VkPipelineLayoutCreateInfo compute_pipeline_layout_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -223,7 +234,8 @@ vk::mem::AllocatedImage create_prefiltered_cubemap(
     };
 
     VkPipelineLayout compute_pipeline_layout;
-    vkCreatePipelineLayout( vulkan.device, &compute_pipeline_layout_info, nullptr, &compute_pipeline_layout );
+    vkCreatePipelineLayout(
+        vulkan.device, &compute_pipeline_layout_info, nullptr, &compute_pipeline_layout );
 
     [[maybe_unused]] VkComputePipelineCreateInfo compute_pipeline_info = {
         .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -240,7 +252,8 @@ vk::mem::AllocatedImage create_prefiltered_cubemap(
     // compute_pipeline_info.stage.pName = "main";
 
     // VkPipeline compute_pipeline;
-    // vkCreateComputePipelines( vulkan.device, VK_NULL_HANDLE, 1, &compute_pipeline_info, nullptr, &compute_pipeline);
+    // vkCreateComputePipelines( vulkan.device, VK_NULL_HANDLE, 1, &compute_pipeline_info, nullptr,
+    // &compute_pipeline);
 
     // for ( int mip_level = 0; mip_level < roughness_levels; mip_level++ ) {
     //     uint32_t mip_width = width >> mip_level;
@@ -249,8 +262,6 @@ vk::mem::AllocatedImage create_prefiltered_cubemap(
     //     float roughness
     //         = static_cast<float>( mip_level ) / static_cast<float>( roughness_levels - 1 );
     // }
-
-
 }
 
 vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common& vulkan,

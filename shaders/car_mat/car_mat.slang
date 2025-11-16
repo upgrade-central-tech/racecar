@@ -1,3 +1,5 @@
+#define USE_GLINTS 1
+
 struct VertexInput {
     float3 position : POSITION;
     float3 normal : NORMAL;
@@ -47,10 +49,13 @@ layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 // Cubemaps + LUTs
 layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
 layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 2, set = 2 ) Texture2D<float4> _Glint2023NoiseMap;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
-static const float PI = 3.14159265359;
+#include "../utils.slang"
+#include "../glint/glint_noise_init.hlsl"
+#include "../glint/glint.hlsl"
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -70,52 +75,6 @@ VertexOutput vs_main( VertexInput input )
     output.uv = input.uv;
 
     return output;
-}
-
-float DistributionGGX( float n_dot_h, float alpha )
-{
-    float alpha2 = max( alpha * alpha, 0.001f );
-
-    float n_dot_h_2 = n_dot_h * n_dot_h;
-    float denom = ( n_dot_h_2 ) * ( alpha2 - 1.0f ) + 1.0f;
-
-    return alpha2 / ( PI * denom * denom );
-}
-
-float GeometrySchlick( float theta, float k ) { return theta / ( theta * ( 1.0f - k ) + k ); }
-
-float GeometrySmith( float n_dot_v, float n_dot_l, float alpha )
-{
-    float num = ( alpha + 1.0f );
-    float k = ( num * num ) / 8.0f;
-
-    return GeometrySchlick( n_dot_v, k ) * GeometrySchlick( n_dot_l, k );
-}
-
-float3 FresnelSchlick( float cos_theta, float3 F0 )
-{
-    return F0 + ( 1.0f - F0 ) * pow( 1.0f - cos_theta, 5.0f );
-}
-
-float3 map_normals( float3 normal_map, float4 in_tangent, float3 in_normal )
-{
-    float3 normal = normalize( in_normal );
-    float3 tangent = normalize( in_tangent.xyz );
-    float3 bitangent = -cross( normal, tangent )
-        * in_tangent.w; // I hardcoded this flip, but this shouldn't be the case
-    float3x3 TBN = float3x3( tangent, bitangent, normal );
-
-    // Map back to [-1, 1] from [0, 1]
-    float3 normal_tangent = 2.0f * normal_map - 1.0f;
-
-    return mul( transpose( TBN ), normal_tangent );
-}
-
-float DistributionGTR( float alpha, float h_dot_l )
-{
-    float alpha_2 = alpha * alpha;
-    return ( alpha_2 - 1.0f )
-        / ( PI * log( alpha_2 ) * ( 1.0f + ( alpha_2 - 1.0f ) * ( h_dot_l * h_dot_l ) ) );
 }
 
 [shader( "fragment" )]
@@ -185,9 +144,20 @@ float4 fs_main( VertexOutput in )
     float3 precomputed_lo_specular = cubemap.Sample( nearest_sampler, reflect( -view, normal ) ).rgb;
 
     // Point-light solution is found via:
-    // float3 base_specular = ( NDF * G * F ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
+#if USE_GLINTS
+    float3 local_half = world_to_local( half, normal );
+    float2 duvdx = ddx( in.uv );
+    float2 duvdy = ddy( in.uv );
+    float2 uv = in.uv;
+
+    float maxNDF = 10000.0f;
+    float targetNDF = NDF;
+    NDF = SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy ).x;
+#endif
+
+    float3 base_specular = ( NDF * G * F ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
     // We use Split-sum approximation instead:
-    float3 base_specular = precomputed_lo_specular * ( F0 * brdf.x + brdf.y );
+    // float3 base_specular = precomputed_lo_specular * ( F0 * brdf.x + brdf.y );
 
     // Clearcoat evaluation
     float clearcoat = debug_data.packed_data0.w;
