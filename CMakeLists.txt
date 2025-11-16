@@ -17,8 +17,11 @@ set(IMGUI_DIR "${THIRD_PARTY_DIR}/imgui")
 
 add_executable(racecar
   ${SRC_DIR}/main.cpp
+  ${SRC_DIR}/racecar.cpp
   ${SRC_DIR}/sdl.cpp
   ${SRC_DIR}/orbit_camera.cpp
+  ${SRC_DIR}/gui.cpp
+  ${SRC_DIR}/stb.cpp
 
   ${VK_DIR}/common.cpp
   ${VK_DIR}/create.cpp
@@ -35,13 +38,13 @@ add_executable(racecar
   ${ENGINE_DIR}/destructor_stack.cpp
   ${ENGINE_DIR}/descriptors.cpp
   ${ENGINE_DIR}/images.cpp
-  ${ENGINE_DIR}/gui.cpp
   ${ENGINE_DIR}/pipeline_barrier.cpp
   ${ENGINE_DIR}/rwimage.cpp
   ${ENGINE_DIR}/gfx_task.cpp
   ${ENGINE_DIR}/descriptor_set.cpp
 
   ${GEOMETRY_DIR}/mesh.cpp
+  ${GEOMETRY_DIR}/procedural.cpp
 
   ${SCENE_DIR}/scene.cpp
 )
@@ -93,3 +96,6 @@ target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)
 
 find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
 target_include_directories(racecar PRIVATE ${TINYGLTF_INCLUDE_DIRS})
+
+find_package(Stb REQUIRED)
+target_include_directories(racecar PRIVATE ${Stb_INCLUDE_DIR})

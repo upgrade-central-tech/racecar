@@ -3,7 +3,7 @@
 
 /// Stores all uniform buffer structs used for different layouts and shaders. Ensure that all
 /// uniform structs are 16 byte aligned!
-namespace racecar::uniform_buffer {
+namespace racecar::ub_data {
 
 /// Camera data
 struct Camera {
@@ -17,23 +17,22 @@ struct Camera {
 };
 
 struct Debug {
-    bool enable_albedo_map = false;
+    glm::vec4 color = {};
+    glm::vec4 packed_data0 = {};
+
+    uint32_t enable_albedo_map = 0;
+    uint32_t enable_normal_map = 0;
+    uint32_t enable_roughness_metal_map = 0;
+    uint32_t normals_only = 0;
+    uint32_t albedo_only = 0;
+    uint32_t roughness_metal_only = 0;
+
+    uint32_t padding0[2];
+};
+
+struct RaymarchBufferData {
+    float step_size;
     uint8_t p0[3];
-
-    bool enable_normal_map = false;
-    uint8_t p1[3];
-
-    bool enable_roughness_metal_map = false;
-    uint8_t p2[3];
-
-    bool normals_only = false;
-    uint8_t p3[3];
-
-    bool albedo_only = false;
-    uint8_t p4[3];
-
-    bool roughness_metal_only = false;
-    uint8_t p5[3];
 };
 
 } // namespace racecar::uniform_buffer

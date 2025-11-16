@@ -11,7 +11,7 @@
 
 namespace racecar::engine {
 
-bool execute( State& engine, Context& ctx, TaskList& task_list )
+void execute( State& engine, Context& ctx, TaskList& task_list )
 {
     vk::Common& vulkan = ctx.vulkan;
 
@@ -19,12 +19,12 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
     FrameData& frame = engine.frames[frame_number];
 
     // Using the maximum 64-bit unsigned integer value effectively disables the timeout
-    RACECAR_VK_CHECK( vkWaitForFences( vulkan.device, 1, &frame.render_fence, VK_TRUE,
-                          std::numeric_limits<uint64_t>::max() ),
+    vk::check( vkWaitForFences( vulkan.device, 1, &frame.render_fence, VK_TRUE,
+                   std::numeric_limits<uint64_t>::max() ),
         "Failed to wait for frame render fence" );
 
     // Manually reset previous frame's render fence to an unsignaled state
-    RACECAR_VK_CHECK( vkResetFences( vulkan.device, 1, &frame.render_fence ),
+    vk::check( vkResetFences( vulkan.device, 1, &frame.render_fence ),
         "Failed to reset frame render fence" );
 
     vkResetCommandBuffer( frame.start_cmdbuf, 0 );
@@ -36,9 +36,10 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
 
     // Request swapchain index.
     uint32_t output_swapchain_index = 0;
-    RACECAR_VK_CHECK( vkAcquireNextImageKHR( vulkan.device, engine.swapchain,
-                          std::numeric_limits<uint64_t>::max(), frame.acquire_start_smp, nullptr,
-                          &output_swapchain_index ),
+
+    vk::check( vkAcquireNextImageKHR( vulkan.device, engine.swapchain,
+                   std::numeric_limits<uint64_t>::max(), frame.acquire_start_smp, nullptr,
+                   &output_swapchain_index ),
         "Failed to acquire next image from swapchain" );
 
     const VkImage& output_image = engine.swapchain_images[output_swapchain_index];
@@ -48,11 +49,13 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
 
     SwapchainSemaphores& swapchain_semaphores = engine.swapchain_semaphores[output_swapchain_index];
 
-    // for any render target rendering to the screen, set the dynamic output
+    // For any render target rendering to the screen, set the dynamic output
     for ( GfxTask& gfx_task : task_list.gfx_tasks ) {
         if ( gfx_task.render_target_is_swapchain ) {
-            gfx_task.color_attachments
-                = { { { { .image = output_image, .image_view = output_image_view } } } };
+            gfx_task.color_attachments = {
+                RWImage {
+                    .images = { { .image = output_image, .image_view = output_image_view } } },
+            };
             gfx_task.depth_image = { { out_depth_image } };
         }
     }
@@ -60,16 +63,16 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
     {
         // Make swapchain image writeable ( and clear! )
         vkBeginCommandBuffer( frame.start_cmdbuf, &command_buffer_begin_info );
-        vk::utility::transition_image( frame.start_cmdbuf, output_image,
-            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0,
-            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT );
+        vk::utility::transition_image( frame.start_cmdbuf, output_image, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_2_TRANSFER_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
 
         // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
         vk::utility::transition_image( frame.start_cmdbuf, out_depth_image.image,
-            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
-            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT );
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
+            VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_NONE,
+            VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_IMAGE_ASPECT_DEPTH_BIT );
+
 
         vkEndCommandBuffer( frame.start_cmdbuf );
     }
@@ -83,8 +86,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
     } );
     VkSubmitInfo2 start_submit_info = vk::create::submit_info_from_all( start_submit_info_all );
 
-    RACECAR_VK_CHECK(
-        vkQueueSubmit2( vulkan.graphics_queue, 1, &start_submit_info, VK_NULL_HANDLE ),
+    vk::check( vkQueueSubmit2( vulkan.graphics_queue, 1, &start_submit_info, VK_NULL_HANDLE ),
         "Graphics queue submit failed" );
 
     {
@@ -93,7 +95,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
         for ( size_t i = 0; i < task_list.gfx_tasks.size(); i++ ) {
             auto search = std::find_if( task_list.pipeline_barriers.begin(),
                 task_list.pipeline_barriers.end(),
-                [=]( std::pair<int, PipelineBarrierDescriptor> v ) -> bool {
+                [=]( const std::pair<int, PipelineBarrierDescriptor>& v ) -> bool {
                     return v.first == int( i );
                 } );
 
@@ -142,8 +144,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
     } );
     VkSubmitInfo2 render_submit_info = vk::create::submit_info_from_all( render_submit_info_all );
 
-    RACECAR_VK_CHECK(
-        vkQueueSubmit2( vulkan.graphics_queue, 1, &render_submit_info, VK_NULL_HANDLE ),
+    vk::check( vkQueueSubmit2( vulkan.graphics_queue, 1, &render_submit_info, VK_NULL_HANDLE ),
         "Graphics queue submit failed" );
 
     {
@@ -151,8 +152,8 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
         vk::utility::transition_image( frame.end_cmdbuf, output_image,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
             VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 0,
-            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT );
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+            VK_IMAGE_ASPECT_COLOR_BIT );
         vkEndCommandBuffer( frame.end_cmdbuf );
     }
 
@@ -165,8 +166,7 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
     } );
     VkSubmitInfo2 end_submit_info = vk::create::submit_info_from_all( end_submit_info_all );
 
-    RACECAR_VK_CHECK(
-        vkQueueSubmit2( vulkan.graphics_queue, 1, &end_submit_info, frame.render_fence ),
+    vk::check( vkQueueSubmit2( vulkan.graphics_queue, 1, &end_submit_info, frame.render_fence ),
         "Graphics queue submit failed" );
 
     VkPresentInfoKHR present_info = {
@@ -178,10 +178,8 @@ bool execute( State& engine, Context& ctx, TaskList& task_list )
         .pImageIndices = &output_swapchain_index,
     };
 
-    RACECAR_VK_CHECK(
+    vk::check(
         vkQueuePresentKHR( vulkan.graphics_queue, &present_info ), "Failed to present to screen" );
-
-    return true;
 }
 
 } // namespace racecar::engine

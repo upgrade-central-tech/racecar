@@ -59,17 +59,18 @@ VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask 
     };
 }
 
-VkImageCreateInfo image_info( VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent )
+VkImageCreateInfo image_info(
+    VkFormat format, VkImageType image_type, uint32_t mip_levels, uint32_t array_layers, VkImageUsageFlags usage_flags, VkExtent3D extent )
 {
     return {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType = VK_IMAGE_TYPE_2D,
+        .imageType = image_type,
 
         .format = format,
         .extent = extent,
 
-        .mipLevels = 1,
-        .arrayLayers = 1,
+        .mipLevels = mip_levels,
+        .arrayLayers = array_layers,
 
         // Samples is used for MSAA
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -79,12 +80,12 @@ VkImageCreateInfo image_info( VkFormat format, VkImageUsageFlags usage_flags, Vk
 }
 
 VkImageViewCreateInfo image_view_info(
-    VkFormat format, VkImage image, VkImageAspectFlags aspect_flags )
+    VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags )
 {
     VkImageViewCreateInfo info = { .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
 
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .viewType = image_view,
         .format = format,
 
         .subresourceRange = {
@@ -145,23 +146,22 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_info(
     };
 }
 
-std::optional<VkShaderModule> shader_module( Common& vulkan, std::filesystem::path shader_path )
+VkShaderModule shader_module( Common& vulkan, std::filesystem::path shader_path )
 {
+    std::string absolute = std::filesystem::absolute( shader_path ).string();
+
     if ( !std::filesystem::exists( shader_path ) ) {
-        SDL_Log( "[Shader] \"%s\" does not exist!", shader_path.string().c_str() );
-        return {};
+        throw Exception( "[Shader] File \"{}\" does not exist", absolute );
     }
 
     std::ifstream file( shader_path.string(), std::ios::ate | std::ios::binary );
 
     if ( !file.is_open() ) {
-        SDL_Log( "[Shader] Could not open file \"%s\"",
-            std::filesystem::absolute( shader_path ).string().c_str() );
-        return {};
+        throw Exception( "[Shader] Could not open file \"{}\"", absolute );
     }
 
     // Use read position to determine size of file and pre-allocate buffer
-    std::size_t file_size = static_cast<std::size_t>( file.tellg() );
+    size_t file_size = static_cast<size_t>( file.tellg() );
     std::vector<char> shader_buffer( file_size );
 
     file.seekg( 0 );
@@ -180,8 +180,9 @@ std::optional<VkShaderModule> shader_module( Common& vulkan, std::filesystem::pa
 
     // We don't immediately add the shader module to the destructor stack because we destroy it at
     // the end of the pipeline creation instead
-    RACECAR_VK_CHECK( vkCreateShaderModule( vulkan.device, &create_info, nullptr, &shader_module ),
-        "Failed to create shader module" );
+    vk::check( vkCreateShaderModule( vulkan.device, &create_info, nullptr, &shader_module ),
+        "[Shader] Failed to create shader module" );
+    vulkan.destructor_stack.push( vulkan.device, shader_module, vkDestroyShaderModule );
 
     return shader_module;
 }

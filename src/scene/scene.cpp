@@ -1,22 +1,18 @@
 #include "scene.hpp"
 
 #include "../engine/images.hpp"
+#include "../log.hpp"
 
 #include <SDL3/SDL.h>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
 #define GLM_ENABLE_EXPERIMENTAL // Needed for quaternion.hpp
 #include <glm/gtx/quaternion.hpp>
+#include <stb_image.h>
+#define TINYGLTF_IMPLEMENTATION
+#include <tiny_gltf.h>
 
 #include <filesystem>
-#include <stb_image.h>
-
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#define TINYGLTF_IMPLEMENTATION
-
-#include <tiny_gltf.h>
 
 namespace racecar::scene {
 
@@ -35,8 +31,8 @@ VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color
         case 4:
             return VK_FORMAT_R32G32B32A32_SFLOAT;
         default:
-            SDL_Log(
-                "[Scene] Texture loading: Unsupported 32-bit channel count: %i", num_channels );
+            log::warn(
+                "[Scene] Texture loading: Unsupported 32-bit channel count: {}", num_channels );
         }
     } else if ( bits_per_channel == 8 ) {
         switch ( num_channels ) {
@@ -50,27 +46,29 @@ VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color
             }
             return VK_FORMAT_R8G8B8A8_UNORM;
         default:
-            SDL_Log( "[Scene] Texture loading: Unsupported 8-bit channel count: %i", num_channels );
+            log::warn(
+                "[Scene] Texture loading: Unsupported 8-bit channel count: {}", num_channels );
         }
     }
-    SDL_Log( "[Scene] Texture loading: Unknown texture format" );
+
+    log::warn( "[Scene] Texture loading: Unknown texture format. Returning "
+               "VK_FORMAT_R8G8B8A8_UNORM as default" );
     return VK_FORMAT_R8G8B8A8_UNORM;
 }
 
-bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path, Scene& scene,
-    std::vector<geometry::Vertex>& out_global_vertices, std::vector<uint32_t>& out_global_indices )
+void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,
+    Scene& scene, std::vector<geometry::Vertex>& out_global_vertices,
+    std::vector<uint32_t>& out_global_indices )
 {
-    std::filesystem::path path( file_path );
-
-    if ( !std::filesystem::exists( path ) ) {
-        SDL_Log( "[Scene] File does not exist" );
-        return false;
+    if ( !std::filesystem::exists( file_path ) ) {
+        throw Exception(
+            "[Scene] File \"{}\" does not exist", std::filesystem::absolute( file_path ).string() );
     }
 
-    std::string ext = path.extension().string();
+    std::string ext = file_path.extension().string();
+
     if ( ext != ".gltf" && ext != ".glb" ) {
-        SDL_Log( "[Scene] Invalid file extension loaded" );
-        return false;
+        throw Exception( "[Scene] Invalid file extension loaded: {}", ext );
     }
 
     tinygltf::Model model;
@@ -81,36 +79,38 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
     bool has_loaded_successfully = false;
     // Binary files
     if ( ext == ".glb" ) {
-        has_loaded_successfully = loader.LoadBinaryFromFile( &model, &err, &warn, file_path );
+        has_loaded_successfully
+            = loader.LoadBinaryFromFile( &model, &err, &warn, file_path.string() );
     } else { // ASCII files
-        has_loaded_successfully = loader.LoadASCIIFromFile( &model, &err, &warn, file_path );
+        has_loaded_successfully
+            = loader.LoadASCIIFromFile( &model, &err, &warn, file_path.string() );
     }
 
     // Check for errors and warnings
     if ( !warn.empty() ) {
-        SDL_Log( "[Scene] GLTF load WARNING: %s", warn.c_str() );
+        log::warn( "[Scene] GLTF load: {}", warn.c_str() );
     }
 
     if ( !err.empty() ) {
-        SDL_Log( "[Scene] GLTF load ERROR: %s!", err.c_str() );
+        log::error( "[Scene] GLTF load: {}", err.c_str() );
     }
 
     if ( !has_loaded_successfully ) {
-        SDL_Log( "[Scene] GLTF parsing error!" );
+        throw Exception( "[Scene] An error occurred while loading the scene" );
     }
 
-    // TODO @terskayl: Add Material Loading
-    // Materials
     for ( tinygltf::Material& loaded_mat : model.materials ) {
         Material new_mat = {};
-        
+
         new_mat.base_color
             = double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );
         new_mat.base_color_texture_index = loaded_mat.pbrMetallicRoughness.baseColorTexture.index;
+
         if ( new_mat.base_color_texture_index.value() == -1 ) {
             new_mat.base_color_texture_index = std::nullopt;
         }
-        SDL_Log( "[Scene] GLTF parsing error! %i",
+
+        log::info( "[Scene] PBR base color texture index: {}",
             loaded_mat.pbrMetallicRoughness.baseColorTexture.index );
 
         new_mat.metallic = static_cast<float>( loaded_mat.pbrMetallicRoughness.metallicFactor );
@@ -229,9 +229,9 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
         texture.data = engine::create_image( vulkan, engine,
             static_cast<void*>( loaded_img.image.data() ),
             { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
-            image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+            image_format, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT, false );
         if ( !texture.data ) {
-            SDL_Log( "[Scene] GLTF loading: Failed to load texture onto the GPU" );
+            log::error( "[Scene] GLTF loading: Failed to load texture onto the GPU" );
         }
     }
 
@@ -294,9 +294,9 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
                 Primitive new_prim;
                 new_prim.material_id = loaded_prim.material;
                 if ( loaded_prim.mode != 4 ) {
-                    SDL_Log( "[Scene] GLTF Loading: Mesh detected that uses a mode other than "
-                             "TRIANGLES. This is "
-                             "currently unsupported." );
+                    log::warn( "[Scene] GLTF Loading: Mesh detected that uses a mode other than "
+                               "TRIANGLES. This is "
+                               "currently unsupported." );
                 }
 
                 std::vector<glm::vec3> pos;
@@ -309,15 +309,16 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
                         = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
-                        SDL_Log( "[Scene] GLTF Loading: Expected all vertex attributes to be float "
-                                 "- "
-                                 "unsupported "
-                                 "component type detected" );
+                        log::warn(
+                            "[Scene] GLTF Loading: Expected all vertex attributes to be float "
+                            "- "
+                            "unsupported "
+                            "component type detected" );
                     }
                     if ( accessor.type != TINYGLTF_TYPE_VEC3 ) {
-                        SDL_Log( "[Scene] GLTF Loading: Expected all positions to be in vec3 - "
-                                 "unsupported type "
-                                 "detected" );
+                        log::warn( "[Scene] GLTF Loading: Expected all positions to be in vec3 - "
+                                   "unsupported type "
+                                   "detected" );
                     }
 
                     tinygltf::BufferView buffer_view
@@ -339,15 +340,16 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
                         = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
-                        SDL_Log( "[Scene] GLTF Loading: Expected all vertex attributes to be float "
-                                 "- "
-                                 "unsupported "
-                                 "component type detected" );
+                        log::warn(
+                            "[Scene] GLTF Loading: Expected all vertex attributes to be float "
+                            "- "
+                            "unsupported "
+                            "component type detected" );
                     }
                     if ( accessor.type != TINYGLTF_TYPE_VEC3 ) {
-                        SDL_Log( "[Scene] GLTF Loading: Expected all normals to be in vec3 - "
-                                 "unsupported type "
-                                 "detected" );
+                        log::warn( "[Scene] GLTF Loading: Expected all normals to be in vec3 - "
+                                   "unsupported type "
+                                   "detected" );
                     }
 
                     tinygltf::BufferView buffer_view
@@ -370,16 +372,17 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
                         = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
-                        SDL_Log( "[Scene] GLTF Loading: Expected all vertex attributes to be float "
-                                 "- "
-                                 "unsupported "
-                                 "component type detected" );
+                        log::warn(
+                            "[Scene] GLTF Loading: Expected all vertex attributes to be float "
+                            "- "
+                            "unsupported "
+                            "component type detected" );
                     }
                     if ( accessor.type != TINYGLTF_TYPE_VEC2 ) {
-                        SDL_Log( "[Scene] GLTF Loading: Expected all uvs to be in vec2 - "
-                                 "unsupported "
-                                 "type "
-                                 "detected" );
+                        log::warn( "[Scene] GLTF Loading: Expected all uvs to be in vec2 - "
+                                   "unsupported "
+                                   "type "
+                                   "detected" );
                     }
 
                     tinygltf::BufferView buffer_view
@@ -398,9 +401,8 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
                 // Assume position data always exists
                 if ( ( pos.size() != nor.size() && nor.size() != 0 )
                     || ( pos.size() != uv.size() && uv.size() != 0 ) ) {
-                    SDL_Log(
-                        "[Scene] GLTF Loading: WARN, nonzero nor or uv count does not match up "
-                        "with pos count" );
+                    log::warn( "[Scene] GLTF Loading: nonzero nor or uv count does not match up "
+                               "with pos count" );
                 }
 
                 new_prim.vertex_offset = static_cast<int>( out_global_vertices.size() );
@@ -413,13 +415,13 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
                     } else {
                         new_vertex.normal = glm::vec3( 0, 0, 1 );
                     }
+
                     if ( i < uv.size() ) {
                         new_vertex.uv = uv[i];
                     } else {
                         new_vertex.uv = glm::vec2( 0.5, 0.5 );
                     }
-                    new_vertex.color = glm::vec4( 0, 0, 0, 1 );
-                    // Vertex Colors are currently not supported.
+
                     out_global_vertices.push_back( new_vertex );
                 }
 
@@ -430,9 +432,9 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
                     int buffer_view_id = accessor.bufferView;
 
                     if ( accessor.type != TINYGLTF_TYPE_SCALAR ) {
-                        SDL_Log( "[Scene] GLTF Loading: Expected all indices to be scalars - "
-                                 "unsupported type "
-                                 "detected" );
+                        log::warn( "[Scene] GLTF Loading: Expected all indices to be scalars - "
+                                   "unsupported type "
+                                   "detected" );
                     }
 
                     tinygltf::BufferView buffer_view
@@ -460,10 +462,10 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
                         out_global_indices.insert(
                             out_global_indices.end(), ind.begin(), ind.end() );
                     } else {
-                        SDL_Log( "[Scene] GLTF Loading: Expected all indices to either be a "
-                                 "unsigned "
-                                 "short or an "
-                                 "unsigned int - unsupported component type detected" );
+                        log::warn( "[Scene] GLTF Loading: Expected all indices to either be a "
+                                   "unsigned "
+                                   "short or an "
+                                   "unsigned int - unsupported component type detected" );
                     }
                 } else { // If there are no indices, assume position vector will lay out all
                          // triangles
@@ -493,8 +495,6 @@ bool load_gltf( vk::Common& vulkan, engine::State& engine, std::string file_path
             node->children.push_back( child_node.get() );
         }
     }
-
-    return true;
 }
 
 bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene )
@@ -503,7 +503,7 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
     float* hdriData = stbi_loadf( file_path.c_str(), &x, &y, &channels, 4 );
 
     if ( x == 0 || y == 0 ) {
-        SDL_Log( "[Scene] Failed to load HDRI: %s", stbi_failure_reason() );
+        log::error( "[Scene] Failed to load HDRI: {}", stbi_failure_reason() );
         return false;
     }
 
@@ -517,7 +517,7 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
         = get_vk_format( hdri.bits_per_channel, hdri.num_channels, ColorSpace::SFLOAT );
     hdri.data = engine::create_image( vulkan, engine, static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
-        image_format, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+        image_format, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     scene.textures.push_back( hdri );
     scene.hdri_index = scene.textures.size() - 1;

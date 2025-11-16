@@ -1,35 +1,80 @@
 #include "images.hpp"
 
+#include "../log.hpp"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
 
 namespace racecar::engine {
 
-std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan, engine::State& engine,
-    void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped )
+vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine, void* data,
+    VkExtent3D extent, VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags,
+    bool mipmapped )
 {
-    std::optional<vk::mem::AllocatedImage> allocated_image
-        = create_allocated_image( vulkan, engine, data, size, format, usage, mipmapped );
+    const size_t data_size
+        = extent.depth * extent.width * extent.height * vk::utility::bytes_from_format( format );
 
-    if ( !allocated_image ) {
-        SDL_Log( "[engine::create_image] Failed to allocate new image" );
-        return {};
+    vk::mem::AllocatedImage new_image;
+
+    try {
+        vk::mem::AllocatedBuffer upload_buffer = vk::mem::create_buffer(
+            vulkan, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
+
+        std::memcpy( upload_buffer.info.pMappedData, data, data_size );
+
+        new_image = allocate_image( vulkan, extent, format, image_type, 1, 1,
+            usage_flags | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped );
+
+        engine::immediate_submit(
+            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+                VkImageAspectFlags aspect_flags = format == VK_FORMAT_D32_SFLOAT
+                    ? VK_IMAGE_ASPECT_DEPTH_BIT
+                    : VK_IMAGE_ASPECT_COLOR_BIT;
+
+                vk::utility::transition_image( command_buffer, new_image.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
+                    VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT, aspect_flags );
+
+                VkBufferImageCopy copy_region = {
+                    .bufferOffset = 0,
+                    .bufferRowLength = 0,
+                    .bufferImageHeight = 0,
+                };
+
+                copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                copy_region.imageSubresource.mipLevel = 0;
+                copy_region.imageSubresource.baseArrayLayer = 0;
+                copy_region.imageSubresource.layerCount = 1;
+                copy_region.imageExtent = extent;
+
+                vkCmdCopyBufferToImage( command_buffer, upload_buffer.handle, new_image.image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region );
+
+                vk::utility::transition_image( command_buffer, new_image.image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    aspect_flags );
+            } );
+    } catch ( const Exception& ex ) {
+        log::error( "[AllocatedImage] Error occurred: {}", ex.what() );
+        throw;
     }
 
-    SDL_Log( "[engine::create_image] Last alloc called!" );
-
-    return allocated_image;
+    return new_image;
 };
 
-std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan, VkExtent3D extent,
-    VkFormat format, VkImageUsageFlags usage, bool mipmapped )
+vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
+    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers, VkImageUsageFlags usage_flags,
+    bool mipmapped )
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
         .image_format = format,
     };
 
-    VkImageCreateInfo image_info = vk::create::image_info( format, usage, extent );
+    VkImageCreateInfo image_info
+        = vk::create::image_info( format, image_type, mip_levels, array_layers, usage_flags, extent );
 
     if ( mipmapped ) {
         image_info.mipLevels = static_cast<uint32_t>( std::floor(
@@ -37,91 +82,37 @@ std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan, VkExt
             + 1;
     }
 
-    VmaAllocationCreateInfo allocation_create_info = {
-        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-        .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ),
-    };
+    {
+        VmaAllocationCreateInfo allocation_create_info = {
+            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+            .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ),
+        };
+        vk::check( vmaCreateImage( vulkan.allocator, &image_info, &allocation_create_info,
+                       &allocated_image.image, &allocated_image.allocation, nullptr ),
+            "[VMA] Failed to create image" );
+        vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, allocated_image );
 
-    RACECAR_VK_CHECK( vmaCreateImage( vulkan.allocator, &image_info, &allocation_create_info,
-                          &allocated_image.image, &allocated_image.allocation, nullptr ),
-        "Failed to create VMA image" );
-
-    SDL_Log( "[engine::allocate_image] Image %p", allocated_image.image );
-
-    VkImageAspectFlags aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    if ( format == VK_FORMAT_D32_SFLOAT ) {
-        aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+        log::info( "Allocated image {}", static_cast<void*>( allocated_image.image ) );
     }
 
-    VkImageViewCreateInfo image_view_info
-        = vk::create::image_view_info( format, allocated_image.image, aspect_flags );
-    image_view_info.subresourceRange.levelCount = image_info.mipLevels;
+    {
+        // Let's just assume there are binary results
+        VkImageViewType image_view_type
+            = ( image_type == VK_IMAGE_TYPE_2D ) ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
 
-    RACECAR_VK_CHECK(
-        vkCreateImageView( vulkan.device, &image_view_info, nullptr, &allocated_image.image_view ),
-        "Failed to create image view" );
-
-    vulkan.destructor_stack.push( vulkan.device, allocated_image.image_view, vkDestroyImageView );
-    vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, allocated_image );
+        VkImageViewCreateInfo image_view_info
+            = vk::create::image_view_info( format, allocated_image.image, image_view_type,
+                format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                               : VK_IMAGE_ASPECT_COLOR_BIT );
+        image_view_info.subresourceRange.levelCount = image_info.mipLevels;
+        vk::check( vkCreateImageView(
+                       vulkan.device, &image_view_info, nullptr, &allocated_image.image_view ),
+            "Failed to create image view" );
+        vulkan.destructor_stack.push(
+            vulkan.device, allocated_image.image_view, vkDestroyImageView );
+    }
 
     return allocated_image;
-}
-
-std::optional<vk::mem::AllocatedImage> create_allocated_image( vk::Common& vulkan,
-    engine::State& engine, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage,
-    bool mipmapped )
-{
-    size_t data_size
-        = extent.depth * extent.width * extent.height * vk::utility::bytes_from_format( format );
-    std::optional<vk::mem::AllocatedBuffer> upload_buffer = vk::mem::create_buffer(
-        vulkan, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
-
-    if ( !upload_buffer ) {
-        SDL_Log( "[Vulkan] Failed to create upload buffer" );
-        return {};
-    }
-
-    memcpy( upload_buffer.value().info.pMappedData, data, data_size );
-
-    std::optional<vk::mem::AllocatedImage> new_image = allocate_image( vulkan, extent, format,
-        usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped );
-
-    engine::immediate_submit(
-        vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
-            vk::utility::transition_image( command_buffer, new_image->image,
-                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
-                VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_TRANSFER_BIT );
-
-            VkBufferImageCopy copy_region = {
-                .bufferOffset = 0,
-                .bufferRowLength = 0,
-                .bufferImageHeight = 0,
-            };
-
-            copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            copy_region.imageSubresource.mipLevel = 0;
-            copy_region.imageSubresource.baseArrayLayer = 0;
-            copy_region.imageSubresource.layerCount = 1;
-            copy_region.imageExtent = extent;
-
-            vkCmdCopyBufferToImage( command_buffer, upload_buffer->handle, new_image->image,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region );
-
-            vk::utility::transition_image( command_buffer, new_image->image,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT );
-        } );
-
-    return new_image;
-}
-
-void destroy_image( vk::Common& vulkan, const vk::mem::AllocatedImage& image )
-{
-    vkDestroyImageView( vulkan.device, image.image_view, nullptr );
-    vmaDestroyImage( vulkan.allocator, image.image, image.allocation );
 }
 
 } // namespace racecar::engine

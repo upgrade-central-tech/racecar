@@ -1,30 +1,33 @@
 #include "common.hpp"
 
+#include "../exception.hpp"
+#include "../log.hpp"
+
 #include <SDL3/SDL_vulkan.h>
+
+#include <format>
 
 namespace racecar::vk {
 
 namespace {
 
-std::optional<vkb::Instance> create_vulkan_instance()
+vkb::Instance create_instance()
 {
     vkb::Result<vkb::SystemInfo> system_info_ret = vkb::SystemInfo::get_system_info();
 
     if ( !system_info_ret ) {
-        SDL_Log( "[vkb] Unable to get system info" );
-        return {};
+        throw Exception( "[vkb] Unable to get system info" );
     }
 
     vkb::SystemInfo& system_info = system_info_ret.value();
-
-    if ( auto handler
+    auto handler
         = reinterpret_cast<PFN_vkGetInstanceProcAddr>( SDL_Vulkan_GetVkGetInstanceProcAddr() );
-        !handler ) {
-        SDL_Log( "[SDL] Could not get vkGetInstanceProcAddr: %s", SDL_GetError() );
-        return {};
-    } else {
-        volkInitializeCustom( handler );
+
+    if ( !handler ) {
+        throw Exception( "[SDL] Could not get vkGetInstanceProcAddr: {}", SDL_GetError() );
     }
+
+    volkInitializeCustom( handler );
 
     vkb::InstanceBuilder instance_builder;
     instance_builder.set_app_name( "RACECAR" )
@@ -38,32 +41,48 @@ std::optional<vkb::Instance> create_vulkan_instance()
 #endif
 
     uint32_t extension_count = 0;
-    if ( const char* const* extensions = SDL_Vulkan_GetInstanceExtensions( &extension_count );
-        !extensions ) {
-        SDL_Log( "[SDL] Could not get necessary Vulkan instance extensions: %s", SDL_GetError() );
-        return {};
-    } else {
-        SDL_Log( "[Vulkan] Enabling necessary instance extensions:" );
+    const char* const* inst_extensions = SDL_Vulkan_GetInstanceExtensions( &extension_count );
 
-        for ( uint32_t i = 0; i < extension_count; ++i ) {
-            const char* extension = extensions[i];
-            SDL_Log( "- %s", extension );
+    if ( !inst_extensions ) {
+        throw Exception(
+            "[SDL] Could not get necessary Vulkan instance extensions: {}", SDL_GetError() );
+    }
 
-            if ( system_info.is_extension_available( extension ) ) {
-                instance_builder.enable_extension( extension );
-            } else {
-                SDL_Log( "[vkb] Necessary Vulkan instance extension not available: %s", extension );
-                return {};
-            }
+    std::vector<std::string_view> extensions;
+
+    for ( uint32_t i = 0; i < extension_count; ++i ) {
+        const char* extension = inst_extensions[i];
+        extensions.push_back( extension );
+
+        if ( system_info.is_extension_available( extension ) ) {
+            instance_builder.enable_extension( extension );
+        } else {
+            throw Exception(
+                "[vkb] Necessary Vulkan instance extension not available: {}", extension );
         }
+    }
+
+    {
+        std::string message = "[Vulkan] Enabling necessary instance extensions: ";
+
+        bool first = true;
+        for ( std::string_view extension : extensions ) {
+            if ( !first ) {
+                message += ", ";
+            }
+
+            message += std::string( extension );
+            first = false;
+        }
+
+        log::info( "{}", message );
     }
 
     vkb::Result<vkb::Instance> instance_ret = instance_builder.build();
 
     if ( !instance_ret ) {
-        SDL_Log( "[vkb] Failed to create Vulkan instance. Error: %s",
-            instance_ret.error().message().c_str() );
-        return {};
+        throw Exception(
+            "[vkb] Failed to create Vulkan instance. Error: {}", instance_ret.error().message() );
     }
 
     return instance_ret.value();
@@ -71,7 +90,7 @@ std::optional<vkb::Instance> create_vulkan_instance()
 
 /// Picks a physical device with a preference for a discrete GPU, and then creates a logical
 /// device with one queue enabled from each available queue family.
-std::optional<vkb::Device> pick_and_create_vulkan_device( const Common& vulkan )
+vkb::Device pick_and_create_device( const Common& vulkan )
 {
     vkb::PhysicalDeviceSelector phys_selector( vulkan.instance, vulkan.surface );
 
@@ -103,16 +122,12 @@ std::optional<vkb::Device> pick_and_create_vulkan_device( const Common& vulkan )
 
         // Handle no physical devices separately
         switch ( phys_device_error ) {
-        case vkb::PhysicalDeviceError::no_physical_devices_found: {
-            SDL_Log( "[vkb] No physical devices found" );
-            return {};
-        }
+        case vkb::PhysicalDeviceError::no_physical_devices_found:
+            throw Exception( "[vkb] No physical devices found" );
 
-        default: {
-            SDL_Log( "[vkb] Physical device selection failed because: %s",
+        default:
+            throw Exception( "[vkb] Physical device selection failed because: {}",
                 vkb::to_string( phys_device_error ) );
-            return {};
-        }
         }
     }
 
@@ -122,33 +137,30 @@ std::optional<vkb::Device> pick_and_create_vulkan_device( const Common& vulkan )
     vkb::Result<vkb::Device> device_ret = device_builder.build();
 
     if ( !device_ret ) {
-        SDL_Log( "[vkb] Failed to create VkDevice from VkPhysicalDevice named \"%s\"",
-            phys_name.c_str() );
-        return {};
+        throw Exception(
+            "[vkb] Failed to create VkDevice from VkPhysicalDevice named \"{}\"", phys_name );
     }
 
     vkb::Device& device = device_ret.value();
 
     if ( !device.get_queue( vkb::QueueType::graphics ) ) {
-        SDL_Log(
-            "[vkb] VkDevice created from physical device \"%s\" does not have a graphics queue!",
-            phys_name.c_str() );
-        return {};
+        throw Exception(
+            "[vkb] VkDevice created from physical device \"{}\" does not have a graphics queue",
+            phys_name );
     }
 
     if ( !device.get_queue( vkb::QueueType::present ) ) {
-        SDL_Log(
-            "[vkb] VkDevice created from physical device \"%s\" does not have a present queue!",
-            phys_name.c_str() );
-        return {};
+        throw Exception(
+            "[vkb] VkDevice created from physical device \"{}\" does not have a present queue",
+            phys_name );
     }
 
-    SDL_Log( "[Vulkan] Selected physical device \"%s\"", phys_name.c_str() );
+    log::info( "[Vulkan] Selected physical device: {}", phys_name );
 
     return device;
 }
 
-bool initialize_allocator( vk::Common& vulkan )
+void initialize_vmaallocator( vk::Common& vulkan )
 {
     VmaAllocatorCreateInfo allocator_info = {
         .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
@@ -160,73 +172,61 @@ bool initialize_allocator( vk::Common& vulkan )
 
     VmaVulkanFunctions vulkan_functions = {};
 
-    if ( vmaImportVulkanFunctionsFromVolk( &allocator_info, &vulkan_functions ) ) {
-        SDL_Log( "[VMA] Failed to import Vulkan functions from volk" );
-        return false;
-    } else {
-        allocator_info.pVulkanFunctions = &vulkan_functions;
-    }
+    check( vmaImportVulkanFunctionsFromVolk( &allocator_info, &vulkan_functions ),
+        "[VMA] Failed to import Vulkan functions from volk" );
 
-    if ( vmaCreateAllocator( &allocator_info, &vulkan.allocator ) ) {
-        SDL_Log( "[VMA] Failed to allocate global VMA allocator" );
-        return false;
-    }
+    allocator_info.pVulkanFunctions = &vulkan_functions;
 
-    return true;
+    check( vmaCreateAllocator( &allocator_info, &vulkan.allocator ),
+        "[VMA] Failed to create global VMA allocator" );
 }
 
 } // namespace
 
-std::optional<Common> initialize( SDL_Window* window )
+Common initialize( SDL_Window* window )
 {
     Common vulkan;
 
-    if ( std::optional<vkb::Instance> instance_opt = create_vulkan_instance(); !instance_opt ) {
-        SDL_Log( "[Vulkan] Failed to create Vulkan instance" );
-        return {};
-    } else {
-        vulkan.instance = instance_opt.value();
+    try {
+        vulkan.instance = create_instance();
+        volkLoadInstance( vulkan.instance );
+
+        if ( !SDL_Vulkan_CreateSurface( window, vulkan.instance, nullptr, &vulkan.surface ) ) {
+            throw Exception( "[SDL] Could not create Vulkan surface: {}", SDL_GetError() );
+        }
+
+        vulkan.device = pick_and_create_device( vulkan );
+        initialize_vmaallocator( vulkan );
+
+        {
+            vkb::Result<VkQueue> gfx_queue_res
+                = vulkan.device.get_queue( vkb::QueueType::graphics );
+
+            if ( !gfx_queue_res ) {
+                throw Exception(
+                    "[vkb] Failed to get graphics queue: {}", gfx_queue_res.error().message() );
+            }
+
+            vulkan.graphics_queue = std::move( gfx_queue_res.value() );
+        }
+
+        {
+            vkb::Result<uint32_t> gfx_queue_family_res
+                = vulkan.device.get_queue_index( vkb::QueueType::graphics );
+
+            if ( !gfx_queue_family_res ) {
+                throw Exception( "[vkb] Failed to get graphics queue family: {}",
+                    gfx_queue_family_res.error().message() );
+            }
+
+            vulkan.graphics_queue_family = gfx_queue_family_res.value();
+        }
+    } catch ( const Exception& ex ) {
+        log::error( "[vk] {}", ex.what() );
+        throw Exception( "[Vulkan] Failed to initialize" );
     }
 
-    volkLoadInstance( vulkan.instance );
-
-    if ( !SDL_Vulkan_CreateSurface( window, vulkan.instance, nullptr, &vulkan.surface ) ) {
-        SDL_Log( "[SDL] Could not create Vulkan surface: %s", SDL_GetError() );
-        return {};
-    }
-
-    if ( std::optional<vkb::Device> device_opt = pick_and_create_vulkan_device( vulkan );
-        !device_opt ) {
-        SDL_Log( "[Vulkan] Failed to create Vulkan device" );
-        return {};
-    } else {
-        vulkan.device = device_opt.value();
-    }
-
-    if ( !initialize_allocator( vulkan ) ) {
-        SDL_Log( "[Engine] Failed to initialize VMA allocator" );
-        return {};
-    }
-
-    if ( vkb::Result<VkQueue> graphics_queue
-        = vulkan.device.get_queue( vkb::QueueType::graphics ).value();
-        !graphics_queue ) {
-        SDL_Log(
-            "[vkb] Failed to get graphics queue: %s", graphics_queue.error().message().c_str() );
-        return {};
-    } else {
-        vulkan.graphics_queue = std::move( graphics_queue.value() );
-    }
-
-    if ( vkb::Result<uint32_t> graphics_queue_family
-        = vulkan.device.get_queue_index( vkb::QueueType::graphics ).value();
-        !graphics_queue_family ) {
-        SDL_Log( "[vkb] Failed to get graphics queue family: %s",
-            graphics_queue_family.error().message().c_str() );
-        return {};
-    } else {
-        vulkan.graphics_queue_family = graphics_queue_family.value();
-    }
+    log::info( "[Vulkan] Initialized!" );
 
     return vulkan;
 }
@@ -237,8 +237,6 @@ void free( Common& vulkan )
     vkb::destroy_device( vulkan.device );
     SDL_Vulkan_DestroySurface( vulkan.instance, vulkan.surface, nullptr );
     vkb::destroy_instance( vulkan.instance );
-
-    vulkan = {};
 }
 
 } // namespace racecar::vk

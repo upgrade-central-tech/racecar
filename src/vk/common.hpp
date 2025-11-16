@@ -1,24 +1,26 @@
 #pragma once
 
 #include "../engine/destructor_stack.hpp"
+#include "../exception.hpp"
 #include "vma.hpp"
 
-#include <SDL3/SDL.h>
+#include <SDL3/SDL_video.h>
 #include <volk.h>
 #include <VkBootstrap.h>
 
-#include <optional>
-
-/// Custom define based on VK_CHECK, just with our SDL_Log. Feel free to tweak this.
-#define RACECAR_VK_CHECK( vk_fn, message )                                                         \
-    do {                                                                                           \
-        if ( VkResult result = vk_fn; result ) {                                                   \
-            SDL_Log( "[Vulkan] %s | Error code: %d", message, result );                            \
-            return {};                                                                             \
-        }                                                                                          \
-    } while ( 0 )
+#include <source_location>
+#include <string_view>
 
 namespace racecar::vk {
+
+inline constexpr void check( VkResult result, std::string_view message,
+    const std::source_location& loc = std::source_location::current() )
+{
+    if ( result ) {
+        throw Exception( "[vk] [{}({}:{})] {} (code {})", loc.file_name(), loc.line(), loc.column(),
+            message, static_cast<int>( result ) );
+    }
+}
 
 /// Binding defines.
 namespace binding {
@@ -42,7 +44,7 @@ struct Common {
     DestructorStack destructor_stack;
 };
 
-std::optional<Common> initialize( SDL_Window* window );
+Common initialize( SDL_Window* window );
 void free( Common& vulkan );
 
 } // namespace racecar::vk

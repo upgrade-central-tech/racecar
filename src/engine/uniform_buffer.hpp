@@ -1,11 +1,9 @@
 #pragma once
 
+#include "../log.hpp"
 #include "../vk/mem.hpp"
 
-#include <SDL3/SDL.h>
 #include <volk.h>
-
-#include <optional>
 
 namespace racecar {
 
@@ -54,21 +52,18 @@ private:
 };
 
 template <typename T>
-std::optional<UniformBuffer<T>> create_uniform_buffer(
-    racecar::vk::Common& vulkan, T input, size_t frame_overlap )
+UniformBuffer<T> create_uniform_buffer( racecar::vk::Common& vulkan, T input, size_t frame_overlap )
 {
     std::vector<vk::mem::AllocatedBuffer> buffers( frame_overlap );
 
     for ( size_t i = 0; i < frame_overlap; ++i ) {
-        auto buffer_opt = vk::mem::create_buffer(
-            vulkan, sizeof( T ), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
-
-        if ( !buffer_opt ) {
-            SDL_Log( "[create_uniform_buffer] Failed to create buffer %zu for swapchain", i );
-            return {};
+        try {
+            buffers[i] = vk::mem::create_buffer( vulkan, sizeof( T ),
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
+        } catch ( const Exception& ex ) {
+            log::error( "Failed to create uniform buffer {} for swapchain", i );
+            throw;
         }
-
-        buffers[i] = buffer_opt.value();
     }
 
     return UniformBuffer( input, buffers );

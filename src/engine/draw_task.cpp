@@ -4,7 +4,7 @@
 
 namespace racecar::engine {
 
-bool draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
+void draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
     const VkExtent2D extent )
 {
     vkCmdBindPipeline( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.handle );
@@ -46,16 +46,14 @@ bool draw( const engine::State& engine, const DrawTask& draw_task, const VkComma
     vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_descriptor.index_count, 1,
         uint32_t( draw_task.draw_resource_descriptor.first_index ),
         draw_task.draw_resource_descriptor.index_buffer_offset, 0 );
-
-    return true;
 }
 
 DrawResourceDescriptor DrawResourceDescriptor::from_mesh(
     const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive )
 {
     engine::DrawResourceDescriptor draw_mesh_desc = {
-        .vertex_buffers = { mesh.mesh_buffers.vertex_buffer.value().handle },
-        .index_buffer = mesh.mesh_buffers.index_buffer.value().handle,
+        .vertex_buffers = { mesh.mesh_buffers.vertex_buffer.handle },
+        .index_buffer = mesh.mesh_buffers.index_buffer.handle,
         .vertex_buffer_offsets = { 0 },
         .index_buffer_offset = 0,
         .first_index = 0,

@@ -3,6 +3,7 @@
 #include <SDL3/SDL.h>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <imgui.h>
 
 #include <cmath>
 
@@ -11,6 +12,9 @@ namespace racecar::camera {
 /// Offset by a little epsilon.
 constexpr float MAX_POLAR_ANGLE = glm::half_pi<float>() - 0.001f;
 constexpr float MIN_RADIUS = 0.1f;
+
+/// The drag and translate speeds below are calculated relative to this framerate.
+constexpr float RELATIVE_FPS = 180.f;
 constexpr float DRAG_SPEED = 1.f / 200.f;
 constexpr float TRANSLATE_SPEED = 0.05f;
 
@@ -77,6 +81,10 @@ glm::mat4 calculate_view_proj_matrix( const OrbitCamera& cam )
 
 void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam )
 {
+    if ( ImGui::GetIO().WantCaptureMouse ) {
+        return;
+    }
+
     switch ( event->type ) {
     case SDL_EVENT_MOUSE_BUTTON_DOWN: {
         SDL_SetWindowRelativeMouseMode( ctx.window, true );
@@ -89,10 +97,12 @@ void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam
     }
 
     case SDL_EVENT_MOUSE_MOTION: {
-        if ( event->motion.state & SDL_BUTTON_LMASK ) {
+        SDL_MouseButtonFlags state = SDL_GetMouseState( nullptr, nullptr );
+
+        if ( state & SDL_BUTTON_LMASK ) {
             camera::rotate_polar( cam, event->motion.yrel * DRAG_SPEED );
             camera::rotate_azimuth( cam, event->motion.xrel * DRAG_SPEED );
-        } else if ( event->motion.state & SDL_BUTTON_MMASK ) {
+        } else if ( state & SDL_BUTTON_MMASK ) {
             camera::move_horizontal( cam, event->motion.xrel * -DRAG_SPEED );
             camera::move_vertical( cam, event->motion.yrel * DRAG_SPEED );
         }
@@ -139,6 +149,11 @@ void process_input( OrbitCamera& cam )
     if ( key_states[SDL_SCANCODE_E] ) {
         direction.y += TRANSLATE_SPEED;
     }
+
+    // Make movement speed FPS-agnostic
+    float framerate = ImGui::GetIO().Framerate;
+    float factor = RELATIVE_FPS / ( framerate <= 0.f ? RELATIVE_FPS : framerate );
+    direction *= factor;
 
     if ( direction.x != 0.f ) {
         camera::move_horizontal( cam, direction.x );

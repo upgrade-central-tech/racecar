@@ -5,16 +5,12 @@
 
 namespace racecar::engine {
 
-std::optional<vk::mem::AllocatedImage> create_image( vk::Common& vulkan, engine::State& engine,
-    void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped );
-
-std::optional<vk::mem::AllocatedImage> allocate_image( vk::Common& vulkan, VkExtent3D extent,
-    VkFormat format, VkImageUsageFlags usage, bool mipmapped );
-
-std::optional<vk::mem::AllocatedImage> create_allocated_image( vk::Common& vulkan,
-    engine::State& engine, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage,
+vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine, void* data,
+    VkExtent3D size, VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags,
     bool mipmapped );
 
-void destroy_image( vk::Common& vulkan, const vk::mem::AllocatedImage& image );
+vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
+    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers, VkImageUsageFlags usage_flags,
+    bool mipmapped );
 
 } // namespace racecar::engine
