@@ -1,5 +1,6 @@
 #include "racecar.hpp"
 
+#include "atmosphere.hpp"
 #include "constants.hpp"
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
@@ -22,6 +23,7 @@
 #include <filesystem>
 #include <string_view>
 #include <thread>
+
 
 namespace racecar {
 
@@ -148,6 +150,8 @@ void run( bool use_fullscreen )
             .render_target_is_swapchain = true,
             .extent = engine.swapchain.extent,
         };
+
+        [[maybe_unused]] atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
 
         engine::Pipeline atmosphere_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
             engine::get_vertex_input_state_create_info( quad_mesh ), {},
