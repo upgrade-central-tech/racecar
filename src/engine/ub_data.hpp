@@ -1,3 +1,4 @@
+#pragma once
 
 #include <glm/glm.hpp>
 
@@ -33,6 +34,19 @@ struct Debug {
 struct RaymarchBufferData {
     float step_size;
     uint8_t p0[3];
+};
+
+/// `size` is split up across two vec4s for alignment purposes.
+struct Atmosphere {
+    glm::mat4 inverse_proj = {};
+    glm::mat4 inverse_view = {};
+    glm::vec3 camera_position = {};
+    float exposure = 0.f;
+    glm::vec3 sun_position = {};
+    float size_x = 0.f;
+    glm::vec3 white_point = {};
+    float size_y = 0.f;
+    glm::vec4 earth_center = {};
 };
 
 } // namespace racecar::uniform_buffer

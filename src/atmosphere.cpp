@@ -7,7 +7,6 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <string_view>
 
 namespace racecar::atmosphere {
 
@@ -48,6 +47,13 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
 {
     Atmosphere atms;
 
+    atms.uniform_buffer = create_uniform_buffer<ub_data::Atmosphere>(
+        vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+    atms.uniform_desc_set = engine::generate_descriptor_set(
+        vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_FRAGMENT_BIT );
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, atms.uniform_desc_set, atms.uniform_buffer, 0 );
+
     try {
         VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
         VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -81,6 +87,32 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
         log::error( "[atmosphere] Failed to create LUTs: {}", ex.what() );
         throw;
     }
+
+    atms.lut_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        VK_SHADER_STAGE_FRAGMENT_BIT );
+    engine::update_descriptor_set_image( vulkan, engine, atms.lut_desc_set, atms.irradiance, 0 );
+    engine::update_descriptor_set_image( vulkan, engine, atms.lut_desc_set, atms.scattering, 1 );
+    engine::update_descriptor_set_image( vulkan, engine, atms.lut_desc_set, atms.transmittance, 2 );
+
+    VkSampler sampler = VK_NULL_HANDLE;
+    {
+        VkSamplerCreateInfo sampler_info = {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .magFilter = VK_FILTER_LINEAR,
+            .minFilter = VK_FILTER_LINEAR,
+            .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        };
+        vk::check( vkCreateSampler( vulkan.device, &sampler_info, nullptr, &sampler ),
+            "Failed to create atmosphere LUT sampler" );
+        vulkan.destructor_stack.push( vulkan.device, sampler, vkDestroySampler );
+    }
+    atms.sampler_desc_set = engine::generate_descriptor_set(
+        vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_FRAGMENT_BIT );
+    engine::update_descriptor_set_sampler( vulkan, engine, atms.sampler_desc_set, sampler, 0 );
 
     return atms;
 }

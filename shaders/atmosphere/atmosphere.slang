@@ -7,12 +7,32 @@ struct VertexOutput {
     float2 uv;
 };
 
+struct CameraData {
+    float4x4 inverse_proj;
+    float4x4 inverse_view;
+    float3 camera_position;
+    float exposure;
+    float3 sun_position;
+    float size_x;
+    float3 white_point;
+    float size_y;
+    float4 earth_center;
+}
+
+layout( binding = 0, set = 0 ) ConstantBuffer<CameraData> camera_data;
+
+layout( binding = 0, set = 1 ) Texture2D<float4> irradiance_lut;
+layout( binding = 1, set = 1 ) Texture3D<float4> scattering_lut;
+layout( binding = 2, set = 1 ) Texture2D<float4> transmittance_lut;
+
+layout( binding = 0, set = 2 ) SamplerState sampler;
+
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
 {
     VertexOutput output;
     output.sv_position = float4( input.position, 0.1f, 1.f );
-    output.uv = input.position;
+    output.uv = ( input.position + 1.f ) * 0.5f;
 
     return output;
 }
@@ -21,8 +41,7 @@ VertexOutput vs_main( VertexInput input )
 float4 fs_main( VertexOutput input )
     : SV_Target
 {
-    float2 uv = ( input.uv + 1.f ) * 0.5f;
-    return float4( uv, 0.f, 1.f );
+    return float4( transmittance_lut.Sample( sampler, input.uv ).rgb, 1.f );
 }
 
 

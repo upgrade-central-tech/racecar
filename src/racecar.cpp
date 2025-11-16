@@ -24,7 +24,6 @@
 #include <string_view>
 #include <thread>
 
-
 namespace racecar {
 
 namespace {
@@ -124,14 +123,13 @@ void run( bool use_fullscreen )
     engine::Pipeline scene_pipeline;
 
     try {
-        size_t frame_index = engine.get_frame_index();
         scene_pipeline = create_gfx_pipeline( engine, ctx.vulkan,
             engine::get_vertex_input_state_create_info( scene_mesh ),
             {
-                uniform_desc_set.layouts[frame_index],
-                material_desc_sets[0].layouts[frame_index],
-                lut_sets.layouts[frame_index],
-                sampler_desc_set.layouts[frame_index],
+                uniform_desc_set.layouts[0],
+                material_desc_sets[0].layouts[0],
+                lut_sets.layouts[0],
+                sampler_desc_set.layouts[0],
             },
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
@@ -141,6 +139,7 @@ void run( bool use_fullscreen )
 
     engine::TaskList task_list;
 
+    atmosphere::Atmosphere atms = atmosphere::initialize(ctx.vulkan, engine);
     {
         geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
 
@@ -151,20 +150,34 @@ void run( bool use_fullscreen )
             .extent = engine.swapchain.extent,
         };
 
-        [[maybe_unused]] atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
+        engine::Pipeline atmosphere_pipeline;
 
-        engine::Pipeline atmosphere_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
-            engine::get_vertex_input_state_create_info( quad_mesh ), {},
-            vk::create::shader_module( ctx.vulkan, "../shaders/atmosphere/atmosphere.spv" ) );
+        try {
+            atmosphere_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
+                engine::get_vertex_input_state_create_info( quad_mesh ),
+                {
+                    atms.uniform_desc_set.layouts[0],
+                    atms.lut_desc_set.layouts[0],
+                    atms.sampler_desc_set.layouts[0],
+                },
+                vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
+        } catch ( const Exception& ex ) {
+            log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
+            throw;
+        }
 
         atmosphere_gfx_task.draw_tasks.push_back( {
-            .draw_resource_descriptor =
-                {
+            .draw_resource_descriptor = {
                     .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
                     .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
                     .vertex_buffer_offsets = { 0 },
                     .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
-                },
+            },
+            .descriptor_sets = {
+                &atms.uniform_desc_set,
+                &atms.lut_desc_set,
+                &atms.sampler_desc_set,
+            },
             .pipeline = atmosphere_pipeline,
         } );
 

@@ -8,8 +8,8 @@
 namespace racecar::engine {
 
 struct Pipeline {
-    VkPipeline handle = nullptr;
-    VkPipelineLayout layout = nullptr;
+    VkPipeline handle = VK_NULL_HANDLE;
+    VkPipelineLayout layout = VK_NULL_HANDLE;
 };
 
 Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
