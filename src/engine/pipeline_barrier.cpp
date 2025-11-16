@@ -47,9 +47,9 @@ VkBufferMemoryBarrier2 BufferBarrier::get_vk() {
         .srcAccessMask = src_access,
         .dstStageMask = src_stage,
         .dstAccessMask = dst_access,
-        .buffer = buffer,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .buffer = buffer,
         .offset = 0,
         .size = VK_WHOLE_SIZE
     };
@@ -65,8 +65,8 @@ VkImageMemoryBarrier2 ImageBarrier::get_vk() {
         .dstAccessMask = dst_access,
         .oldLayout = src_layout,
         .newLayout = dst_layout,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = image,
         .subresourceRange = range
     };
