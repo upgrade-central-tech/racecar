@@ -141,12 +141,12 @@ vk::mem::AllocatedImage create_cubemap( [[maybe_unused]] std::filesystem::path f
     // hardcode file paths for now because screw you
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
     std::vector<std::string> faces = {
-        abs_file_path + "/nx.png",
-        abs_file_path + "/ny.png",
-        abs_file_path + "/nz.png",
         abs_file_path + "/px.png",
+        abs_file_path + "/nx.png",
         abs_file_path + "/py.png",
+        abs_file_path + "/ny.png",
         abs_file_path + "/pz.png",
+        abs_file_path + "/nz.png",
     };
 
     // Parse the data somehow
@@ -336,12 +336,12 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
     // hardcode file paths for now because screw you
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
     std::vector<std::string> faces = {
-        abs_file_path + "/nx.png",
-        abs_file_path + "/ny.png",
-        abs_file_path + "/nz.png",
         abs_file_path + "/px.png",
+        abs_file_path + "/nx.png",
         abs_file_path + "/py.png",
+        abs_file_path + "/ny.png",
         abs_file_path + "/pz.png",
+        abs_file_path + "/nz.png",
     };
 
     // Parse the data somehow
@@ -410,11 +410,11 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
         }
     }
 
-    for ( size_t i = 0; i < sh_coefficients.size(); i++ ) {
-        // Normalize over the surface area of the sphere, 4 * PI...
-        // I don't want to do anything nasty with figuring out why M_PI isn't here.
-        sh_coefficients[i] *= 1.0f / ( 4.0f * 3.14159265358979323846f );
-    }
+    // for ( size_t i = 0; i < sh_coefficients.size(); i++ ) {
+    //     // Normalize over the surface area of the sphere, 4 * PI...
+    //     // I don't want to do anything nasty with figuring out why M_PI isn't here.
+    //     sh_coefficients[i] *= 1.0f / ( 4.0f * 3.14159265358979323846f );
+    // }
 
     return sh_coefficients;
 }

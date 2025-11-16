@@ -85,6 +85,7 @@ float3 eval_SH( SHData data, float3 direction )
     float c4 = 0.886227;
     float c5 = 0.247708;
 
+#if 1
     float3 L00 = float3( data.coeff0.rgb );
     float3 L1n1 = float3( data.coeff0.a, data.coeff1.rg );
     float3 L10 = float3( data.coeff1.ba, data.coeff2.r );
@@ -94,6 +95,17 @@ float3 eval_SH( SHData data, float3 direction )
     float3 L20 = float3( data.coeff4.ba, data.coeff5.r );
     float3 L21 = float3( data.coeff5.gba );
     float3 L22 = float3( data.coeff6.rgb );
+#else
+    float3 L00 = float3( 0.79, 0.44, 0.54 ) * 0.886227f; // float3( data.coeff0.rgb );
+    float3 L1n1 = float3( 0.39, 0.35, 0.60 ) * 1.023326f; // float3( data.coeff0.a, data.coeff1.rg );
+    float3 L10 = float3( -0.34, -0.18, -0.27 ) * 1.023326f; // float3( data.coeff1.ba, data.coeff2.r );
+    float3 L11 = float3( -0.29, -0.06, 0.01 ) * 1.023326f; // float3( data.coeff2.gba );
+    float3 L2n2 = float3( -0.11, -0.05, -0.12 ) * 0.247708f; // float3( data.coeff3.rgb );
+    float3 L2n1 = float3( -0.26, -0.22, -0.47 ) * 0.247708f; // float3( data.coeff3.a, data.coeff4.rg );
+    float3 L20 = float3( -0.16, -0.09, -0.15 ) * 0.247708f; // float3( data.coeff4.ba, data.coeff5.r );
+    float3 L21 = float3( 0.56, 0.21, 0.14 ) * 0.247708f; // float3( data.coeff5.gba );
+    float3 L22 = float3( 0.21, -0.05, -0.30 ) * 0.247708f; // float3( data.coeff6.rgb );
+#endif
 
     return ( c1 * L22 * ( x * x - y * y ) ) + ( c3 * L20 * ( z * z ) ) + ( c4 * L00 - c5 * L20 )
         + ( 2.0f * c1 * ( L2n2 * x * y + L21 * x * z + L2n1 * y * z ) )

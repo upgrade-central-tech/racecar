@@ -204,20 +204,42 @@ float4 fs_main( VertexOutput in )
     float F_D90 = 0.5f + 2.0f * roughness * clamped_h_dot_l * clamped_h_dot_l;
 
     float3 diffuse_final
-        = lambert * ( 1.0f + ( F_D90 - 1.0f ) * F_l ) * ( 1.0f + ( F_D90 - 1.0f ) * F_v );
+        = lambert; //  * ( 1.0f + ( F_D90 - 1.0f ) * F_l ) * ( 1.0f + ( F_D90 - 1.0f ) * F_v );
 
     ////////////////////////////////////////////////////////////////
     // Composite results
     ////////////////////////////////////////////////////////////////
-    float3 base_color = ( diffuse_final + max( ( 1.0f - F_cc ) * base_specular, 0.0f ) ) * clamped_n_dot_l * ( radiance * 1.5f );
-    float3 out_color = base_color + clearcoat_specular;
+    float3 base_color = ( diffuse_final + max( ( 1.0f - F_cc ) * base_specular, 0.0f ) );
+    // float3 out_color = base_color + clearcoat_specular;
 
 #if USE_SH_IRRADIANCE
     float3 irradiance = eval_SH( sh_data, normal );
-    out_color += irradiance;
+    float3 diffuse_irradiance = diffuse_final * irradiance;
+    // out_color *= irradiance;
 #endif
 
-    return float4( irradiance, 1.0f );
+    float3 diffuse_direct = diffuse_final * clamped_n_dot_l * ( radiance );
+
+    float3 specular_direct = base_specular * clamped_n_dot_l * ( radiance );
+    float3 specular_indirect = precomputed_specular_cc;
+
+    float3 clearcoat_ibl = clearcoat * 0.25f * precomputed_specular_cc;
+    float3 clearcoat_direct = max( clearcoat_specular + ( 1.0f - F_cc ) * base_specular, 0.0f );
+
+    float3 kS = F;
+    float3 kD = 1.0f - kS;
+    kD *= 1.0f - metallic;
+
+    float3 out_color = float3(0.0f);
+
+    // Direct lighting
+    out_color += ( diffuse_direct + specular_direct );
+
+    // IBL
+    out_color += ( kD * diffuse_irradiance + specular_indirect );
+    out_color += clearcoat_ibl;
+
+    return float4( out_color, 1.0f );
 }
 
 
