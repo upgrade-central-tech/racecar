@@ -7,7 +7,7 @@ struct VertexOutput {
     float2 uv;
 };
 
-struct CameraData {
+struct Uniforms {
     float4x4 inverse_proj;
     float4x4 inverse_view;
     float3 camera_position;
@@ -19,7 +19,7 @@ struct CameraData {
     float4 earth_center;
 }
 
-layout( binding = 0, set = 0 ) ConstantBuffer<CameraData> camera_data;
+layout( binding = 0, set = 0 ) ConstantBuffer<Uniforms> uniforms;
 
 layout( binding = 0, set = 1 ) Texture2D<float4> irradiance_lut;
 layout( binding = 1, set = 1 ) Texture3D<float4> scattering_lut;

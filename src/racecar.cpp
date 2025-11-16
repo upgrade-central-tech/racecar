@@ -139,7 +139,7 @@ void run( bool use_fullscreen )
 
     engine::TaskList task_list;
 
-    atmosphere::Atmosphere atms = atmosphere::initialize(ctx.vulkan, engine);
+    atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
     {
         geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
 
@@ -302,14 +302,27 @@ void run( bool use_fullscreen )
             continue;
         }
 
+        camera::OrbitCamera& camera = engine.camera;
+        glm::mat4 view = camera::calculate_view_matrix( camera );
+        glm::mat4 projection = glm::perspective(
+            camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
+        glm::vec3 camera_position = camera::calculate_eye_position( camera );
+
+        // Update atmosphere uniform buffer
+        {
+            ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+            atms_ub.inverse_proj = glm::inverse( projection );
+            atms_ub.inverse_view = glm::inverse( view );
+            atms_ub.camera_position = camera_position;
+
+            atms.uniform_buffer.set_data( atms_ub );
+            atms.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
         // Update camera uniform buffer
         {
             ub_data::Camera camera_ub = camera_buffer.get_data();
-            camera::OrbitCamera& camera = engine.camera;
 
-            glm::mat4 view = camera::calculate_view_matrix( camera );
-            glm::mat4 projection = glm::perspective(
-                camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
             projection[1][1] *= -1;
 
             glm::mat4 model = !gui.demo.rotate_on
@@ -319,7 +332,7 @@ void run( bool use_fullscreen )
             camera_ub.mvp = projection * view * model;
             camera_ub.model = model;
             camera_ub.inv_model = glm::inverse( model );
-            camera_ub.camera_pos = camera::calculate_eye_position( camera );
+            camera_ub.camera_pos = camera_position;
             camera_ub.color = glm::vec3( 0.85f, 0.0f, 0.0f );
 
             camera_buffer.set_data( camera_ub );
