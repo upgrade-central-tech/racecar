@@ -57,7 +57,7 @@ VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color
 }
 
 void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,
-    Scene& scene, std::vector<geometry::Vertex>& out_global_vertices,
+    Scene& scene, std::vector<geometry::scene::Vertex>& out_global_vertices,
     std::vector<uint32_t>& out_global_indices )
 {
     if ( !std::filesystem::exists( file_path ) ) {
@@ -408,7 +408,7 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
                 new_prim.vertex_offset = static_cast<int>( out_global_vertices.size() );
 
                 for ( size_t i = 0; i < pos.size(); ++i ) {
-                    geometry::Vertex new_vertex;
+                    geometry::scene::Vertex new_vertex;
                     new_vertex.position = pos[i];
                     if ( i < nor.size() ) {
                         new_vertex.normal = nor[i];
