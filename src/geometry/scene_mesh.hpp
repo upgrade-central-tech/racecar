@@ -1,14 +1,15 @@
 #pragma once
 
 #include "../engine/state.hpp"
-#include "../vk/mem.hpp"
+#include "gpu_mesh_buffers.hpp"
 
 #include <glm/glm.hpp>
+#include <volk.h>
 
 #include <array>
 #include <span>
 
-namespace racecar::geometry {
+namespace racecar::geometry::scene {
 
 /// Vertex struct, not optimally arranged to fit 16 bytes.
 struct Vertex {
@@ -18,12 +19,6 @@ struct Vertex {
     glm::vec2 uv;
 };
 
-struct GPUMeshBuffers {
-    vk::mem::AllocatedBuffer index_buffer;
-    vk::mem::AllocatedBuffer vertex_buffer;
-    VkDeviceAddress vertex_buffer_address = 0;
-};
-
 struct Mesh {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
@@ -31,7 +26,7 @@ struct Mesh {
 
     VkVertexInputBindingDescription vertex_binding_description = {
         .binding = vk::binding::VERTEX_BUFFER,
-        .stride = sizeof( geometry::Vertex ),
+        .stride = sizeof( Vertex ),
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
     };
 

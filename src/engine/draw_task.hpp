@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../geometry/mesh.hpp"
 #include "../scene/scene.hpp"
 #include "descriptor_set.hpp"
 #include "pipeline.hpp"
@@ -21,8 +20,8 @@ struct DrawResourceDescriptor {
 
     uint32_t index_count = 0;
 
-    static DrawResourceDescriptor from_mesh(
-        const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive );
+    static DrawResourceDescriptor from_mesh( VkBuffer vertex_buffer, VkBuffer index_buffer,
+        uint32_t num_indices, const std::optional<scene::Primitive>& primitive );
 };
 
 /// A draw task represents one Vulkan pipeline, and more specifically, the shader to be used

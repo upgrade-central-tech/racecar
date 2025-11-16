@@ -1,9 +1,9 @@
-#include "mesh.hpp"
+#include "scene_mesh.hpp"
 
 #include "../engine/imm_submit.hpp"
 #include "../log.hpp"
 
-namespace racecar::geometry {
+namespace racecar::geometry::scene {
 
 GPUMeshBuffers upload_mesh( vk::Common& vulkan, const engine::State& engine,
     std::span<uint32_t> indices, std::span<Vertex> vertices )
@@ -24,7 +24,7 @@ GPUMeshBuffers upload_mesh( vk::Common& vulkan, const engine::State& engine,
                 VMA_MEMORY_USAGE_CPU_TO_GPU ),
         };
     } catch ( const Exception& ex ) {
-        log::error( "[geometry] Failed to create vertex + index buffers for mesh" );
+        log::error( "[geometry::scene] Failed to create vertex + index buffers for scene mesh" );
         throw;
     }
 
@@ -50,37 +50,36 @@ GPUMeshBuffers upload_mesh( vk::Common& vulkan, const engine::State& engine,
 
     // Copy stitched buffer [ vertex_buffer_data, index_buffer_data ] to respective vertex and
     // index buffer data on GPU Use CmdCopyBuffer to transfer data from CPU to GPU
-    engine::immediate_submit(
-        vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
-            VkBufferCopy vertex_buf_copy = {
-                .srcOffset = 0,
-                .dstOffset = 0,
-                .size = vertex_buffer_size,
-            };
+    engine::immediate_submit( vulkan, engine.immediate_submit, [&]( VkCommandBuffer cmd_buf ) {
+        VkBufferCopy vertex_buf_copy = {
+            .srcOffset = 0,
+            .dstOffset = 0,
+            .size = vertex_buffer_size,
+        };
 
-            vkCmdCopyBuffer( command_buffer, staging.handle, new_mesh_buffers.vertex_buffer.handle,
-                1, &vertex_buf_copy );
+        vkCmdCopyBuffer(
+            cmd_buf, staging.handle, new_mesh_buffers.vertex_buffer.handle, 1, &vertex_buf_copy );
 
-            VkBufferCopy index_buf_copy = {
-                .srcOffset = vertex_buffer_size,
-                .dstOffset = 0,
-                .size = index_buffer_size,
-            };
+        VkBufferCopy index_buf_copy = {
+            .srcOffset = vertex_buffer_size,
+            .dstOffset = 0,
+            .size = index_buffer_size,
+        };
 
-            vkCmdCopyBuffer( command_buffer, staging.handle, new_mesh_buffers.index_buffer.handle,
-                1, &index_buf_copy );
-        } );
+        vkCmdCopyBuffer(
+            cmd_buf, staging.handle, new_mesh_buffers.index_buffer.handle, 1, &index_buf_copy );
+    } );
 
     return new_mesh_buffers;
 }
 
 void generate_tangents( Mesh& mesh )
 {
-    std::vector<geometry::Vertex>& vertices = mesh.vertices;
+    std::vector<Vertex>& vertices = mesh.vertices;
     std::vector<uint32_t>& indices = mesh.indices;
 
     // Shouldn't be necessary if default constructed to be 0, but do it in case
-    for ( geometry::Vertex& vertex : vertices ) {
+    for ( Vertex& vertex : vertices ) {
         vertex.tangent = glm::vec4( 0.0f );
     }
 
@@ -119,7 +118,7 @@ void generate_tangents( Mesh& mesh )
         vertices[i2].tangent += glm::vec4( tangent, w );
     }
 
-    for ( geometry::Vertex& vertex : vertices ) {
+    for ( Vertex& vertex : vertices ) {
         glm::vec normal = glm::normalize( vertex.normal );
         glm::vec3 tangent
             = glm::normalize( glm::vec3( vertex.tangent.x, vertex.tangent.y, vertex.tangent.z ) );

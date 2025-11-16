@@ -9,6 +9,7 @@
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
 #include "geometry/procedural.hpp"
+#include "geometry/quad.hpp"
 #include "gui.hpp"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
@@ -44,11 +45,11 @@ void run( bool use_fullscreen )
 
     // SCENE LOADING/PROCESSING
     scene::Scene scene;
-    geometry::Mesh scene_mesh;
+    geometry::scene::Mesh scene_mesh;
     scene::load_gltf(
         ctx.vulkan, engine, GLTF_FILE_PATH, scene, scene_mesh.vertices, scene_mesh.indices );
-    scene_mesh.mesh_buffers
-        = geometry::upload_mesh( ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
+    scene_mesh.mesh_buffers = geometry::scene::upload_mesh(
+        ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
 
     UniformBuffer camera_buffer = create_uniform_buffer<ub_data::Camera>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
@@ -122,7 +123,8 @@ void run( bool use_fullscreen )
 
     try {
         size_t frame_index = engine.get_frame_index();
-        scene_pipeline = create_gfx_pipeline( engine, ctx.vulkan, scene_mesh,
+        scene_pipeline = create_gfx_pipeline( engine, ctx.vulkan,
+            engine::get_vertex_input_state_create_info( scene_mesh ),
             {
                 uniform_desc_set.layouts[frame_index],
                 material_desc_sets[0].layouts[frame_index],
@@ -134,6 +136,11 @@ void run( bool use_fullscreen )
         log::error( "Failed to create graphics pipeline: {}", ex.what() );
         throw;
     }
+
+    geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+
+    [[maybe_unused]] VkPipelineVertexInputStateCreateInfo test
+        = engine::get_vertex_input_state_create_info( quad_mesh );
 
     engine::TaskList task_list;
 
@@ -205,7 +212,10 @@ void run( bool use_fullscreen )
                     }
 
                     engine::DrawResourceDescriptor draw_descriptor
-                        = engine::DrawResourceDescriptor::from_mesh( scene_mesh, prim );
+                        = engine::DrawResourceDescriptor::from_mesh(
+                            scene_mesh.mesh_buffers.vertex_buffer.handle,
+                            scene_mesh.mesh_buffers.index_buffer.handle,
+                            static_cast<uint32_t>( scene_mesh.indices.size() ), prim );
 
                     // give the material descriptor set to the draw task
                     sponza_gfx_task.draw_tasks.push_back( {

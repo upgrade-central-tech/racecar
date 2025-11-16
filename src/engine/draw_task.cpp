@@ -48,16 +48,16 @@ void draw( const engine::State& engine, const DrawTask& draw_task, const VkComma
         draw_task.draw_resource_descriptor.index_buffer_offset, 0 );
 }
 
-DrawResourceDescriptor DrawResourceDescriptor::from_mesh(
-    const geometry::Mesh& mesh, const std::optional<scene::Primitive>& primitive )
+DrawResourceDescriptor DrawResourceDescriptor::from_mesh( VkBuffer vertex_buffer,
+    VkBuffer index_buffer, uint32_t num_indices, const std::optional<scene::Primitive>& primitive )
 {
     engine::DrawResourceDescriptor draw_mesh_desc = {
-        .vertex_buffers = { mesh.mesh_buffers.vertex_buffer.handle },
-        .index_buffer = mesh.mesh_buffers.index_buffer.handle,
+        .vertex_buffers = { vertex_buffer },
+        .index_buffer = index_buffer,
         .vertex_buffer_offsets = { 0 },
         .index_buffer_offset = 0,
         .first_index = 0,
-        .index_count = static_cast<uint32_t>( mesh.indices.size() ),
+        .index_count = num_indices,
     };
 
     if ( primitive.has_value() ) {
