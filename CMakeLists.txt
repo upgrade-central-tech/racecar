@@ -21,6 +21,7 @@ add_executable(racecar
   ${SRC_DIR}/sdl.cpp
   ${SRC_DIR}/orbit_camera.cpp
   ${SRC_DIR}/gui.cpp
+  ${SRC_DIR}/stb.cpp
 
   ${VK_DIR}/common.cpp
   ${VK_DIR}/create.cpp
@@ -95,3 +96,6 @@ target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)
 
 find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
 target_include_directories(racecar PRIVATE ${TINYGLTF_INCLUDE_DIRS})
+
+find_package(Stb REQUIRED)
+target_include_directories(racecar PRIVATE ${Stb_INCLUDE_DIR})

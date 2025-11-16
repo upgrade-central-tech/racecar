@@ -6,18 +6,13 @@
 #include <SDL3/SDL.h>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
 #define GLM_ENABLE_EXPERIMENTAL // Needed for quaternion.hpp
 #include <glm/gtx/quaternion.hpp>
+#include <stb_image.h>
+#define TINYGLTF_IMPLEMENTATION
+#include <tiny_gltf.h>
 
 #include <filesystem>
-#include <stb_image.h>
-
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#define TINYGLTF_IMPLEMENTATION
-
-#include <tiny_gltf.h>
 
 namespace racecar::scene {
 
