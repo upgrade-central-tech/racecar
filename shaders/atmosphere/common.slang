@@ -35,7 +35,7 @@ public struct Parameters {
 }
 
 /// Compile-time constant. Values are calibrated to match Earth's atmosphere.
-public static const Parameters ATMOSPHERE_PARAMETERS = {
+public static const Parameters EARTH = {
     float3( 1.474000f, 1.850400f, 1.911980f ),
     0.004675f,
     6360.f,
@@ -76,6 +76,7 @@ static const int SCATTERING_LUT_NU_SIZE = 8;
 static const int TRANSMITTANCE_LUT_W = 256;
 static const int TRANSMITTANCE_LUT_H = 64;
 
-static const float PI = 3.14159265358979323846f;
+public static const float PI = 3.14159265358979323846f;
+public static const float INV_PI = 0.3183098861837906715377f;
 
 

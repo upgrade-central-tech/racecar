@@ -18,6 +18,8 @@
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
+#include <glm/gtx/compatibility.hpp>
 
 #include <chrono>
 #include <filesystem>
@@ -310,9 +312,17 @@ void run( bool use_fullscreen )
 
         // Update atmosphere uniform buffer
         {
+            if ( gui.atms.animate_azimuth ) {
+                float t
+                    = ( std::sin( 0.0002f * static_cast<float>( engine.rendered_frames ) ) + 1.f )
+                    * 0.5f;
+                atms.sun_azimuth = glm::lerp( -glm::half_pi<float>(), glm::pi<float>(), t );
+            }
+
             ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
             atms_ub.inverse_proj = glm::inverse( projection );
-            atms_ub.inverse_view = glm::inverse( view );
+            atms_ub.inverse_view
+                = glm::rotate( glm::inverse( view ), glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
             atms_ub.camera_position = camera_position;
             atms_ub.exposure = atms.exposure;
             atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );

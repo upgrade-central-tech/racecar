@@ -37,6 +37,10 @@ struct Gui {
         bool rotate_on = false;
         float rotate_speed = 0.005f;
     } demo = {};
+
+    struct AtmosphereData {
+        bool animate_azimuth = false;
+    } atms = {};
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );
