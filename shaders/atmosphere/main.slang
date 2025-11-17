@@ -1,4 +1,5 @@
 import atmosphere;
+import bindings;
 
 struct VertexInput {
     float2 position : POSITION;
@@ -8,26 +9,6 @@ struct VertexOutput {
     float4 sv_position : SV_Position;
     float3 view_ray;
 };
-
-struct Uniforms {
-    float4x4 inverse_proj;
-    float4x4 inverse_view;
-    float3 camera_position;
-    float exposure;
-    float3 sun_direction;
-    float sun_size_x;
-    float3 white_point;
-    float sun_size_y;
-    float4 earth_center;
-}
-
-ConstantBuffer<Uniforms> uniforms;
-
-Texture2D<float4> irradiance_lut;
-Texture3D<float4> scattering_lut;
-Texture2D<float4> transmittance_lut;
-
-SamplerState sampler;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )

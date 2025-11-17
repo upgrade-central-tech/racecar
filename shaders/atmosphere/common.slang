@@ -64,4 +64,17 @@ static const Parameters ATMOSPHERE_PARAMETERS = {
     -0.207912f,
 };
 
+static const int IRRADIANCE_LUT_W = 64;
+static const int IRRADIANCE_LUT_H = 16;
+
+static const int SCATTERING_LUT_R_SIZE = 32;
+static const int SCATTERING_LUT_MU_SIZE = 128;
+static const int SCATTERING_LUT_MU_S_SIZE = 32;
+static const int SCATTERING_LUT_NU_SIZE = 8;
+
+static const int TRANSMITTANCE_LUT_W = 256;
+static const int TRANSMITTANCE_LUT_H = 64;
+
+static const float PI = 3.14159265358979323846f;
+
 
