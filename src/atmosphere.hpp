@@ -15,14 +15,11 @@ namespace racecar::atmosphere {
 
 constexpr std::string_view SHADER_PATH = "../shaders/atmosphere/atmosphere.spv";
 
-/// The base unit of the model is in kilometers, so we have to convert it.
-constexpr float LENGTH_UNIT_IN_METERS = 1000.f;
-
 /// Earth radius is 6360 km, which we represent as height.
-constexpr glm::vec3 EARTH_CENTER = { 0.f, -6'360'000.f / LENGTH_UNIT_IN_METERS, 0.f };
+constexpr glm::vec3 EARTH_CENTER = { 0.f, -6'360, 0.f };
 
 /// The sun's angular radius as seen from Earth, in radians.
-constexpr float SUN_ANGULAR_RADIUS = 0.00935f * 0.5f;
+constexpr float SUN_ANGULAR_RADIUS = 0.015f;
 
 /// White point for tone mapping. Currently neutral white.
 constexpr glm::vec3 WHITE_POINT = { 1.f, 1.f, 1.f };
