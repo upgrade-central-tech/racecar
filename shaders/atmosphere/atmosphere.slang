@@ -12,10 +12,10 @@ struct Uniforms {
     float4x4 inverse_view;
     float3 camera_position;
     float exposure;
-    float3 sun_position;
-    float size_x;
+    float3 sun_direction;
+    float sun_size_x;
     float3 white_point;
-    float size_y;
+    float sun_size_y;
     float4 earth_center;
 }
 
@@ -45,6 +45,15 @@ VertexOutput vs_main( VertexInput input )
 float4 fs_main( VertexOutput input )
     : SV_Target
 {
+    let view_ray = input.view_ray;
+    let view_dir = normalize( view_ray );
+    let camera_pos = uniforms.camera_position;
+    let earth_center = uniforms.earth_center.xyz;
+    let sun_dir = normalize( uniforms.sun_direction );
+    let sun_size = float2( uniforms.sun_size_x, uniforms.sun_size_y );
+    let exposure = uniforms.exposure;
+    let white_point = uniforms.white_point;
+
     return float4( 0.f, 1.f, 0.f, 1.f );
 }
 
