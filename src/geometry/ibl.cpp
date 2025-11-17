@@ -1,20 +1,149 @@
 #include "ibl.hpp"
 
+#include "../engine/descriptor_set.hpp"
 #include "../engine/images.hpp"
 #include "../log.hpp"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
-#include "procedural.hpp"
 
 
 namespace racecar::geometry {
 
-vk::mem::AllocatedImage generate_diffuse_irradiance(
-    [[maybe_unused]] std::filesystem::path file_path )
+glm::vec3 cubemap_direction( uint32_t face, float u, float v )
 {
-    vk::mem::AllocatedImage new_image;
+    switch ( face ) {
+    case 0:
+        return glm::normalize( glm::vec3( 1.0f, -v, -u ) );
+    case 1:
+        return glm::normalize( glm::vec3( -1.0f, -v, u ) );
+    case 2:
+        return glm::normalize( glm::vec3( u, 1.0f, v ) );
+    case 3:
+        return glm::normalize( glm::vec3( u, -1.0f, -v ) );
+    case 4:
+        return glm::normalize( glm::vec3( u, -v, 1.0f ) );
+    case 5:
+        return glm::normalize( glm::vec3( -u, -v, -1.0f ) );
+    }
+    return glm::vec3( -1.0f );
+}
 
-    return new_image;
+vk::mem::AllocatedImage generate_diffuse_irradiance(
+    [[maybe_unused]] std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine )
+{
+    // Parse the cubemap for each face individually. Somehow log important info?
+    const size_t layer_count = 6;
+    uint32_t tile_width = 256;
+    uint32_t tile_height = 256;
+    VkExtent3D tile_extent = { tile_width, tile_height, 1 };
+
+    vk::mem::AllocatedImage cubemap_image
+        = allocate_cube_map( vulkan, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
+
+    vk::mem::AllocatedImage irradiance_rw_image
+        = allocate_cube_map( vulkan, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1, false );
+
+    {
+        // hardcode file paths for now because screw you
+        std::string abs_file_path = std::filesystem::absolute( file_path ).string();
+        std::vector<std::string> faces = {
+            abs_file_path + "/px.png",
+            abs_file_path + "/nx.png",
+            abs_file_path + "/py.png",
+            abs_file_path + "/ny.png",
+            abs_file_path + "/pz.png",
+            abs_file_path + "/nz.png",
+        };
+
+        // Parse the data somehow
+        std::vector<std::vector<float>> face_data( layer_count );
+        for ( uint32_t tile = 0; tile < layer_count; tile++ ) {
+            face_data[tile] = engine::load_image_to_float( faces[tile] );
+        }
+
+        // Need to upload all of these
+        // Batched upload necessary. I can't use my brain right now to use our API effectively
+        load_cubemap(
+            vulkan, engine, face_data, cubemap_image, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT );
+    }
+    {
+        engine::DescriptorSet prefilter_desc = engine::generate_descriptor_set( vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLER },
+            VK_SHADER_STAGE_COMPUTE_BIT );
+
+        VkSampler sampler = VK_NULL_HANDLE;
+        {
+            VkSamplerCreateInfo sampler_info = {
+                .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                .magFilter = VK_FILTER_LINEAR,
+                .minFilter = VK_FILTER_LINEAR,
+                .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            };
+            vk::check( vkCreateSampler( vulkan.device, &sampler_info, nullptr, &sampler ),
+                "Failed to create atmosphere LUT sampler" );
+            vulkan.destructor_stack.push( vulkan.device, sampler, vkDestroySampler );
+        }
+
+        engine::update_descriptor_set_image( vulkan, engine, prefilter_desc, cubemap_image, 0 );
+        engine::update_descriptor_set_write_image( vulkan, engine, prefilter_desc, irradiance_rw_image, 1 );
+        engine::update_descriptor_set_sampler( vulkan, engine, prefilter_desc, sampler, 2 );
+
+        // Hardcoded one-shot compute pipeline run
+        VkPipelineLayoutCreateInfo pipeline_info
+            = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+                  .setLayoutCount = 1,
+                  .pSetLayouts = prefilter_desc.layouts.data() };
+
+        VkPipelineLayout pipeline_layout;
+        vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &pipeline_layout );
+
+        VkComputePipelineCreateInfo create_pipeline_info = {
+            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+            .layout = pipeline_layout,
+        };
+
+        VkShaderModule irradiance_module
+            = vk::create::shader_module( vulkan, "../shaders/prefilter/irradiance.spv" );
+        create_pipeline_info.stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr,
+            0, VK_SHADER_STAGE_COMPUTE_BIT, irradiance_module, "cs_compute_irradiance", nullptr };
+
+        VkPipeline compute_pipeline;
+        vkCreateComputePipelines(
+            vulkan.device, VK_NULL_HANDLE, 1, &create_pipeline_info, nullptr, &compute_pipeline );
+
+        engine::immediate_submit(
+            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+                // RW cubemap transition first
+                vk::utility::transition_image( command_buffer, irradiance_rw_image.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+                    VK_ACCESS_NONE, VK_ACCESS_SHADER_WRITE_BIT,
+                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT );
+            
+                vkCmdBindPipeline( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline );
+                vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, prefilter_desc.descriptor_sets.data(), 0, nullptr );
+                
+                vkCmdDispatch( command_buffer, tile_width, tile_height, 6 );
+                
+                vk::utility::transition_image(
+                    command_buffer,
+                    irradiance_rw_image.image,
+                    VK_IMAGE_LAYOUT_GENERAL,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_SHADER_WRITE_BIT,
+                    VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT
+                );
+            }
+        );
+    }
+
+    return irradiance_rw_image;
 }
 
 std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
@@ -111,7 +240,7 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
 }
 
 vk::mem::AllocatedImage allocate_cube_map(
-    vk::Common& vulkan, VkExtent3D extent, VkFormat format, uint32_t mip_levels )
+    vk::Common& vulkan, VkExtent3D extent, VkFormat format, uint32_t mip_levels, [[maybe_unused]] bool readOnly )
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
@@ -157,9 +286,35 @@ vk::mem::AllocatedImage allocate_cube_map(
         vk::check( vkCreateImageView(
                        vulkan.device, &image_view_info, nullptr, &allocated_image.image_view ),
             "Failed to create image view" );
+
+        vulkan.destructor_stack.push( vulkan.device, allocated_image.image_view, vkDestroyImageView );
     }
 
-    vulkan.destructor_stack.push( vulkan.device, allocated_image.image_view, vkDestroyImageView );
+    {
+        VkImageViewCreateInfo storage_image_view_info = { 
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = allocated_image.image,
+
+            .viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+            .format = format,
+
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = std::max(mip_levels, 1U),
+                .baseArrayLayer = 0,
+                .layerCount = 6,
+            }, 
+        };
+        storage_image_view_info.subresourceRange.levelCount = image_info.mipLevels;
+
+        vk::check( vkCreateImageView(
+                       vulkan.device, &storage_image_view_info, nullptr, &allocated_image.storage_image_view ),
+            "Failed to create image view" );
+
+        vulkan.destructor_stack.push( vulkan.device, allocated_image.storage_image_view, vkDestroyImageView );
+    }
+
     vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, allocated_image );
 
     return allocated_image;

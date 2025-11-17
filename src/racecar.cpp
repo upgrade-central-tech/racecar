@@ -5,16 +5,14 @@
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
 #include "engine/execute.hpp"
+#include "engine/images.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
-#include "engine/images.hpp"
-
-#include "geometry/procedural.hpp"
 #include "geometry/ibl.hpp"
+#include "geometry/procedural.hpp"
 #include "geometry/quad.hpp"
-
 #include "gui.hpp"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
@@ -22,6 +20,7 @@
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+
 #define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
 #include <glm/gtx/compatibility.hpp>
 
@@ -116,7 +115,8 @@ void run( bool use_fullscreen )
 
     engine::DescriptorSet lut_sets;
     lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     vk::mem::AllocatedImage test_cubemap
@@ -126,16 +126,20 @@ void run( bool use_fullscreen )
 
     UniformBuffer sh_buffer = create_uniform_buffer<ub_data::SHData>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-    std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );
 
-    for (size_t i = 0; i < sh_coefficients.size(); ++i)
-    {
-        log::info("SH coeff: {}, {}, {}", sh_coefficients[i].x, sh_coefficients[i].y, sh_coefficients[i].z);
+    std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );
+    vk::mem::AllocatedImage diffuse_irradiance
+        = geometry::generate_diffuse_irradiance( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
+
+    for ( size_t i = 0; i < sh_coefficients.size(); ++i ) {
+        log::info( "SH coeff: {}, {}, {}", sh_coefficients[i].x, sh_coefficients[i].y,
+            sh_coefficients[i].z );
     }
 
     engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, test_cubemap, 0 );
     engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 1 );
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 2 );
+    engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, diffuse_irradiance, 2 );
+    engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 3 );
 
     engine::Pipeline scene_pipeline;
 
@@ -384,16 +388,24 @@ void run( bool use_fullscreen )
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        // This is rather silly, but I guess we need to update the uniform buffer for SH everytime I suppose.
+        // This is rather silly, but I guess we need to update the uniform buffer for SH everytime I
+        // suppose.
         {
             ub_data::SHData SH_ub = {
-                .coeff0 = glm::vec4( sh_coefficients[0].r, sh_coefficients[0].g, sh_coefficients[0].b, sh_coefficients[1].r ),
-                .coeff1 = glm::vec4( sh_coefficients[1].g, sh_coefficients[1].b, sh_coefficients[2].r, sh_coefficients[2].g ),
-                .coeff2 = glm::vec4( sh_coefficients[2].b, sh_coefficients[3].r, sh_coefficients[3].g, sh_coefficients[3].b),
-                .coeff3 = glm::vec4( sh_coefficients[4].r, sh_coefficients[4].g, sh_coefficients[4].b, sh_coefficients[5].r),
-                .coeff4 = glm::vec4( sh_coefficients[5].g, sh_coefficients[5].b, sh_coefficients[6].r, sh_coefficients[6].g ),
-                .coeff5 = glm::vec4( sh_coefficients[6].b, sh_coefficients[7].r, sh_coefficients[7].g, sh_coefficients[7].b),
-                .coeff6 = glm::vec4( sh_coefficients[8].r, sh_coefficients[8].g, sh_coefficients[8].b, 0.0f),
+                .coeff0 = glm::vec4( sh_coefficients[0].r, sh_coefficients[0].g,
+                    sh_coefficients[0].b, sh_coefficients[1].r ),
+                .coeff1 = glm::vec4( sh_coefficients[1].g, sh_coefficients[1].b,
+                    sh_coefficients[2].r, sh_coefficients[2].g ),
+                .coeff2 = glm::vec4( sh_coefficients[2].b, sh_coefficients[3].r,
+                    sh_coefficients[3].g, sh_coefficients[3].b ),
+                .coeff3 = glm::vec4( sh_coefficients[4].r, sh_coefficients[4].g,
+                    sh_coefficients[4].b, sh_coefficients[5].r ),
+                .coeff4 = glm::vec4( sh_coefficients[5].g, sh_coefficients[5].b,
+                    sh_coefficients[6].r, sh_coefficients[6].g ),
+                .coeff5 = glm::vec4( sh_coefficients[6].b, sh_coefficients[7].r,
+                    sh_coefficients[7].g, sh_coefficients[7].b ),
+                .coeff6 = glm::vec4(
+                    sh_coefficients[8].r, sh_coefficients[8].g, sh_coefficients[8].b, 0.0f ),
             };
 
             sh_buffer.set_data( SH_ub );

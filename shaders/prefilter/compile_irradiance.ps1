@@ -1,0 +1,2 @@
+# Assumes compiler is on your PATH (which it should be)
+slangc.exe "$PSScriptRoot\irradiance.slang" -target spirv -profile spirv_1_5 -emit-spirv-directly -g2 -fvk-use-entrypoint-name -entry cs_compute_irradiance -o "$PSScriptRoot\irradiance.spv"

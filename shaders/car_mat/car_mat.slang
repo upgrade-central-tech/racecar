@@ -63,8 +63,8 @@ layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 // Cubemaps + LUTs
 layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
 layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
-layout( binding = 2, set = 2 ) ConstantBuffer<SHData> sh_data;
-layout( binding = 3, set = 2 ) Texture2D<float4> _Glint2023NoiseMap;
+layout( binding = 2, set = 2 ) TextureCube<float4> irradiance_cubemap;
+layout( binding = 3, set = 2 ) ConstantBuffer<SHData> sh_data;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
@@ -220,6 +220,7 @@ float4 fs_main( VertexOutput in )
 #if USE_SH_IRRADIANCE
     float3 irradiance = eval_SH( sh_data, normal );
     float3 diffuse_irradiance = diffuse_final * irradiance;
+    float3 diffuse_irradiance2 = irradiance_cubemap.Sample( nearest_sampler, normal ).rgb;
     // out_color *= irradiance;
 #endif
 
@@ -244,7 +245,7 @@ float4 fs_main( VertexOutput in )
     out_color += ( kD * diffuse_irradiance + specular_indirect );
     out_color += clearcoat_ibl;
 
-    return float4( out_color, 1.0f );
+    return float4( diffuse_irradiance2, 1.0f );
 }
 
 
