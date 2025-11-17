@@ -28,7 +28,7 @@ namespace racecar {
 namespace {
 
 constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
-constexpr std::string_view SHADER_MODULE_PATH = "../shaders/car_mat/car_mat.spv";
+constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
@@ -131,6 +131,12 @@ void run( bool use_fullscreen )
                 lut_sets.layouts[frame_index],
                 sampler_desc_set.layouts[frame_index],
             },
+            {
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT  // UV
+            },
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create graphics pipeline: {}", ex.what() );
@@ -144,11 +150,101 @@ void run( bool use_fullscreen )
 
     engine::TaskList task_list;
 
+    // deferred rendering
+    engine::RWImage GBuffer_Normal
+        = engine::create_rwimage( ctx.vulkan, engine, VkExtent3D(engine.swapchain.extent.width, engine.swapchain.extent.height, 1),
+            VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
+    engine::RWImage GBuffer_Position
+        = engine::create_rwimage( ctx.vulkan, engine, VkExtent3D(engine.swapchain.extent.width, engine.swapchain.extent.height, 1),
+            VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
+    engine::RWImage GBuffer_Tangent
+        = engine::create_rwimage( ctx.vulkan, engine, VkExtent3D(engine.swapchain.extent.width, engine.swapchain.extent.height, 1),
+            VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
+    engine::RWImage GBuffer_UV
+        = engine::create_rwimage( ctx.vulkan, engine, VkExtent3D(engine.swapchain.extent.width, engine.swapchain.extent.height, 1),
+            VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
+    engine::RWImage GBuffer_Depth
+        = engine::create_rwimage( ctx.vulkan, engine, VkExtent3D(engine.swapchain.extent.width, engine.swapchain.extent.height, 1),
+            VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
     {
+        // deferred transition tasks
+        engine::add_pipeline_barrier(task_list, engine::PipelineBarrierDescriptor {
+            .buffer_barriers = {},
+            .image_barriers = {
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Normal,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR
+                },
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR
+                },
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Tangent,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR
+                },
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_UV,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR
+                },
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Depth,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH
+                }
+            }
+        });
+
         engine::GfxTask sponza_gfx_task = {
-            .clear_color = { { { 0.f, 0.f, 1.f, 1.f } } },
+            .clear_color = { { { 0.f, 0.f, 0.f, 1.f } } },
             .clear_depth = 1.f,
-            .render_target_is_swapchain = true,
+            .render_target_is_swapchain = false,
+            .color_attachments = {
+                GBuffer_Position,
+                GBuffer_Normal,
+                GBuffer_Tangent,
+                GBuffer_UV
+            },
+            .depth_image = GBuffer_Depth,
             .extent = engine.swapchain.extent,
         };
 

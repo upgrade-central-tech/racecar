@@ -12,9 +12,10 @@ struct Pipeline {
     VkPipelineLayout layout = nullptr;
 };
 
+// this def needs to be refactored
 Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
-    const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module );
+    const std::vector<VkDescriptorSetLayout>& layouts, const std::vector<VkFormat> color_attachment_formats, VkShaderModule shader_module );
 
 template <typename Mesh>
 VkPipelineVertexInputStateCreateInfo get_vertex_input_state_create_info( const Mesh& mesh )
