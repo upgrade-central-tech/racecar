@@ -4,9 +4,9 @@ __include common;
 __include helpers;
 
 /// Stores the result of atmospheric scattering.
-struct SkySample {
-    float3 radiance; /// In-scattered light, i.e. the sky glow
-    float3 transmittance; /// Ratio of light transmitted through the atmosphere
+public struct SkySample {
+    public float3 radiance; /// In-scattered light, i.e. the sky glow
+    public float3 transmittance; /// Ratio of light transmitted through the atmosphere
 };
 
 struct CombinedScatteringResult {
@@ -59,8 +59,8 @@ func get_combined_scattering( in atms: Parameters, r: float, mu: float, mu_s: fl
     };
 }
 
-func get_sky_radiance(
-    in atms: Parameters, camera: float3, view_ray: float3, shadow_length: float, sun_dir: float3 )
+public func get_sky_radiance(
+    in atms: Parameters, camera: float3, view_ray: float3, sun_dir: float3 )
     ->SkySample
 {
     var local_camera = camera;

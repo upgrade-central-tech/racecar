@@ -1,40 +1,41 @@
 implementing atmosphere;
 
-struct DensityProfileLayer {
-    float width;
-    float exp_term;
-    float exp_scale;
-    float linear_term;
-    float constant_term;
+public struct DensityProfileLayer {
+    public float width;
+    public float exp_term;
+    public float exp_scale;
+    public float linear_term;
+    public float constant_term;
 };
 
-struct DensityProfile {
-    DensityProfileLayer layers[2]; ///< Hardcoded to have two layers (lower and upper atmosphere)
+public struct DensityProfile {
+    /// Hardcoded to have two layers (lower and upper atmosphere)
+    public DensityProfileLayer layers[2];
 };
 
-struct Parameters {
-    float3 solar_irradiance;
-    float sun_angular_radius;
-    float bottom_radius;
-    float top_radius;
+public struct Parameters {
+    public float3 solar_irradiance;
+    public float sun_angular_radius;
+    public float bottom_radius;
+    public float top_radius;
 
-    DensityProfile rayleigh_density;
-    float3 rayleigh_scattering;
+    public DensityProfile rayleigh_density;
+    public float3 rayleigh_scattering;
 
-    DensityProfile mie_density;
-    float3 mie_scattering;
-    float3 mie_extinction;
-    float mie_phase_function_g;
+    public DensityProfile mie_density;
+    public float3 mie_scattering;
+    public float3 mie_extinction;
+    public float mie_phase_function_g;
 
-    DensityProfile absorption_density;
-    float3 absorption_extinction;
+    public DensityProfile absorption_density;
+    public float3 absorption_extinction;
 
-    float3 ground_albedo;
-    float mu_s_min;
+    public float3 ground_albedo;
+    public float mu_s_min;
 }
 
 /// Compile-time constant. Values are calibrated to match Earth's atmosphere.
-static const Parameters ATMOSPHERE_PARAMETERS = {
+public static const Parameters ATMOSPHERE_PARAMETERS = {
     float3( 1.474000f, 1.850400f, 1.911980f ),
     0.004675f,
     6360.f,

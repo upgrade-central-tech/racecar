@@ -10,6 +10,8 @@ struct VertexOutput {
     float3 view_ray;
 };
 
+static const float3 GAMMA_FACTOR = float3( 1.f / 2.2f );
+
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
 {
@@ -37,7 +39,18 @@ float4 fs_main( VertexOutput input )
     let exposure = uniforms.exposure;
     let white_point = uniforms.white_point;
 
-    return float4( 0.f, 1.f, 0.f, 1.f );
+    let sky
+        = get_sky_radiance( ATMOSPHERE_PARAMETERS, camera_pos - earth_center, view_dir, sun_dir );
+
+    var radiance = sky.radiance;
+    if ( dot( view_dir, sun_dir ) > sun_size.y ) {
+        radiance = float3( 1.f, 0.f, 0.f );
+    }
+
+    // Apply tone mapping via Reinhard and sRGB gamma correction
+    let color = pow( float3( 1.f ) - exp( -radiance / white_point * exposure ), GAMMA_FACTOR );
+
+    return float4( color, 1.f );
 }
 
 
