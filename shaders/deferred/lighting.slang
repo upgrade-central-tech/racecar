@@ -1,14 +1,11 @@
 
 struct VertexInput {
-    float3 position : POSITION;
-    float3 normal : NORMAL;
-    float4 tangent : TANGENT0;
-    float2 uv : TEXCOORD0;
+    float2 position : POSITION;
 };
 
 struct VertexOutput {
     float4 sv_position : SV_Position;
-    float4 uv;
+    float2 uv;
 };
 
 // Material stuff strictly
@@ -36,6 +33,6 @@ VertexOutput vs_main( VertexInput input )
 [shader( "fragment" )]
 float4 fs_main( VertexOutput in ) : SV_Target
 {
-    return in.sv_position;
+    return float4(in.uv, 0.0, 1.0);
 }
 
