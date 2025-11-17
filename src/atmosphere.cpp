@@ -49,8 +49,9 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
 
     atms.uniform_buffer = create_uniform_buffer<ub_data::Atmosphere>(
         vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-    atms.uniform_desc_set = engine::generate_descriptor_set(
-        vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_FRAGMENT_BIT );
+    atms.uniform_desc_set
+        = engine::generate_descriptor_set( vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
     engine::update_descriptor_set_uniform(
         vulkan, engine, atms.uniform_desc_set, atms.uniform_buffer, 0 );
 

@@ -4,7 +4,7 @@ struct VertexInput {
 
 struct VertexOutput {
     float4 sv_position : SV_Position;
-    float2 uv;
+    float3 view_ray;
 };
 
 struct Uniforms {
@@ -19,20 +19,24 @@ struct Uniforms {
     float4 earth_center;
 }
 
-layout( binding = 0, set = 0 ) ConstantBuffer<Uniforms> uniforms;
+ConstantBuffer<Uniforms> uniforms;
 
-layout( binding = 0, set = 1 ) Texture2D<float4> irradiance_lut;
-layout( binding = 1, set = 1 ) Texture3D<float4> scattering_lut;
-layout( binding = 2, set = 1 ) Texture2D<float4> transmittance_lut;
+Texture2D<float4> irradiance_lut;
+Texture3D<float4> scattering_lut;
+Texture2D<float4> transmittance_lut;
 
-layout( binding = 0, set = 2 ) SamplerState sampler;
+SamplerState sampler;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
 {
-    VertexOutput output;
-    output.sv_position = float4( input.position, 0.1f, 1.f );
-    output.uv = ( input.position + 1.f ) * 0.5f;
+    let clip_position = float4( input.position, 0.f, 1.f );
+    let view_position = mul( clip_position, uniforms.inverse_proj );
+    let world_position = mul( view_position, uniforms.inverse_view );
+
+    var output : VertexOutput;
+    output.sv_position = clip_position;
+    output.view_ray = world_position.xyz;
 
     return output;
 }
@@ -41,7 +45,7 @@ VertexOutput vs_main( VertexInput input )
 float4 fs_main( VertexOutput input )
     : SV_Target
 {
-    return float4( transmittance_lut.Sample( sampler, input.uv ).rgb, 1.f );
+    return float4( 0.f, 1.f, 0.f, 1.f );
 }
 
 
