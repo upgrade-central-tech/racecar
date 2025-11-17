@@ -47,6 +47,7 @@ add_executable(racecar
   ${GEOMETRY_DIR}/scene_mesh.cpp
   ${GEOMETRY_DIR}/procedural.cpp
   ${GEOMETRY_DIR}/quad.cpp
+  ${GEOMETRY_DIR}/ibl.cpp
 
   ${SCENE_DIR}/scene.cpp
 )

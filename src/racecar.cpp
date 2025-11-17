@@ -9,8 +9,12 @@
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
+#include "engine/images.hpp"
+
 #include "geometry/procedural.hpp"
+#include "geometry/ibl.hpp"
 #include "geometry/quad.hpp"
+
 #include "gui.hpp"
 #include "scene/scene.hpp"
 #include "sdl.hpp"
@@ -118,8 +122,7 @@ void run( bool use_fullscreen )
     vk::mem::AllocatedImage test_cubemap
         = geometry::create_cubemap( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
     vk::mem::AllocatedImage lut_brdf
-        = geometry::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
-    
+        = engine::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
 
     UniformBuffer sh_buffer = create_uniform_buffer<ub_data::SHData>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );

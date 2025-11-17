@@ -4,6 +4,8 @@
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
 
+#include "../stb_image.h"
+
 namespace racecar::engine {
 
 vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine, void* data,
@@ -111,6 +113,86 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
         vulkan.destructor_stack.push(
             vulkan.device, allocated_image.image_view, vkDestroyImageView );
     }
+
+    return allocated_image;
+}
+
+
+std::vector<float> load_image_to_float( const std::string& global_path )
+{
+    int width, height, channels;
+    float* pixels = stbi_loadf( global_path.c_str(), &width, &height, &channels, 4 );
+
+    std::vector<float> float_data(
+        static_cast<uint32_t>( width ) * static_cast<uint32_t>( height ) * 4U );
+    for ( size_t i = 0; i < static_cast<size_t>( width * height * 4 ); i++ ) {
+        float_data[i] = pixels[i];
+    }
+
+    stbi_image_free( pixels );
+    return float_data;
+}
+
+std::vector<uint16_t> load_image_to_float16( const std::string& global_path )
+{
+    int width, height, channels;
+    float* pixels = stbi_loadf( global_path.c_str(), &width, &height, &channels, 4 );
+
+    /// TODO: error checking
+    std::vector<uint16_t> half_data(
+        static_cast<uint32_t>( width ) * static_cast<uint32_t>( height ) * 4U );
+    for ( size_t i = 0; i < static_cast<size_t>( width * height * 4 ); i++ ) {
+        half_data[i] = vk::utility::float_to_half( pixels[i] );
+    }
+
+    stbi_image_free( pixels );
+    return half_data;
+}
+
+vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common& vulkan,
+    engine::State& engine, int desired_channels, VkFormat image_format )
+{
+    vk::mem::AllocatedImage allocated_image;
+    std::string abs_file_path = std::filesystem::absolute( file_path ).string();
+
+    int width, height, channels;
+    unsigned char* pixels = stbi_load( abs_file_path.c_str(), &width, &height, &channels, 4 );
+
+    /// TODO: error checking
+    /// TODO: This only supports 16bit floats! this needs to be extended much furhter
+    ///       to support loading of any arbitrary formats.
+    std::vector<uint16_t> half_data( static_cast<uint32_t>( width * height * desired_channels ) );
+
+    for ( int i = 0; i < width * height; i++ ) {
+        float r = pixels[i * 4] / 255.0f;
+        float g = pixels[i * 4 + 1] / 255.0f;
+        [[maybe_unused]] float b = pixels[i * 4 + 2] / 255.0f;
+        [[maybe_unused]] float a = pixels[i * 4 + 3] / 255.0f;
+
+        half_data[static_cast<size_t>( i * desired_channels )] = vk::utility::float_to_half( r );
+
+        if ( desired_channels > 1 ) {
+            half_data[static_cast<size_t>( i * desired_channels + 1 )]
+                = vk::utility::float_to_half( g );
+        }
+        if ( desired_channels > 2 ) {
+            half_data[static_cast<size_t>( i * desired_channels + 2 )]
+                = vk::utility::float_to_half( b );
+        }
+        if ( desired_channels > 3 ) {
+            half_data[static_cast<size_t>( i * desired_channels + 3 )]
+                = vk::utility::float_to_half( a );
+        }
+    }
+
+    stbi_image_free( pixels );
+
+    // From half_data, upload to GPU
+    bool is_mipmapped = false;
+    allocated_image = engine::create_image( vulkan, engine, half_data.data(),
+        { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 }, image_format,
+        VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        is_mipmapped );
 
     return allocated_image;
 }
