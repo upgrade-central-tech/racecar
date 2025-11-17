@@ -2,6 +2,7 @@
 
 #include "log.hpp"
 
+#include <glm/gtc/constants.hpp>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 
@@ -91,7 +92,7 @@ void process_event( const SDL_Event* event )
     ImGui_ImplSDL3_ProcessEvent( event );
 }
 
-void update( Gui& gui )
+void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere& atms )
 {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
@@ -102,26 +103,48 @@ void update( Gui& gui )
         float average_fps = io.Framerate;
         ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );
 
-        ImGui::SeparatorText( "Material Settings" );
-        ImGui::ColorEdit4( "Base color", &gui.debug.color[0] );
-        ImGui::SliderFloat( "Roughness", &gui.debug.roughness, 0, 1.0f );
-        ImGui::SliderFloat( "Metallic", &gui.debug.metallic, 0, 1.0f );
-        ImGui::SliderFloat( "Clearcoat Roughness", &gui.debug.clearcoat_roughness, 0, 1.0f );
-        ImGui::SliderFloat( "Clearcoat Weight", &gui.debug.clearcoat_weight, 0, 1.0f );
+        glm::vec3 cam_pos = camera::calculate_eye_position( camera );
+        ImGui::Text( "Camera: [x=%.1f, y=%.1f, z=%1.f]", cam_pos.x, cam_pos.y, cam_pos.z );
 
-        ImGui::SeparatorText( "Debug" );
-        ImGui::Checkbox( "Enable albedo map", &gui.debug.enable_albedo_map );
-        ImGui::Checkbox( "Enable normal map", &gui.debug.enable_normal_map );
-        ImGui::Checkbox( "Enable roughness + metallic map", &gui.debug.enable_roughness_metal_map );
+        if ( ImGui::BeginTabBar( "Categories" ) ) {
+            if ( ImGui::BeginTabItem( "General" ) ) {
+                ImGui::SeparatorText( "Material Settings" );
+                ImGui::ColorEdit4( "Base color", &gui.debug.color[0] );
+                ImGui::SliderFloat( "Roughness", &gui.debug.roughness, 0, 1.0f );
+                ImGui::SliderFloat( "Metallic", &gui.debug.metallic, 0, 1.0f );
+                ImGui::SliderFloat(
+                    "Clearcoat Roughness", &gui.debug.clearcoat_roughness, 0, 1.0f );
+                ImGui::SliderFloat( "Clearcoat Weight", &gui.debug.clearcoat_weight, 0, 1.0f );
 
-        ImGui::Checkbox( "Turn on albedo only", &gui.debug.albedo_only );
-        ImGui::Checkbox( "Turn on normals only", &gui.debug.normals_only );
-        ImGui::Checkbox( "Turn on roughness + metallic only", &gui.debug.roughness_metal_only );
+                ImGui::SeparatorText( "Debug" );
+                ImGui::Checkbox( "Enable albedo map", &gui.debug.enable_albedo_map );
+                ImGui::Checkbox( "Enable normal map", &gui.debug.enable_normal_map );
+                ImGui::Checkbox(
+                    "Enable roughness + metallic map", &gui.debug.enable_roughness_metal_map );
 
-        ImGui::SeparatorText( "Demo Settings" );
-        ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );
-        ImGui::Text( "Spin speed:" );
-        ImGui::SliderFloat( "Min", &gui.demo.rotate_speed, 0, 0.05f );
+                ImGui::Checkbox( "Turn on albedo only", &gui.debug.albedo_only );
+                ImGui::Checkbox( "Turn on normals only", &gui.debug.normals_only );
+                ImGui::Checkbox(
+                    "Turn on roughness + metallic only", &gui.debug.roughness_metal_only );
+
+                ImGui::SeparatorText( "Demo Settings" );
+                ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );
+                ImGui::Text( "Spin speed:" );
+                ImGui::SliderFloat( "Min", &gui.demo.rotate_speed, 0, 0.05f );
+
+                ImGui::EndTabItem();
+            }
+
+            if ( ImGui::BeginTabItem( "Atmosphere" ) ) {
+                ImGui::SliderFloat( "Sun azimuth", &atms.sun_azimuth, 0.f, glm::two_pi<float>() );
+                ImGui::SliderFloat( "Sun zenith", &atms.sun_zenith, 0.f, glm::pi<float>() );
+                ImGui::SliderFloat( "Exposure", &atms.exposure, 0.f, 50.f );
+
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
+        }
     }
 
     ImGui::End();

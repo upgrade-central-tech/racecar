@@ -368,7 +368,7 @@ void run( bool use_fullscreen )
         //     raymarch_buffer.update( ctx.vulkan, engine.get_frame_index() );
         // }
 
-        gui::update( gui );
+        gui::update( gui, camera, atms );
 
         engine::execute( engine, ctx, task_list );
         engine.rendered_frames = engine.rendered_frames + 1;

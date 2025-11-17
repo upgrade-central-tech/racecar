@@ -1,7 +1,9 @@
 #pragma once
 
+#include "atmosphere.hpp"
 #include "context.hpp"
 #include "engine/state.hpp"
+#include "orbit_camera.hpp"
 
 #include <SDL3/SDL_events.h>
 #include <imgui.h>
@@ -16,7 +18,7 @@ struct Gui {
     ImGuiContext* ctx = nullptr;
 
     struct DebugData {
-        glm::vec4 color = glm::vec4(0.85f, 0.0f, 0.0f, 1.0f);
+        glm::vec4 color = glm::vec4( 0.85f, 0.0f, 0.0f, 1.0f );
         float roughness;
         float metallic;
         float clearcoat_roughness = 0.30f;
@@ -39,7 +41,7 @@ struct Gui {
 
 Gui initialize( Context& ctx, const engine::State& engine );
 void process_event( const SDL_Event* event );
-void update( Gui& gui );
+void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere& atms );
 void free();
 
 } // namespace racecar::engine::gui

@@ -125,10 +125,9 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
         vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_FRAGMENT_BIT );
     engine::update_descriptor_set_sampler( vulkan, engine, atms.sampler_desc_set, sampler, 0 );
 
-    // Some default states, taken from
-    // https://github.com/jeantimex/precomputed_atmospheric_scattering/blob/5b4484e700ac439323d85bd33dc37e3532b100f0/webgpu/main.js#L75-L77
+    // Some default states
     atms.sun_azimuth = 2.9f;
-    atms.sun_zenith = 1.3f;
+    atms.sun_zenith = 1.49f;
     atms.exposure = 10.f;
 
     return atms;
