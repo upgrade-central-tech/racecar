@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../geometry/mesh.hpp"
+#include "../geometry/scene_mesh.hpp"
 
 #include <glm/glm.hpp>
 #include <tiny_gltf.h>
@@ -70,12 +70,10 @@ struct Texture {
 /// data and index data.
 struct Primitive {
     int material_id = -1;
-    ///< Offsets are for the out_vertices array.
-    int vertex_offset = -1;
+    int vertex_offset = -1; ///< Offsets are for the out_vertices array.
     ///< Index data can be a unsigned short uint_16t or an unsigned int uint_32t.
     int ind_offset = -1;
-    /// Index count is in actual indices, not in bytes.
-    size_t ind_count = 0;
+    size_t ind_count = 0; /// Index count is in actual indices, not in bytes.
     bool is_indexed = true;
 };
 
@@ -105,7 +103,8 @@ struct Scene {
 };
 
 void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,
-    Scene& scene, std::vector<geometry::Vertex>& out_vertices, std::vector<uint32_t>& out_indices );
+    Scene& scene, std::vector<geometry::scene::Vertex>& out_vertices,
+    std::vector<uint32_t>& out_indices );
 
 bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene );
 

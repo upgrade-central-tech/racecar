@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../geometry/mesh.hpp"
 #include "../vk/common.hpp"
 #include "state.hpp"
 
@@ -9,12 +8,25 @@
 namespace racecar::engine {
 
 struct Pipeline {
-    VkPipeline handle = nullptr;
-    VkPipelineLayout layout = nullptr;
+    VkPipeline handle = VK_NULL_HANDLE;
+    VkPipelineLayout layout = VK_NULL_HANDLE;
 };
 
 Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
-    const std::optional<const geometry::Mesh>& mesh,
+    std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
     const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module );
+
+template <typename Mesh>
+VkPipelineVertexInputStateCreateInfo get_vertex_input_state_create_info( const Mesh& mesh )
+{
+    return {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &mesh.vertex_binding_description,
+        .vertexAttributeDescriptionCount
+        = static_cast<uint32_t>( mesh.attribute_descriptions.size() ),
+        .pVertexAttributeDescriptions = mesh.attribute_descriptions.data(),
+    };
+}
 
 } // namespace racecar::engine

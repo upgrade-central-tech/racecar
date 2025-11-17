@@ -11,24 +11,12 @@ constexpr std::string_view VERTEX_ENTRY_NAME = "vs_main";
 constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
 Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
-    const std::optional<const geometry::Mesh>& mesh,
+    std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
     const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module )
 {
-    VkPipelineVertexInputStateCreateInfo vertex_input_info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = 0,
-        .pVertexBindingDescriptions = nullptr,
-        .vertexAttributeDescriptionCount = 0,
-        .pVertexAttributeDescriptions = nullptr,
-    };
-
-    if ( mesh && mesh->mesh_buffers.vertex_buffer_address ) {
-        vertex_input_info.vertexBindingDescriptionCount = 1,
-        vertex_input_info.pVertexBindingDescriptions = &mesh->vertex_binding_description;
-        vertex_input_info.vertexAttributeDescriptionCount
-            = static_cast<uint32_t>( mesh->attribute_descriptions.size() );
-        vertex_input_info.pVertexAttributeDescriptions = mesh->attribute_descriptions.data();
-    }
+    VkPipelineVertexInputStateCreateInfo vertex_input_info
+        = vertex_input_state_create_info.value_or(
+          VkPipelineVertexInputStateCreateInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,

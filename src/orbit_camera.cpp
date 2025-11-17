@@ -17,6 +17,7 @@ constexpr float MIN_RADIUS = 0.1f;
 constexpr float RELATIVE_FPS = 180.f;
 constexpr float DRAG_SPEED = 1.f / 200.f;
 constexpr float TRANSLATE_SPEED = 0.05f;
+constexpr float SCROLL_SPEED = 0.5f;
 
 void rotate_azimuth( OrbitCamera& cam, float radians )
 {
@@ -112,11 +113,11 @@ void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam
 
     case SDL_EVENT_MOUSE_WHEEL: {
         if ( event->wheel.y > 0.f ) {
-            camera::zoom( cam, 0.1f );
+            camera::zoom( cam, SCROLL_SPEED );
         }
 
         if ( event->wheel.y < 0.f ) {
-            camera::zoom( cam, -0.1f );
+            camera::zoom( cam, -SCROLL_SPEED );
         }
 
         break;

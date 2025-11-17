@@ -21,6 +21,8 @@ add_executable(racecar
   ${SRC_DIR}/sdl.cpp
   ${SRC_DIR}/orbit_camera.cpp
   ${SRC_DIR}/gui.cpp
+  ${SRC_DIR}/stb.cpp
+  ${SRC_DIR}/atmosphere.cpp
 
   ${VK_DIR}/common.cpp
   ${VK_DIR}/create.cpp
@@ -42,8 +44,9 @@ add_executable(racecar
   ${ENGINE_DIR}/gfx_task.cpp
   ${ENGINE_DIR}/descriptor_set.cpp
 
-  ${GEOMETRY_DIR}/mesh.cpp
+  ${GEOMETRY_DIR}/scene_mesh.cpp
   ${GEOMETRY_DIR}/procedural.cpp
+  ${GEOMETRY_DIR}/quad.cpp
 
   ${SCENE_DIR}/scene.cpp
 )
@@ -95,3 +98,6 @@ target_link_libraries(racecar PRIVATE vk-bootstrap::vk-bootstrap)
 
 find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
 target_include_directories(racecar PRIVATE ${TINYGLTF_INCLUDE_DIRS})
+
+find_package(Stb REQUIRED)
+target_include_directories(racecar PRIVATE ${Stb_INCLUDE_DIR})
