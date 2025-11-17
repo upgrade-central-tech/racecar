@@ -29,6 +29,7 @@ namespace {
 
 constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
+constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
@@ -387,7 +388,53 @@ void run( bool use_fullscreen )
             }
         });   
 
-        
+        // lighting pass
+        geometry::quad::Mesh quad_mesh = geometry::quad::create(ctx.vulkan, engine);
+
+        engine::GfxTask lighting_pass_gfx_task = {
+            .clear_color = { { { 0.f, 0.f, 0.f, 1.f } } },
+            .clear_depth = 1.f,
+            .render_target_is_swapchain = true,
+            .extent = engine.swapchain.extent,
+        };
+
+        engine::Pipeline lighting_pass_gfx_pipeline;
+        try {
+            size_t frame_index = engine.get_frame_index();
+            lighting_pass_gfx_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
+                engine::get_vertex_input_state_create_info( quad_mesh ),
+                {
+                    uniform_desc_set.layouts[frame_index],
+                    material_desc_sets[0].layouts[frame_index],
+                    lut_sets.layouts[frame_index],
+                    sampler_desc_set.layouts[frame_index],
+                },
+                {
+                    engine.swapchain.image_format
+                },
+                vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ) );
+        } catch ( const Exception& ex ) {
+            log::error( "Failed to create lighting pass graphics pipeline: {}", ex.what() );
+            throw;
+        }
+
+        lighting_pass_gfx_task.draw_tasks.push_back({
+            .draw_resource_descriptor = {
+                .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
+                .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
+                .vertex_buffer_offsets = { 0 },
+                .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
+            },
+            .descriptor_sets = {
+                &uniform_desc_set,
+                &material_desc_sets[static_cast<size_t>( 0 )], // THIS IS WRONG; NEEDS FIX
+                &lut_sets,
+                &sampler_desc_set,
+            },
+            .pipeline = lighting_pass_gfx_pipeline,
+        });
+
+        engine::add_gfx_task( task_list, lighting_pass_gfx_task );
     }
 
     bool will_quit = false;
