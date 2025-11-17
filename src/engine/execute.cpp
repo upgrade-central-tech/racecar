@@ -105,7 +105,6 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
                 run_pipeline_barrier( engine, ( *search ).second, frame.render_cmdbuf );
             }
 
-            log::info("RUN GFX TASK: %d", i);
             execute_gfx_task( engine, frame.render_cmdbuf, gfx_task);
         }
 
