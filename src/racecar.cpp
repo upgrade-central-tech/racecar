@@ -253,7 +253,7 @@ void run( bool use_fullscreen )
                         atms.lut_desc_set.layouts[0],
                         atms.sampler_desc_set.layouts[0],
                     },
-                    {},
+                    { engine.swapchain.image_format },
                     false,
                     vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
             } catch ( const Exception& ex ) {
