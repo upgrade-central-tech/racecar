@@ -81,3 +81,11 @@ void cs_compute_irradiance( uint3 thread_id: SV_DispatchThreadID ) {
 
     irradiance_cubemap[uint3( xy, face )] = float4( irradiance, 0.0f );
 }
+
+[shader("compute")]
+[numthreads( 8, 8, 8 )]
+void cs_compute_irradiance_sh() {
+    
+    
+
+}
