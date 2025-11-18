@@ -64,14 +64,14 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
         // Make swapchain image writeable ( and clear! )
         vkBeginCommandBuffer( frame.start_cmdbuf, &command_buffer_begin_info );
         vk::utility::transition_image( frame.start_cmdbuf, output_image, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_2_TRANSFER_WRITE_BIT,
-            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
 
         // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
         vk::utility::transition_image( frame.start_cmdbuf, out_depth_image.image,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
-            VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_NONE,
-            VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_IMAGE_ASPECT_DEPTH_BIT );
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
+            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_NONE,
+            VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT, VK_IMAGE_ASPECT_DEPTH_BIT );
 
 
         vkEndCommandBuffer( frame.start_cmdbuf );
@@ -93,6 +93,8 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
         vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
 
         for ( size_t i = 0; i < task_list.gfx_tasks.size(); i++ ) {
+            GfxTask& gfx_task = task_list.gfx_tasks[i];
+
             auto search = std::find_if( task_list.pipeline_barriers.begin(),
                 task_list.pipeline_barriers.end(),
                 [=]( const std::pair<int, PipelineBarrierDescriptor>& v ) -> bool {
@@ -100,10 +102,10 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
                 } );
 
             if ( search != task_list.pipeline_barriers.end() ) {
-                run_pipeline_barrier( ( *search ).second, frame.render_cmdbuf );
+                run_pipeline_barrier( engine, ( *search ).second, frame.render_cmdbuf );
             }
 
-            execute_gfx_task( engine, frame.render_cmdbuf, task_list.gfx_tasks[i] );
+            execute_gfx_task( engine, frame.render_cmdbuf, gfx_task);
         }
 
         // GUI render pass

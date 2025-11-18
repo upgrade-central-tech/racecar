@@ -1,6 +1,5 @@
 #include "racecar.hpp"
 
-#include "atmosphere.hpp"
 #include "constants.hpp"
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
@@ -31,7 +30,8 @@ namespace racecar {
 namespace {
 
 constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
-constexpr std::string_view SHADER_MODULE_PATH = "../shaders/car_mat/car_mat.spv";
+constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
+constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
@@ -125,13 +125,20 @@ void run( bool use_fullscreen )
     engine::Pipeline scene_pipeline;
 
     try {
+        size_t frame_index = engine.get_frame_index();
         scene_pipeline = create_gfx_pipeline( engine, ctx.vulkan,
             engine::get_vertex_input_state_create_info( scene_mesh ),
             {
-                uniform_desc_set.layouts[0],
-                material_desc_sets[0].layouts[0],
-                lut_sets.layouts[0],
-                sampler_desc_set.layouts[0],
+                uniform_desc_set.layouts[frame_index],
+                material_desc_sets[0].layouts[frame_index],
+                lut_sets.layouts[frame_index],
+                sampler_desc_set.layouts[frame_index],
+            },
+            {
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT // UV
             },
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
@@ -162,6 +169,7 @@ void run( bool use_fullscreen )
                     atms.lut_desc_set.layouts[0],
                     atms.sampler_desc_set.layouts[0],
                 },
+                { engine.swapchain.image_format },
                 vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
         } catch ( const Exception& ex ) {
             log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
@@ -186,80 +194,153 @@ void run( bool use_fullscreen )
         engine::add_gfx_task( task_list, atmosphere_gfx_task );
     }
 
-    {
-        engine::GfxTask sponza_gfx_task = {
-            .clear_depth = 1.f,
-            .render_target_is_swapchain = true,
-            .extent = engine.swapchain.extent,
-        };
+    // deferred rendering
+    engine::RWImage GBuffer_Normal = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
-        for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
-            if ( node->mesh.has_value() ) {
-                const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
+    engine::RWImage GBuffer_Position = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
-                for ( const scene::Primitive& prim : mesh->primitives ) {
-                    const scene::Material& current_material
-                        = scene.materials[static_cast<size_t>( prim.material_id )];
-                    std::vector<std::optional<scene::Texture>> textures_needed;
+    engine::RWImage GBuffer_Tangent = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
-                    switch ( current_material.type ) {
-                    case scene::MaterialType::PBR_ALBEDO_MAP: {
-                        std::optional<int> albedo_index = current_material.base_color_texture_index;
-                        std::optional<int> normal_index = current_material.normal_texture_index;
-                        std::optional<int> metallic_roughness_index
-                            = current_material.metallic_roughness_texture_index;
+    engine::RWImage GBuffer_UV = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
-                        textures_needed.push_back( albedo_index
-                                ? std::optional { ( scene
-                                          .textures[static_cast<size_t>( albedo_index.value() )] ) }
-                                : std::nullopt );
-                        textures_needed.push_back( normal_index
-                                ? std::optional { ( scene
-                                          .textures[static_cast<size_t>( normal_index.value() )] ) }
-                                : std::nullopt );
-                        textures_needed.push_back( metallic_roughness_index
-                                ? std::optional { ( scene.textures[static_cast<size_t>(
-                                      metallic_roughness_index.value() )] ) }
-                                : std::nullopt );
+    engine::RWImage GBuffer_Depth = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
-                        break;
+    // {
+    // deferred transition tasks
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers
+            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Normal,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Tangent,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_UV,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Depth,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
+
+    engine::GfxTask sponza_gfx_task = {
+        .clear_color = { { { 0.f, 0.f, 0.f, 1.f } } },
+        .clear_depth = 1.f,
+        .render_target_is_swapchain = false,
+        .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Tangent, GBuffer_UV },
+        .depth_image = GBuffer_Depth,
+        .extent = engine.swapchain.extent,
+    };
+
+    for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
+        if ( node->mesh.has_value() ) {
+            const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
+
+            for ( const scene::Primitive& prim : mesh->primitives ) {
+                const scene::Material& current_material
+                    = scene.materials[static_cast<size_t>( prim.material_id )];
+                std::vector<std::optional<scene::Texture>> textures_needed;
+
+                switch ( current_material.type ) {
+                case scene::MaterialType::PBR_ALBEDO_MAP: {
+                    std::optional<int> albedo_index = current_material.base_color_texture_index;
+                    std::optional<int> normal_index = current_material.normal_texture_index;
+                    std::optional<int> metallic_roughness_index
+                        = current_material.metallic_roughness_texture_index;
+
+                    textures_needed.push_back( albedo_index
+                            ? std::optional { (
+                                  scene.textures[static_cast<size_t>( albedo_index.value() )] ) }
+                            : std::nullopt );
+                    textures_needed.push_back( normal_index
+                            ? std::optional { (
+                                  scene.textures[static_cast<size_t>( normal_index.value() )] ) }
+                            : std::nullopt );
+                    textures_needed.push_back( metallic_roughness_index
+                            ? std::optional { ( scene.textures[static_cast<size_t>(
+                                  metallic_roughness_index.value() )] ) }
+                            : std::nullopt );
+
+                    break;
+                }
+
+                default:
+                    throw Exception( "[main_gfx_task] Unhandled material type" );
+                }
+
+                // TODO: Not yet connected with a layout
+                if ( scene.hdri_index.has_value() ) {
+                    textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
+                } else {
+                    textures_needed.push_back( std::nullopt );
+                }
+
+                std::vector<vk::mem::AllocatedImage> textures_sent;
+
+                for ( std::optional<scene::Texture>& texture : textures_needed ) {
+                    if ( texture && ( textures_sent.size() < vk::binding::MAX_IMAGES_BINDED ) ) {
+                        textures_sent.push_back( texture->data.value() );
                     }
+                }
 
-                    default:
-                        throw Exception( "[main_gfx_task] Unhandled material type" );
-                    }
+                // Actually bind the texture handle to the descriptorset
+                for ( size_t i = 0; i < textures_sent.size(); i++ ) {
+                    engine::update_descriptor_set_image( ctx.vulkan, engine,
+                        material_desc_sets[static_cast<size_t>( prim.material_id )],
+                        textures_sent[i], static_cast<int>( i ) );
+                }
 
-                    // TODO: Not yet connected with a layout
-                    if ( scene.hdri_index.has_value() ) {
-                        textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
-                    } else {
-                        textures_needed.push_back( std::nullopt );
-                    }
+                engine::DrawResourceDescriptor draw_descriptor
+                    = engine::DrawResourceDescriptor::from_mesh(
+                        scene_mesh.mesh_buffers.vertex_buffer.handle,
+                        scene_mesh.mesh_buffers.index_buffer.handle,
+                        static_cast<uint32_t>( scene_mesh.indices.size() ), prim );
 
-                    std::vector<vk::mem::AllocatedImage> textures_sent;
-
-                    for ( std::optional<scene::Texture>& texture : textures_needed ) {
-                        if ( texture
-                            && ( textures_sent.size() < vk::binding::MAX_IMAGES_BINDED ) ) {
-                            textures_sent.push_back( texture->data.value() );
-                        }
-                    }
-
-                    // Actually bind the texture handle to the descriptorset
-                    for ( size_t i = 0; i < textures_sent.size(); i++ ) {
-                        engine::update_descriptor_set_image( ctx.vulkan, engine,
-                            material_desc_sets[static_cast<size_t>( prim.material_id )],
-                            textures_sent[i], static_cast<int>( i ) );
-                    }
-
-                    engine::DrawResourceDescriptor draw_descriptor
-                        = engine::DrawResourceDescriptor::from_mesh(
-                            scene_mesh.mesh_buffers.vertex_buffer.handle,
-                            scene_mesh.mesh_buffers.index_buffer.handle,
-                            static_cast<uint32_t>( scene_mesh.indices.size() ), prim );
-
-                    // give the material descriptor set to the draw task
-                    sponza_gfx_task.draw_tasks.push_back( {
+                // give the material descriptor set to the draw task
+                sponza_gfx_task.draw_tasks.push_back( {
                         .draw_resource_descriptor = draw_descriptor,
                         .descriptor_sets = {
                             &uniform_desc_set,
@@ -269,12 +350,116 @@ void run( bool use_fullscreen )
                         },
                         .pipeline = scene_pipeline,
                     } );
-                }
             }
         }
-
-        engine::add_gfx_task( task_list, sponza_gfx_task );
     }
+
+    engine::add_gfx_task( task_list, sponza_gfx_task );
+
+    // Lighting pass
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers
+            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Normal,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Tangent,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_UV,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Depth,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
+
+    // lighting pass
+    geometry::quad::Mesh lighting_pass_quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+
+    engine::GfxTask lighting_pass_gfx_task = {
+        .clear_color = { { { 0.f, 0.f, 0.f, 1.f } } },
+        .clear_depth = 1.f,
+        .render_target_is_swapchain = true,
+        .extent = engine.swapchain.extent,
+    };
+
+    engine::DescriptorSet gbuffer_descriptor_set
+        = engine::generate_descriptor_set( ctx.vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+            VK_SHADER_STAGE_FRAGMENT_BIT );
+
+    size_t frame_index = engine.get_frame_index();
+    engine::Pipeline lighting_pass_gfx_pipeline;
+    try {
+        lighting_pass_gfx_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
+            engine::get_vertex_input_state_create_info( lighting_pass_quad_mesh ),
+            { uniform_desc_set.layouts[frame_index], material_desc_sets[0].layouts[frame_index],
+                lut_sets.layouts[frame_index], sampler_desc_set.layouts[frame_index],
+                gbuffer_descriptor_set.layouts[frame_index] },
+            { engine.swapchain.image_format },
+            vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ) );
+    } catch ( const Exception& ex ) {
+        log::error( "Failed to create lighting pass graphics pipeline: {}", ex.what() );
+        throw;
+    }
+
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Position, 0 );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Normal, 1 );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Tangent, 2 );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_UV, 3 );
+
+    lighting_pass_gfx_task.draw_tasks.push_back({
+            .draw_resource_descriptor = {
+                .vertex_buffers = { lighting_pass_quad_mesh.mesh_buffers.vertex_buffer.handle },
+                .index_buffer = lighting_pass_quad_mesh.mesh_buffers.index_buffer.handle,
+                .vertex_buffer_offsets = { 0 },
+                .index_count = static_cast<uint32_t>( lighting_pass_quad_mesh.indices.size() ),
+            },
+            .descriptor_sets = {
+                &uniform_desc_set,
+                &material_desc_sets[static_cast<size_t>( 0 )], // THIS IS WRONG; NEEDS FIX
+                &lut_sets,
+                &sampler_desc_set,
+                &gbuffer_descriptor_set
+            },
+            .pipeline = lighting_pass_gfx_pipeline,
+        });
+
+    engine::add_gfx_task( task_list, lighting_pass_gfx_task );
+    // }
 
     bool will_quit = false;
     bool stop_drawing = false;
@@ -336,7 +521,11 @@ void run( bool use_fullscreen )
         // Update camera uniform buffer
         {
             ub_data::Camera camera_ub = camera_buffer.get_data();
+            camera::OrbitCamera& camera = engine.camera;
 
+            glm::mat4 view = camera::calculate_view_matrix( camera );
+            glm::mat4 projection = glm::perspective(
+                camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
             projection[1][1] *= -1;
 
             glm::mat4 model = !gui.demo.rotate_on
@@ -346,7 +535,7 @@ void run( bool use_fullscreen )
             camera_ub.mvp = projection * view * model;
             camera_ub.model = model;
             camera_ub.inv_model = glm::inverse( model );
-            camera_ub.camera_pos = camera_position;
+            camera_ub.camera_pos = camera::calculate_eye_position( camera );
             camera_ub.color = glm::vec3( 0.85f, 0.0f, 0.0f );
 
             camera_buffer.set_data( camera_ub );
