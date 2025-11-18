@@ -172,7 +172,7 @@ public func get_sky_radiance_to_point(
     let distance_to_top = -rmu - sqrt( rmu * rmu - r * r + atms.top_radius * atms.top_radius );
 
     if ( distance_to_top > 0.f ) {
-        local_camera = local_camera + view_ray * distance_to_top;
+        local_camera += view_ray * distance_to_top;
         r = atms.top_radius;
         rmu += distance_to_top;
     }
@@ -180,7 +180,7 @@ public func get_sky_radiance_to_point(
     let mu = rmu / r;
     let mu_s = dot( local_camera, sun_dir ) / r;
     let nu = dot( view_ray, sun_dir );
-    var d = max( length( surface_point - local_camera ), 0.0 );
+    var d = length( surface_point - local_camera );
 
     let ray_r_mu_intersects_ground = ray_intersects_ground( atms, r, mu );
     let transmittance = get_transmittance( atms, r, mu, d, ray_r_mu_intersects_ground );

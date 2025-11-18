@@ -338,11 +338,13 @@ void run( bool use_fullscreen )
                 atms.sun_azimuth = glm::lerp( -glm::half_pi<float>(), glm::pi<float>(), t );
             }
 
+            glm::vec3 atmosphere_position = camera_position + glm::vec3( 0.f, 9.f, 0.f );
+
             ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
             atms_ub.inverse_proj = glm::inverse( projection );
             atms_ub.inverse_view
-                = glm::rotate( glm::inverse( view ), glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
-            atms_ub.camera_position = camera_position;
+                = glm::rotate( view, -glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
+            atms_ub.camera_position = atmosphere_position;
             atms_ub.exposure = atms.exposure;
             atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
 

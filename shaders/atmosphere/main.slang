@@ -57,7 +57,7 @@ float4 fs_main( VertexOutput input )
             let irradiance
                 = get_sun_and_sky_irradiance( EARTH, point - earth_center, normal, sun_dir );
 
-            ground_radiance = INV_PI * irradiance.sun * irradiance.sky;
+            ground_radiance = GROUND_ALBEDO * INV_PI * irradiance.sun + irradiance.sky;
 
             let scatter = get_sky_radiance_to_point(
                 EARTH, camera_pos - earth_center, point - earth_center, sun_dir );
@@ -76,11 +76,10 @@ float4 fs_main( VertexOutput input )
         radiance += sky.transmittance * solar_radiance;
     }
 
-    // radiance = lerp( radiance, ground_radiance, ground_alpha );
+    radiance = lerp( radiance, ground_radiance, ground_alpha );
 
     // Apply tone mapping via Reinhard and sRGB gamma correction
     let color = pow( float3( 1.f ) - exp( -radiance / white_point * exposure ), GAMMA_FACTOR );
-
     return float4( color, 1.f );
 }
 
