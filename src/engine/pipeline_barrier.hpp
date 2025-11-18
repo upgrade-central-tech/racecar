@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rwimage.hpp"
 #include <volk.h>
 #include <vector>
 
@@ -43,10 +44,10 @@ struct ImageBarrier {
     /// the layout of the image we want to transition to
     VkImageLayout dst_layout;
 
-    VkImage image;
+    RWImage image;
     VkImageSubresourceRange range;
 
-    VkImageMemoryBarrier2 get_vk();
+    VkImageMemoryBarrier2 get_vk(size_t idx);
 };
 
 struct PipelineBarrierDescriptor {
@@ -54,6 +55,23 @@ struct PipelineBarrierDescriptor {
     std::vector<ImageBarrier> image_barriers;
 };
 
-void run_pipeline_barrier( PipelineBarrierDescriptor barrier, VkCommandBuffer cmd_buf );
+void run_pipeline_barrier( const State& engine, PipelineBarrierDescriptor barrier, VkCommandBuffer cmd_buf );
+
+const VkImageSubresourceRange VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR = {
+    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    .baseMipLevel = 0,
+    .levelCount = 1,
+    .baseArrayLayer = 0,
+    .layerCount = 1,
+};
+
+const VkImageSubresourceRange VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH = {
+    .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+    .baseMipLevel = 0,
+    .levelCount = 1,
+    .baseArrayLayer = 0,
+    .layerCount = 1,
+};
+
 
 }

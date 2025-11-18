@@ -4,10 +4,12 @@
 
 namespace racecar::engine {
 
-void run_pipeline_barrier( PipelineBarrierDescriptor barrier, VkCommandBuffer cmd_buf )
+void run_pipeline_barrier( const State& engine, PipelineBarrierDescriptor barrier, VkCommandBuffer cmd_buf )
 {
     std::vector<VkBufferMemoryBarrier2> vk_buffer_barriers;
     std::vector<VkImageMemoryBarrier2> vk_image_barriers;
+
+    size_t idx = engine.get_frame_index();
 
     std::transform(
         barrier.buffer_barriers.begin(),
@@ -20,7 +22,7 @@ void run_pipeline_barrier( PipelineBarrierDescriptor barrier, VkCommandBuffer cm
         barrier.image_barriers.begin(),
         barrier.image_barriers.end(),
         std::back_inserter(vk_image_barriers),
-        [](ImageBarrier b) { return b.get_vk(); }
+        [=](ImageBarrier b) { return b.get_vk(idx); }
     );
 
     VkDependencyInfo info {
@@ -55,7 +57,7 @@ VkBufferMemoryBarrier2 BufferBarrier::get_vk() {
     };
 }
 
-VkImageMemoryBarrier2 ImageBarrier::get_vk() {
+VkImageMemoryBarrier2 ImageBarrier::get_vk(size_t idx) {
     return VkImageMemoryBarrier2 {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .pNext = VK_NULL_HANDLE,
@@ -67,7 +69,7 @@ VkImageMemoryBarrier2 ImageBarrier::get_vk() {
         .newLayout = dst_layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = image,
+        .image = image.images[idx].image,
         .subresourceRange = range
     };
 }

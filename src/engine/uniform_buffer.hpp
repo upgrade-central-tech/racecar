@@ -17,8 +17,6 @@ struct IUniformBuffer {
 template <typename T> struct UniformBuffer : IUniformBuffer {
     bool dirty = false;
 
-    UniformBuffer() = default;
-
     UniformBuffer( T data, std::vector<vk::mem::AllocatedBuffer> buffer )
         : data_( data )
         , buffer_( buffer )
@@ -48,7 +46,7 @@ template <typename T> struct UniformBuffer : IUniformBuffer {
     }
 
 private:
-    T data_ = {};
+    T data_;
     std::vector<VkDescriptorSetLayout> layout_;
     std::vector<vk::mem::AllocatedBuffer> buffer_;
 };

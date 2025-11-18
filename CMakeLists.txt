@@ -22,7 +22,6 @@ add_executable(racecar
   ${SRC_DIR}/orbit_camera.cpp
   ${SRC_DIR}/gui.cpp
   ${SRC_DIR}/stb.cpp
-  ${SRC_DIR}/atmosphere.cpp
 
   ${VK_DIR}/common.cpp
   ${VK_DIR}/create.cpp
