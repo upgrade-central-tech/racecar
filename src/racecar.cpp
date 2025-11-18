@@ -1,5 +1,6 @@
 #include "racecar.hpp"
 
+#include "atmosphere.hpp"
 #include "constants.hpp"
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
@@ -17,6 +18,9 @@
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
+#include <glm/gtx/compatibility.hpp>
+
 
 #include <chrono>
 #include <filesystem>
@@ -138,6 +142,7 @@ void run( bool use_fullscreen )
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT  // UV
             },
+            false,
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create graphics pipeline: {}", ex.what() );
@@ -223,8 +228,63 @@ void run( bool use_fullscreen )
                         .image = GBuffer_Depth,
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
 
+
+
+
+        // ATMOSPHERE STUFF
+        atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
+        {
+            geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+
+            engine::GfxTask atmosphere_gfx_task = {
+                .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
+                .clear_depth = 1.f,
+                .render_target_is_swapchain = true,
+                .extent = engine.swapchain.extent,
+            };
+
+            engine::Pipeline atmosphere_pipeline;
+
+            try {
+                atmosphere_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
+                    engine::get_vertex_input_state_create_info( quad_mesh ),
+                    {
+                        atms.uniform_desc_set.layouts[0],
+                        atms.lut_desc_set.layouts[0],
+                        atms.sampler_desc_set.layouts[0],
+                    },
+                    {},
+                    false,
+                    vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
+            } catch ( const Exception& ex ) {
+                log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
+                throw;
+            }
+
+            atmosphere_gfx_task.draw_tasks.push_back( {
+                .draw_resource_descriptor = {
+                        .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
+                        .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
+                        .vertex_buffer_offsets = { 0 },
+                        .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
+                },
+                .descriptor_sets = {
+                    &atms.uniform_desc_set,
+                    &atms.lut_desc_set,
+                    &atms.sampler_desc_set,
+                },
+                .pipeline = atmosphere_pipeline,
+            } );
+
+            engine::add_gfx_task( task_list, atmosphere_gfx_task );
+        }
+        // END ATMOSPHERE STUFF
+
+
+
+
         engine::GfxTask sponza_gfx_task = {
-            .clear_color = { { { 0.f, 0.f, 0.f, 1.f } } },
+            .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
             .clear_depth = 1.f,
             .render_target_is_swapchain = false,
             .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Tangent, GBuffer_UV },
@@ -367,8 +427,7 @@ void run( bool use_fullscreen )
         geometry::quad::Mesh lighting_pass_quad_mesh = geometry::quad::create( ctx.vulkan, engine );
 
         engine::GfxTask lighting_pass_gfx_task = {
-            .clear_color = { { { 0.f, 0.f, 0.f, 1.f } } },
-            .clear_depth = 1.f,
+            .clear_depth = 1.0f,
             .render_target_is_swapchain = true,
             .extent = engine.swapchain.extent,
         };
@@ -392,6 +451,7 @@ void run( bool use_fullscreen )
                     gbuffer_descriptor_set.layouts[frame_index]
                 },
                 { engine.swapchain.image_format },
+                true,
                 vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ) );
         } catch ( const Exception& ex ) {
             log::error( "Failed to create lighting pass graphics pipeline: {}", ex.what() );
@@ -451,6 +511,36 @@ void run( bool use_fullscreen )
             continue;
         }
 
+        
+        camera::OrbitCamera& camera = engine.camera;
+        glm::mat4 view = camera::calculate_view_matrix( camera );
+        glm::mat4 projection = glm::perspective(
+            camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
+        glm::vec3 camera_position = camera::calculate_eye_position( camera );
+
+        // Update atmosphere uniform buffer
+        {
+            if ( gui.atms.animate_azimuth ) {
+                float t
+                    = ( std::sin( 0.0002f * static_cast<float>( engine.rendered_frames ) ) + 1.f )
+                    * 0.5f;
+                atms.sun_azimuth = glm::lerp( -glm::half_pi<float>(), glm::pi<float>(), t );
+            }
+
+            glm::vec3 atmosphere_position = camera_position + glm::vec3( 0.f, 9.f, 0.f );
+
+            ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+            atms_ub.inverse_proj = glm::inverse( projection );
+            atms_ub.inverse_view
+                = glm::rotate( view, -glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
+            atms_ub.camera_position = atmosphere_position;
+            atms_ub.exposure = atms.exposure;
+            atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
+
+            atms.uniform_buffer.set_data( atms_ub );
+            atms.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
         // Update camera uniform buffer
         {
             ub_data::Camera camera_ub = camera_buffer.get_data();
@@ -502,7 +592,7 @@ void run( bool use_fullscreen )
         //     raymarch_buffer.update( ctx.vulkan, engine.get_frame_index() );
         // }
 
-        gui::update( gui );
+        gui::update( gui, camera, atms );
 
         engine::execute( engine, ctx, task_list );
         engine.rendered_frames = engine.rendered_frames + 1;

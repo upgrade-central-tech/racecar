@@ -81,10 +81,10 @@ struct FragmentOutput {
 FragmentOutput fs_main( VertexOutput in )
 {
     FragmentOutput output;
-    output.position = float4(in.position, 0.0);
-    output.normal = float4(in.normal, 0.0);
+    output.position = float4(in.position, 1.0);
+    output.normal = float4(in.normal, 1.0);
     output.tangent = in.tangent;
-    output.uv = float4(in.uv, 0.0, 0.0);
+    output.uv = float4(in.uv, 0.0, 1.0);
     return output;
 }
 

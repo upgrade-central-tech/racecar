@@ -115,6 +115,12 @@ float4 fs_main( VertexOutput in )
     float4 in_tangent = GBuffer_Position.Sample( nearest_sampler, in.uv );
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
 
+    float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
+
+    if ( stencil == 0.0f ) {
+        return float4( 0.0f );
+    }
+
     // Texture samples
     float3 base_albedo = debug_data.enable_albedo_map
         ? albedo_map.Sample( nearest_sampler, in.uv ).rgb
