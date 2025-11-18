@@ -35,7 +35,7 @@ namespace {
 
 constexpr std::string_view GLTF_FILE_PATH = "../assets/material_ball.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/car_mat/car_mat.spv";
-constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
+constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/cathedral";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
 }
@@ -86,6 +86,20 @@ void run( bool use_fullscreen )
         ctx.vulkan.destructor_stack.push( ctx.vulkan.device, linear_sampler, vkDestroySampler );
     }
 
+    VkSampler point_sampler = VK_NULL_HANDLE;
+    {
+        VkSamplerCreateInfo sampler_nearest_create_info = {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .magFilter = VK_FILTER_NEAREST,
+            .minFilter = VK_FILTER_NEAREST,
+        };
+
+        vk::check( vkCreateSampler(
+                       ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &point_sampler ),
+            "Failed to create sampler" );
+        ctx.vulkan.destructor_stack.push( ctx.vulkan.device, linear_sampler, vkDestroySampler );
+    }
+
     engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
             VK_DESCRIPTOR_TYPE_SAMPLER },
@@ -93,6 +107,8 @@ void run( bool use_fullscreen )
 
     engine::update_descriptor_set_sampler(
         ctx.vulkan, engine, sampler_desc_set, linear_sampler, 0 );
+
+    engine::update_descriptor_set_sampler( ctx.vulkan, engine, sampler_desc_set, point_sampler, 1 );
 
     size_t num_materials = scene.materials.size();
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
@@ -116,7 +132,8 @@ void run( bool use_fullscreen )
     engine::DescriptorSet lut_sets;
     lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     vk::mem::AllocatedImage test_cubemap
@@ -124,6 +141,7 @@ void run( bool use_fullscreen )
     vk::mem::AllocatedImage lut_brdf
         = engine::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
 
+    //
     UniformBuffer sh_buffer = create_uniform_buffer<ub_data::SHData>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
@@ -136,10 +154,15 @@ void run( bool use_fullscreen )
             sh_coefficients[i].z );
     }
 
+    vk::mem::AllocatedImage diffuse_irradiance_sh
+        = geometry::cs_generate_diffuse_sh( test_cubemap, linear_sampler, ctx.vulkan, engine );
+
     engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, test_cubemap, 0 );
     engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 1 );
     engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, diffuse_irradiance, 2 );
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 3 );
+    engine::update_descriptor_set_image(
+        ctx.vulkan, engine, lut_sets, diffuse_irradiance_sh, 3 );
+    engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 4 );
 
     engine::Pipeline scene_pipeline;
 

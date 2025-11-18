@@ -64,9 +64,11 @@ layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
 layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 2, set = 2 ) TextureCube<float4> irradiance_cubemap;
-layout( binding = 3, set = 2 ) ConstantBuffer<SHData> sh_data;
+layout( binding = 3, set = 2 ) Texture2D<float4> irradiance_SH;
+layout( binding = 4, set = 2 ) ConstantBuffer<SHData> sh_data;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
+layout( binding = 1, set = 3 ) SamplerState point_sampler;
 
 #include "../utils.slang"
 #include "../glint/glint_noise_init.hlsl"
@@ -245,7 +247,7 @@ float4 fs_main( VertexOutput in )
     out_color += ( kD * diffuse_irradiance + specular_indirect );
     out_color += clearcoat_ibl;
 
-    return float4( diffuse_irradiance2, 1.0f );
+    return float4( irradiance, 1.0f );
 }
 
 

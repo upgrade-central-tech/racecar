@@ -2,6 +2,7 @@
 
 #include "../engine/descriptor_set.hpp"
 #include "../engine/images.hpp"
+#include "../engine/pipeline.hpp"
 #include "../log.hpp"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
@@ -66,10 +67,12 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
             vulkan, engine, face_data, cubemap_image, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT );
     }
     {
-        engine::DescriptorSet prefilter_desc = engine::generate_descriptor_set( vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLER },
+        engine::DescriptorSet prefilter_desc_set = engine::generate_descriptor_set( vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT );
+
+        engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set(
+            vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_COMPUTE_BIT );
 
         VkSampler sampler = VK_NULL_HANDLE;
         {
@@ -86,33 +89,20 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
             vulkan.destructor_stack.push( vulkan.device, sampler, vkDestroySampler );
         }
 
-        engine::update_descriptor_set_image( vulkan, engine, prefilter_desc, cubemap_image, 0 );
+        engine::update_descriptor_set_image( vulkan, engine, prefilter_desc_set, cubemap_image, 0 );
         engine::update_descriptor_set_write_image(
-            vulkan, engine, prefilter_desc, irradiance_rw_image, 1 );
-        engine::update_descriptor_set_sampler( vulkan, engine, prefilter_desc, sampler, 2 );
+            vulkan, engine, prefilter_desc_set, irradiance_rw_image, 1 );
 
-        // Hardcoded one-shot compute pipeline run
-        VkPipelineLayoutCreateInfo pipeline_info
-            = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-                  .setLayoutCount = 1,
-                  .pSetLayouts = prefilter_desc.layouts.data() };
-
-        VkPipelineLayout pipeline_layout;
-        vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &pipeline_layout );
-
-        VkComputePipelineCreateInfo create_pipeline_info = {
-            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-            .layout = pipeline_layout,
-        };
+        engine::update_descriptor_set_sampler( vulkan, engine, sampler_desc_set, sampler, 0 );
 
         VkShaderModule irradiance_module
             = vk::create::shader_module( vulkan, "../shaders/prefilter/irradiance.spv" );
-        create_pipeline_info.stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr,
-            0, VK_SHADER_STAGE_COMPUTE_BIT, irradiance_module, "cs_compute_irradiance", nullptr };
 
-        VkPipeline compute_pipeline;
-        vkCreateComputePipelines(
-            vulkan.device, VK_NULL_HANDLE, 1, &create_pipeline_info, nullptr, &compute_pipeline );
+        std::vector<engine::DescriptorSet> descs = { prefilter_desc_set, sampler_desc_set };
+
+        engine::Pipeline compute_pipeline
+            = engine::create_compute_pipeline( vulkan, { descs[0].layouts[0], descs[1].layouts[0] },
+                irradiance_module, "cs_compute_irradiance" );
 
         engine::immediate_submit(
             vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
@@ -123,9 +113,13 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
 
                 vkCmdBindPipeline(
-                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline );
+                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.handle );
+
+                VkDescriptorSet sets[] = { prefilter_desc_set.descriptor_sets[0],
+                    sampler_desc_set.descriptor_sets[0] };
+
                 vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                    pipeline_layout, 0, 1, prefilter_desc.descriptor_sets.data(), 0, nullptr );
+                    compute_pipeline.layout, 0, 2, sets, 0, nullptr );
 
                 vkCmdDispatch( command_buffer, tile_width, tile_height, 6 );
 
@@ -140,50 +134,51 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
     return irradiance_rw_image;
 }
 
-vk::mem::AllocatedImage cs_generate_diffuse_sh(
-    vk::mem::AllocatedImage sample_cubemap, VkSampler sampler, vk::Common& vulkan, engine::State& engine )
+vk::mem::AllocatedImage cs_generate_diffuse_sh( vk::mem::AllocatedImage sample_cubemap,
+    VkSampler sampler, vk::Common& vulkan, engine::State& engine )
 {
     // Hardcode them to be 9 coefficients for now.
     std::vector<glm::vec3> SH_coefficients( 9, glm::vec3( 0.0f ) );
 
     // Allocate the coefficeints.
-    vk::mem::AllocatedImage sh_coefficients_image
-        = engine::allocate_image( vulkan, { 9, 1, 1 }, VK_FORMAT_R8G8B8_SNORM, VK_IMAGE_TYPE_2D, 0,
-            0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
+    vk::mem::AllocatedImage sh_coefficients_image = engine::allocate_image( vulkan, { 9, 6, 1 },
+        VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TYPE_2D, 1, 1,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
 
     {
-        engine::DescriptorSet sh_projection_desc = engine::generate_descriptor_set( vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLER },
+        engine::DescriptorSet sh_projection_desc0_set = engine::generate_descriptor_set( vulkan,
+            engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT );
-        
-        engine::update_descriptor_set_image( vulkan, engine, sh_projection_desc, sample_cubemap, 0 );
+
+        engine::DescriptorSet sh_projection_desc1_set = engine::generate_descriptor_set(
+            vulkan, engine, { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE }, VK_SHADER_STAGE_COMPUTE_BIT );
+
+        engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set(
+            vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_COMPUTE_BIT );
+
+        engine::update_descriptor_set_image(
+            vulkan, engine, sh_projection_desc0_set, sample_cubemap, 0 );
+
+        engine::update_descriptor_set_sampler( vulkan, engine, sampler_desc_set, sampler, 0 );
+
         engine::update_descriptor_set_write_image(
-            vulkan, engine, sh_projection_desc, sh_coefficients_image, 1 );
-        engine::update_descriptor_set_sampler( vulkan, engine, sh_projection_desc, sampler, 2 );
-
-        // Hardcoded one-shot compute pipeline run
-        VkPipelineLayoutCreateInfo pipeline_info
-            = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-                  .setLayoutCount = 1,
-                  .pSetLayouts = sh_projection_desc.layouts.data() };
-
-        VkPipelineLayout pipeline_layout;
-        vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &pipeline_layout );
-
-        VkComputePipelineCreateInfo create_pipeline_info = {
-            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-            .layout = pipeline_layout,
-        };
+            vulkan, engine, sh_projection_desc1_set, sh_coefficients_image, 0 );
 
         VkShaderModule irradiance_module
-            = vk::create::shader_module( vulkan, "../shaders/prefilter/irradiance.spv" );
-        create_pipeline_info.stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr,
-            0, VK_SHADER_STAGE_COMPUTE_BIT, irradiance_module, "cs_compute_irradiance_sh", nullptr };
+            = vk::create::shader_module( vulkan, "../shaders/prefilter/irradiance_sh.spv" );
 
-        VkPipeline compute_pipeline;
-        vkCreateComputePipelines(
-            vulkan.device, VK_NULL_HANDLE, 1, &create_pipeline_info, nullptr, &compute_pipeline );
+        std::vector<engine::DescriptorSet> descs
+            = { sh_projection_desc0_set, sampler_desc_set, sh_projection_desc1_set };
+
+        std::vector<VkDescriptorSet> bind_descs = {
+            sh_projection_desc0_set.descriptor_sets[0],
+            sampler_desc_set.descriptor_sets[0],
+            sh_projection_desc1_set.descriptor_sets[0],
+        };
+
+        engine::Pipeline compute_pipeline = engine::create_compute_pipeline( vulkan,
+            { descs[0].layouts[0], descs[1].layouts[0], descs[2].layouts[0] }, irradiance_module,
+            "cs_compute_irradiance_sh" );
 
         engine::immediate_submit(
             vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
@@ -194,14 +189,21 @@ vk::mem::AllocatedImage cs_generate_diffuse_sh(
                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
 
                 vkCmdBindPipeline(
-                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline );
+                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.handle );
+
+                VkDescriptorSet sets[] = { sh_projection_desc0_set.descriptor_sets[0],
+                    sampler_desc_set.descriptor_sets[0],
+                    sh_projection_desc1_set.descriptor_sets[0] };
+
                 vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                    pipeline_layout, 0, 1, sh_projection_desc.descriptor_sets.data(), 0, nullptr );
+                    compute_pipeline.layout, 0, 3, sets, 0, nullptr );
 
-                uint32_t x_groups = ( static_cast<uint32_t>( sample_cubemap.image_extent.width ) + 7 ) / 8;
-                uint32_t y_groups = ( static_cast<uint32_t>( sample_cubemap.image_extent.height ) + 7 ) / 8;
+                // uint32_t x_groups
+                //     = ( static_cast<uint32_t>( sample_cubemap.image_extent.width ) + 7 ) / 8;
+                // uint32_t y_groups
+                //     = ( static_cast<uint32_t>( sample_cubemap.image_extent.height ) + 7 ) / 8;
 
-                vkCmdDispatch( command_buffer, x_groups, y_groups, 6 );
+                vkCmdDispatch( command_buffer, 1, 1, 1 );
 
                 vk::utility::transition_image( command_buffer, sh_coefficients_image.image,
                     VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -298,11 +300,11 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
         }
     }
 
-    // for ( size_t i = 0; i < sh_coefficients.size(); i++ ) {
-    //     // Normalize over the surface area of the sphere, 4 * PI...
-    //     // I don't want to do anything nasty with figuring out why M_PI isn't here.
-    //     sh_coefficients[i] *= 1.0f / ( 4.0f * 3.14159265358979323846f );
-    // }
+    for ( size_t i = 0; i < sh_coefficients.size(); i++ ) {
+        // Normalize over the surface area of the sphere, 4 * PI...
+        // I don't want to do anything nasty with figuring out why M_PI isn't here.
+        sh_coefficients[i] *= 1.0f / ( 4.0f * 3.14159265358979323846f );
+    }
 
     return sh_coefficients;
 }
@@ -400,7 +402,7 @@ vk::mem::AllocatedImage create_cubemap( [[maybe_unused]] std::filesystem::path f
     VkExtent3D tile_extent = { tile_width, tile_height, 1 };
 
     vk::mem::AllocatedImage cubemap_image
-        = allocate_cube_map( vulkan, tile_extent, VK_FORMAT_R16G16B16A16_SFLOAT, 1 );
+        = allocate_cube_map( vulkan, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
 
     // hardcode file paths for now because screw you
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
@@ -414,15 +416,15 @@ vk::mem::AllocatedImage create_cubemap( [[maybe_unused]] std::filesystem::path f
     };
 
     // Parse the data somehow
-    std::vector<std::vector<uint16_t>> face_data( layer_count );
+    std::vector<std::vector<float>> face_data( layer_count );
     for ( uint32_t tile = 0; tile < layer_count; tile++ ) {
-        face_data[tile] = engine::load_image_to_float16( faces[tile] );
+        face_data[tile] = engine::load_image_to_float( faces[tile] );
     }
 
     // Need to upload all of these
     // Batched upload necessary. I can't use my brain right now to use our API effectively
     load_cubemap(
-        vulkan, engine, face_data, cubemap_image, tile_extent, VK_FORMAT_R16G16B16A16_SFLOAT );
+        vulkan, engine, face_data, cubemap_image, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT );
 
     return cubemap_image;
 }

@@ -115,9 +115,6 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
         allocated_image.storage_image_view = allocated_image.image_view;
 
         vulkan.destructor_stack.push(
-            vulkan.device, allocated_image.storage_image_view, vkDestroyImageView );
-
-        vulkan.destructor_stack.push(
             vulkan.device, allocated_image.image_view, vkDestroyImageView );
     }
 
