@@ -70,7 +70,10 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     };
 
     VkPipelineColorBlendAttachmentState color_blend_attachment_info = {
-        .blendEnable = VK_FALSE,
+        .blendEnable = blend ? VK_TRUE : VK_FALSE,
+        .srcColorBlendFactor = blend ? VK_BLEND_FACTOR_SRC_ALPHA : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
+        .dstColorBlendFactor = blend ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
+        .colorBlendOp = VK_BLEND_OP_ADD,
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
             | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
     };

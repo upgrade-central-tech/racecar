@@ -24,6 +24,7 @@
 #define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
 #include <glm/gtx/compatibility.hpp>
 
+
 #include <chrono>
 #include <filesystem>
 #include <string_view>
@@ -167,14 +168,22 @@ void run( bool use_fullscreen )
     engine::Pipeline scene_pipeline;
 
     try {
+        size_t frame_index = engine.get_frame_index();
         scene_pipeline = create_gfx_pipeline( engine, ctx.vulkan,
             engine::get_vertex_input_state_create_info( scene_mesh ),
             {
-                uniform_desc_set.layouts[0],
-                material_desc_sets[0].layouts[0],
-                lut_sets.layouts[0],
-                sampler_desc_set.layouts[0],
+                uniform_desc_set.layouts[frame_index],
+                material_desc_sets[0].layouts[frame_index],
+                lut_sets.layouts[frame_index],
+                sampler_desc_set.layouts[frame_index],
             },
+            {
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT  // UV
+            },
+            false,
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create graphics pipeline: {}", ex.what() );
@@ -183,53 +192,135 @@ void run( bool use_fullscreen )
 
     engine::TaskList task_list;
 
-    atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
-    {
-        geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+    // deferred rendering
+    engine::RWImage GBuffer_Normal = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
-        engine::GfxTask atmosphere_gfx_task = {
-            .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
-            .clear_depth = 1.f,
-            .render_target_is_swapchain = true,
-            .extent = engine.swapchain.extent,
-        };
+    engine::RWImage GBuffer_Position = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
-        engine::Pipeline atmosphere_pipeline;
+    engine::RWImage GBuffer_Tangent = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
-        try {
-            atmosphere_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
-                engine::get_vertex_input_state_create_info( quad_mesh ),
-                {
-                    atms.uniform_desc_set.layouts[0],
-                    atms.lut_desc_set.layouts[0],
-                    atms.sampler_desc_set.layouts[0],
+    engine::RWImage GBuffer_UV = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
+    engine::RWImage GBuffer_Depth = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
+    // {
+        // deferred transition tasks
+        engine::add_pipeline_barrier( task_list,
+            engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+                .image_barriers
+                = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = GBuffer_Normal,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = GBuffer_Position,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = GBuffer_Tangent,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = GBuffer_UV,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                        .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                        .image = GBuffer_Depth,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
+
+
+
+
+        // ATMOSPHERE STUFF
+        atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
+        {
+            geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+
+            engine::GfxTask atmosphere_gfx_task = {
+                .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
+                .clear_depth = 1.f,
+                .render_target_is_swapchain = true,
+                .extent = engine.swapchain.extent,
+            };
+
+            engine::Pipeline atmosphere_pipeline;
+
+            try {
+                atmosphere_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
+                    engine::get_vertex_input_state_create_info( quad_mesh ),
+                    {
+                        atms.uniform_desc_set.layouts[0],
+                        atms.lut_desc_set.layouts[0],
+                        atms.sampler_desc_set.layouts[0],
+                    },
+                    { engine.swapchain.image_format },
+                    false,
+                    vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
+            } catch ( const Exception& ex ) {
+                log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
+                throw;
+            }
+
+            atmosphere_gfx_task.draw_tasks.push_back( {
+                .draw_resource_descriptor = {
+                        .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
+                        .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
+                        .vertex_buffer_offsets = { 0 },
+                        .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
                 },
-                vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
-        } catch ( const Exception& ex ) {
-            log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
-            throw;
+                .descriptor_sets = {
+                    &atms.uniform_desc_set,
+                    &atms.lut_desc_set,
+                    &atms.sampler_desc_set,
+                },
+                .pipeline = atmosphere_pipeline,
+            } );
+
+            engine::add_gfx_task( task_list, atmosphere_gfx_task );
         }
+        // END ATMOSPHERE STUFF
 
-        atmosphere_gfx_task.draw_tasks.push_back( {
-            .draw_resource_descriptor = {
-                    .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
-                    .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
-                    .vertex_buffer_offsets = { 0 },
-                    .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
-            },
-            .descriptor_sets = {
-                &atms.uniform_desc_set,
-                &atms.lut_desc_set,
-                &atms.sampler_desc_set,
-            },
-            .pipeline = atmosphere_pipeline,
-        } );
 
-        engine::add_gfx_task( task_list, atmosphere_gfx_task );
-    }
 
-    {
+
         engine::GfxTask sponza_gfx_task = {
+            .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
             .clear_depth = 1.f,
             .render_target_is_swapchain = true,
             .extent = engine.swapchain.extent,
@@ -316,7 +407,115 @@ void run( bool use_fullscreen )
         }
 
         engine::add_gfx_task( task_list, sponza_gfx_task );
-    }
+
+        // Lighting pass
+        engine::add_pipeline_barrier( task_list,
+            engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+                .image_barriers = { engine::ImageBarrier { .src_stage
+                                        = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                                        .image = GBuffer_Position,
+                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                        .image = GBuffer_Normal,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                        .image = GBuffer_Tangent,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                        .image = GBuffer_UV,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                        .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                        .image = GBuffer_Depth,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
+
+        // lighting pass
+        geometry::quad::Mesh lighting_pass_quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+
+        engine::GfxTask lighting_pass_gfx_task = {
+            .clear_depth = 1.0f,
+            .render_target_is_swapchain = true,
+            .extent = engine.swapchain.extent,
+        };
+
+        engine::DescriptorSet gbuffer_descriptor_set
+            = engine::generate_descriptor_set( ctx.vulkan, engine,
+                { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+                VK_SHADER_STAGE_FRAGMENT_BIT );
+
+        size_t frame_index = engine.get_frame_index();
+        engine::Pipeline lighting_pass_gfx_pipeline;
+        try {
+            lighting_pass_gfx_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
+                engine::get_vertex_input_state_create_info( lighting_pass_quad_mesh ),
+                {
+                    uniform_desc_set.layouts[frame_index],
+                    material_desc_sets[0].layouts[frame_index],
+                    lut_sets.layouts[frame_index],
+                    sampler_desc_set.layouts[frame_index],
+                    gbuffer_descriptor_set.layouts[frame_index]
+                },
+                { engine.swapchain.image_format },
+                true,
+                vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ) );
+        } catch ( const Exception& ex ) {
+            log::error( "Failed to create lighting pass graphics pipeline: {}", ex.what() );
+            throw;
+        }
+
+        engine::update_descriptor_set_rwimage(ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Position, 0);
+        engine::update_descriptor_set_rwimage(ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Normal, 1);
+        engine::update_descriptor_set_rwimage(ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Tangent, 2);
+        engine::update_descriptor_set_rwimage(ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_UV, 3);
+
+        lighting_pass_gfx_task.draw_tasks.push_back({
+            .draw_resource_descriptor = {
+                .vertex_buffers = { lighting_pass_quad_mesh.mesh_buffers.vertex_buffer.handle },
+                .index_buffer = lighting_pass_quad_mesh.mesh_buffers.index_buffer.handle,
+                .vertex_buffer_offsets = { 0 },
+                .index_count = static_cast<uint32_t>( lighting_pass_quad_mesh.indices.size() ),
+            },
+            .descriptor_sets = {
+                &uniform_desc_set,
+                &material_desc_sets[static_cast<size_t>( 0 )], // THIS IS WRONG; NEEDS FIX
+                &lut_sets,
+                &sampler_desc_set,
+                &gbuffer_descriptor_set
+            },
+            .pipeline = lighting_pass_gfx_pipeline,
+        });
+
+        engine::add_gfx_task( task_list, lighting_pass_gfx_task );
+    // }
 
     bool will_quit = false;
     bool stop_drawing = false;
@@ -346,6 +545,7 @@ void run( bool use_fullscreen )
             continue;
         }
 
+        
         camera::OrbitCamera& camera = engine.camera;
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
