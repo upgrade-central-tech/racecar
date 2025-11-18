@@ -9,6 +9,9 @@ namespace racecar::geometry {
 
 std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path );
 
+vk::mem::AllocatedImage cs_generate_diffuse_sh(
+    vk::mem::AllocatedImage sample_cubemap, vk::Common& vulkan, engine::State& engine );
+
 vk::mem::AllocatedImage generate_diffuse_irradiance(
     std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine );
 

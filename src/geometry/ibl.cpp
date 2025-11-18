@@ -6,7 +6,6 @@
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
 
-
 namespace racecar::geometry {
 
 glm::vec3 cubemap_direction( uint32_t face, float u, float v )
@@ -83,12 +82,13 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
                 .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             };
             vk::check( vkCreateSampler( vulkan.device, &sampler_info, nullptr, &sampler ),
-                "Failed to create atmosphere LUT sampler" );
+                "Failed to create irradiance filtering sampler" );
             vulkan.destructor_stack.push( vulkan.device, sampler, vkDestroySampler );
         }
 
         engine::update_descriptor_set_image( vulkan, engine, prefilter_desc, cubemap_image, 0 );
-        engine::update_descriptor_set_write_image( vulkan, engine, prefilter_desc, irradiance_rw_image, 1 );
+        engine::update_descriptor_set_write_image(
+            vulkan, engine, prefilter_desc, irradiance_rw_image, 1 );
         engine::update_descriptor_set_sampler( vulkan, engine, prefilter_desc, sampler, 2 );
 
         // Hardcoded one-shot compute pipeline run
@@ -118,32 +118,100 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
             vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
                 // RW cubemap transition first
                 vk::utility::transition_image( command_buffer, irradiance_rw_image.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-                    VK_ACCESS_NONE, VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT );
-            
-                vkCmdBindPipeline( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline );
-                vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, prefilter_desc.descriptor_sets.data(), 0, nullptr );
-                
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_NONE,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+
+                vkCmdBindPipeline(
+                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline );
+                vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                    pipeline_layout, 0, 1, prefilter_desc.descriptor_sets.data(), 0, nullptr );
+
                 vkCmdDispatch( command_buffer, tile_width, tile_height, 6 );
-                
-                vk::utility::transition_image(
-                    command_buffer,
-                    irradiance_rw_image.image,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
-            }
-        );
+
+                vk::utility::transition_image( command_buffer, irradiance_rw_image.image,
+                    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT );
+            } );
     }
 
     return irradiance_rw_image;
+}
+
+vk::mem::AllocatedImage cs_generate_diffuse_sh(
+    vk::mem::AllocatedImage sample_cubemap, VkSampler sampler, vk::Common& vulkan, engine::State& engine )
+{
+    // Hardcode them to be 9 coefficients for now.
+    std::vector<glm::vec3> SH_coefficients( 9, glm::vec3( 0.0f ) );
+
+    // Allocate the coefficeints.
+    vk::mem::AllocatedImage sh_coefficients_image
+        = engine::allocate_image( vulkan, { 9, 1, 1 }, VK_FORMAT_R8G8B8_SNORM, VK_IMAGE_TYPE_2D, 0,
+            0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
+
+    {
+        engine::DescriptorSet sh_projection_desc = engine::generate_descriptor_set( vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLER },
+            VK_SHADER_STAGE_COMPUTE_BIT );
+        
+        engine::update_descriptor_set_image( vulkan, engine, sh_projection_desc, sample_cubemap, 0 );
+        engine::update_descriptor_set_write_image(
+            vulkan, engine, sh_projection_desc, sh_coefficients_image, 1 );
+        engine::update_descriptor_set_sampler( vulkan, engine, sh_projection_desc, sampler, 2 );
+
+        // Hardcoded one-shot compute pipeline run
+        VkPipelineLayoutCreateInfo pipeline_info
+            = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+                  .setLayoutCount = 1,
+                  .pSetLayouts = sh_projection_desc.layouts.data() };
+
+        VkPipelineLayout pipeline_layout;
+        vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &pipeline_layout );
+
+        VkComputePipelineCreateInfo create_pipeline_info = {
+            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+            .layout = pipeline_layout,
+        };
+
+        VkShaderModule irradiance_module
+            = vk::create::shader_module( vulkan, "../shaders/prefilter/irradiance.spv" );
+        create_pipeline_info.stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr,
+            0, VK_SHADER_STAGE_COMPUTE_BIT, irradiance_module, "cs_compute_irradiance_sh", nullptr };
+
+        VkPipeline compute_pipeline;
+        vkCreateComputePipelines(
+            vulkan.device, VK_NULL_HANDLE, 1, &create_pipeline_info, nullptr, &compute_pipeline );
+
+        engine::immediate_submit(
+            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+                // RW cubemap transition first
+                vk::utility::transition_image( command_buffer, sh_coefficients_image.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_NONE,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+
+                vkCmdBindPipeline(
+                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline );
+                vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                    pipeline_layout, 0, 1, sh_projection_desc.descriptor_sets.data(), 0, nullptr );
+
+                uint32_t x_groups = ( static_cast<uint32_t>( sample_cubemap.image_extent.width ) + 7 ) / 8;
+                uint32_t y_groups = ( static_cast<uint32_t>( sample_cubemap.image_extent.height ) + 7 ) / 8;
+
+                vkCmdDispatch( command_buffer, x_groups, y_groups, 6 );
+
+                vk::utility::transition_image( command_buffer, sh_coefficients_image.image,
+                    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT );
+            } );
+    }
+
+    return sh_coefficients_image;
 }
 
 std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
@@ -239,8 +307,8 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
     return sh_coefficients;
 }
 
-vk::mem::AllocatedImage allocate_cube_map(
-    vk::Common& vulkan, VkExtent3D extent, VkFormat format, uint32_t mip_levels, [[maybe_unused]] bool readOnly )
+vk::mem::AllocatedImage allocate_cube_map( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
+    uint32_t mip_levels, [[maybe_unused]] bool readOnly )
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
@@ -287,7 +355,8 @@ vk::mem::AllocatedImage allocate_cube_map(
                        vulkan.device, &image_view_info, nullptr, &allocated_image.image_view ),
             "Failed to create image view" );
 
-        vulkan.destructor_stack.push( vulkan.device, allocated_image.image_view, vkDestroyImageView );
+        vulkan.destructor_stack.push(
+            vulkan.device, allocated_image.image_view, vkDestroyImageView );
     }
 
     {
@@ -308,11 +377,12 @@ vk::mem::AllocatedImage allocate_cube_map(
         };
         storage_image_view_info.subresourceRange.levelCount = image_info.mipLevels;
 
-        vk::check( vkCreateImageView(
-                       vulkan.device, &storage_image_view_info, nullptr, &allocated_image.storage_image_view ),
-            "Failed to create image view" );
+        vk::check( vkCreateImageView( vulkan.device, &storage_image_view_info, nullptr,
+                       &allocated_image.storage_image_view ),
+            "Failed to create storage image view" );
 
-        vulkan.destructor_stack.push( vulkan.device, allocated_image.storage_image_view, vkDestroyImageView );
+        vulkan.destructor_stack.push(
+            vulkan.device, allocated_image.storage_image_view, vkDestroyImageView );
     }
 
     vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, allocated_image );

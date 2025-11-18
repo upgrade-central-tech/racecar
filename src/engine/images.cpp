@@ -110,6 +110,13 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
         vk::check( vkCreateImageView(
                        vulkan.device, &image_view_info, nullptr, &allocated_image.image_view ),
             "Failed to create image view" );
+
+        // They can be the same, as long as VK_IMAGE_USAGE_STORAGE_BIT is used. The views are different, however, for writing to cubemaps.
+        allocated_image.storage_image_view = allocated_image.image_view;
+
+        vulkan.destructor_stack.push(
+            vulkan.device, allocated_image.storage_image_view, vkDestroyImageView );
+
         vulkan.destructor_stack.push(
             vulkan.device, allocated_image.image_view, vkDestroyImageView );
     }
