@@ -42,11 +42,12 @@ struct Atmosphere {
     glm::mat4 inverse_view = {};
     glm::vec3 camera_position = {};
     float exposure = 0.f;
-    glm::vec3 sun_position = {};
-    float size_x = 0.f;
+    glm::vec3 sun_direction = {};
+
+    float sun_size_x = 0.f;
     glm::vec3 white_point = {};
-    float size_y = 0.f;
-    glm::vec4 earth_center = {};
+    float sun_size_y = 0.f;
+    glm::vec4 earth_center = {}; ///< Really only `vec3`, but stored as `vec4` for padding
 };
 
 } // namespace racecar::uniform_buffer

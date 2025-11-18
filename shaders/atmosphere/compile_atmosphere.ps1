@@ -1,2 +1,2 @@
 # Assumes compiler is on your PATH (which it should be)
-slangc.exe "$PSScriptRoot\atmosphere.slang" -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name -entry vs_main -entry fs_main -o "$PSScriptRoot\atmosphere.spv"
+slangc.exe "$PSScriptRoot\main.slang" -target spirv -profile spirv_1_4 -o "$PSScriptRoot\atmosphere.spv"

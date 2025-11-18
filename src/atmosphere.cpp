@@ -1,9 +1,11 @@
 #include "atmosphere.hpp"
 
 #include "engine/images.hpp"
+#include "engine/ub_data.hpp"
 #include "exception.hpp"
 #include "log.hpp"
 
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -47,10 +49,19 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
 {
     Atmosphere atms;
 
+    // Fill in the unchanging parameters
+    ub_data::Atmosphere atms_ub = {
+        .sun_size_x = std::tan( atmosphere::SUN_ANGULAR_RADIUS ),
+        .white_point = atmosphere::WHITE_POINT,
+        .sun_size_y = std::cos( atmosphere::SUN_ANGULAR_RADIUS ),
+        .earth_center = glm::vec4( atmosphere::EARTH_CENTER, 0.f ),
+    };
+
     atms.uniform_buffer = create_uniform_buffer<ub_data::Atmosphere>(
-        vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-    atms.uniform_desc_set = engine::generate_descriptor_set(
-        vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_FRAGMENT_BIT );
+        vulkan, atms_ub, static_cast<size_t>( engine.frame_overlap ) );
+    atms.uniform_desc_set
+        = engine::generate_descriptor_set( vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
     engine::update_descriptor_set_uniform(
         vulkan, engine, atms.uniform_desc_set, atms.uniform_buffer, 0 );
 
@@ -114,7 +125,21 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
         vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_FRAGMENT_BIT );
     engine::update_descriptor_set_sampler( vulkan, engine, atms.sampler_desc_set, sampler, 0 );
 
+    // Some default states
+    atms.sun_azimuth = 2.9f;
+    atms.sun_zenith = 1.49f;
+    atms.exposure = 10.f;
+
     return atms;
+}
+
+glm::vec3 compute_sun_direction( const Atmosphere& atms )
+{
+    return {
+        std::cos( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
+        std::sin( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
+        std::cos( atms.sun_zenith ),
+    };
 }
 
 }
