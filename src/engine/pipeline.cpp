@@ -15,8 +15,8 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     const std::vector<VkDescriptorSetLayout>& layouts, const std::vector<VkFormat> color_attachment_formats, VkShaderModule shader_module )
 {
     VkPipelineVertexInputStateCreateInfo vertex_input_info
-        = vertex_input_state_create_info.value_or(
-            { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
+        = vertex_input_state_create_info.value_or( VkPipelineVertexInputStateCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -140,6 +140,56 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     vulkan.destructor_stack.push( vulkan.device, gfx_pipeline.handle, vkDestroyPipeline );
 
     return gfx_pipeline;
+}
+
+Pipeline create_compute_pipeline( vk::Common& vulkan,
+    const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module,
+    std::string_view entry_name )
+{
+    Pipeline compute_pipeline;
+
+    {
+        VkPipelineLayoutCreateInfo pipeline_info
+            = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+                  .setLayoutCount = static_cast<uint32_t>( layouts.size() ),
+                  .pSetLayouts = layouts.data() };
+
+        vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &compute_pipeline.layout );
+        vulkan.destructor_stack.push(
+            vulkan.device, compute_pipeline.layout, vkDestroyPipelineLayout );
+    }
+
+    VkPipelineLayoutCreateInfo pipeline_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+    };
+
+    if ( layouts.size() > 0 ) {
+        pipeline_info.setLayoutCount = static_cast<uint32_t>( layouts.size() );
+        pipeline_info.pSetLayouts = layouts.data();
+    }
+
+    VkPipelineLayout pipeline_layout;
+    vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &pipeline_layout );
+
+    VkComputePipelineCreateInfo create_pipeline_info = {
+        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        .layout = pipeline_layout,
+    };
+
+    create_pipeline_info.stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+        VK_SHADER_STAGE_COMPUTE_BIT, shader_module, entry_name.data(), nullptr };
+
+    VkPipeline compute_pipeline_handle;
+    vk::check( vkCreateComputePipelines( vulkan.device, VK_NULL_HANDLE, 1, &create_pipeline_info,
+                   nullptr, &compute_pipeline_handle ),
+        "Failed to create compute pipeline" );
+
+    vulkan.destructor_stack.push( vulkan.device, compute_pipeline_handle, vkDestroyPipeline );
+
+    compute_pipeline.handle = compute_pipeline_handle;
+    compute_pipeline.layout = pipeline_layout;
+
+    return compute_pipeline;
 }
 
 } // namespace racecar::engine
