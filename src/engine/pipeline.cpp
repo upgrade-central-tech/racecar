@@ -15,8 +15,8 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     const std::vector<VkDescriptorSetLayout>& layouts, const std::vector<VkFormat> color_attachment_formats, VkShaderModule shader_module )
 {
     VkPipelineVertexInputStateCreateInfo vertex_input_info
-        = vertex_input_state_create_info.value_or( VkPipelineVertexInputStateCreateInfo {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
+        = vertex_input_state_create_info.value_or(
+          VkPipelineVertexInputStateCreateInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
