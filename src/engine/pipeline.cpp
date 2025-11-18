@@ -12,7 +12,7 @@ constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
 Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
-    const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module )
+    const std::vector<VkDescriptorSetLayout>& layouts, const std::vector<VkFormat> color_attachment_formats, bool blend, VkShaderModule shader_module )
 {
     VkPipelineVertexInputStateCreateInfo vertex_input_info
         = vertex_input_state_create_info.value_or(
@@ -78,11 +78,13 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
             | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
     };
 
+    std::vector<VkPipelineColorBlendAttachmentState> color_attachment_infos(color_attachment_formats.size(), color_blend_attachment_info);
+
     VkPipelineColorBlendStateCreateInfo color_blend_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .logicOpEnable = VK_FALSE,
-        .attachmentCount = 1,
-        .pAttachments = &color_blend_attachment_info,
+        .attachmentCount = uint32_t(color_attachment_formats.size()),
+        .pAttachments = color_attachment_infos.data(),
     };
 
     Pipeline gfx_pipeline;
@@ -113,8 +115,8 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     // Use dynamic rendering instead of manually creating render passes
     VkPipelineRenderingCreateInfo pipeline_rendering_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-        .colorAttachmentCount = 1,
-        .pColorAttachmentFormats = &engine.swapchain.image_format,
+        .colorAttachmentCount = uint32_t(color_attachment_formats.size()),
+        .pColorAttachmentFormats = color_attachment_formats.data(),
         .depthAttachmentFormat = engine.depth_images[0].image_format,
     };
 

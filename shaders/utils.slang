@@ -1,6 +1,26 @@
 static const float PI = 3.14159265359;
 
 //=======================================================================================
+// BSDF Stuff
+//=======================================================================================
+
+//
+struct GBuffer {
+    float3 in_pos;
+    float3 in_nor;
+    float4 in_tangent;
+    float2 in_uv;
+}
+
+struct Material {
+    float roughness;
+    float metallic;
+    float clearcoat_roughness;
+    float clearcoat_weight;
+}
+
+
+//=======================================================================================
 // NDF functions
 //=======================================================================================
 float DistributionGGX( float n_dot_h, float alpha )

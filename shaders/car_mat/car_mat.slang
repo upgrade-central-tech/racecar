@@ -1,4 +1,3 @@
-#define USE_GLINTS 1
 #define USE_SH_IRRADIANCE 1
 
 struct VertexInput {

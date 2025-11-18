@@ -24,7 +24,6 @@
 #define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
 #include <glm/gtx/compatibility.hpp>
 
-
 #include <chrono>
 #include <filesystem>
 #include <string_view>
@@ -34,9 +33,10 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/material_ball.glb";
-constexpr std::string_view SHADER_MODULE_PATH = "../shaders/car_mat/car_mat.spv";
-constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/cathedral";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
+constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
+constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
+constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
 }
@@ -74,42 +74,41 @@ void run( bool use_fullscreen )
 
     // Simple set up for linear sampler
     VkSampler linear_sampler = VK_NULL_HANDLE;
+    VkSampler point_sampler = VK_NULL_HANDLE;
+    engine::DescriptorSet sampler_desc_set;
     {
-        VkSamplerCreateInfo sampler_nearest_create_info = {
+        VkSamplerCreateInfo sampler_linear_create_info = {
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .magFilter = VK_FILTER_LINEAR,
             .minFilter = VK_FILTER_LINEAR,
         };
 
         vk::check( vkCreateSampler(
-                       ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &linear_sampler ),
+                       ctx.vulkan.device, &sampler_linear_create_info, nullptr, &linear_sampler ),
             "Failed to create sampler" );
         ctx.vulkan.destructor_stack.push( ctx.vulkan.device, linear_sampler, vkDestroySampler );
-    }
 
-    VkSampler point_sampler = VK_NULL_HANDLE;
-    {
-        VkSamplerCreateInfo sampler_nearest_create_info = {
-            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .magFilter = VK_FILTER_NEAREST,
-            .minFilter = VK_FILTER_NEAREST,
-        };
+        VkSamplerCreateInfo sampler_nearest_create_info
+            = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                  .magFilter = VK_FILTER_NEAREST,
+                  .minFilter = VK_FILTER_NEAREST };
 
         vk::check( vkCreateSampler(
                        ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &point_sampler ),
-            "Failed to create sampler" );
-        ctx.vulkan.destructor_stack.push( ctx.vulkan.device, linear_sampler, vkDestroySampler );
+            "Failed to create nearest smapler!" );
+        ctx.vulkan.destructor_stack.push( ctx.vulkan.device, point_sampler, vkDestroySampler );
+
+        sampler_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
+                VK_DESCRIPTOR_TYPE_SAMPLER },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+        engine::update_descriptor_set_sampler(
+            ctx.vulkan, engine, sampler_desc_set, linear_sampler, 0 );
+            
+        engine::update_descriptor_set_sampler(
+            ctx.vulkan, engine, sampler_desc_set, point_sampler, 1 );
     }
-
-    engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
-            VK_DESCRIPTOR_TYPE_SAMPLER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
-
-    engine::update_descriptor_set_sampler(
-        ctx.vulkan, engine, sampler_desc_set, linear_sampler, 0 );
-
-    engine::update_descriptor_set_sampler( ctx.vulkan, engine, sampler_desc_set, point_sampler, 1 );
 
     size_t num_materials = scene.materials.size();
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
@@ -123,47 +122,51 @@ void run( bool use_fullscreen )
     }
 
     engine::DescriptorSet raymarch_tex_sets;
-    raymarch_tex_sets
-        = engine::generate_descriptor_set( ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+    {
+        raymarch_tex_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-    vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D( ctx.vulkan, engine );
-    engine::update_descriptor_set_image( ctx.vulkan, engine, raymarch_tex_sets, test_data_3D, 0 );
-
-    engine::DescriptorSet lut_sets;
-    lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
-
-    vk::mem::AllocatedImage test_cubemap
-        = geometry::create_cubemap( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
-    vk::mem::AllocatedImage lut_brdf
-        = engine::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
-
-    //
-    UniformBuffer sh_buffer = create_uniform_buffer<ub_data::SHData>(
-        ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-
-    std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );
-    vk::mem::AllocatedImage diffuse_irradiance
-        = geometry::generate_diffuse_irradiance( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
-
-    for ( size_t i = 0; i < sh_coefficients.size(); ++i ) {
-        log::info( "SH coeff: {}, {}, {}", sh_coefficients[i].x, sh_coefficients[i].y,
-            sh_coefficients[i].z );
+        vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D( ctx.vulkan, engine );
+        engine::update_descriptor_set_image(
+            ctx.vulkan, engine, raymarch_tex_sets, test_data_3D, 0 );
     }
 
-    vk::mem::AllocatedImage diffuse_irradiance_sh
-        = geometry::cs_generate_diffuse_sh( test_cubemap, linear_sampler, ctx.vulkan, engine );
+    engine::DescriptorSet lut_sets;
+    {
+        lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-    engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, test_cubemap, 0 );
-    engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 1 );
-    engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, diffuse_irradiance, 2 );
-    engine::update_descriptor_set_image(
-        ctx.vulkan, engine, lut_sets, diffuse_irradiance_sh, 3 );
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 4 );
+        vk::mem::AllocatedImage test_cubemap
+            = geometry::create_cubemap( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
+        vk::mem::AllocatedImage lut_brdf
+            = engine::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
+
+        UniformBuffer sh_buffer = create_uniform_buffer<ub_data::SHData>(
+            ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+
+        std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );
+        vk::mem::AllocatedImage diffuse_irradiance
+            = geometry::generate_diffuse_irradiance( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
+
+        for ( size_t i = 0; i < sh_coefficients.size(); ++i ) {
+            log::info( "SH coeff: {}, {}, {}", sh_coefficients[i].x, sh_coefficients[i].y,
+                sh_coefficients[i].z );
+        }
+
+        vk::mem::AllocatedImage diffuse_irradiance_sh
+            = geometry::cs_generate_diffuse_sh( test_cubemap, linear_sampler, ctx.vulkan, engine );
+
+        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, test_cubemap, 0 );
+        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 1 );
+        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, diffuse_irradiance, 2 );
+        engine::update_descriptor_set_image(
+            ctx.vulkan, engine, lut_sets, diffuse_irradiance_sh, 3 );
+        engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 4 );
+    }
 
     engine::Pipeline scene_pipeline;
 
@@ -181,14 +184,18 @@ void run( bool use_fullscreen )
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT  // UV
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT // UV
             },
-            false,
-            vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
+            false, vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create graphics pipeline: {}", ex.what() );
         throw;
     }
+
+    geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+
+    [[maybe_unused]] VkPipelineVertexInputStateCreateInfo test
+        = engine::get_vertex_input_state_create_info( quad_mesh );
 
     engine::TaskList task_list;
 
@@ -219,85 +226,81 @@ void run( bool use_fullscreen )
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     // {
-        // deferred transition tasks
-        engine::add_pipeline_barrier( task_list,
-            engine::PipelineBarrierDescriptor { .buffer_barriers = {},
-                .image_barriers
-                = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                        .src_access = VK_ACCESS_2_NONE,
-                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        .image = GBuffer_Normal,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                    engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                        .src_access = VK_ACCESS_2_NONE,
-                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        .image = GBuffer_Position,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                    engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                        .src_access = VK_ACCESS_2_NONE,
-                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        .image = GBuffer_Tangent,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                    engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                        .src_access = VK_ACCESS_2_NONE,
-                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        .image = GBuffer_UV,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                    engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                        .src_access = VK_ACCESS_2_NONE,
-                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                        .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                        .image = GBuffer_Depth,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
+    // deferred transition tasks
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers
+            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Normal,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Tangent,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_UV,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Depth,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
 
+    // ATMOSPHERE STUFF
+    atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
+    {
+        geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
 
+        engine::GfxTask atmosphere_gfx_task = {
+            .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
+            .clear_depth = 1.f,
+            .render_target_is_swapchain = true,
+            .extent = engine.swapchain.extent,
+        };
 
+        engine::Pipeline atmosphere_pipeline;
 
-        // ATMOSPHERE STUFF
-        atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
-        {
-            geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+        try {
+            atmosphere_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
+                engine::get_vertex_input_state_create_info( quad_mesh ),
+                {
+                    atms.uniform_desc_set.layouts[0],
+                    atms.lut_desc_set.layouts[0],
+                    atms.sampler_desc_set.layouts[0],
+                },
+                { engine.swapchain.image_format }, false,
+                vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
+        } catch ( const Exception& ex ) {
+            log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
+            throw;
+        }
 
-            engine::GfxTask atmosphere_gfx_task = {
-                .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
-                .clear_depth = 1.f,
-                .render_target_is_swapchain = true,
-                .extent = engine.swapchain.extent,
-            };
-
-            engine::Pipeline atmosphere_pipeline;
-
-            try {
-                atmosphere_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
-                    engine::get_vertex_input_state_create_info( quad_mesh ),
-                    {
-                        atms.uniform_desc_set.layouts[0],
-                        atms.lut_desc_set.layouts[0],
-                        atms.sampler_desc_set.layouts[0],
-                    },
-                    { engine.swapchain.image_format },
-                    false,
-                    vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
-            } catch ( const Exception& ex ) {
-                log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
-                throw;
-            }
-
-            atmosphere_gfx_task.draw_tasks.push_back( {
+        atmosphere_gfx_task.draw_tasks.push_back( {
                 .draw_resource_descriptor = {
                         .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
                         .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
@@ -312,87 +315,85 @@ void run( bool use_fullscreen )
                 .pipeline = atmosphere_pipeline,
             } );
 
-            engine::add_gfx_task( task_list, atmosphere_gfx_task );
-        }
-        // END ATMOSPHERE STUFF
+        engine::add_gfx_task( task_list, atmosphere_gfx_task );
+    }
+    // END ATMOSPHERE STUFF
 
+    engine::GfxTask sponza_gfx_task = {
+        .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
+        .clear_depth = 1.f,
+        .render_target_is_swapchain = false,
+        .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Tangent, GBuffer_UV },
+        .depth_image = GBuffer_Depth,
+        .extent = engine.swapchain.extent,
+    };
 
+    for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
+        if ( node->mesh.has_value() ) {
+            const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
 
+            for ( const scene::Primitive& prim : mesh->primitives ) {
+                const scene::Material& current_material
+                    = scene.materials[static_cast<size_t>( prim.material_id )];
+                std::vector<std::optional<scene::Texture>> textures_needed;
 
-        engine::GfxTask sponza_gfx_task = {
-            .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
-            .clear_depth = 1.f,
-            .render_target_is_swapchain = true,
-            .extent = engine.swapchain.extent,
-        };
+                switch ( current_material.type ) {
+                case scene::MaterialType::PBR_ALBEDO_MAP: {
+                    std::optional<int> albedo_index = current_material.base_color_texture_index;
+                    std::optional<int> normal_index = current_material.normal_texture_index;
+                    std::optional<int> metallic_roughness_index
+                        = current_material.metallic_roughness_texture_index;
 
-        for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
-            if ( node->mesh.has_value() ) {
-                const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
+                    textures_needed.push_back( albedo_index
+                            ? std::optional { (
+                                  scene.textures[static_cast<size_t>( albedo_index.value() )] ) }
+                            : std::nullopt );
+                    textures_needed.push_back( normal_index
+                            ? std::optional { (
+                                  scene.textures[static_cast<size_t>( normal_index.value() )] ) }
+                            : std::nullopt );
+                    textures_needed.push_back( metallic_roughness_index
+                            ? std::optional { ( scene.textures[static_cast<size_t>(
+                                  metallic_roughness_index.value() )] ) }
+                            : std::nullopt );
 
-                for ( const scene::Primitive& prim : mesh->primitives ) {
-                    const scene::Material& current_material
-                        = scene.materials[static_cast<size_t>( prim.material_id )];
-                    std::vector<std::optional<scene::Texture>> textures_needed;
+                    break;
+                }
 
-                    switch ( current_material.type ) {
-                    case scene::MaterialType::PBR_ALBEDO_MAP: {
-                        std::optional<int> albedo_index = current_material.base_color_texture_index;
-                        std::optional<int> normal_index = current_material.normal_texture_index;
-                        std::optional<int> metallic_roughness_index
-                            = current_material.metallic_roughness_texture_index;
+                default:
+                    throw Exception( "[main_gfx_task] Unhandled material type" );
+                }
 
-                        textures_needed.push_back( albedo_index
-                                ? std::optional { ( scene
-                                          .textures[static_cast<size_t>( albedo_index.value() )] ) }
-                                : std::nullopt );
-                        textures_needed.push_back( normal_index
-                                ? std::optional { ( scene
-                                          .textures[static_cast<size_t>( normal_index.value() )] ) }
-                                : std::nullopt );
-                        textures_needed.push_back( metallic_roughness_index
-                                ? std::optional { ( scene.textures[static_cast<size_t>(
-                                      metallic_roughness_index.value() )] ) }
-                                : std::nullopt );
+                // TODO: Not yet connected with a layout
+                if ( scene.hdri_index.has_value() ) {
+                    textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
+                } else {
+                    textures_needed.push_back( std::nullopt );
+                }
 
-                        break;
+                std::vector<vk::mem::AllocatedImage> textures_sent;
+
+                for ( std::optional<scene::Texture>& texture : textures_needed ) {
+                    if ( texture && ( textures_sent.size() < vk::binding::MAX_IMAGES_BINDED ) ) {
+                        textures_sent.push_back( texture->data.value() );
                     }
+                }
 
-                    default:
-                        throw Exception( "[main_gfx_task] Unhandled material type" );
-                    }
+                // Actually bind the texture handle to the descriptorset
+                for ( size_t i = 0; i < textures_sent.size(); i++ ) {
+                    engine::update_descriptor_set_image( ctx.vulkan, engine,
+                        material_desc_sets[static_cast<size_t>( prim.material_id )],
+                        textures_sent[i], static_cast<int>( i ) );
+                }
 
-                    // TODO: Not yet connected with a layout
-                    if ( scene.hdri_index.has_value() ) {
-                        textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
-                    } else {
-                        textures_needed.push_back( std::nullopt );
-                    }
+                engine::DrawResourceDescriptor draw_descriptor
+                    = engine::DrawResourceDescriptor::from_mesh(
+                        scene_mesh.mesh_buffers.vertex_buffer.handle,
+                        scene_mesh.mesh_buffers.index_buffer.handle,
+                        static_cast<uint32_t>( scene_mesh.indices.size() ), prim );
 
-                    std::vector<vk::mem::AllocatedImage> textures_sent;
-
-                    for ( std::optional<scene::Texture>& texture : textures_needed ) {
-                        if ( texture
-                            && ( textures_sent.size() < vk::binding::MAX_IMAGES_BINDED ) ) {
-                            textures_sent.push_back( texture->data.value() );
-                        }
-                    }
-
-                    // Actually bind the texture handle to the descriptorset
-                    for ( size_t i = 0; i < textures_sent.size(); i++ ) {
-                        engine::update_descriptor_set_image( ctx.vulkan, engine,
-                            material_desc_sets[static_cast<size_t>( prim.material_id )],
-                            textures_sent[i], static_cast<int>( i ) );
-                    }
-
-                    engine::DrawResourceDescriptor draw_descriptor
-                        = engine::DrawResourceDescriptor::from_mesh(
-                            scene_mesh.mesh_buffers.vertex_buffer.handle,
-                            scene_mesh.mesh_buffers.index_buffer.handle,
-                            static_cast<uint32_t>( scene_mesh.indices.size() ), prim );
-
-                    // give the material descriptor set to the draw task
-                    sponza_gfx_task.draw_tasks.push_back( {
+                // give the material descriptor set to the draw task
+                sponza_gfx_task.draw_tasks.push_back( {
                         .draw_resource_descriptor = draw_descriptor,
                         .descriptor_sets = {
                             &uniform_desc_set,
@@ -402,102 +403,97 @@ void run( bool use_fullscreen )
                         },
                         .pipeline = scene_pipeline,
                     } );
-                }
             }
         }
+    }
 
-        engine::add_gfx_task( task_list, sponza_gfx_task );
+    engine::add_gfx_task( task_list, sponza_gfx_task );
 
-        // Lighting pass
-        engine::add_pipeline_barrier( task_list,
-            engine::PipelineBarrierDescriptor { .buffer_barriers = {},
-                .image_barriers = { engine::ImageBarrier { .src_stage
-                                        = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                                        .image = GBuffer_Position,
-                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                    engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                        .image = GBuffer_Normal,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                    engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                        .image = GBuffer_Tangent,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                    engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                        .image = GBuffer_UV,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                    engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                        .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                        .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-                        .image = GBuffer_Depth,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
+    // Lighting pass
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers
+            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Normal,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Tangent,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_UV,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Depth,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
 
-        // lighting pass
-        geometry::quad::Mesh lighting_pass_quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+    // lighting pass
+    geometry::quad::Mesh lighting_pass_quad_mesh = geometry::quad::create( ctx.vulkan, engine );
 
-        engine::GfxTask lighting_pass_gfx_task = {
-            .clear_depth = 1.0f,
-            .render_target_is_swapchain = true,
-            .extent = engine.swapchain.extent,
-        };
+    engine::GfxTask lighting_pass_gfx_task = {
+        .clear_depth = 1.0f,
+        .render_target_is_swapchain = true,
+        .extent = engine.swapchain.extent,
+    };
 
-        engine::DescriptorSet gbuffer_descriptor_set
-            = engine::generate_descriptor_set( ctx.vulkan, engine,
-                { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
-                VK_SHADER_STAGE_FRAGMENT_BIT );
+    engine::DescriptorSet gbuffer_descriptor_set
+        = engine::generate_descriptor_set( ctx.vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+            VK_SHADER_STAGE_FRAGMENT_BIT );
 
-        size_t frame_index = engine.get_frame_index();
-        engine::Pipeline lighting_pass_gfx_pipeline;
-        try {
-            lighting_pass_gfx_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
-                engine::get_vertex_input_state_create_info( lighting_pass_quad_mesh ),
-                {
-                    uniform_desc_set.layouts[frame_index],
-                    material_desc_sets[0].layouts[frame_index],
-                    lut_sets.layouts[frame_index],
-                    sampler_desc_set.layouts[frame_index],
-                    gbuffer_descriptor_set.layouts[frame_index]
-                },
-                { engine.swapchain.image_format },
-                true,
-                vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ) );
-        } catch ( const Exception& ex ) {
-            log::error( "Failed to create lighting pass graphics pipeline: {}", ex.what() );
-            throw;
-        }
+    size_t frame_index = engine.get_frame_index();
+    engine::Pipeline lighting_pass_gfx_pipeline;
+    try {
+        lighting_pass_gfx_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
+            engine::get_vertex_input_state_create_info( lighting_pass_quad_mesh ),
+            { uniform_desc_set.layouts[frame_index], material_desc_sets[0].layouts[frame_index],
+                lut_sets.layouts[frame_index], sampler_desc_set.layouts[frame_index],
+                gbuffer_descriptor_set.layouts[frame_index] },
+            { engine.swapchain.image_format }, true,
+            vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ) );
+    } catch ( const Exception& ex ) {
+        log::error( "Failed to create lighting pass graphics pipeline: {}", ex.what() );
+        throw;
+    }
 
-        engine::update_descriptor_set_rwimage(ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Position, 0);
-        engine::update_descriptor_set_rwimage(ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Normal, 1);
-        engine::update_descriptor_set_rwimage(ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Tangent, 2);
-        engine::update_descriptor_set_rwimage(ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_UV, 3);
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Position, 0 );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Normal, 1 );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Tangent, 2 );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_UV, 3 );
 
-        lighting_pass_gfx_task.draw_tasks.push_back({
+    lighting_pass_gfx_task.draw_tasks.push_back({
             .draw_resource_descriptor = {
                 .vertex_buffers = { lighting_pass_quad_mesh.mesh_buffers.vertex_buffer.handle },
                 .index_buffer = lighting_pass_quad_mesh.mesh_buffers.index_buffer.handle,
@@ -514,7 +510,7 @@ void run( bool use_fullscreen )
             .pipeline = lighting_pass_gfx_pipeline,
         });
 
-        engine::add_gfx_task( task_list, lighting_pass_gfx_task );
+    engine::add_gfx_task( task_list, lighting_pass_gfx_task );
     // }
 
     bool will_quit = false;
@@ -545,7 +541,6 @@ void run( bool use_fullscreen )
             continue;
         }
 
-        
         camera::OrbitCamera& camera = engine.camera;
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
@@ -578,7 +573,11 @@ void run( bool use_fullscreen )
         // Update camera uniform buffer
         {
             ub_data::Camera camera_ub = camera_buffer.get_data();
+            camera::OrbitCamera& camera = engine.camera;
 
+            glm::mat4 view = camera::calculate_view_matrix( camera );
+            glm::mat4 projection = glm::perspective(
+                camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
             projection[1][1] *= -1;
 
             glm::mat4 model = !gui.demo.rotate_on
@@ -588,7 +587,7 @@ void run( bool use_fullscreen )
             camera_ub.mvp = projection * view * model;
             camera_ub.model = model;
             camera_ub.inv_model = glm::inverse( model );
-            camera_ub.camera_pos = camera_position;
+            camera_ub.camera_pos = camera::calculate_eye_position( camera );
             camera_ub.color = glm::vec3( 0.85f, 0.0f, 0.0f );
 
             camera_buffer.set_data( camera_ub );
@@ -613,29 +612,14 @@ void run( bool use_fullscreen )
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        // This is rather silly, but I guess we need to update the uniform buffer for SH everytime I
-        // suppose.
-        {
-            ub_data::SHData SH_ub = {
-                .coeff0 = glm::vec4( sh_coefficients[0].r, sh_coefficients[0].g,
-                    sh_coefficients[0].b, sh_coefficients[1].r ),
-                .coeff1 = glm::vec4( sh_coefficients[1].g, sh_coefficients[1].b,
-                    sh_coefficients[2].r, sh_coefficients[2].g ),
-                .coeff2 = glm::vec4( sh_coefficients[2].b, sh_coefficients[3].r,
-                    sh_coefficients[3].g, sh_coefficients[3].b ),
-                .coeff3 = glm::vec4( sh_coefficients[4].r, sh_coefficients[4].g,
-                    sh_coefficients[4].b, sh_coefficients[5].r ),
-                .coeff4 = glm::vec4( sh_coefficients[5].g, sh_coefficients[5].b,
-                    sh_coefficients[6].r, sh_coefficients[6].g ),
-                .coeff5 = glm::vec4( sh_coefficients[6].b, sh_coefficients[7].r,
-                    sh_coefficients[7].g, sh_coefficients[7].b ),
-                .coeff6 = glm::vec4(
-                    sh_coefficients[8].r, sh_coefficients[8].g, sh_coefficients[8].b, 0.0f ),
-            };
+        // {
+        //     ub_data::RaymarchBufferData raymarch_ub = {
+        //         .step_size = 1,
+        //     };
 
-            sh_buffer.set_data( SH_ub );
-            sh_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        }
+        //     raymarch_buffer.set_data( raymarch_ub );
+        //     raymarch_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        // }
 
         gui::update( gui, camera, atms );
 

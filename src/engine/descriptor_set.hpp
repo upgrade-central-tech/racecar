@@ -2,6 +2,7 @@
 
 #include "../vk/common.hpp"
 #include "state.hpp"
+#include "rwimage.hpp"
 #include "uniform_buffer.hpp"
 
 #include <volk.h>
@@ -49,6 +50,9 @@ void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorS
 
 void update_descriptor_set_write_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     vk::mem::AllocatedImage img, int binding_idx );
+
+void update_descriptor_set_rwimage( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
+    RWImage rw_img, int binding_idx );
 
 void update_descriptor_set_sampler( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     VkSampler sampler, int binding_idx );
