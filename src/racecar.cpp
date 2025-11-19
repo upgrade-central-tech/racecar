@@ -136,7 +136,8 @@ void run( bool use_fullscreen )
     {
         lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
@@ -151,16 +152,19 @@ void run( bool use_fullscreen )
         vk::mem::AllocatedImage diffuse_irradiance
             = geometry::generate_diffuse_irradiance( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
 
-
         vk::mem::AllocatedImage diffuse_irradiance_sh
             = geometry::cs_generate_diffuse_sh( test_cubemap, linear_sampler, ctx.vulkan, engine );
+
+        vk::mem::AllocatedImage glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
 
         engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, test_cubemap, 0 );
         engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 1 );
         engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, diffuse_irradiance, 2 );
         engine::update_descriptor_set_image(
             ctx.vulkan, engine, lut_sets, diffuse_irradiance_sh, 3 );
-        engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 4 );
+        engine::update_descriptor_set_image(
+            ctx.vulkan, engine, lut_sets, glint_noise, 4 );
+        engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 5 );
 
 
         std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );

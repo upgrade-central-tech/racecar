@@ -1,11 +1,8 @@
 #include "glint_noise_init.hlsl"
 
-struct TextureInfo {
-    uint2 dimensions;
-}
+#define HARDCODED_SIZE 512
 
 layout( binding = 0, set = 0 ) RWTexture2D<float4> glint_noise_texture;
-layout( binding = 1, set = 0 ) ConstantBuffer<TextureInfo> noise_output;
 
 float4 sample_packed_noise( uint2 pixelCoord00, uint2 dimensions ) {
     // Hardcoded for fast testing
@@ -37,6 +34,6 @@ float4 sample_packed_noise( uint2 pixelCoord00, uint2 dimensions ) {
 
 [shader("compute")]
 [numthreads( 8, 8, 1 )]
-void generate_glint_noise( uint3 thread_id : SV_DispatchThreadID ) {
-    glint_noise_texture[thread_id.xy] = sample_packed_noise( thread_id.xy, noise_output.dimensions );
+void cs_generate_glint_noise( uint3 thread_id: SV_DispatchThreadID ) {
+    glint_noise_texture[thread_id.xy] = sample_packed_noise( thread_id.xy, uint2( HARDCODED_SIZE, HARDCODED_SIZE ) );
 }

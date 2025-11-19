@@ -1,7 +1,6 @@
 // module car_lighting;
 
 #include "../utils.slang"
-#include "../glint/glint_noise_init.hlsl"
 #include "../glint/glint.hlsl"
 
 #define USE_GLINTS 1
@@ -59,7 +58,7 @@ float3 car_bsdf( float3 normal, float3 view, float3 half, float3 light, Material
 
     float maxNDF = 10000.0f;
     float targetNDF = NDF;
-    NDF = SampleGlints2023NDF( local_half, targetNDF, maxNDF, uv, duvdx, duvdy ).x;
+    NDF = duvdy.x; // SampleGlints2023NDF( local_half, targetNDF, maxNDF, uv, duvdx, duvdy ).x;
 #endif
 
     float3 base_specular = ( NDF * G * F ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
@@ -132,5 +131,5 @@ float3 car_bsdf( float3 normal, float3 view, float3 half, float3 light, Material
     out_color += ( kD * diffuse_irradiance + specular_indirect );
     out_color += clearcoat_ibl;
 
-    return out_color;
+    return float3( out_color );
 }

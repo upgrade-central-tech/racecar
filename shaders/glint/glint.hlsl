@@ -233,7 +233,7 @@ void CustomRand4Texture(float2 slope, float2 slopeRandOffset, out float4 outUnif
 	int2 slopeCoord = int2(floor(slope2)) % size;
 
     // We don't have the texture prepared here, so let's just directly call the packing function.
-	float4 packedRead = sample_packed_noise(slopeCoord); //_Glint2023NoiseMap[slopeCoord];
+	float4 packedRead = glint_noise[slopeCoord];
 	UnpackFloatParallel4(packedRead, outUniform, outGaussian);
 }
 

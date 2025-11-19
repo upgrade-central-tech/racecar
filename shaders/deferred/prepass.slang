@@ -46,10 +46,33 @@ layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 // Cubemaps + LUTs
 layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
 layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 4, set = 2 ) Texture2D<float4> glint_noise;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
 static const float PI = 3.14159265359;
+
+#include "../glint/glint.hlsl"
+
+float DistributionGGX( float n_dot_h, float alpha )
+{
+    float alpha2 = max( alpha * alpha, 0.001f );
+
+    float n_dot_h_2 = n_dot_h * n_dot_h;
+    float denom = ( n_dot_h_2 ) * ( alpha2 - 1.0f ) + 1.0f;
+
+    return alpha2 / ( PI * denom * denom );
+}
+
+float3 world_to_local( float3 world_dir, float3 normal )
+{
+    float3 up = abs( normal.z ) < 0.999f ? float3( 0, 0, 1 ) : float3( 1, 0, 0 );
+    float3 tangent = normalize( cross( up, normal ) );
+    float3 bitangent = cross( normal, tangent );
+    float3x3 TBN = float3x3( tangent, bitangent, normal );
+
+    return mul( transpose( TBN ), world_dir );
+}
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -83,15 +106,33 @@ FragmentOutput fs_main( VertexOutput in )
     FragmentOutput output;
 
     // awesome packing hacks
-    float2 ddx_uv = ddx( in.uv );
-    float2 ddy_uv = ddy( in.uv );
 
     float stencil = 1.0f;
 
-    output.position = float4(in.position, ddx_uv.x );
-    output.normal = float4(in.normal, ddx_uv.y );
+#if 1
+    float3 normal = normalize( in.normal );
+    float3 light_pos = float3( 1, 2, 1 );
+    float3 light = normalize( light_pos - in.position );
+    float3 view = normalize( camera_buffer_data.camera_pos - in.position );
+    float3 half = normalize( view + light );
+    float3 local_half = world_to_local( half, normal );
+
+    float2 duvdx = ddx( in.uv );
+    float2 duvdy = ddy( in.uv );
+
+    float alpha = debug_data.packed_data0.x * debug_data.packed_data0.x;
+    float clamped_n_dot_h = max( dot( normal, half ), 0.0f );
+    float NDF = DistributionGGX( clamped_n_dot_h, alpha );
+
+    float maxNDF = 10000.0f;
+    float targetNDF = NDF;
+    NDF = SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy ).x;
+#endif
+
+    output.position = float4(in.position, stencil );
+    output.normal = float4(in.normal, 1.0f );
     output.tangent = in.tangent;
-    output.uv = float4( in.uv, ddy_uv );
+    output.uv = float4( in.uv, NDF, 0.0f );
 
     return output;
 }

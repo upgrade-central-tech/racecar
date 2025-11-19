@@ -70,7 +70,6 @@ layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 layout( binding = 1, set = 3 ) SamplerState point_sampler;
 
 #include "../utils.slang"
-#include "../glint/glint_noise_init.hlsl"
 #include "../glint/glint.hlsl"
 
 [shader( "vertex" )]

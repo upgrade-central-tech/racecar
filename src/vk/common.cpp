@@ -100,23 +100,25 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     //     .shaderImageFloat32AtomicAdd = VK_TRUE,
     // };
 
-    // VkPhysicalDeviceVulkan11Features required_features_11 = {
-    //     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-    //     .pNext = nullptr,
-    //     .shaderDrawParameters = VK_TRUE,
-    // };
+    VkPhysicalDeviceVulkan11Features required_features_11 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .shaderDrawParameters = VK_TRUE
+    };
 
     VkPhysicalDeviceVulkan12Features required_features_12 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-        .pNext = nullptr,
+        .shaderFloat16 = VK_TRUE,
         .bufferDeviceAddress = VK_TRUE,
      };
 
     VkPhysicalDeviceVulkan13Features required_features_13 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-        .pNext = &required_features_12,
         .synchronization2 = VK_TRUE,
         .dynamicRendering = VK_TRUE,
+    };
+
+    VkPhysicalDeviceFeatures required_features = {
+        .shaderInt16 = VK_TRUE,
     };
 
     vkb::Result<vkb::PhysicalDevice> phys_selector_ret
@@ -125,6 +127,9 @@ vkb::Device pick_and_create_device( const Common& vulkan )
               .add_required_extension( VK_KHR_SWAPCHAIN_EXTENSION_NAME )
               .add_required_extension( VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME )
               .set_required_features_13( required_features_13 )
+              .set_required_features_12( required_features_12 )
+              .set_required_features_11( required_features_11 )
+              .set_required_features( required_features )
               .select();
 
     if ( !phys_selector_ret ) {
