@@ -33,7 +33,7 @@ void rotate_polar( OrbitCamera& cam, float radians );
 void move_along_view( OrbitCamera& cam, float delta );
 void move_horizontal( OrbitCamera& cam, float delta );
 void move_vertical( OrbitCamera& cam, float delta );
-void zoom( OrbitCamera& cam, float delta );
+void zoom( OrbitCamera& cam, float scale );
 
 /// Converts spherical coordinates to eye position and constructs the view matrix from it.
 glm::mat4 calculate_view_matrix( const OrbitCamera& cam );

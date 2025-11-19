@@ -17,7 +17,7 @@ constexpr float MIN_RADIUS = 0.1f;
 constexpr float RELATIVE_FPS = 180.f;
 constexpr float DRAG_SPEED = 1.f / 200.f;
 constexpr float TRANSLATE_SPEED = 0.05f;
-constexpr float SCROLL_SPEED = 0.5f;
+constexpr float SCROLL_SCALE = 1.05f;
 
 void rotate_azimuth( OrbitCamera& cam, float radians )
 {
@@ -51,9 +51,9 @@ void move_horizontal( OrbitCamera& cam, float delta )
 
 void move_vertical( OrbitCamera& cam, float delta ) { cam.center += cam.up * delta; }
 
-void zoom( OrbitCamera& cam, float delta )
+void zoom( OrbitCamera& cam, float scale )
 {
-    cam.radius = std::max( cam.radius - delta, MIN_RADIUS );
+    cam.radius = std::max( cam.radius * scale, MIN_RADIUS );
 }
 
 glm::mat4 calculate_view_matrix( const OrbitCamera& cam )
@@ -113,11 +113,11 @@ void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam
 
     case SDL_EVENT_MOUSE_WHEEL: {
         if ( event->wheel.y > 0.f ) {
-            camera::zoom( cam, SCROLL_SPEED );
+            camera::zoom( cam, SCROLL_SCALE );
         }
 
         if ( event->wheel.y < 0.f ) {
-            camera::zoom( cam, -SCROLL_SPEED );
+            camera::zoom( cam, 1.f / SCROLL_SCALE );
         }
 
         break;
