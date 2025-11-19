@@ -36,7 +36,7 @@ func sample_transmittance_lut( in atms: Parameters, r: float, mu: float )->float
 #ifdef COMPUTE_NO_SAMPLE
     return transmittance_lut.SampleLevel( sampler, uv, 0.0f ).rgb;
 #else
-    return transmittance_lut.Sample( sampler, uv ).rgb;
+    return transmittance_lut.SampleLevel( sampler, uv, 0.0f ).rgb;
 #endif
 }
 

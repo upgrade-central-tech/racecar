@@ -148,6 +148,6 @@ float4 fs_main( VertexOutput in )
 
     float3 out_color = car_bsdf( normal, view, half, light, pbr, gbuffer );
 
-    return float4( out_color, 1.0f );
+    return float4( octahedral_sky.Sample(nearest_sampler, oct_encode(normal)).rgb, 1.0f );
 }
 

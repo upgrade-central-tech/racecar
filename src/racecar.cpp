@@ -301,6 +301,10 @@ void run( bool use_fullscreen )
 
     // ATMOSPHERE STUFF
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
+    atmosphere::AtmosphereBaker atms_baker = {
+        .atmosphere = atms
+    };
+
     {
         geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
 
@@ -344,10 +348,8 @@ void run( bool use_fullscreen )
             } );
 
         engine::add_gfx_task( task_list, atmosphere_gfx_task );
-    }
-    // END ATMOSPHERE STUFF
 
-    {
+        
         camera::OrbitCamera& camera = engine.camera;
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
@@ -369,13 +371,11 @@ void run( bool use_fullscreen )
             atms.uniform_buffer.update( ctx.vulkan, i );
         }
         
-        vk::mem::AllocatedImage octahedral_sky_map
-            = atmosphere::generate_octahedral_sky( atms, ctx.vulkan, engine );
-        
-            
-
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, octahedral_sky_map, 5 );
+        // This is probably terrible, but this is necessary for now.
+        atmosphere::initialize_atmosphere_baker( atms_baker, ctx.vulkan, engine );
+        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 5 );
     }
+    // END ATMOSPHERE STUFF
 
     engine::GfxTask sponza_gfx_task = {
         .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
