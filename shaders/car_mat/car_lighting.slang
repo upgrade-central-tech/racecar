@@ -36,7 +36,13 @@ float3 car_bsdf( float3 normal, float3 view, float3 half, float3 light, Material
 
     // So far only the first mip exists. Will need some more complicated efforts to
     // get this stuff to work with roughness.
-    float3 precomputed_lo_specular = cubemap.Sample( nearest_sampler, reflect( -view, normal ) ).rgb;
+
+    // write out ugly ass code here first, then make it nicer later
+    float2 encoded_direction = oct_encode( reflect( -view, normal ) );
+
+    // float3 sky_color = octahedral_sky.Sample( nearest_sampler, encoded_direction ).rgb;
+
+    float3 precomputed_lo_specular = octahedral_sky.Sample( nearest_sampler, encoded_direction ).rgb;
 
     float3 F0 = float3( 0.04f );
     F0 = lerp( F0, base_albedo * precomputed_lo_specular, pbr.metallic );
@@ -131,5 +137,5 @@ float3 car_bsdf( float3 normal, float3 view, float3 half, float3 light, Material
     out_color += ( kD * diffuse_irradiance + specular_indirect );
     out_color += clearcoat_ibl;
 
-    return precomputed_lo_specular;
+    return out_color;
 }

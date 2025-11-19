@@ -70,8 +70,8 @@ func get_combined_scattering( in atms: Parameters, r: float, mu: float, mu_s: fl
     let combined1 = scattering_lut.SampleLevel( sampler, uvw1, 0.0f );
     let combined = combined0 * ( 1.f - lerp ) + combined1 * lerp;
 #else
-    let combined0 = scattering_lut.SampleLevel( sampler, uvw0, 0.0f );
-    let combined1 = scattering_lut.SampleLevel( sampler, uvw1, 0.0f );
+    let combined0 = scattering_lut.Sample( sampler, uvw0 );
+    let combined1 = scattering_lut.Sample( sampler, uvw1 );
     let combined = combined0 * ( 1.f - lerp ) + combined1 * lerp;
 #endif
 

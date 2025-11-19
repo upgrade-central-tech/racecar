@@ -21,6 +21,18 @@ struct Material {
     float clearcoat_weight;
 }
 
+float2 oct_encode( float3 n )
+{
+    // Project the normal onto the octahedron
+    n /= ( abs( n.x ) + abs( n.y ) + abs( n.z ) );
+
+    // Fold the lower hemisphere
+    if ( n.z < 0.0f )
+        n.xy = ( 1.0f - abs( n.yx ) ) * sign( n.xy );
+
+    // Map from [-1, 1] to [0, 1]
+    return n.xy * 0.5f + 0.5f;
+}
 
 //=======================================================================================
 // NDF functions
