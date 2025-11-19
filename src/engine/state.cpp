@@ -216,7 +216,7 @@ State initialize( Context& ctx )
             .center = glm::vec3( 0.f, 1.f, 0.f ),
             .radius = 8.f,
             .azimuth = 0.f,
-            .polar = 0.f,
+            .zenith = 0.f,
             .up = glm::vec3( 0.f, 1.f, 0.f ),
             .fov_y = float( glm::radians( 60.0 ) ),
             .aspect_ratio = static_cast<float>( constant::SCREEN_W ) / constant::SCREEN_H,

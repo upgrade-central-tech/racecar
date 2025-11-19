@@ -17,15 +17,6 @@ namespace racecar::atmosphere {
 
 constexpr std::string_view SHADER_PATH = "../shaders/atmosphere/atmosphere.spv";
 
-/// Earth radius is 6360 km, which we represent as height.
-constexpr glm::vec3 EARTH_CENTER = { 0.f, -6'360, 0.f };
-
-/// The sun's angular radius as seen from Earth, in radians.
-constexpr float SUN_ANGULAR_RADIUS = 0.015f;
-
-/// White point for tone mapping. Currently neutral white.
-constexpr glm::vec3 WHITE_POINT = { 1.f, 1.f, 1.f };
-
 struct Atmosphere {
     vk::mem::AllocatedImage irradiance;
     vk::mem::AllocatedImage scattering;
@@ -37,9 +28,8 @@ struct Atmosphere {
     engine::DescriptorSet lut_desc_set;
     engine::DescriptorSet sampler_desc_set;
 
-    float sun_azimuth = 0.f; ///< Stored in radians.
-    float sun_zenith = 0.f; ///< Stored in radians.
-    float exposure = 0.f;
+    float sun_azimuth = 0.f; ///< Stored in radians. Bound between [0, 2π].
+    float sun_zenith = 0.f; ///< Stored in radians. Bound between [0, π].
 };
 
 struct AtmosphereBaker {

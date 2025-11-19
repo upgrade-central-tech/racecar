@@ -24,7 +24,8 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
         std::memcpy( upload_buffer.info.pMappedData, data, data_size );
 
         new_image = allocate_image( vulkan, extent, format, image_type, 1, 1,
-            usage_flags | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped );
+            usage_flags | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+            mipmapped );
 
         engine::immediate_submit(
             vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
@@ -67,16 +68,16 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
 };
 
 vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
-    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers, VkImageUsageFlags usage_flags,
-    bool mipmapped )
+    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers,
+    VkImageUsageFlags usage_flags, bool mipmapped )
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
         .image_format = format,
     };
 
-    VkImageCreateInfo image_info
-        = vk::create::image_info( format, image_type, mip_levels, array_layers, usage_flags, extent );
+    VkImageCreateInfo image_info = vk::create::image_info(
+        format, image_type, mip_levels, array_layers, usage_flags, extent );
 
     if ( mipmapped ) {
         image_info.mipLevels = static_cast<uint32_t>( std::floor(

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../vk/common.hpp"
-#include "ub_data.hpp"
 
 #include <deque>
 #include <span>
