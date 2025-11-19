@@ -136,11 +136,9 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
             }
 
             if ( ImGui::BeginTabItem( "Atmosphere" ) ) {
-                ImGui::Checkbox( "Ping-pong azimuth", &gui.atms.animate_azimuth );
-                ImGui::SliderFloat( "Sun azimuth", &atms.sun_azimuth, -glm::half_pi<float>(),
-                    glm::pi<float>() + 0.26f );
+                ImGui::Checkbox( "Ping-pong zenith", &gui.atms.animate_zenith );
+                ImGui::SliderFloat( "Sun azimuth", &atms.sun_azimuth, 0.f, glm::two_pi<float>() );
                 ImGui::SliderFloat( "Sun zenith", &atms.sun_zenith, 0.f, glm::pi<float>() );
-                ImGui::SliderFloat( "Exposure", &atms.exposure, 0.f, 50.f );
 
                 ImGui::EndTabItem();
             }

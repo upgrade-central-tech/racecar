@@ -5,6 +5,8 @@
 #include "exception.hpp"
 #include "log.hpp"
 
+#include <glm/gtc/constants.hpp>
+
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -32,6 +34,8 @@ std::vector<float> read_data( std::string_view path )
         throw Exception( "[atmosphere] Could not open file \"{}\"", absolute );
     }
 
+    static_assert( sizeof( float ) == 4, "float data type is not 32 bits (somehow)" );
+
     std::streampos file_size = file.tellg();
     size_t num_floats = static_cast<size_t>( file_size ) / sizeof( float );
     std::vector<float> dat_buffer( num_floats );
@@ -49,16 +53,8 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
 {
     Atmosphere atms;
 
-    // Fill in the unchanging parameters
-    ub_data::Atmosphere atms_ub = {
-        .sun_size_x = std::tan( atmosphere::SUN_ANGULAR_RADIUS ),
-        .white_point = atmosphere::WHITE_POINT,
-        .sun_size_y = std::cos( atmosphere::SUN_ANGULAR_RADIUS ),
-        .earth_center = glm::vec4( atmosphere::EARTH_CENTER, 0.f ),
-    };
-
     atms.uniform_buffer = create_uniform_buffer<ub_data::Atmosphere>(
-        vulkan, atms_ub, static_cast<size_t>( engine.frame_overlap ) );
+        vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
     atms.uniform_desc_set
         = engine::generate_descriptor_set( vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
@@ -127,8 +123,7 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
 
     // Some default states
     atms.sun_azimuth = 2.9f;
-    atms.sun_zenith = 1.49f;
-    atms.exposure = 10.f;
+    atms.sun_zenith = 1.3f;
 
     return atms;
 }
@@ -137,8 +132,8 @@ glm::vec3 compute_sun_direction( const Atmosphere& atms )
 {
     return {
         std::cos( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
-        std::sin( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
         std::cos( atms.sun_zenith ),
+        std::sin( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
     };
 }
 

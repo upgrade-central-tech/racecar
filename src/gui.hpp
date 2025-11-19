@@ -39,7 +39,7 @@ struct Gui {
     } demo = {};
 
     struct AtmosphereData {
-        bool animate_azimuth = false;
+        bool animate_zenith = false;
     } atms = {};
 };
 
