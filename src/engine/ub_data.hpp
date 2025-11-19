@@ -20,6 +20,7 @@ struct Camera {
 struct Debug {
     glm::vec4 color = {};
     glm::vec4 packed_data0 = {};
+    glm::vec4 sun_direction = {};
 
     uint32_t enable_albedo_map = 0;
     uint32_t enable_normal_map = 0;

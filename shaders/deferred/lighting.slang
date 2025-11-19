@@ -21,6 +21,7 @@ struct DebugData {
 
     // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
     float4 packed_data0;
+    float4 sun_direction;
 
     bool enable_albedo_map;
     bool enable_normal_map;
@@ -117,11 +118,10 @@ float4 fs_main( VertexOutput in )
     float roughness = metallic_roughness.x;
 
     // Basic vectors
-    float3 light_pos = float3( 1, 2, 1 );
-    float3 light = normalize( light_pos - in_pos );
+    float3 light = normalize( debug_data.sun_direction.rgb );
     float3 radiance = float3( 1, 1, 1 );
-    float attenuation = 1.0f / length( light_pos - in_pos );
-    attenuation *= attenuation;
+    //float attenuation = 1.0f / length( light_pos - in_pos );
+    //attenuation *= attenuation;
 
     float3 camera_pos = camera_buffer_data.camera_pos;
     float3 normal = debug_data.enable_normal_map
@@ -148,6 +148,6 @@ float4 fs_main( VertexOutput in )
 
     float3 out_color = car_bsdf( normal, view, half, light, pbr, gbuffer );
 
-    return float4( octahedral_sky.Sample(nearest_sampler, oct_encode(normal)).rgb, 1.0f );
+    return float4( out_color, 1.0f );
 }
 

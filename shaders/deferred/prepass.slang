@@ -26,6 +26,7 @@ struct DebugData {
 
     // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
     float4 packed_data0;
+    float4 sun_direction;
 
     bool enable_albedo_map;
     bool enable_normal_map;
@@ -111,8 +112,7 @@ FragmentOutput fs_main( VertexOutput in )
 
 #if 1
     float3 normal = normalize( in.normal );
-    float3 light_pos = float3( 1, 2, 1 );
-    float3 light = normalize( light_pos - in.position );
+    float3 light = normalize( debug_data.sun_direction.rgb );
     float3 view = normalize( camera_buffer_data.camera_pos - in.position );
     float3 half = normalize( view + light );
     float3 local_half = world_to_local( half, normal );

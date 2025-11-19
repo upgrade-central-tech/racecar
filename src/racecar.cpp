@@ -660,10 +660,12 @@ void run( bool use_fullscreen )
 
         // Update debug uniform buffer
         {
+            ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
             ub_data::Debug debug_ub = {
                 .color = gui.debug.color,
                 .packed_data0 = glm::vec4( gui.debug.roughness, gui.debug.metallic,
                     gui.debug.clearcoat_roughness, gui.debug.clearcoat_weight ),
+                .sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f ),
                 .enable_albedo_map = gui.debug.enable_albedo_map,
                 .enable_normal_map = gui.debug.enable_normal_map,
                 .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
