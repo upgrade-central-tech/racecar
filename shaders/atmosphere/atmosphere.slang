@@ -19,6 +19,9 @@ struct CombinedScatteringResult {
     float3 single_mie;
 };
 
+static const float3 GAMMA_FACTOR = float3( 1.f / 2.2f );
+static const float3 GROUND_ALBEDO = float3( 0.f, 0.f, 0.04f );
+
 func rayleigh_phase_function( nu: float )->float
 {
     let k = 3.f / ( 16.f * PI );
@@ -61,9 +64,16 @@ func get_combined_scattering( in atms: Parameters, r: float, mu: float, mu_s: fl
 
     var uvw0 = float3( ( tex_x + uvwz.y ) / (float)SCATTERING_LUT_NU_SIZE, uvwz.z, uvwz.w );
     var uvw1 = float3( ( tex_x + 1.f + uvwz.y ) / (float)SCATTERING_LUT_NU_SIZE, uvwz.z, uvwz.w );
-    let combined0 = scattering_lut.Sample( sampler, uvw0 );
-    let combined1 = scattering_lut.Sample( sampler, uvw1 );
+
+#ifdef COMPUTE_NO_SAMPLE
+    let combined0 = scattering_lut.SampleLevel( sampler, uvw0, 0.0f );
+    let combined1 = scattering_lut.SampleLevel( sampler, uvw1, 0.0f );
     let combined = combined0 * ( 1.f - lerp ) + combined1 * lerp;
+#else
+    let combined0 = scattering_lut.SampleLevel( sampler, uvw0, 0.0f );
+    let combined1 = scattering_lut.SampleLevel( sampler, uvw1, 0.0f );
+    let combined = combined0 * ( 1.f - lerp ) + combined1 * lerp;
+#endif
 
     return {
         combined.rgb,
@@ -115,7 +125,11 @@ public func get_sky_radiance(
 func get_irradiance( in atms: Parameters, r: float, mu_s: float )->float3
 {
     let uv = map_to_irradiance_texture( atms, r, mu_s );
-    return irradiance_lut.Sample( sampler, uv ).rgb;
+#ifdef COMPUTE_NO_SAMPLE
+    return irradiance_lut.SampleLevel( sampler, uv, 0.0f ).rgb;
+#else
+    return irradiance_lut.SampleLevel( sampler, uv, 0.0f ).rgb;
+#endif
 }
 
 func get_transmittance_to_sun( in atms: Parameters, r: float, mu_s: float )->float3
@@ -203,4 +217,56 @@ public func get_sky_radiance_to_point(
     return { radiance, transmittance };
 }
 
+public func get_sky_color( float3 view_dir )->float3
+{
+    let camera_pos = uniforms.camera_position;
+    let earth_center = uniforms.earth_center.xyz;
+    let sun_dir = normalize( uniforms.sun_direction );
+    let sun_size = float2( uniforms.sun_size_x, uniforms.sun_size_y );
+    let exposure = uniforms.exposure;
+    let white_point = uniforms.white_point;
+
+    var ground_alpha = 0.f;
+    var ground_radiance = float3( 0.f );
+    let earth_offset = camera_pos - earth_center;
+    let earth_dot_v = dot( earth_offset, view_dir );
+    let earth_dot_earth = dot( earth_offset, earth_offset );
+    let earth_radius_sq = EARTH.bottom_radius * EARTH.bottom_radius;
+    let ray_center_sq = earth_dot_earth - earth_dot_v * earth_dot_v;
+    let ground_discriminant = earth_radius_sq - ray_center_sq;
+    if ( ground_discriminant >= 0.f ) {
+        let ground_distance = -earth_dot_v - sqrt( ground_discriminant );
+
+        if ( ground_distance > 0.f ) {
+            let point = camera_pos + view_dir * ground_distance;
+            let normal = normalize( point - earth_center );
+            let irradiance
+                = get_sun_and_sky_irradiance( EARTH, point - earth_center, normal, sun_dir );
+
+            ground_radiance = GROUND_ALBEDO * INV_PI * irradiance.sun + irradiance.sky;
+
+            let scatter = get_sky_radiance_to_point(
+                EARTH, camera_pos - earth_center, point - earth_center, sun_dir );
+
+            ground_radiance *= scatter.transmittance + scatter.radiance;
+            ground_alpha = 1.f;
+        }
+    }
+
+    let sky = get_sky_radiance( EARTH, camera_pos - earth_center, view_dir, sun_dir );
+
+    var radiance = sky.radiance;
+    if ( dot( view_dir, sun_dir ) > sun_size.y ) {
+        let solar_radiance
+            = EARTH.solar_irradiance / ( PI * EARTH.sun_angular_radius * EARTH.sun_angular_radius );
+        radiance += sky.transmittance * solar_radiance;
+    }
+
+    radiance = lerp( radiance, ground_radiance, ground_alpha );
+
+    // Apply tone mapping via Reinhard and sRGB gamma correction
+    let color = pow( float3( 1.f ) - exp( -radiance / white_point * exposure ), GAMMA_FACTOR );
+
+    return color;
+}
 

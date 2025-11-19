@@ -44,4 +44,7 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine );
 
 glm::vec3 compute_sun_direction( const Atmosphere& atms );
 
+vk::mem::AllocatedImage generate_octahedral_sky(
+    const Atmosphere& atms, vk::Common& vulkan, engine::State& engine );
+
 }

@@ -105,7 +105,7 @@ void run( bool use_fullscreen )
 
         engine::update_descriptor_set_sampler(
             ctx.vulkan, engine, sampler_desc_set, linear_sampler, 0 );
-            
+
         engine::update_descriptor_set_sampler(
             ctx.vulkan, engine, sampler_desc_set, point_sampler, 1 );
     }
@@ -136,8 +136,8 @@ void run( bool use_fullscreen )
     {
         lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
@@ -162,17 +162,17 @@ void run( bool use_fullscreen )
         engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, diffuse_irradiance, 2 );
         engine::update_descriptor_set_image(
             ctx.vulkan, engine, lut_sets, diffuse_irradiance_sh, 3 );
-        engine::update_descriptor_set_image(
-            ctx.vulkan, engine, lut_sets, glint_noise, 4 );
-        engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 5 );
+        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, glint_noise, 4 );
 
+        // nothing in the lut for the sky.. YET
+        engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 6 );
 
         std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );
         for ( size_t i = 0; i < sh_coefficients.size(); ++i ) {
             log::info( "SH coeff: {}, {}, {}", sh_coefficients[i].x, sh_coefficients[i].y,
                 sh_coefficients[i].z );
         }
-        
+
         for ( size_t i = 0; i < engine.frame_overlap; i++ ) {
             ub_data::SHData SH_ub = {
                 .coeff0 = glm::vec4( sh_coefficients[0].r, sh_coefficients[0].g,
@@ -346,6 +346,36 @@ void run( bool use_fullscreen )
         engine::add_gfx_task( task_list, atmosphere_gfx_task );
     }
     // END ATMOSPHERE STUFF
+
+    {
+        camera::OrbitCamera& camera = engine.camera;
+        glm::mat4 view = camera::calculate_view_matrix( camera );
+        glm::mat4 projection = glm::perspective(
+            camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
+        glm::vec3 camera_position = camera::calculate_eye_position( camera );
+
+        glm::vec3 atmosphere_position = camera_position + glm::vec3( 0.f, 9.f, 0.f );
+
+        ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+        atms_ub.inverse_proj = glm::inverse( projection );
+        atms_ub.inverse_view
+            = glm::rotate( view, -glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
+        atms_ub.camera_position = atmosphere_position;
+        atms_ub.exposure = atms.exposure;
+        atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
+
+        atms.uniform_buffer.set_data( atms_ub );
+        for ( size_t i = 0; i < engine.frame_overlap; i++ ) {
+            atms.uniform_buffer.update( ctx.vulkan, i );
+        }
+        
+        vk::mem::AllocatedImage octahedral_sky_map
+            = atmosphere::generate_octahedral_sky( atms, ctx.vulkan, engine );
+        
+            
+
+        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, octahedral_sky_map, 5 );
+    }
 
     engine::GfxTask sponza_gfx_task = {
         .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },

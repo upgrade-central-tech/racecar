@@ -33,7 +33,11 @@ func map_to_transmittance_texture( in atms: Parameters, r: float, mu: float )->f
 func sample_transmittance_lut( in atms: Parameters, r: float, mu: float )->float3
 {
     let uv = map_to_transmittance_texture( atms, r, mu );
-    return transmittance_lut.Sample( sampler, uv ).rgb;
+#ifdef COMPUTE_NO_SAMPLE
+    return transmittance_lut.SampleLevel( sampler, uv, 0.0f ).rgb;
+#else
+    return transmittance_lut.SampleLevel( sampler, uv, 0.0f ).rgb;
+#endif
 }
 
 func map_to_scattering_texture( in atms: Parameters, r: float, mu: float, mu_s: float, nu: float,

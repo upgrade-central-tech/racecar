@@ -54,7 +54,8 @@ layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 2, set = 2 ) TextureCube<float4> irradiance_cubemap;
 layout( binding = 3, set = 2 ) Texture2D<float4> irradiance_SH;
 layout( binding = 4, set = 2 ) Texture2D<float4> glint_noise;
-layout( binding = 5, set = 2 ) ConstantBuffer<SHData> sh_data;
+layout( binding = 5, set = 2 ) Texture2D<float4> octahedral_sky;
+layout( binding = 6, set = 2 ) ConstantBuffer<SHData> sh_data;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 layout( binding = 1, set = 3 ) SamplerState point_sampler;
@@ -77,6 +78,19 @@ VertexOutput vs_main( VertexInput input )
     output.sv_position = float4( input.position, 0.1f, 1.f );
     output.uv = ( input.position + 1.f ) * 0.5f;
     return output;
+}
+
+float2 oct_encode( float3 n )
+{
+    // Project the normal onto the octahedron
+    n /= ( abs( n.x ) + abs( n.y ) + abs( n.z ) );
+
+    // Fold the lower hemisphere
+    if ( n.z < 0.0f )
+        n.xy = ( 1.0f - abs( n.yx ) ) * sign( n.xy );
+
+    // Map from [-1, 1] to [0, 1]
+    return n.xy * 0.5f + 0.5f;
 }
 
 [shader( "fragment" )]
@@ -147,6 +161,11 @@ float4 fs_main( VertexOutput in )
 
     float3 out_color = car_bsdf( normal, view, half, light, pbr, gbuffer );
 
-    return float4( out_color, 1.0f );
+    // write out ugly ass code here first, then make it nicer later
+    float2 uhfhewnfwef = oct_encode( normal );
+
+    float3 sky_color = octahedral_sky.Sample( nearest_sampler, uhfhewnfwef ).rgb;
+
+    return float4( sky_color, 1.0f );
 }
 

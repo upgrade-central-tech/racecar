@@ -1,9 +1,12 @@
 #include "atmosphere.hpp"
 
 #include "engine/images.hpp"
+#include "engine/pipeline.hpp"
 #include "engine/ub_data.hpp"
 #include "exception.hpp"
 #include "log.hpp"
+#include "vk/create.hpp"
+#include "vk/utility.hpp"
 
 #include <cmath>
 #include <filesystem>
@@ -59,9 +62,9 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
 
     atms.uniform_buffer = create_uniform_buffer<ub_data::Atmosphere>(
         vulkan, atms_ub, static_cast<size_t>( engine.frame_overlap ) );
-    atms.uniform_desc_set
-        = engine::generate_descriptor_set( vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+    atms.uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
     engine::update_descriptor_set_uniform(
         vulkan, engine, atms.uniform_desc_set, atms.uniform_buffer, 0 );
 
@@ -102,7 +105,7 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
     atms.lut_desc_set = engine::generate_descriptor_set( vulkan, engine,
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
-        VK_SHADER_STAGE_FRAGMENT_BIT );
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
     engine::update_descriptor_set_image( vulkan, engine, atms.lut_desc_set, atms.irradiance, 0 );
     engine::update_descriptor_set_image( vulkan, engine, atms.lut_desc_set, atms.scattering, 1 );
     engine::update_descriptor_set_image( vulkan, engine, atms.lut_desc_set, atms.transmittance, 2 );
@@ -121,8 +124,9 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
             "Failed to create atmosphere LUT sampler" );
         vulkan.destructor_stack.push( vulkan.device, sampler, vkDestroySampler );
     }
-    atms.sampler_desc_set = engine::generate_descriptor_set(
-        vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_FRAGMENT_BIT );
+    atms.sampler_desc_set
+        = engine::generate_descriptor_set( vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER },
+            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
     engine::update_descriptor_set_sampler( vulkan, engine, atms.sampler_desc_set, sampler, 0 );
 
     // Some default states
@@ -140,6 +144,68 @@ glm::vec3 compute_sun_direction( const Atmosphere& atms )
         std::sin( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
         std::cos( atms.sun_zenith ),
     };
+}
+
+vk::mem::AllocatedImage generate_octahedral_sky(
+    const Atmosphere& atms, vk::Common& vulkan, engine::State& engine )
+{
+    uint32_t octahedral_sky_size = 1024;
+
+    vk::mem::AllocatedImage octahedral_sky = engine::allocate_image( vulkan,
+        { octahedral_sky_size, octahedral_sky_size, 1 }, VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_TYPE_2D, 1, 1, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
+
+    {
+        engine::DescriptorSet octahedral_write = engine::generate_descriptor_set(
+            vulkan, engine, { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE }, VK_SHADER_STAGE_COMPUTE_BIT );
+
+        engine::update_descriptor_set_write_image(
+            vulkan, engine, octahedral_write, octahedral_sky, 0 );
+
+        VkShaderModule bake_atmosphere_module
+            = vk::create::shader_module( vulkan, "../shaders/atmosphere/bake_atmosphere.spv" );
+
+        std::vector<engine::DescriptorSet> descs
+            = { atms.uniform_desc_set, atms.lut_desc_set, atms.sampler_desc_set, octahedral_write };
+
+        engine::Pipeline compute_pipeline = engine::create_compute_pipeline( vulkan,
+            { atms.uniform_desc_set.layouts[0], atms.lut_desc_set.layouts[0],
+                atms.sampler_desc_set.layouts[0], octahedral_write.layouts[0] },
+            bake_atmosphere_module, "cs_bake_atmosphere" );
+
+        engine::immediate_submit(
+            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+                // RW cubemap transition first
+                vk::utility::transition_image( command_buffer, octahedral_sky.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_NONE,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+
+                vkCmdBindPipeline(
+                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.handle );
+
+                std::vector<VkDescriptorSet> bind_descs = {
+                    atms.uniform_desc_set.descriptor_sets[0], atms.lut_desc_set.descriptor_sets[0],
+                    atms.sampler_desc_set.descriptor_sets[0], octahedral_write.descriptor_sets[0]
+                };
+
+                vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                    compute_pipeline.layout, 0, 4, bind_descs.data(), 0, nullptr );
+
+                uint32_t x_groups = ( static_cast<uint32_t>( octahedral_sky_size ) + 7 ) / 8;
+                uint32_t y_groups = ( static_cast<uint32_t>( octahedral_sky_size ) + 7 ) / 8;
+
+                vkCmdDispatch( command_buffer, x_groups, y_groups, 1 );
+
+                vk::utility::transition_image( command_buffer, octahedral_sky.image,
+                    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT );
+            } );
+    }
+
+    return octahedral_sky;
 }
 
 }
