@@ -31,7 +31,7 @@ void rotate_azimuth( OrbitCamera& cam, float radians )
 
 void rotate_polar( OrbitCamera& cam, float radians )
 {
-    cam.polar = glm::clamp( cam.polar + radians, -MAX_POLAR_ANGLE, MAX_POLAR_ANGLE );
+    cam.zenith = glm::clamp( cam.zenith + radians, -MAX_POLAR_ANGLE, MAX_POLAR_ANGLE );
 }
 
 void move_along_view( OrbitCamera& cam, float delta )
@@ -63,9 +63,9 @@ glm::mat4 calculate_view_matrix( const OrbitCamera& cam )
 
 glm::vec3 calculate_eye_position( const OrbitCamera& cam )
 {
-    float x = cam.center.x + cam.radius * std::cos( cam.polar ) * std::cos( cam.azimuth );
-    float y = cam.center.y + cam.radius * std::sin( cam.polar );
-    float z = cam.center.z + cam.radius * std::cos( cam.polar ) * std::sin( cam.azimuth );
+    float x = cam.center.x + cam.radius * std::cos( cam.zenith ) * std::cos( cam.azimuth );
+    float y = cam.center.y + cam.radius * std::sin( cam.zenith );
+    float z = cam.center.z + cam.radius * std::cos( cam.zenith ) * std::sin( cam.azimuth );
 
     return glm::vec3( x, y, z );
 }

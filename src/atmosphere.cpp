@@ -5,6 +5,8 @@
 #include "exception.hpp"
 #include "log.hpp"
 
+#include <glm/gtc/constants.hpp>
+
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -129,10 +131,12 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
 
 glm::vec3 compute_sun_direction( const Atmosphere& atms )
 {
+    float zenith = glm::clamp( glm::pi<float>() - atms.sun_zenith, 0.f, glm::pi<float>() );
+
     return {
-        std::cos( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
-        std::sin( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
-        std::cos( atms.sun_zenith ),
+        std::cos( atms.sun_azimuth ) * std::sin( zenith ),
+        std::sin( atms.sun_azimuth ) * std::sin( zenith ),
+        std::cos( zenith ),
     };
 }
 

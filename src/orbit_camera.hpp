@@ -14,7 +14,7 @@ struct OrbitCamera {
     float radius = 0.f;
 
     float azimuth = 0.f; ///< Stored in radians.
-    float polar = 0.f; ///< Stored in radians.
+    float zenith = 0.f; ///< Stored in radians.
 
     glm::vec3 up = {};
 
