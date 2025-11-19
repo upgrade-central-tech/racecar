@@ -248,12 +248,12 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
     // - Y_{lm} are weighted SH functions, already computed/derived for us
 
     std::vector<std::vector<glm::vec3>> face_directions = {
-        { glm::vec3( -1, 0, 0 ), glm::vec3( 0, 0, 1.0f ), glm::vec3( 0, -1, 0 ) }, // nx
-        { glm::vec3( 0, -1, 0 ), glm::vec3( 1.0f, 0, 0 ), glm::vec3( 0, 0, -1 ) }, // ny
-        { glm::vec3( 0, 0, -1 ), glm::vec3( 1.0f, 0, 0.0f ), glm::vec3( 0, -1.0f, 0 ) }, // nz
         { glm::vec3( 1, 0, 0 ), glm::vec3( 0, 0, -1.0f ), glm::vec3( 0, -1, 0 ) }, // px
+        { glm::vec3( -1, 0, 0 ), glm::vec3( 0, 0, 1.0f ), glm::vec3( 0, -1, 0 ) }, // nx
         { glm::vec3( 0, 1, 0 ), glm::vec3( 1.0f, 0, 0 ), glm::vec3( 0, 0, 1.0f ) }, // py
+        { glm::vec3( 0, -1, 0 ), glm::vec3( 1.0f, 0, 0 ), glm::vec3( 0, 0, -1 ) }, // ny
         { glm::vec3( 0, 0, 1 ), glm::vec3( 1.0f, 0, 0 ), glm::vec3( 0, -1, 0 ) }, // pz
+        { glm::vec3( 0, 0, -1 ), glm::vec3( 1.0f, 0, 0.0f ), glm::vec3( 0, -1.0f, 0 ) }, // nz
     };
 
     for ( uint32_t face = 0; face < 6; face++ ) {
@@ -303,7 +303,7 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
     for ( size_t i = 0; i < sh_coefficients.size(); i++ ) {
         // Normalize over the surface area of the sphere, 4 * PI...
         // I don't want to do anything nasty with figuring out why M_PI isn't here.
-        sh_coefficients[i] *= 1.0f / ( 4.0f * 3.14159265358979323846f );
+        // sh_coefficients[i] *= 1.0f / ( 4.0f * 3.14159265358979323846f );
     }
 
     return sh_coefficients;

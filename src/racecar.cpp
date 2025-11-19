@@ -148,14 +148,9 @@ void run( bool use_fullscreen )
         UniformBuffer sh_buffer = create_uniform_buffer<ub_data::SHData>(
             ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
-        std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );
         vk::mem::AllocatedImage diffuse_irradiance
             = geometry::generate_diffuse_irradiance( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
 
-        for ( size_t i = 0; i < sh_coefficients.size(); ++i ) {
-            log::info( "SH coeff: {}, {}, {}", sh_coefficients[i].x, sh_coefficients[i].y,
-                sh_coefficients[i].z );
-        }
 
         vk::mem::AllocatedImage diffuse_irradiance_sh
             = geometry::cs_generate_diffuse_sh( test_cubemap, linear_sampler, ctx.vulkan, engine );
@@ -166,6 +161,35 @@ void run( bool use_fullscreen )
         engine::update_descriptor_set_image(
             ctx.vulkan, engine, lut_sets, diffuse_irradiance_sh, 3 );
         engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 4 );
+
+
+        std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );
+        for ( size_t i = 0; i < sh_coefficients.size(); ++i ) {
+            log::info( "SH coeff: {}, {}, {}", sh_coefficients[i].x, sh_coefficients[i].y,
+                sh_coefficients[i].z );
+        }
+        
+        for ( size_t i = 0; i < engine.frame_overlap; i++ ) {
+            ub_data::SHData SH_ub = {
+                .coeff0 = glm::vec4( sh_coefficients[0].r, sh_coefficients[0].g,
+                    sh_coefficients[0].b, sh_coefficients[1].r ),
+                .coeff1 = glm::vec4( sh_coefficients[1].g, sh_coefficients[1].b,
+                    sh_coefficients[2].r, sh_coefficients[2].g ),
+                .coeff2 = glm::vec4( sh_coefficients[2].b, sh_coefficients[3].r,
+                    sh_coefficients[3].g, sh_coefficients[3].b ),
+                .coeff3 = glm::vec4( sh_coefficients[4].r, sh_coefficients[4].g,
+                    sh_coefficients[4].b, sh_coefficients[5].r ),
+                .coeff4 = glm::vec4( sh_coefficients[5].g, sh_coefficients[5].b,
+                    sh_coefficients[6].r, sh_coefficients[6].g ),
+                .coeff5 = glm::vec4( sh_coefficients[6].b, sh_coefficients[7].r,
+                    sh_coefficients[7].g, sh_coefficients[7].b ),
+                .coeff6 = glm::vec4(
+                    sh_coefficients[8].r, sh_coefficients[8].g, sh_coefficients[8].b, 0.0f ),
+            };
+
+            sh_buffer.set_data( SH_ub );
+            sh_buffer.update( ctx.vulkan, i );
+        }
     }
 
     engine::Pipeline scene_pipeline;
@@ -181,10 +205,10 @@ void run( bool use_fullscreen )
                 sampler_desc_set.layouts[frame_index],
             },
             {
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT // UV
+                VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, // POSITION
+                VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, // NORMAL
+                VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, // TANGENT
+                VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT // UV
             },
             false, vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
@@ -202,22 +226,22 @@ void run( bool use_fullscreen )
     // deferred rendering
     engine::RWImage GBuffer_Normal = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
-        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     engine::RWImage GBuffer_Position = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
-        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     engine::RWImage GBuffer_Tangent = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
-        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     engine::RWImage GBuffer_UV = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
-        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     engine::RWImage GBuffer_Depth = engine::create_rwimage( ctx.vulkan, engine,

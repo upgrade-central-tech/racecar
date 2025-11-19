@@ -54,8 +54,8 @@ float3 car_bsdf( float3 normal, float3 view, float3 half, float3 light, Material
     // Point-light solution is found via:
 #if USE_GLINTS
     float3 local_half = world_to_local( half, normal );
-    float2 duvdx = ddx( uv );
-    float2 duvdy = ddy( uv );
+    float2 duvdx = g_buffer.ddx_uv;
+    float2 duvdy = g_buffer.ddy_uv;
 
     float maxNDF = 10000.0f;
     float targetNDF = NDF;
@@ -116,7 +116,7 @@ float3 car_bsdf( float3 normal, float3 view, float3 half, float3 light, Material
     float3 specular_direct = base_specular * clamped_n_dot_l;
     float3 specular_indirect = precomputed_specular_cc;
 
-    float3 clearcoat_ibl = clearcoat_weight * 0.25f * precomputed_specular_cc;
+    float3 clearcoat_ibl = clearcoat_weight * 1.0f * precomputed_specular_cc;
     float3 clearcoat_direct = max( clearcoat_specular + ( 1.0f - F_cc ) * base_specular, 0.0f );
 
     float3 kS = F;

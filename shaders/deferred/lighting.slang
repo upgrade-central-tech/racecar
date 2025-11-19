@@ -88,8 +88,14 @@ float4 fs_main( VertexOutput in )
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
 
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
+    float2 ddx_uv = float2(
+        GBuffer_Position.Sample( nearest_sampler, in.uv ).a,
+        GBuffer_Normals.Sample( nearest_sampler, in.uv ).a
+    );
 
-    if ( stencil == 0.0f ) {
+    float2 ddy_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).ba;
+
+    if ( length(in_nor) == 0.0f ) {
         return float4( 0.0f );
     }
 
@@ -133,7 +139,9 @@ float4 fs_main( VertexOutput in )
         in_pos,
         normal,
         in_tangent,
-        in_uv
+        in_uv,
+        ddx_uv,
+        ddy_uv
     };
 
     float3 out_color = car_bsdf( normal, view, half, light, pbr, gbuffer );

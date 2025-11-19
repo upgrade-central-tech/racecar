@@ -81,10 +81,18 @@ struct FragmentOutput {
 FragmentOutput fs_main( VertexOutput in )
 {
     FragmentOutput output;
-    output.position = float4(in.position, 1.0);
-    output.normal = float4(in.normal, 1.0);
+
+    // awesome packing hacks
+    float2 ddx_uv = ddx( in.uv );
+    float2 ddy_uv = ddy( in.uv );
+
+    float stencil = 1.0f;
+
+    output.position = float4(in.position, ddx_uv.x );
+    output.normal = float4(in.normal, ddx_uv.y );
     output.tangent = in.tangent;
-    output.uv = float4(in.uv, 0.0, 1.0);
+    output.uv = float4( in.uv, ddy_uv );
+
     return output;
 }
 
