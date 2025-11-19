@@ -27,7 +27,7 @@ namespace racecar {
 namespace {
 
 constexpr std::string_view GLTF_FILE_PATH = "../assets/cube.glb";
-constexpr std::string_view SHADER_MODULE_PATH = "../shaders/raymarch/raymarch.spv";
+constexpr std::string_view SHADER_MODULE_PATH = "../shaders/cloud_debug/cloud_debug.spv";
 
 }
 
