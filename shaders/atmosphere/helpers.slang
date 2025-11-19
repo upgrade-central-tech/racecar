@@ -4,6 +4,11 @@ __include common;
 
 import bindings;
 
+struct ScatteringResult {
+    float3 scattering;
+    float3 single_mie;
+};
+
 func safe_sqrt( value: float )->float { return sqrt( max( value, 0.f ) ); }
 
 /// Maps `[0, 1]` to texture space and centers samples in texel centers.
@@ -12,16 +17,21 @@ func normalize_to_uv( x: float, texture_size: int )->float
     return 0.5f / (float)texture_size + x * ( 1.f - 1.f / (float)texture_size );
 }
 
-/// Ensures `radius` is within `[bottom_radius, top_radius]`.
-func clamp_to_radius( in atms: Parameters, radius: float )->float
-{
-    return clamp( radius, atms.bottom_radius, atms.top_radius );
-}
-
 func ray_distance_to_atmosphere_top( in atms: Parameters, r: float, mu: float )->float
 {
     let discriminant = r * r * ( mu * mu - 1.f ) + atms.top_radius * atms.top_radius;
     return max( 0.f, -r * mu + safe_sqrt( discriminant ) );
+}
+
+func extrapolate_single_mie( in atms: Parameters, scattering: float4 )->float3
+{
+    if ( scattering.x <= 0.f ) {
+        return float3( 0.f );
+    }
+
+    return scattering.xyz * scattering.w / scattering.x
+        * ( atms.rayleigh_scattering.x / atms.mie_scattering.x )
+        * ( atms.mie_scattering / atms.rayleigh_scattering );
 }
 
 func sample_transmittance_lut( in atms: Parameters, r: float, mu: float )->float3
@@ -41,11 +51,11 @@ func sample_transmittance_lut( in atms: Parameters, r: float, mu: float )->float
 
 func sample_scattering_lut( in atms: Parameters, r: float, mu: float, mu_s: float, nu: float,
     ray_r_mu_intersects_ground: bool )
-    ->CombinedScatteringResult
+    ->ScatteringResult
 {
     let uvwz = map_to_scattering_texture( atms, r, mu, mu_s, nu, ray_r_mu_intersects_ground );
 
-    // Compute which two nu slices to sample and interpolation factor
+    // Compute which two `nu` slices to sample and interpolation factor
     let tex_coord_x = uvwz.x * (float)( SCATTERING_LUT_NU_SIZE - 1 );
     let tex_x = floor( tex_coord_x );
     let lerp = tex_coord_x - tex_x;

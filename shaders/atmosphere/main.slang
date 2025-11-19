@@ -45,41 +45,15 @@ float4 fs_main( VertexOutput input )
     let camera_pos = uniforms.camera_position;
     let sun_dir = normalize( uniforms.sun_direction );
 
-    var ground_alpha = 0.f;
-    var ground_radiance = float3( 0.f );
-    let earth_offset = camera_pos - EARTH_CENTER;
-    let earth_dot_v = dot( earth_offset, view_dir );
-    let ray_center_sq = dot( earth_offset, earth_offset ) - earth_dot_v * earth_dot_v;
-    let ground_discriminant = EARTH.bottom_radius * EARTH.bottom_radius - ray_center_sq;
-    if ( ground_discriminant >= 0.f ) {
-        let ground_distance = -earth_dot_v - sqrt( ground_discriminant );
-
-        if ( ground_distance > 0.f ) {
-            let point = camera_pos + view_dir * ground_distance;
-            let normal = normalize( point - EARTH_CENTER );
-            let irradiance
-                = get_sun_and_sky_irradiance( EARTH, point - EARTH_CENTER, normal, sun_dir );
-
-            ground_radiance = GROUND_ALBEDO * INV_PI * irradiance.sun + irradiance.sky;
-
-            let scatter = get_sky_radiance_to_point(
-                EARTH, camera_pos - EARTH_CENTER, point - EARTH_CENTER, sun_dir );
-
-            ground_radiance *= scatter.transmittance + scatter.radiance;
-            ground_alpha = 1.f;
-        }
-    }
-
     let sky = get_sky_radiance( EARTH, camera_pos - EARTH_CENTER, view_dir, sun_dir );
-
     var radiance = sky.radiance;
+
+    // Add sun disk if looking toward the sun
     if ( dot( view_dir, sun_dir ) > SUN_SIZE ) {
         let solar_radiance
             = EARTH.solar_irradiance / ( PI * EARTH.sun_angular_radius * EARTH.sun_angular_radius );
         radiance += sky.transmittance * solar_radiance;
     }
-
-    radiance = lerp( radiance, ground_radiance, ground_alpha );
 
     // Apply tone mapping via Reinhard and sRGB gamma correction
     let color = pow( float3( 1.f ) - exp( -radiance * RADIANCE_EXPOSURE ), GAMMA_FACTOR );
