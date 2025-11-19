@@ -131,5 +131,5 @@ float3 car_bsdf( float3 normal, float3 view, float3 half, float3 light, Material
     out_color += ( kD * diffuse_irradiance + specular_indirect );
     out_color += clearcoat_ibl;
 
-    return float3( out_color );
+    return precomputed_lo_specular;
 }

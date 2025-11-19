@@ -1,8 +1,108 @@
-#include "glint_noise_init.hlsl"
-
 #define HARDCODED_SIZE 512
 
+static const float GAUSSIAN_AVG = 0.0;
+static const float GAUSSIAN_STD = 1.0;
+
 layout( binding = 0, set = 0 ) RWTexture2D<float4> glint_noise_texture;
+
+uint CoordToFlatId( uint2 coord )
+{
+	return coord.y * HARDCODED_SIZE + coord.x;
+}
+
+float PackFloats( float a, float b )
+{
+    uint a16 = f32tof16( a );
+    uint b16 = f32tof16( b );
+    uint abPacked = ( a16 << 16 ) | b16;
+    return asfloat( abPacked );
+}
+
+uint WangHash( uint seed )
+{
+    seed = ( seed ^ 61 ) ^ ( seed >> 16 );
+    seed *= 9;
+    seed = seed ^ ( seed >> 4 );
+    seed *= 0x27d4eb2d;
+    seed = seed ^ ( seed >> 15 );
+    return seed;
+}
+
+void RandXorshift( inout uint rngState )
+{
+    // Xorshift algorithm from George Marsaglia's paper
+    rngState ^= ( rngState << 13 );
+    rngState ^= ( rngState >> 17 );
+    rngState ^= ( rngState << 5 );
+}
+
+float RandXorshiftFloat( inout uint rngState )
+{
+    RandXorshift( rngState );
+    float res = float( rngState ) * ( 1.0 / 4294967296.0 );
+    return res;
+}
+
+float Erf( float x )
+{
+    // Save the sign of x
+    int sign = 1;
+    if ( x < 0 )
+        sign = -1;
+    x = abs( x );
+
+    // A&S formula 7.1.26
+    float t = 1.0 / ( 1.0 + 0.3275911 * x );
+    float y = 1.0 - ( ( ( ( ( 1.061405429 * t + -1.453152027 ) * t ) + 1.421413741 )
+		* t + -0.284496736 ) * t + 0.254829592 ) * t * exp( -x * x );
+
+    return sign * y;
+}
+
+float ErfInv( float x )
+{
+    float w, p;
+    w = -log( ( 1.0f - x ) * ( 1.0f + x ) );
+    if ( w < 5.000000f )
+	{
+        w = w - 2.500000;
+        p = 2.81022636e-08;
+        p = 3.43273939e-07 + p * w;
+        p = -3.5233877e-06 + p * w;
+        p = -4.39150654e-06 + p * w;
+        p = 0.00021858087 + p * w;
+        p = -0.00125372503 + p * w;
+        p = -0.00417768164 + p * w;
+        p = 0.246640727 + p * w;
+        p = 1.50140941 + p * w;
+    }
+	else
+	{
+        w = sqrt( w ) - 3.000000;
+        p = -0.000200214257;
+        p = 0.000100950558 + p * w;
+        p = 0.00134934322 + p * w;
+        p = -0.00367342844 + p * w;
+        p = 0.00573950773 + p * w;
+        p = -0.0076224613 + p * w;
+        p = 0.00943887047 + p * w;
+        p = 1.00167406 + p * w;
+        p = 2.83297682 + p * w;
+    }
+    return p * x;
+}
+
+float CDF( float x, float mu, float sigma )
+{
+    float U = 0.5 * ( 1 + Erf( ( x - mu ) / ( sigma * sqrt( 2.0 ) ) ) );
+    return U;
+}
+
+float InvCDF( float U, float mu, float sigma )
+{
+    float x = sigma * sqrt( 2.0 ) * ErfInv( 2.0 * U - 1.0 ) + mu;
+    return x;
+}
 
 float4 sample_packed_noise( uint2 pixelCoord00, uint2 dimensions ) {
     // Hardcoded for fast testing
