@@ -534,9 +534,8 @@ void run( bool use_fullscreen )
             atms_ub.inverse_view
                 = glm::rotate( view, -glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
             atms_ub.camera_position = atmosphere_position;
-            atms_ub.exposure = atms.exposure;
             atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
-
+            
             atms.uniform_buffer.set_data( atms_ub );
             atms.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
