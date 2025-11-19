@@ -147,8 +147,8 @@ func get_transmittance(
     in atms: Parameters, r: float, mu: float, d: float, ray_r_mu_intersects_ground: bool )
     ->float3
 {
-    let r_d = clamp_radius( atms, sqrt( d * d + 2.f * r * mu * d + r * r ) );
-    let mu_d = clamp_cos( ( r * mu + d ) / r_d );
+    let r_d = clamp_to_radius( atms, sqrt( d * d + 2.f * r * mu * d + r * r ) );
+    let mu_d = clamp( ( r * mu + d ) / r_d, -1.f, 1.f );
 
     if ( ray_r_mu_intersects_ground ) {
         return min(
@@ -187,7 +187,7 @@ public func get_sky_radiance_to_point(
     var scatter_result
         = get_combined_scattering( atms, r, mu, mu_s, nu, ray_r_mu_intersects_ground );
 
-    let r_p = clamp_radius( atms, sqrt( d * d + 2.f * r * mu * d + r * r ) );
+    let r_p = clamp_to_radius( atms, sqrt( d * d + 2.f * r * mu * d + r * r ) );
     let mu_p = ( r * mu + d ) / r_p;
     let mu_s_p = ( r * mu_s + d * nu ) / r_p;
     let scatter_p

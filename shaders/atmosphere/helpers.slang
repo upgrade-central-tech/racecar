@@ -1,14 +1,27 @@
 implementing atmosphere;
 
 __include common;
-__include utils;
 
 import bindings;
+
+func safe_sqrt( value: float )->float { return sqrt( max( value, 0.f ) ); }
+
+/// Maps `[0, 1]` to texture space and centers samples in texel centers.
+func normalize_to_uv( x: float, texture_size: int )->float
+{
+    return 0.5f / (float)texture_size + x * ( 1.f - 1.f / (float)texture_size );
+}
+
+/// Ensures `radius` is within `[bottom_radius, top_radius]`.
+func clamp_to_radius( in atms: Parameters, radius: float )->float
+{
+    return clamp( radius, atms.bottom_radius, atms.top_radius );
+}
 
 func ray_distance_to_atmosphere_top( in atms: Parameters, r: float, mu: float )->float
 {
     let discriminant = r * r * ( mu * mu - 1.f ) + atms.top_radius * atms.top_radius;
-    return clamp_distance( -r * mu + safe_sqrt( discriminant ) );
+    return max( 0.f, -r * mu + safe_sqrt( discriminant ) );
 }
 
 /// Maps (r, mu) to texture UV coordinates.
