@@ -500,6 +500,11 @@ void run( bool use_fullscreen )
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
             camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
+
+        // This cursed piece of code flips the positive y-axis down because Vulkan's clip space +y
+        // points down (whereas in OpenGL/WebGPU it points up).
+        projection[1][1] *= -1;
+
         glm::vec3 camera_position = camera::calculate_eye_position( camera );
 
         // Update atmosphere uniform buffer
@@ -515,9 +520,7 @@ void run( bool use_fullscreen )
 
             ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
             atms_ub.inverse_proj = glm::inverse( projection );
-            atms_ub.inverse_view
-                = glm::rotate( view, -glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
-            // = glm::inverse( view );
+            atms_ub.inverse_view = glm::inverse( view );
             atms_ub.camera_position = atmosphere_position;
             atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
 
@@ -528,21 +531,15 @@ void run( bool use_fullscreen )
         // Update camera uniform buffer
         {
             ub_data::Camera camera_ub = camera_buffer.get_data();
-            camera::OrbitCamera& camera = engine.camera;
 
-            glm::mat4 view = camera::calculate_view_matrix( camera );
-            glm::mat4 projection = glm::perspective(
-                camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
-            projection[1][1] *= -1;
-
-            glm::mat4 model = !gui.demo.rotate_on
-                ? camera_ub.model
-                : glm::rotate( camera_ub.model, gui.demo.rotate_speed, glm::vec3( 0, 1, 0 ) );
+            glm::mat4 model = gui.demo.rotate_on
+                ? glm::rotate( camera_ub.model, gui.demo.rotate_speed, glm::vec3( 0, 1, 0 ) )
+                : camera_ub.model;
 
             camera_ub.mvp = projection * view * model;
             camera_ub.model = model;
             camera_ub.inv_model = glm::inverse( model );
-            camera_ub.camera_pos = camera::calculate_eye_position( camera );
+            camera_ub.camera_pos = camera_position;
             camera_ub.color = glm::vec3( 0.85f, 0.0f, 0.0f );
 
             camera_buffer.set_data( camera_ub );

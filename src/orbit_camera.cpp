@@ -29,7 +29,7 @@ void rotate_azimuth( OrbitCamera& cam, float radians )
     }
 }
 
-void rotate_polar( OrbitCamera& cam, float radians )
+void rotate_zenith( OrbitCamera& cam, float radians )
 {
     cam.zenith = glm::clamp( cam.zenith + radians, -MAX_POLAR_ANGLE, MAX_POLAR_ANGLE );
 }
@@ -101,7 +101,7 @@ void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam
         SDL_MouseButtonFlags state = SDL_GetMouseState( nullptr, nullptr );
 
         if ( state & SDL_BUTTON_LMASK ) {
-            camera::rotate_polar( cam, event->motion.yrel * DRAG_SPEED );
+            camera::rotate_zenith( cam, event->motion.yrel * DRAG_SPEED );
             camera::rotate_azimuth( cam, event->motion.xrel * DRAG_SPEED );
         } else if ( state & SDL_BUTTON_MMASK ) {
             camera::move_horizontal( cam, event->motion.xrel * -DRAG_SPEED );
@@ -113,11 +113,11 @@ void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam
 
     case SDL_EVENT_MOUSE_WHEEL: {
         if ( event->wheel.y > 0.f ) {
-            camera::zoom( cam, SCROLL_SCALE );
+            camera::zoom( cam, 1.f / SCROLL_SCALE );
         }
 
         if ( event->wheel.y < 0.f ) {
-            camera::zoom( cam, 1.f / SCROLL_SCALE );
+            camera::zoom( cam, SCROLL_SCALE );
         }
 
         break;

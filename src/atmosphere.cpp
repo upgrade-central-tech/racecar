@@ -131,9 +131,9 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
 glm::vec3 compute_sun_direction( const Atmosphere& atms )
 {
     return {
-        std::cos( atms.sun_azimuth ) * std::cos( atms.sun_zenith ),
-        std::sin( atms.sun_azimuth ) * std::cos( atms.sun_zenith ),
-        std::sin( atms.sun_zenith ),
+        std::cos( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
+        std::cos( atms.sun_zenith ),
+        std::sin( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
     };
 }
 

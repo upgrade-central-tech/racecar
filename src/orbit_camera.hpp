@@ -27,8 +27,8 @@ struct OrbitCamera {
 /// Keeps azimuth in the range [0, 2π].
 void rotate_azimuth( OrbitCamera& cam, float radians );
 
-/// Keeps polar in the range [-π/2, π/2].
-void rotate_polar( OrbitCamera& cam, float radians );
+/// Keeps zenith in the range [-π/2, π/2].
+void rotate_zenith( OrbitCamera& cam, float radians );
 
 void move_along_view( OrbitCamera& cam, float delta );
 void move_horizontal( OrbitCamera& cam, float delta );
