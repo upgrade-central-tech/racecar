@@ -123,20 +123,17 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
 
     // Some default states
     atms.sun_azimuth = 2.9f;
-    atms.sun_zenith = 1.49f;
-    atms.exposure = 10.f;
+    atms.sun_zenith = 1.3f;
 
     return atms;
 }
 
 glm::vec3 compute_sun_direction( const Atmosphere& atms )
 {
-    float zenith = glm::clamp( glm::pi<float>() - atms.sun_zenith, 0.f, glm::pi<float>() );
-
     return {
-        std::cos( atms.sun_azimuth ) * std::sin( zenith ),
-        std::sin( atms.sun_azimuth ) * std::sin( zenith ),
-        std::cos( zenith ),
+        std::cos( atms.sun_azimuth ) * std::cos( atms.sun_zenith ),
+        std::sin( atms.sun_azimuth ) * std::cos( atms.sun_zenith ),
+        std::sin( atms.sun_zenith ),
     };
 }
 

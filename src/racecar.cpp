@@ -26,7 +26,6 @@
 #include <string_view>
 #include <thread>
 
-
 namespace racecar {
 
 namespace {
@@ -505,11 +504,11 @@ void run( bool use_fullscreen )
 
         // Update atmosphere uniform buffer
         {
-            if ( gui.atms.animate_azimuth ) {
+            if ( gui.atms.animate_zenith ) {
                 float t
-                    = ( std::sin( 0.0002f * static_cast<float>( engine.rendered_frames ) ) + 1.f )
+                    = ( std::sin( 0.001f * static_cast<float>( engine.rendered_frames ) ) + 1.f )
                     * 0.5f;
-                atms.sun_azimuth = glm::lerp( -glm::half_pi<float>(), glm::pi<float>(), t );
+                atms.sun_zenith = glm::lerp( 0.f, glm::pi<float>(), t );
             }
 
             glm::vec3 atmosphere_position = camera_position + glm::vec3( 0.f, 9.f, 0.f );
@@ -518,9 +517,10 @@ void run( bool use_fullscreen )
             atms_ub.inverse_proj = glm::inverse( projection );
             atms_ub.inverse_view
                 = glm::rotate( view, -glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
+            // = glm::inverse( view );
             atms_ub.camera_position = atmosphere_position;
             atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
-            
+
             atms.uniform_buffer.set_data( atms_ub );
             atms.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }

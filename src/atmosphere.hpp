@@ -28,7 +28,6 @@ struct Atmosphere {
 
     float sun_azimuth = 0.f; ///< Stored in radians.
     float sun_zenith = 0.f; ///< Stored in radians.
-    float exposure = 0.f;
 };
 
 Atmosphere initialize( vk::Common& vulkan, engine::State& engine );
