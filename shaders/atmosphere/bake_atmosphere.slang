@@ -1,4 +1,4 @@
-#define HARDCODED_OCTAHEDRAL_SIZE 1024.0f
+#define HARDCODED_OCTAHEDRAL_SIZE 512.0f
 #define COMPUTE_NO_SAMPLE 1
 
 import atmosphere;

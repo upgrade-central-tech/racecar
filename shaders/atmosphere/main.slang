@@ -40,23 +40,7 @@ VertexOutput vs_main( VertexInput input )
 float4 fs_main( VertexOutput input )
     : SV_Target
 {
-    let view_ray = input.view_ray;
-    let view_dir = normalize( view_ray );
-    let camera_pos = uniforms.camera_position;
-    let sun_dir = normalize( uniforms.sun_direction );
-
-    let sky = get_sky_radiance( EARTH, camera_pos - EARTH_CENTER, view_dir, sun_dir );
-    var radiance = sky.radiance;
-
-    // Add sun disk if looking toward the sun
-    if ( dot( view_dir, sun_dir ) > SUN_SIZE ) {
-        let solar_radiance
-            = EARTH.solar_irradiance / ( PI * EARTH.sun_angular_radius * EARTH.sun_angular_radius );
-        radiance += sky.transmittance * solar_radiance;
-    }
-
-    // Apply tone mapping via Reinhard and sRGB gamma correction
-    let color = pow( float3( 1.f ) - exp( -radiance * RADIANCE_EXPOSURE ), GAMMA_FACTOR );
+    float3 color = get_sky_color( normalize( input.view_ray ) );
     return float4( color, 1.f );
 }
 

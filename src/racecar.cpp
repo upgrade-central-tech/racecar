@@ -230,22 +230,22 @@ void run( bool use_fullscreen )
     // deferred rendering
     engine::RWImage GBuffer_Normal = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
-        VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     engine::RWImage GBuffer_Position = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
-        VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     engine::RWImage GBuffer_Tangent = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
-        VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     engine::RWImage GBuffer_UV = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
-        VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     engine::RWImage GBuffer_Depth = engine::create_rwimage( ctx.vulkan, engine,
@@ -359,7 +359,6 @@ void run( bool use_fullscreen )
         atms_ub.inverse_proj = glm::inverse( projection );
         atms_ub.inverse_view = glm::rotate( view, -glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
         atms_ub.camera_position = atmosphere_position;
-        atms_ub.exposure = atms.exposure;
         atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
 
         atms.uniform_buffer.set_data( atms_ub );
@@ -368,6 +367,7 @@ void run( bool use_fullscreen )
         }
 
         // This is probably terrible, but this is necessary for now.
+        // Experiment: comment this out, move it somewhere else.
         atmosphere::initialize_atmosphere_baker( atms_baker, ctx.vulkan, engine );
         engine::update_descriptor_set_image(
             ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 5 );
