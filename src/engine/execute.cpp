@@ -92,6 +92,17 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
     {
         vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
 
+        // THIS IS VERY BAD. THIS IS TEMPORARILY HERE SO I CAN RUN ANY ARBITRARY FUNCTION I WANT
+        // WITH THE COMFORT OF KNOWING THE FRAME'S RENDER COMMAND BUFFER CAN BE USED. APOLOGIES.
+        // LEAVING THIS HERE FOR NOW UNTIL WE HAVE A DECENT SOLUTION FOR COMPUTE TASKS THAT CAN RUN DURING THE GAME.
+        // MAYBE YOU CAN THINK OF THIS AS A PRE-PASS BUFFER. I DON'T REALLY KNOW, JUST FIGURE SOMETHING OUT BETTER.
+        {
+            for ( size_t i = 0; i < task_list.junk_tasks.size(); i++ ) {
+                task_list.junk_tasks[i](engine, ctx, frame);
+            }
+        }
+
+
         for ( size_t i = 0; i < task_list.gfx_tasks.size(); i++ ) {
             GfxTask& gfx_task = task_list.gfx_tasks[i];
 

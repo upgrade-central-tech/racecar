@@ -58,7 +58,7 @@ glm::vec3 compute_sun_direction( const Atmosphere& atms );
 void initialize_atmosphere_baker( AtmosphereBaker& atms_baker,
     vk::Common& vulkan, [[maybe_unused]] engine::State& engine );
 
-void bake_octahedral_sky(
+void prebake_octahedral_sky(
     const AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::State& engine );
 void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffer command_buffer );
 

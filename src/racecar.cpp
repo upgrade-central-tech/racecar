@@ -301,9 +301,7 @@ void run( bool use_fullscreen )
 
     // ATMOSPHERE STUFF
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
-    atmosphere::AtmosphereBaker atms_baker = {
-        .atmosphere = atms
-    };
+    atmosphere::AtmosphereBaker atms_baker = { .atmosphere = atms };
 
     {
         geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
@@ -349,7 +347,6 @@ void run( bool use_fullscreen )
 
         engine::add_gfx_task( task_list, atmosphere_gfx_task );
 
-        
         camera::OrbitCamera& camera = engine.camera;
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
@@ -360,8 +357,7 @@ void run( bool use_fullscreen )
 
         ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
         atms_ub.inverse_proj = glm::inverse( projection );
-        atms_ub.inverse_view
-            = glm::rotate( view, -glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
+        atms_ub.inverse_view = glm::rotate( view, -glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
         atms_ub.camera_position = atmosphere_position;
         atms_ub.exposure = atms.exposure;
         atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
@@ -370,10 +366,11 @@ void run( bool use_fullscreen )
         for ( size_t i = 0; i < engine.frame_overlap; i++ ) {
             atms.uniform_buffer.update( ctx.vulkan, i );
         }
-        
+
         // This is probably terrible, but this is necessary for now.
         atmosphere::initialize_atmosphere_baker( atms_baker, ctx.vulkan, engine );
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 5 );
+        engine::update_descriptor_set_image(
+            ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 5 );
     }
     // END ATMOSPHERE STUFF
 
@@ -570,6 +567,12 @@ void run( bool use_fullscreen )
 
     engine::add_gfx_task( task_list, lighting_pass_gfx_task );
     // }
+
+    // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
+    task_list.junk_tasks.push_back( [&atms_baker]( [[maybe_unused]] engine::State& engine, Context&,
+                                        engine::FrameData& frame ) {
+        atmosphere::bake_octahedral_sky_task( atms_baker, frame.render_cmdbuf );
+    } );
 
     bool will_quit = false;
     bool stop_drawing = false;

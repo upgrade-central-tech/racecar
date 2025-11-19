@@ -146,7 +146,7 @@ glm::vec3 compute_sun_direction( const Atmosphere& atms )
     };
 }
 
-void bake_octahedral_sky( const AtmosphereBaker& atms_baker,
+void prebake_octahedral_sky( const AtmosphereBaker& atms_baker,
     vk::Common& vulkan, engine::State& engine )
 {
     engine::immediate_submit(
@@ -214,7 +214,7 @@ void initialize_atmosphere_baker( AtmosphereBaker& atms_baker,
             atms.sampler_desc_set.layouts[0], atms_baker.octahedral_write.layouts[0] },
         bake_atmosphere_module, "cs_bake_atmosphere" );
 
-    bake_octahedral_sky( atms_baker, vulkan, engine );
+    prebake_octahedral_sky( atms_baker, vulkan, engine );
 }
 
 }
