@@ -15,7 +15,7 @@ static const float3 GROUND_ALBEDO = { 0.f, 0.f, 0.04f };
 static const float RADIANCE_EXPOSURE = 10.f;
 
 /// Expressed in radians.
-static const float SUN_ANGULAR_RADIUS = 0.02f;
+static const float SUN_ANGULAR_RADIUS = 0.04f;
 static const float SUN_SIZE = cos( SUN_ANGULAR_RADIUS );
 
 /// Earth radius is 6360 km, which we represent as height. This is a negative value because
@@ -49,10 +49,8 @@ float4 fs_main( VertexOutput input )
     var ground_radiance = float3( 0.f );
     let earth_offset = camera_pos - EARTH_CENTER;
     let earth_dot_v = dot( earth_offset, view_dir );
-    let earth_dot_earth = dot( earth_offset, earth_offset );
-    let earth_radius_sq = EARTH.bottom_radius * EARTH.bottom_radius;
-    let ray_center_sq = earth_dot_earth - earth_dot_v * earth_dot_v;
-    let ground_discriminant = earth_radius_sq - ray_center_sq;
+    let ray_center_sq = dot( earth_offset, earth_offset ) - earth_dot_v * earth_dot_v;
+    let ground_discriminant = EARTH.bottom_radius * EARTH.bottom_radius - ray_center_sq;
     if ( ground_discriminant >= 0.f ) {
         let ground_distance = -earth_dot_v - sqrt( ground_discriminant );
 

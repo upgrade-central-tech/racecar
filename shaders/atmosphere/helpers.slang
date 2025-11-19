@@ -24,29 +24,42 @@ func ray_distance_to_atmosphere_top( in atms: Parameters, r: float, mu: float )-
     return max( 0.f, -r * mu + safe_sqrt( discriminant ) );
 }
 
-/// Maps (r, mu) to texture UV coordinates.
-func map_to_transmittance_texture( in atms: Parameters, r: float, mu: float )->float2
-{
-    let H = sqrt( atms.top_radius * atms.top_radius - atms.bottom_radius * atms.bottom_radius );
-    let rho = safe_sqrt( r * r - atms.bottom_radius * atms.bottom_radius );
-    let d = ray_distance_to_atmosphere_top( atms, r, mu );
-
-    let d_min = atms.top_radius - r;
-    let d_max = rho + H;
-    let x_mu = ( d - d_min ) / ( d_max - d_min );
-
-    let x_r = rho / H;
-
-    return {
-        normalize_to_uv( x_mu, TRANSMITTANCE_LUT_H ),
-        normalize_to_uv( x_r, TRANSMITTANCE_LUT_H ),
-    };
-}
-
 func sample_transmittance_lut( in atms: Parameters, r: float, mu: float )->float3
 {
-    let uv = map_to_transmittance_texture( atms, r, mu );
+    // Map (r, mu) to texture UV coordinates
+    let H = sqrt( atms.top_radius * atms.top_radius - atms.bottom_radius * atms.bottom_radius );
+    let rho = safe_sqrt( r * r - atms.bottom_radius * atms.bottom_radius );
+    let d_min = atms.top_radius - r;
+    let d_max = rho + H;
+    let x_mu = ( ray_distance_to_atmosphere_top( atms, r, mu ) - d_min ) / ( d_max - d_min );
+    let x_r = rho / H;
+    let uv = float2(
+        normalize_to_uv( x_mu, TRANSMITTANCE_LUT_H ), normalize_to_uv( x_r, TRANSMITTANCE_LUT_H ) );
+
     return transmittance_lut.Sample( sampler, uv ).rgb;
+}
+
+func sample_scattering_lut( in atms: Parameters, r: float, mu: float, mu_s: float, nu: float,
+    ray_r_mu_intersects_ground: bool )
+    ->CombinedScatteringResult
+{
+    let uvwz = map_to_scattering_texture( atms, r, mu, mu_s, nu, ray_r_mu_intersects_ground );
+
+    // Compute which two nu slices to sample and interpolation factor
+    let tex_coord_x = uvwz.x * (float)( SCATTERING_LUT_NU_SIZE - 1 );
+    let tex_x = floor( tex_coord_x );
+    let lerp = tex_coord_x - tex_x;
+
+    var uvw0 = float3( ( tex_x + uvwz.y ) / (float)SCATTERING_LUT_NU_SIZE, uvwz.z, uvwz.w );
+    var uvw1 = float3( ( tex_x + 1.f + uvwz.y ) / (float)SCATTERING_LUT_NU_SIZE, uvwz.z, uvwz.w );
+    let combined0 = scattering_lut.Sample( sampler, uvw0 );
+    let combined1 = scattering_lut.Sample( sampler, uvw1 );
+    let combined = combined0 * ( 1.f - lerp ) + combined1 * lerp;
+
+    return {
+        combined.rgb,
+        extrapolate_single_mie( atms, combined ),
+    };
 }
 
 func map_to_scattering_texture( in atms: Parameters, r: float, mu: float, mu_s: float, nu: float,
@@ -93,15 +106,10 @@ func map_to_scattering_texture( in atms: Parameters, r: float, mu: float, mu_s: 
     return { u_nu, u_mu_s, u_mu, u_r };
 }
 
-func map_to_irradiance_texture( in atms: Parameters, r: float, mu_s: float )->float2
+func ray_intersects_ground( in atms: Parameters, r: float, mu: float )->bool
 {
-    let x_r = ( r - atms.bottom_radius ) / ( atms.top_radius - atms.bottom_radius );
-    let x_mu_s = mu_s * 0.5f + 0.5f;
-
-    return {
-        normalize_to_uv( x_mu_s, IRRADIANCE_LUT_W ),
-        normalize_to_uv( x_r, IRRADIANCE_LUT_H ),
-    };
+    return mu < 0.f
+        && ( ( r * r * ( mu * mu - 1.f ) + atms.bottom_radius * atms.bottom_radius ) >= 0.f );
 }
 
 

@@ -516,7 +516,13 @@ void run( bool use_fullscreen )
                 atms.sun_zenith = glm::lerp( 0.f, glm::pi<float>(), t );
             }
 
-            glm::vec3 atmosphere_position = camera_position + glm::vec3( 0.f, 9.f, 0.f );
+            glm::vec3 atmosphere_position = {
+                camera_position.x,
+                // A y-value of 9 means the camera is 9 km above the surface. This is pretty
+                // ridiculous so we manually adjust it here. Now y needs to be 900.
+                camera_position.y * 0.01f,
+                camera_position.z,
+            };
 
             ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
             atms_ub.inverse_proj = glm::inverse( projection );

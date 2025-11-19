@@ -5,8 +5,8 @@ __include helpers;
 
 /// Stores the result of atmospheric scattering.
 public struct SkySample {
-    public float3 radiance; /// In-scattered light, i.e. the sky glow
-    public float3 transmittance; /// Ratio of light transmitted through the atmosphere
+    public float3 radiance; ///< In-scattered light, i.e. the sky glow
+    public float3 transmittance; ///< Ratio of light transmitted through the atmosphere
 };
 
 public struct SunSkyIrradiance {
@@ -42,35 +42,6 @@ func extrapolate_single_mie( in atms: Parameters, scattering: float4 )->float3
         * ( atms.mie_scattering / atms.rayleigh_scattering );
 }
 
-func ray_intersects_ground( in atms: Parameters, r: float, mu: float )->bool
-{
-    return mu < 0.f
-        && ( ( r * r * ( mu * mu - 1.f ) + atms.bottom_radius * atms.bottom_radius ) >= 0.f );
-}
-
-func get_combined_scattering( in atms: Parameters, r: float, mu: float, mu_s: float, nu: float,
-    ray_r_mu_intersects_ground: bool )
-    ->CombinedScatteringResult
-{
-    let uvwz = map_to_scattering_texture( atms, r, mu, mu_s, nu, ray_r_mu_intersects_ground );
-
-    // Compute which two nu slices to sample and interpolation factor
-    let tex_coord_x = uvwz.x * (float)( SCATTERING_LUT_NU_SIZE - 1 );
-    let tex_x = floor( tex_coord_x );
-    let lerp = tex_coord_x - tex_x;
-
-    var uvw0 = float3( ( tex_x + uvwz.y ) / (float)SCATTERING_LUT_NU_SIZE, uvwz.z, uvwz.w );
-    var uvw1 = float3( ( tex_x + 1.f + uvwz.y ) / (float)SCATTERING_LUT_NU_SIZE, uvwz.z, uvwz.w );
-    let combined0 = scattering_lut.Sample( sampler, uvw0 );
-    let combined1 = scattering_lut.Sample( sampler, uvw1 );
-    let combined = combined0 * ( 1.f - lerp ) + combined1 * lerp;
-
-    return {
-        combined.rgb,
-        extrapolate_single_mie( atms, combined ),
-    };
-}
-
 public func get_sky_radiance(
     in atms: Parameters, camera: float3, view_ray: float3, sun_dir: float3 )
     ->SkySample
@@ -103,8 +74,7 @@ public func get_sky_radiance(
         transmittance = sample_transmittance_lut( atms, r, mu );
     }
 
-    let scatter_result
-        = get_combined_scattering( atms, r, mu, mu_s, nu, ray_r_mu_intersects_ground );
+    let scatter_result = sample_scattering_lut( atms, r, mu, mu_s, nu, ray_r_mu_intersects_ground );
 
     let radiance = scatter_result.scattering * rayleigh_phase_function( nu )
         + scatter_result.single_mie * mie_phase_function( atms.mie_phase_function_g, nu );
@@ -112,14 +82,26 @@ public func get_sky_radiance(
     return { radiance, transmittance };
 }
 
-func get_irradiance( in atms: Parameters, r: float, mu_s: float )->float3
+/// Samples the irradiance LUT. Returns the total ground irradiance (sum of sun + sky light) at
+/// `altitude` when the sun is at zenith angle `mu_s`.
+func get_irradiance( in atms: Parameters, altitude: float, mu_s: float )->float3
 {
-    let uv = map_to_irradiance_texture( atms, r, mu_s );
+    // Map (r, mu_s) to irradiance texture coordinates
+    let x_r = ( altitude - atms.bottom_radius ) / ( atms.top_radius - atms.bottom_radius );
+    let x_mu_s = mu_s * 0.5f + 0.5f;
+    let uv = float2(
+        normalize_to_uv( x_mu_s, IRRADIANCE_LUT_W ), normalize_to_uv( x_r, IRRADIANCE_LUT_H ) );
+
     return irradiance_lut.Sample( sampler, uv ).rgb;
 }
 
+/// Computes atmospheric transmittance to the sun. Returns the fraction of sunlight that reaches a
+/// point at altitude `r`. It accounts for the atmospheric absorption along the path to the sun.
+///
+/// Also, we use `smoothstep` to smoothly transition as the sun sets/rises.
 func get_transmittance_to_sun( in atms: Parameters, r: float, mu_s: float )->float3
 {
+    // Compute horizon angle at this altitude
     let sin_theta_h = atms.bottom_radius / r;
     let cos_theta_h = -sqrt( max( 1.f - sin_theta_h * sin_theta_h, 0.f ) );
 
@@ -128,7 +110,15 @@ func get_transmittance_to_sun( in atms: Parameters, r: float, mu_s: float )->flo
             mu_s - cos_theta_h );
 }
 
-/// Assumes the normal is already normalized.
+/// Returns the total irradiance at a surface point from two sources:
+///
+/// 1. Direct sunlight (with atmospheric attenuation)
+/// 2. Diffuse skylight (light scattered from the sky dome)
+///
+/// The sky irradiance uses a hemisphere integral approximation, by multiplying by (1 + dot(normal,
+/// zenith)) / 2. This is a simple approximation of integrating over the visible hemisphere.
+///
+/// Assumes `normal` and `sun_dir` is already normalized.
 public func get_sun_and_sky_irradiance(
     in atms: Parameters, surface_point: float3, normal: float3, sun_dir: float3 )
     ->SunSkyIrradiance
@@ -136,26 +126,36 @@ public func get_sun_and_sky_irradiance(
     let r = length( surface_point );
     let mu_s = dot( surface_point, sun_dir ) / r;
 
+    // Sky irradiance with hemisphere weighting
     let sky = get_irradiance( atms, r, mu_s ) * ( 1.f + dot( normal, surface_point ) / r ) * 0.5f;
+
+    // Direct sun irradiance with cosine law
     let sun = atms.solar_irradiance * get_transmittance_to_sun( atms, r, mu_s )
         * max( dot( normal, sun_dir ), 0.f );
 
     return { sun, sky };
 }
 
+/// Computes transmittance between two points.
+///
+/// Returns the fraction of light that survives traveling distance `d` along a ray from (`r`, `mu`).
+/// Handles both ground-intersecting and non-intersecting rays.
 func get_transmittance(
     in atms: Parameters, r: float, mu: float, d: float, ray_r_mu_intersects_ground: bool )
     ->float3
 {
+    // Compute endpoint of ray segment
     let r_d = clamp_to_radius( atms, sqrt( d * d + 2.f * r * mu * d + r * r ) );
     let mu_d = clamp( ( r * mu + d ) / r_d, -1.f, 1.f );
 
+    // Ray hits ground: use ratio of transmittances looking down
     if ( ray_r_mu_intersects_ground ) {
         return min(
             sample_transmittance_lut( atms, r_d, -mu_d ) / sample_transmittance_lut( atms, r, -mu ),
             float3( 1.f ) );
     }
 
+    // Ray doesn't hit ground: use ratio of transmittances looking up
     return min(
         sample_transmittance_lut( atms, r, mu ) / sample_transmittance_lut( atms, r_d, mu_d ),
         float3( 1.f ) );
@@ -184,14 +184,13 @@ public func get_sky_radiance_to_point(
 
     let ray_r_mu_intersects_ground = ray_intersects_ground( atms, r, mu );
     let transmittance = get_transmittance( atms, r, mu, d, ray_r_mu_intersects_ground );
-    var scatter_result
-        = get_combined_scattering( atms, r, mu, mu_s, nu, ray_r_mu_intersects_ground );
+    var scatter_result = sample_scattering_lut( atms, r, mu, mu_s, nu, ray_r_mu_intersects_ground );
 
     let r_p = clamp_to_radius( atms, sqrt( d * d + 2.f * r * mu * d + r * r ) );
     let mu_p = ( r * mu + d ) / r_p;
     let mu_s_p = ( r * mu_s + d * nu ) / r_p;
     let scatter_p
-        = get_combined_scattering( atms, r_p, mu_p, mu_s_p, nu, ray_r_mu_intersects_ground );
+        = sample_scattering_lut( atms, r_p, mu_p, mu_s_p, nu, ray_r_mu_intersects_ground );
 
     scatter_result.scattering -= transmittance * scatter_p.scattering;
     scatter_result.single_mie -= transmittance * scatter_p.single_mie;
