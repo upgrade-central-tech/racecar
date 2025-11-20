@@ -126,7 +126,94 @@ bool check_ray_bbox_intersection( float3 local_origin, float3 local_dir, float3 
     return max( 0.0f, t_min ) <= t_max;
 }
 
-float raymarch( float3 view, float3 origin )
+float sample_density( float3 march_pos )
+{
+    float3 p = march_pos * 1.f + float3( 1000.f, 0.f, 1100.f );
+
+    float cumulus_map = noise_sum3D( float3( p.xz * 2.f + 100.f, 1.f ) );
+    cumulus_map += 0.5;
+    cumulus_map = smoothstep( 0.0, 1.0, cumulus_map );
+
+    float normY = -p.y * 0.5 + 0.5;
+    float height_modulation = ( 0.5 * ( -normY + 1 ) ) / ( cumulus_map - 0.2 );
+    float value2 = ( 0.5 * ( 10 * normY - 8 ) ) / ( cumulus_map - 0.2 );
+    height_modulation = smoothstep( 0.6, 0.4, height_modulation ) * smoothstep( 1.0, 0.0, value2 );
+
+    float worley = noise_sum3D_Worley( p.xyz * 1.5 + 100.f );
+    worley = smoothstep( 0.0, 0.8, worley ) - 0.2;
+
+    float low_freq_perlin = noise_sum3D( p.xyz * 1.5 + 100.f ) + 0.5;
+    low_freq_perlin = 0.8 * smoothstep( 0.3, 0.6, low_freq_perlin ) + 0.2;
+    float low_freq_noise = low_freq_perlin * ( 1.2 - worley ) * 0.5;
+    low_freq_noise *= 0.5;
+    low_freq_noise -= 0.25;
+
+    float low_freq_modulation = 1.f - height_modulation;
+
+    cumulus_map = lerp( cumulus_map, cumulus_map + 4 * low_freq_noise, low_freq_modulation );
+    cumulus_map = smoothstep( 0.3, 0.6, cumulus_map ) * 2 - 1;
+
+    return 0.5f * ( max( cumulus_map * height_modulation, 0 ) );
+}
+
+static const float3 light_dir = normalize( float3( 1, 1, 1 ) );
+
+static const float absorption_coeff = 11.5f;
+
+float estimate_lighting( float3 march_pos )
+{
+    float3 local_light_dir = normalize( mul( (float3x3)camera_buffer_data.inv_model, light_dir ) );
+
+    float3 minAABB = float3( -1, -1, -1 );
+    float3 maxAABB = float3( 1, 1, 1 );
+
+    float t_min, t_max;
+    if ( !check_ray_bbox_intersection(
+             march_pos, local_light_dir, minAABB, maxAABB, t_min, t_max ) ) {
+        return 1.0f;
+    }
+
+    float3 right_dir;
+    if ( dot( local_light_dir, float3( 0, 1, 0 ) ) > 0.01 ) {
+        right_dir = cross( local_light_dir, float3( 0, 1, 0 ) );
+    } else {
+        right_dir = cross( local_light_dir, float3( 1, 0, 0 ) );
+    }
+
+    float3 up_dir = cross( local_light_dir, right_dir );
+
+    // Cone sample
+    float step_size = 0.01;
+    float throughput = 1.f;
+    for ( uint i = 0; i < 5; i++ ) {
+        float3 prev_marched_pos = march_pos;
+        step_size += step_size * 0.1 * ( rand_float( prev_marched_pos.x ) * 0.5 - 0.25 );
+
+        float2 coneOffset = rand_float3_float3( march_pos ).xy;
+        float dist_along_view = i * step_size;
+        float3 marched_pos = march_pos + local_light_dir * dist_along_view;
+        float coneAngle = 0.3;
+        marched_pos += right_dir * coneOffset.x * dist_along_view * coneAngle;
+        marched_pos += up_dir * coneOffset.y * dist_along_view * coneAngle;
+
+        float density = sample_density( march_pos );
+        throughput
+            *= exp( -absorption_coeff * density * distance( marched_pos, prev_marched_pos ) );
+        step_size = 0.05;
+    }
+
+    float sun_amplitude = 1.0f;
+    return throughput * sun_amplitude;
+}
+
+float PhaseHG( float cosTheta, float g )
+{
+    float g2 = g * g;
+    float denom = pow( 1 + g2 - 2 * g * cosTheta, 1.5 );
+    return ( 1 - g2 ) / ( 4 * 3.14159265 * denom );
+}
+
+float3 raymarch( float3 view, float3 origin )
 {
     float3 local_dir = normalize( mul( (float3x3)camera_buffer_data.inv_model, view ) );
     float3 local_origin = mul( camera_buffer_data.inv_model, float4( origin, 1.0f ) ).xyz;
@@ -144,45 +231,37 @@ float raymarch( float3 view, float3 origin )
         return 0.0f;
     }
 
-    int steps = 40;
+    int steps = 128;
     float t = 0.0f;
     float step_size = ( t_max - t_min ) / (float)steps;
-    float accumulated = 0.0f;
+    float3 accumulated = float3( 0.0f );
 
+    float throughput = 1.f;
     for ( float t = t_min; t < t_max; t += step_size ) {
+        if ( throughput < 0.01 ) {
+            break;
+        }
+        // jitter
+        t += step_size * 0.1 * ( rand_float( t * origin.x ) * 0.5 - 0.25 );
         float3 marched_pos = local_origin + local_dir * t;
-        float3 p = marched_pos * 1.f + float3( 1000.f, 0.f, 1100.f );
+        float density = sample_density( marched_pos );
+        if ( density > 0.01 ) {
 
-        float cumulus_map = noise_sum3D( float3( p.xz * 2.f + 100.f, 1.f ) );
-        cumulus_map += 0.5;
-        cumulus_map = smoothstep( 0.0, 1.0, cumulus_map );
+            float lighting = estimate_lighting( marched_pos );
 
-        float normY = -p.y * 0.5 + 0.5;
-        float height_modulation = ( 0.5 * ( -normY + 1 ) ) / cumulus_map;
-        float value2 = ( 0.5 * ( 10 * normY - 8 ) ) / cumulus_map;
-        height_modulation
-            = smoothstep( 0.6, 0.4, height_modulation ) * smoothstep( 1.0, 0.0, value2 );
+            float3 local_light_dir
+                = normalize( mul( (float3x3)camera_buffer_data.inv_model, light_dir ) );
 
-        float worley = noise_sum3D_Worley( p.xyz * 1.5 + 100.f );
-        worley = smoothstep( 0.0, 0.8, worley ) - 0.2;
+            float cosTheta = dot( local_dir, local_light_dir );
+            float phase = PhaseHG( cosTheta, 0.947 );
 
-        float low_freq_perlin = noise_sum3D( p.xyz * 1.5 + 100.f ) + 0.5;
-        low_freq_perlin = 0.8 * smoothstep( 0.3, 0.6, low_freq_perlin ) + 0.2;
-        float low_freq_noise = low_freq_perlin * ( 1.2 - worley ) * 0.5;
-        low_freq_noise *= 0.5;
-        low_freq_noise -= 0.25;
-
-        float low_freq_modulation = 1.f - height_modulation;
-
-        cumulus_map = lerp( cumulus_map, cumulus_map + 4 * low_freq_noise, low_freq_modulation );
-        cumulus_map = smoothstep( 0.3, 0.6, cumulus_map ) * 2 - 1;
-
-        float density = 0.5f * ( max( cumulus_map * height_modulation, 0 ) );
-
-        accumulated += density * step_size;
+            float scattering = density * lighting * 1.f;
+            accumulated += float3( throughput * scattering );
+            throughput *= exp( -density * step_size * absorption_coeff );
+        }
     }
 
-    return accumulated;
+    return accumulated * float3( 1.0, 1.0, 0.8 );
 }
 
 float worley3D( float3 p )
@@ -312,9 +391,9 @@ float4 fs_main( VertexOutput in )
     float value2 = ( 0.5 * ( 10 * coords.y - 8 ) ) / coords.x;
     height_modulation = smoothstep( 0.6, 0.4, height_modulation ) * smoothstep( 1.0, 0.0, value2 );
 
-    float output_density = raymarch( view, world_pos );
+    float3 output_density = raymarch( view, world_pos );
 
-    return float4( float3( output_density ), 1.0 );
+    return float4( output_density, 1.0 );
 }
 
 
