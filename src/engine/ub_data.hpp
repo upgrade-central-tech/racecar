@@ -1,3 +1,4 @@
+#pragma once
 
 #include <glm/glm.hpp>
 
@@ -17,28 +18,43 @@ struct Camera {
 };
 
 struct Debug {
-    bool enable_albedo_map = false;
-    uint8_t p0[3];
+    glm::vec4 color = {};
+    glm::vec4 packed_data0 = {};
+    glm::vec4 sun_direction = {};
 
-    bool enable_normal_map = false;
-    uint8_t p1[3];
+    uint32_t enable_albedo_map = 0;
+    uint32_t enable_normal_map = 0;
+    uint32_t enable_roughness_metal_map = 0;
+    uint32_t normals_only = 0;
+    uint32_t albedo_only = 0;
+    uint32_t roughness_metal_only = 0;
 
-    bool enable_roughness_metal_map = false;
-    uint8_t p2[3];
+    uint32_t padding0[2];
+};
 
-    bool normals_only = false;
-    uint8_t p3[3];
-
-    bool albedo_only = false;
-    uint8_t p4[3];
-
-    bool roughness_metal_only = false;
-    uint8_t p5[3];
+struct SHData {
+    // Packs all 9 spherical harmonics
+    glm::vec4 coeff0 = {};
+    glm::vec4 coeff1 = {};
+    glm::vec4 coeff2 = {};
+    glm::vec4 coeff3 = {};
+    glm::vec4 coeff4 = {};
+    glm::vec4 coeff5 = {};
+    glm::vec4 coeff6 = {};
 };
 
 struct RaymarchBufferData {
     float step_size;
     uint8_t p0[3];
+};
+
+struct Atmosphere {
+    glm::mat4 inverse_proj = {};
+    glm::mat4 inverse_view = {};
+    glm::vec3 camera_position = {};
+    uint8_t p0 = 0;
+    glm::vec3 sun_direction = {};
+    uint8_t p1 = 0;
 };
 
 } // namespace racecar::uniform_buffer

@@ -15,16 +15,20 @@ VkCommandPoolCreateInfo command_pool_info(
 VkCommandBufferAllocateInfo command_buffer_allocate_info( VkCommandPool pool, uint32_t count );
 VkCommandBufferBeginInfo command_buffer_begin_info( VkCommandBufferUsageFlags flags );
 
-VkFenceCreateInfo fence_info( VkFenceCreateFlags flags );
-VkSemaphoreCreateInfo semaphore_info();
 
+// Image related
 VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask );
 
 VkImageCreateInfo image_info(
-    VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags, VkExtent3D extent );
+    VkFormat format, VkImageType image_type, uint32_t mip_levels, uint32_t array_layers, VkImageUsageFlags usage_flags, VkExtent3D extent );
 VkImageViewCreateInfo image_view_info(
     VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags );
 
+VkSamplerCreateInfo sampler_info( VkFilter filter_type );
+
+// Sync related
+VkFenceCreateInfo fence_info( VkFenceCreateFlags flags );
+VkSemaphoreCreateInfo semaphore_info();
 VkSemaphoreSubmitInfo semaphore_submit_info(
     VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore );
 VkCommandBufferSubmitInfo command_buffer_submit_info( VkCommandBuffer command_buffer );

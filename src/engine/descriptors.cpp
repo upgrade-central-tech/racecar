@@ -9,7 +9,7 @@ void create_descriptor_system(
 {
     std::vector<DescriptorAllocator::PoolSizeRatio> pool_sizes
         = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 }, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4 },
-              { VK_DESCRIPTOR_TYPE_SAMPLER, 4 } };
+              { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4 }, { VK_DESCRIPTOR_TYPE_SAMPLER, 4 } };
 
     descriptor_allocator::init_pool( vulkan, descriptor_system.global_allocator, 50, pool_sizes );
 

@@ -3,6 +3,7 @@
 #include "draw_task.hpp"
 #include "rwimage.hpp"
 
+#include <glm/glm.hpp>
 #include <volk.h>
 
 #include <optional>
@@ -13,7 +14,9 @@ namespace racecar::engine {
 struct GfxTask {
     std::vector<DrawTask> draw_tasks;
 
-    bool clear_screen = false;
+    std::optional<VkClearColorValue> clear_color;
+    std::optional<float> clear_depth;
+
     bool render_target_is_swapchain = false;
 
     std::vector<RWImage> color_attachments;
@@ -21,8 +24,6 @@ struct GfxTask {
 
     VkExtent2D extent = {};
 };
-
-std::optional<GfxTask> initialize_gfx_task();
 
 void execute_gfx_task(
     const engine::State& engine, const VkCommandBuffer& cmd_buf, GfxTask& gfx_task );

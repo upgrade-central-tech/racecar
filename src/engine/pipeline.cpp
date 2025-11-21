@@ -11,24 +11,13 @@ constexpr std::string_view VERTEX_ENTRY_NAME = "vs_main";
 constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
 Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
-    const std::optional<const geometry::Mesh>& mesh,
-    const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module )
+    std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
+    const std::vector<VkDescriptorSetLayout>& layouts,
+    const std::vector<VkFormat> color_attachment_formats, bool blend, VkShaderModule shader_module )
 {
-    VkPipelineVertexInputStateCreateInfo vertex_input_info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = 0,
-        .pVertexBindingDescriptions = nullptr,
-        .vertexAttributeDescriptionCount = 0,
-        .pVertexAttributeDescriptions = nullptr,
-    };
-
-    if ( mesh && mesh->mesh_buffers.vertex_buffer_address ) {
-        vertex_input_info.vertexBindingDescriptionCount = 1,
-        vertex_input_info.pVertexBindingDescriptions = &mesh->vertex_binding_description;
-        vertex_input_info.vertexAttributeDescriptionCount
-            = static_cast<uint32_t>( mesh->attribute_descriptions.size() );
-        vertex_input_info.pVertexAttributeDescriptions = mesh->attribute_descriptions.data();
-    }
+    VkPipelineVertexInputStateCreateInfo vertex_input_info
+        = vertex_input_state_create_info.value_or( VkPipelineVertexInputStateCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -82,16 +71,24 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     };
 
     VkPipelineColorBlendAttachmentState color_blend_attachment_info = {
-        .blendEnable = VK_FALSE,
+        .blendEnable = blend ? VK_TRUE : VK_FALSE,
+        .srcColorBlendFactor
+        = blend ? VK_BLEND_FACTOR_SRC_ALPHA : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
+        .dstColorBlendFactor
+        = blend ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
+        .colorBlendOp = VK_BLEND_OP_ADD,
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
             | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
     };
 
+    std::vector<VkPipelineColorBlendAttachmentState> color_attachment_infos(
+        color_attachment_formats.size(), color_blend_attachment_info );
+
     VkPipelineColorBlendStateCreateInfo color_blend_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .logicOpEnable = VK_FALSE,
-        .attachmentCount = 1,
-        .pAttachments = &color_blend_attachment_info,
+        .attachmentCount = uint32_t( color_attachment_formats.size() ),
+        .pAttachments = color_attachment_infos.data(),
     };
 
     Pipeline gfx_pipeline;
@@ -122,8 +119,8 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     // Use dynamic rendering instead of manually creating render passes
     VkPipelineRenderingCreateInfo pipeline_rendering_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-        .colorAttachmentCount = 1,
-        .pColorAttachmentFormats = &engine.swapchain.image_format,
+        .colorAttachmentCount = uint32_t( color_attachment_formats.size() ),
+        .pColorAttachmentFormats = color_attachment_formats.data(),
         .depthAttachmentFormat = engine.depth_images[0].image_format,
     };
 
@@ -150,6 +147,56 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     vulkan.destructor_stack.push( vulkan.device, gfx_pipeline.handle, vkDestroyPipeline );
 
     return gfx_pipeline;
+}
+
+Pipeline create_compute_pipeline( vk::Common& vulkan,
+    const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module,
+    std::string_view entry_name )
+{
+    Pipeline compute_pipeline;
+
+    {
+        VkPipelineLayoutCreateInfo pipeline_info
+            = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+                  .setLayoutCount = static_cast<uint32_t>( layouts.size() ),
+                  .pSetLayouts = layouts.data() };
+
+        vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &compute_pipeline.layout );
+        vulkan.destructor_stack.push(
+            vulkan.device, compute_pipeline.layout, vkDestroyPipelineLayout );
+    }
+
+    VkPipelineLayoutCreateInfo pipeline_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+    };
+
+    if ( layouts.size() > 0 ) {
+        pipeline_info.setLayoutCount = static_cast<uint32_t>( layouts.size() );
+        pipeline_info.pSetLayouts = layouts.data();
+    }
+
+    VkPipelineLayout pipeline_layout;
+    vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &pipeline_layout );
+
+    VkComputePipelineCreateInfo create_pipeline_info = {
+        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        .layout = pipeline_layout,
+    };
+
+    create_pipeline_info.stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
+        VK_SHADER_STAGE_COMPUTE_BIT, shader_module, entry_name.data(), nullptr };
+
+    VkPipeline compute_pipeline_handle;
+    vk::check( vkCreateComputePipelines( vulkan.device, VK_NULL_HANDLE, 1, &create_pipeline_info,
+                   nullptr, &compute_pipeline_handle ),
+        "Failed to create compute pipeline" );
+
+    vulkan.destructor_stack.push( vulkan.device, compute_pipeline_handle, vkDestroyPipeline );
+
+    compute_pipeline.handle = compute_pipeline_handle;
+    compute_pipeline.layout = pipeline_layout;
+
+    return compute_pipeline;
 }
 
 } // namespace racecar::engine

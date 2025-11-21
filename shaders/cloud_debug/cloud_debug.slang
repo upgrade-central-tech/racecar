@@ -1,5 +1,4 @@
 struct VertexInput {
-    float4 color : COLOR0;
     float3 position : POSITION;
     float3 normal : NORMAL;
     float4 tangent : TANGENT0;
@@ -35,13 +34,9 @@ struct DebugData {
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
-layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
-layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
-layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
+layout( binding = 0, set = 1 ) Texture3D<float4> volume_data;
 
-layout( binding = 0, set = 2 ) Texture3D<float4> volume_data;
-
-layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
+layout( binding = 0, set = 2 ) SamplerState nearest_sampler;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -145,7 +140,11 @@ float sample_density( float3 march_pos )
 
     float low_freq_modulation = 1.f - height_modulation;
 
-    cumulus_map = lerp( cumulus_map, cumulus_map + 4 * low_freq_noise, low_freq_modulation );
+    float high_freq_noise = noise_sum3D_Worley( p.xyz * 7 + 100.f );
+    high_freq_noise = 0.8 - 0.7 * smoothstep( 0.0, 0.8, high_freq_noise );
+
+    cumulus_map = lerp(
+        cumulus_map, cumulus_map + 4 * low_freq_noise + 1 * high_freq_noise, low_freq_modulation );
     cumulus_map = smoothstep( 0.3, 0.6, cumulus_map ) * 2 - 1;
 
     return 0.5f * ( max( cumulus_map * height_modulation, 0 ) );

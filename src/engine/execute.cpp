@@ -49,11 +49,13 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
 
     SwapchainSemaphores& swapchain_semaphores = engine.swapchain_semaphores[output_swapchain_index];
 
-    // for any render target rendering to the screen, set the dynamic output
+    // For any render target rendering to the screen, set the dynamic output
     for ( GfxTask& gfx_task : task_list.gfx_tasks ) {
         if ( gfx_task.render_target_is_swapchain ) {
-            gfx_task.color_attachments
-                = { { { { .image = output_image, .image_view = output_image_view } } } };
+            gfx_task.color_attachments = {
+                RWImage {
+                    .images = { { .image = output_image, .image_view = output_image_view } } },
+            };
             gfx_task.depth_image = { { out_depth_image } };
         }
     }
@@ -61,41 +63,16 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
     {
         // Make swapchain image writeable ( and clear! )
         vkBeginCommandBuffer( frame.start_cmdbuf, &command_buffer_begin_info );
-
         vk::utility::transition_image( frame.start_cmdbuf, output_image, VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_2_TRANSFER_WRITE_BIT,
-            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_TRANSFER_BIT );
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_IMAGE_ASPECT_COLOR_BIT );
 
         // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
         vk::utility::transition_image( frame.start_cmdbuf, out_depth_image.image,
-            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
-            VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_NONE,
-            VK_PIPELINE_STAGE_2_TRANSFER_BIT );
-
-        VkClearColorValue clear_color = { { 1.0f, 1.0f, 1.0f, 1.0f } };
-        VkImageSubresourceRange clear_range
-            = vk::create::image_subresource_range( VK_IMAGE_ASPECT_COLOR_BIT );
-
-        vkCmdClearColorImage( frame.start_cmdbuf, output_image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &clear_range );
-
-        VkClearDepthStencilValue clear_depth = { 1.0f, 0 };
-        VkImageSubresourceRange clear_depth_range
-            = vk::create::image_subresource_range( VK_IMAGE_ASPECT_DEPTH_BIT );
-
-        vkCmdClearDepthStencilImage( frame.start_cmdbuf, out_depth_image.image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &clear_depth_range );
-
-        vk::utility::transition_image( frame.start_cmdbuf, output_image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0,
-            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT );
-
-        // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
-        vk::utility::transition_image( frame.start_cmdbuf, out_depth_image.image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
-            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT );
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
+            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_2_NONE,
+            VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT, VK_IMAGE_ASPECT_DEPTH_BIT );
 
         vkEndCommandBuffer( frame.start_cmdbuf );
     }
@@ -115,18 +92,31 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
     {
         vkBeginCommandBuffer( frame.render_cmdbuf, &command_buffer_begin_info );
 
+        // THIS IS VERY BAD. THIS IS TEMPORARILY HERE SO I CAN RUN ANY ARBITRARY FUNCTION I WANT
+        // WITH THE COMFORT OF KNOWING THE FRAME'S RENDER COMMAND BUFFER CAN BE USED. APOLOGIES.
+        // LEAVING THIS HERE FOR NOW UNTIL WE HAVE A DECENT SOLUTION FOR COMPUTE TASKS THAT CAN RUN DURING THE GAME.
+        // MAYBE YOU CAN THINK OF THIS AS A PRE-PASS BUFFER. I DON'T REALLY KNOW, JUST FIGURE SOMETHING OUT BETTER.
+        {
+            for ( size_t i = 0; i < task_list.junk_tasks.size(); i++ ) {
+                task_list.junk_tasks[i](engine, ctx, frame);
+            }
+        }
+
+
         for ( size_t i = 0; i < task_list.gfx_tasks.size(); i++ ) {
+            GfxTask& gfx_task = task_list.gfx_tasks[i];
+
             auto search = std::find_if( task_list.pipeline_barriers.begin(),
                 task_list.pipeline_barriers.end(),
-                [=]( std::pair<int, PipelineBarrierDescriptor> v ) -> bool {
+                [=]( const std::pair<int, PipelineBarrierDescriptor>& v ) -> bool {
                     return v.first == int( i );
                 } );
 
             if ( search != task_list.pipeline_barriers.end() ) {
-                run_pipeline_barrier( ( *search ).second, frame.render_cmdbuf );
+                run_pipeline_barrier( engine, ( *search ).second, frame.render_cmdbuf );
             }
 
-            execute_gfx_task( engine, frame.render_cmdbuf, task_list.gfx_tasks[i] );
+            execute_gfx_task( engine, frame.render_cmdbuf, gfx_task );
         }
 
         // GUI render pass
@@ -175,8 +165,8 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
         vk::utility::transition_image( frame.end_cmdbuf, output_image,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
             VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 0,
-            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT );
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+            VK_IMAGE_ASPECT_COLOR_BIT );
         vkEndCommandBuffer( frame.end_cmdbuf );
     }
 

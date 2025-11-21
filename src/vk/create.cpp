@@ -59,8 +59,8 @@ VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask 
     };
 }
 
-VkImageCreateInfo image_info(
-    VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags, VkExtent3D extent )
+VkImageCreateInfo image_info( VkFormat format, VkImageType image_type, uint32_t mip_levels,
+    uint32_t array_layers, VkImageUsageFlags usage_flags, VkExtent3D extent )
 {
     return {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -69,8 +69,8 @@ VkImageCreateInfo image_info(
         .format = format,
         .extent = extent,
 
-        .mipLevels = 1,
-        .arrayLayers = 1,
+        .mipLevels = mip_levels,
+        .arrayLayers = array_layers,
 
         // Samples is used for MSAA
         .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -98,6 +98,18 @@ VkImageViewCreateInfo image_view_info(
     };
 
     return info;
+}
+
+VkSamplerCreateInfo sampler_info( VkFilter filter_type )
+{
+    return {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = filter_type,
+        .minFilter = filter_type,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    };
 }
 
 VkSemaphoreSubmitInfo semaphore_submit_info(
@@ -161,10 +173,10 @@ VkShaderModule shader_module( Common& vulkan, std::filesystem::path shader_path 
     }
 
     // Use read position to determine size of file and pre-allocate buffer
-    size_t file_size = static_cast<size_t>( file.tellg() );
-    std::vector<char> shader_buffer( file_size );
+    std::streampos file_size = file.tellg();
+    std::vector<char> shader_buffer( static_cast<size_t>( file_size ) );
 
-    file.seekg( 0 );
+    file.seekg( 0, std::ios::beg );
     file.read( shader_buffer.data(), static_cast<std::streamsize>( file_size ) );
     file.close();
 

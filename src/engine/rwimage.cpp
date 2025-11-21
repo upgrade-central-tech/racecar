@@ -14,8 +14,8 @@ RWImage create_rwimage( vk::Common& vulkan, const engine::State& engine, VkExten
 
     try {
         for ( size_t i = 0; i < engine.swapchain_images.size(); ++i ) {
-            rwimage.images.push_back(
-                allocate_image( vulkan, extent, format, image_type, usage_flags, mipmapped ) );
+            rwimage.images.push_back( allocate_image(
+                vulkan, extent, format, image_type, 1, 1, usage_flags, mipmapped ) );
         }
     } catch ( const Exception& ex ) {
         log::error( "[RWImage] Error occurred: {}", ex.what() );

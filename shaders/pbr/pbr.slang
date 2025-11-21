@@ -1,5 +1,4 @@
 struct VertexInput {
-    float4 color : COLOR0;
     float3 position : POSITION;
     float3 normal : NORMAL;
     float4 tangent : TANGENT0;

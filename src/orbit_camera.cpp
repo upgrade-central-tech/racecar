@@ -17,6 +17,7 @@ constexpr float MIN_RADIUS = 0.1f;
 constexpr float RELATIVE_FPS = 180.f;
 constexpr float DRAG_SPEED = 1.f / 200.f;
 constexpr float TRANSLATE_SPEED = 0.05f;
+constexpr float SCROLL_SCALE = 1.05f;
 
 void rotate_azimuth( OrbitCamera& cam, float radians )
 {
@@ -28,9 +29,9 @@ void rotate_azimuth( OrbitCamera& cam, float radians )
     }
 }
 
-void rotate_polar( OrbitCamera& cam, float radians )
+void rotate_zenith( OrbitCamera& cam, float radians )
 {
-    cam.polar = glm::clamp( cam.polar + radians, -MAX_POLAR_ANGLE, MAX_POLAR_ANGLE );
+    cam.zenith = glm::clamp( cam.zenith + radians, -MAX_POLAR_ANGLE, MAX_POLAR_ANGLE );
 }
 
 void move_along_view( OrbitCamera& cam, float delta )
@@ -50,9 +51,9 @@ void move_horizontal( OrbitCamera& cam, float delta )
 
 void move_vertical( OrbitCamera& cam, float delta ) { cam.center += cam.up * delta; }
 
-void zoom( OrbitCamera& cam, float delta )
+void zoom( OrbitCamera& cam, float scale )
 {
-    cam.radius = std::max( cam.radius - delta, MIN_RADIUS );
+    cam.radius = std::max( cam.radius * scale, MIN_RADIUS );
 }
 
 glm::mat4 calculate_view_matrix( const OrbitCamera& cam )
@@ -62,9 +63,9 @@ glm::mat4 calculate_view_matrix( const OrbitCamera& cam )
 
 glm::vec3 calculate_eye_position( const OrbitCamera& cam )
 {
-    float x = cam.center.x + cam.radius * std::cos( cam.polar ) * std::cos( cam.azimuth );
-    float y = cam.center.y + cam.radius * std::sin( cam.polar );
-    float z = cam.center.z + cam.radius * std::cos( cam.polar ) * std::sin( cam.azimuth );
+    float x = cam.center.x + cam.radius * std::cos( cam.zenith ) * std::cos( cam.azimuth );
+    float y = cam.center.y + cam.radius * std::sin( cam.zenith );
+    float z = cam.center.z + cam.radius * std::cos( cam.zenith ) * std::sin( cam.azimuth );
 
     return glm::vec3( x, y, z );
 }
@@ -81,6 +82,10 @@ glm::mat4 calculate_view_proj_matrix( const OrbitCamera& cam )
 
 void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam )
 {
+    if ( ImGui::GetIO().WantCaptureMouse ) {
+        return;
+    }
+
     switch ( event->type ) {
     case SDL_EVENT_MOUSE_BUTTON_DOWN: {
         SDL_SetWindowRelativeMouseMode( ctx.window, true );
@@ -96,7 +101,7 @@ void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam
         SDL_MouseButtonFlags state = SDL_GetMouseState( nullptr, nullptr );
 
         if ( state & SDL_BUTTON_LMASK ) {
-            camera::rotate_polar( cam, event->motion.yrel * DRAG_SPEED );
+            camera::rotate_zenith( cam, event->motion.yrel * DRAG_SPEED );
             camera::rotate_azimuth( cam, event->motion.xrel * DRAG_SPEED );
         } else if ( state & SDL_BUTTON_MMASK ) {
             camera::move_horizontal( cam, event->motion.xrel * -DRAG_SPEED );
@@ -108,11 +113,11 @@ void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam
 
     case SDL_EVENT_MOUSE_WHEEL: {
         if ( event->wheel.y > 0.f ) {
-            camera::zoom( cam, 0.1f );
+            camera::zoom( cam, 1.f / SCROLL_SCALE );
         }
 
         if ( event->wheel.y < 0.f ) {
-            camera::zoom( cam, -0.1f );
+            camera::zoom( cam, SCROLL_SCALE );
         }
 
         break;
