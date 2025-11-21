@@ -145,7 +145,11 @@ float sample_density( float3 march_pos )
 
     float low_freq_modulation = 1.f - height_modulation;
 
-    cumulus_map = lerp( cumulus_map, cumulus_map + 4 * low_freq_noise, low_freq_modulation );
+    float high_freq_noise = noise_sum3D_Worley( p.xyz * 7 + 100.f );
+    high_freq_noise = 0.8 - 0.7 * smoothstep( 0.0, 0.8, high_freq_noise );
+
+    cumulus_map = lerp(
+        cumulus_map, cumulus_map + 4 * low_freq_noise + 1 * high_freq_noise, low_freq_modulation );
     cumulus_map = smoothstep( 0.3, 0.6, cumulus_map ) * 2 - 1;
 
     return 0.5f * ( max( cumulus_map * height_modulation, 0 ) );
