@@ -32,11 +32,6 @@ struct DebugData {
     bool roughness_metal_only;
 }
 
-// State for PCG random number generation
-struct RngState {
-    uint32_t state;
-}
-
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
