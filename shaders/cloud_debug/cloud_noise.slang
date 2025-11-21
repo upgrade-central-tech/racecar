@@ -44,8 +44,8 @@ void cs_generate_high_frequency( uint3 thread_id: SV_DispatchThreadID ) {
 void cs_generate_cumulus( uint3 thread_id: SV_DispatchThreadID ) {
     uint2 pixel = thread_id.xy;
 
-    float ndc_x = 2.0f * float( pixel.x ) / 1024.0f - 1.0f;
-    float ndc_z = 2.0f * float( pixel.y ) / 1024.0f - 1.0f;
+    float ndc_x = 2.0f * float( pixel.x ) / 256.0f - 1.0f;
+    float ndc_z = 2.0f * float( pixel.y ) / 256.0f - 1.0f;
 
     // Apply scaling
     float2 input = float2( ndc_x, ndc_z ) * 2.0f + 100.0f;

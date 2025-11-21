@@ -64,7 +64,7 @@ bool generate_noise(
     [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan, engine::State& engine )
 {
     {
-        uint32_t cumulus_map_size = 1024;
+        uint32_t cumulus_map_size = 256;
 
         volumetric.cumulus_map = engine::allocate_image( vulkan,
             { cumulus_map_size, cumulus_map_size, 1 }, VK_FORMAT_R8_UNORM, VK_IMAGE_TYPE_2D, 1, 1,
