@@ -41,7 +41,8 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
 
     volumetric.lut_desc_set = engine::generate_descriptor_set( vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
 
     volumetric.sampler_desc_set = engine::generate_descriptor_set( vulkan, engine,
@@ -63,6 +64,7 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
 bool generate_noise(
     [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan, engine::State& engine )
 {
+    // Cumulus map generation
     {
         uint32_t cumulus_map_size = 256;
 
@@ -115,6 +117,115 @@ bool generate_noise(
         log::info( "[VOLUMETRIC] Ran awesome submit for the cumulus noise map generation." );
     }
 
+    // Low frequency noise map generation
+    {
+        uint32_t low_freq_noise_size = 128;
+
+        volumetric.low_freq_noise = engine::allocate_image( vulkan,
+            { low_freq_noise_size, low_freq_noise_size, low_freq_noise_size }, VK_FORMAT_R8_UNORM,
+            VK_IMAGE_TYPE_3D, 1, 1, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+            false );
+
+        engine::DescriptorSet low_freq_desc_set = engine::generate_descriptor_set(
+            vulkan, engine, { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE }, VK_SHADER_STAGE_COMPUTE_BIT );
+
+        engine::update_descriptor_set_write_image(
+            vulkan, engine, low_freq_desc_set, volumetric.low_freq_noise, 0 );
+
+        VkShaderModule generate_low_freq_module = vk::create::shader_module(
+            vulkan, "../shaders/cloud_debug/cs_generate_low_frequency.spv" );
+
+        engine::Pipeline compute_pipeline
+            = engine::create_compute_pipeline( vulkan, { low_freq_desc_set.layouts[0] },
+                generate_low_freq_module, "cs_generate_low_frequency" );
+
+        log::info( "[VOLUMETRIC] Compute pipeline for low frequency noise made" );
+
+        engine::immediate_submit(
+            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+                vk::utility::transition_image( command_buffer, volumetric.low_freq_noise.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_NONE,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+
+                vkCmdBindPipeline(
+                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.handle );
+
+                vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                    compute_pipeline.layout, 0, 1, low_freq_desc_set.descriptor_sets.data(), 0,
+                    nullptr );
+
+                uint32_t x_groups = ( low_freq_noise_size + 7 ) / 8;
+                uint32_t y_groups = ( low_freq_noise_size + 7 ) / 8;
+                uint32_t z_groups = ( low_freq_noise_size + 7 ) / 8;
+
+                vkCmdDispatch( command_buffer, x_groups, y_groups, z_groups );
+
+                vk::utility::transition_image( command_buffer, volumetric.low_freq_noise.image,
+                    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT );
+            } );
+
+        log::info( "[VOLUMETRIC] Ran submit for low frequency noise map generation" );
+    }
+
+    // high frequency noise map generation
+    {
+        uint32_t high_freq_noise_size = 32;
+
+        volumetric.high_freq_noise = engine::allocate_image( vulkan,
+            { high_freq_noise_size, high_freq_noise_size, high_freq_noise_size },
+            VK_FORMAT_R8_UNORM, VK_IMAGE_TYPE_3D, 1, 1,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
+
+        engine::DescriptorSet high_freq_desc_set = engine::generate_descriptor_set( vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            VK_SHADER_STAGE_COMPUTE_BIT );
+
+        engine::update_descriptor_set_write_image(
+            vulkan, engine, high_freq_desc_set, volumetric.high_freq_noise, 1 );
+
+        VkShaderModule generate_high_freq_module = vk::create::shader_module(
+            vulkan, "../shaders/cloud_debug/cs_generate_high_frequency.spv" );
+
+        engine::Pipeline compute_pipeline
+            = engine::create_compute_pipeline( vulkan, { high_freq_desc_set.layouts[0] },
+                generate_high_freq_module, "cs_generate_high_frequency" );
+
+        log::info( "[VOLUMETRIC] Compute pipeline for high frequency noise made" );
+
+        engine::immediate_submit(
+            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+                vk::utility::transition_image( command_buffer, volumetric.high_freq_noise.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_NONE,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+
+                vkCmdBindPipeline(
+                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.handle );
+
+                vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                    compute_pipeline.layout, 0, 1, high_freq_desc_set.descriptor_sets.data(), 0,
+                    nullptr );
+
+                uint32_t x_groups = ( high_freq_noise_size + 7 ) / 8;
+                uint32_t y_groups = ( high_freq_noise_size + 7 ) / 8;
+                uint32_t z_groups = ( high_freq_noise_size + 7 ) / 8;
+
+                vkCmdDispatch( command_buffer, x_groups, y_groups, z_groups );
+
+                vk::utility::transition_image( command_buffer, volumetric.high_freq_noise.image,
+                    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT );
+            } );
+
+        log::info( "[VOLUMETRIC] Ran submit for high frequency noise map generation" );
+    }
+
     return true;
 }
 
@@ -132,7 +243,11 @@ void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulka
     engine::Pipeline volumetric_pipeline;
 
     engine::update_descriptor_set_image(
-        vulkan, engine, volumetric.lut_desc_set, volumetric.cumulus_map, 0 );
+        vulkan, engine, volumetric.lut_desc_set, volumetric.low_freq_noise, 0 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, volumetric.lut_desc_set, volumetric.high_freq_noise, 1 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, volumetric.lut_desc_set, volumetric.cumulus_map, 2 );
 
     try {
         volumetric_pipeline = engine::create_gfx_pipeline( engine, vulkan,

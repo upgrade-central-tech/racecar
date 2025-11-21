@@ -34,7 +34,9 @@ struct DebugData {
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
-layout( binding = 0, set = 1 ) Texture2D<float> cumulus_map_LUT;
+layout( binding = 0, set = 1 ) Texture3D<float> low_freq_noise_LUT;
+layout( binding = 1, set = 1 ) Texture3D<float> high_freq_noise_LUT;
+layout( binding = 2, set = 1 ) Texture2D<float> cumulus_map_LUT;
 
 layout( binding = 0, set = 2 ) SamplerState linear_sampler;
 
@@ -133,19 +135,22 @@ float sample_density( float3 march_pos )
     float value2 = ( 0.5 * ( 10 * normY - 8 ) ) / ( cumulus_map - 0.2 );
     height_modulation = smoothstep( 0.6, 0.4, height_modulation ) * smoothstep( 1.0, 0.0, value2 );
 
-    float worley = noise_sum3D_Worley( p.xyz * 1.5 + 100.f );
-    worley = smoothstep( 0.0, 0.8, worley ) - 0.2;
+    // float worley = noise_sum3D_Worley( p.xyz * 1.5 + 100.f );
+    // worley = smoothstep( 0.0, 0.8, worley ) - 0.2;
 
-    float low_freq_perlin = noise_sum3D( p.xyz * 1.5 + 100.f ) + 0.5;
-    low_freq_perlin = 0.8 * smoothstep( 0.3, 0.6, low_freq_perlin ) + 0.2;
-    float low_freq_noise = low_freq_perlin * ( 1.2 - worley ) * 0.5;
-    low_freq_noise *= 0.5;
-    low_freq_noise -= 0.25;
+    // float low_freq_perlin = noise_sum3D( p.xyz * 1.5 + 100.f ) + 0.5;
+    // low_freq_perlin = 0.8 * smoothstep( 0.3, 0.6, low_freq_perlin ) + 0.2;
+    // float low_freq_noise = low_freq_perlin * ( 1.2 - worley ) * 0.5;
+    // low_freq_noise *= 0.5;
+    // low_freq_noise -= 0.25;
+    float3 uvw = 0.50f * march_pos + 0.50f;
+    float low_freq_noise = low_freq_noise_LUT.Sample( linear_sampler, uvw ).r;
 
     float low_freq_modulation = 1.f - height_modulation;
 
-    float high_freq_noise = noise_sum3D_Worley( p.xyz * 7 + 100.f );
-    high_freq_noise = 0.8 - 0.7 * smoothstep( 0.0, 0.8, high_freq_noise );
+    // float high_freq_noise = noise_sum3D_Worley( p.xyz * 7 + 100.f );
+    // high_freq_noise = 0.8 - 0.7 * smoothstep( 0.0, 0.8, high_freq_noise );
+    float high_freq_noise = high_freq_noise_LUT.Sample( linear_sampler, uvw ).r;
 
     cumulus_map = lerp(
         cumulus_map, cumulus_map + 4 * low_freq_noise + 1 * high_freq_noise, low_freq_modulation );

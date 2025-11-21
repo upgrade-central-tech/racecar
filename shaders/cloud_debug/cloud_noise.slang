@@ -4,9 +4,10 @@ layout( binding = 0, set = 0 ) RWTexture3D<float> low_frequency_noise;
 layout( binding = 1, set = 0 ) RWTexture3D<float> high_frequency_noise;
 layout( binding = 2, set = 0 ) RWTexture2D<float> cumulus_map;
 
-[shader("compute")]
+[shader( "compute" )]
 [numthreads( 8, 8, 8 )]
-void cs_generate_low_frequency( uint3 thread_id: SV_DispatchThreadID ) {
+void cs_generate_low_frequency( uint3 thread_id: SV_DispatchThreadID )
+{
     float ndc_x = 2.0f * float( thread_id.x ) / 128.0f - 1.0f;
     float ndc_y = 2.0f * float( thread_id.y ) / 128.0f - 1.0f;
     float ndc_z = 2.0f * float( thread_id.z ) / 128.0f - 1.0f;
@@ -26,7 +27,8 @@ void cs_generate_low_frequency( uint3 thread_id: SV_DispatchThreadID ) {
 
 [shader( "compute" )]
 [numthreads( 8, 8, 8 )]
-void cs_generate_high_frequency( uint3 thread_id: SV_DispatchThreadID ) {
+void cs_generate_high_frequency( uint3 thread_id: SV_DispatchThreadID )
+{
     float ndc_x = 2.0f * float( thread_id.x ) / 128.0f - 1.0f;
     float ndc_y = 2.0f * float( thread_id.y ) / 128.0f - 1.0f;
     float ndc_z = 2.0f * float( thread_id.z ) / 128.0f - 1.0f;
@@ -36,12 +38,13 @@ void cs_generate_high_frequency( uint3 thread_id: SV_DispatchThreadID ) {
     high_freq_noise = 0.8 - 0.7 * smoothstep( 0.0, 0.8, high_freq_noise );
 
     float noise = 1.0f;
-    low_frequency_noise[thread_id] = noise;
+    high_frequency_noise[thread_id] = noise;
 }
 
 [shader( "compute" )]
 [numthreads( 8, 8, 1 )]
-void cs_generate_cumulus( uint3 thread_id: SV_DispatchThreadID ) {
+void cs_generate_cumulus( uint3 thread_id: SV_DispatchThreadID )
+{
     uint2 pixel = thread_id.xy;
 
     float ndc_x = 2.0f * float( pixel.x ) / 256.0f - 1.0f;
@@ -56,3 +59,5 @@ void cs_generate_cumulus( uint3 thread_id: SV_DispatchThreadID ) {
 
     cumulus_map[thread_id.xy] = smoothstep( 0.0f, 1.0f, noise );
 }
+
+
