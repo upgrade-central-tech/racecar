@@ -14,7 +14,7 @@ struct OrbitCamera {
     float radius = 0.f;
 
     float azimuth = 0.f; ///< Stored in radians.
-    float polar = 0.f; ///< Stored in radians.
+    float zenith = 0.f; ///< Stored in radians.
 
     glm::vec3 up = {};
 
@@ -27,13 +27,13 @@ struct OrbitCamera {
 /// Keeps azimuth in the range [0, 2π].
 void rotate_azimuth( OrbitCamera& cam, float radians );
 
-/// Keeps polar in the range [-π/2, π/2].
-void rotate_polar( OrbitCamera& cam, float radians );
+/// Keeps zenith in the range [-π/2, π/2].
+void rotate_zenith( OrbitCamera& cam, float radians );
 
 void move_along_view( OrbitCamera& cam, float delta );
 void move_horizontal( OrbitCamera& cam, float delta );
 void move_vertical( OrbitCamera& cam, float delta );
-void zoom( OrbitCamera& cam, float delta );
+void zoom( OrbitCamera& cam, float scale );
 
 /// Converts spherical coordinates to eye position and constructs the view matrix from it.
 glm::mat4 calculate_view_matrix( const OrbitCamera& cam );

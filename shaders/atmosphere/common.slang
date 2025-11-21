@@ -35,6 +35,9 @@ public struct Parameters {
 }
 
 /// Compile-time constant. Values are calibrated to match Earth's atmosphere.
+///
+/// - Bottom radius: 6360 km (Earth's radius)
+/// - Top radius: 6420 km (60 km atmosphere thickness)
 public static const Parameters EARTH = {
     float3( 1.474000f, 1.850400f, 1.911980f ),
     0.004675f,

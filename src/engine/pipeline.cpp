@@ -12,15 +12,16 @@ constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
 Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
-    const std::vector<VkDescriptorSetLayout>& layouts, const std::vector<VkFormat> color_attachment_formats, bool blend, VkShaderModule shader_module )
+    const std::vector<VkDescriptorSetLayout>& layouts,
+    const std::vector<VkFormat> color_attachment_formats, bool blend, VkShaderModule shader_module )
 {
     if (color_attachment_formats.empty()) {
         throw Exception("[Pipeline] create_gfx_pipeline() called with no color attachment formats!");
     }
     
     VkPipelineVertexInputStateCreateInfo vertex_input_info
-        = vertex_input_state_create_info.value_or(
-          VkPipelineVertexInputStateCreateInfo{ .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
+        = vertex_input_state_create_info.value_or( VkPipelineVertexInputStateCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -75,19 +76,22 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
 
     VkPipelineColorBlendAttachmentState color_blend_attachment_info = {
         .blendEnable = blend ? VK_TRUE : VK_FALSE,
-        .srcColorBlendFactor = blend ? VK_BLEND_FACTOR_SRC_ALPHA : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
-        .dstColorBlendFactor = blend ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
+        .srcColorBlendFactor
+        = blend ? VK_BLEND_FACTOR_SRC_ALPHA : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
+        .dstColorBlendFactor
+        = blend ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
         .colorBlendOp = VK_BLEND_OP_ADD,
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
             | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
     };
 
-    std::vector<VkPipelineColorBlendAttachmentState> color_attachment_infos(color_attachment_formats.size(), color_blend_attachment_info);
+    std::vector<VkPipelineColorBlendAttachmentState> color_attachment_infos(
+        color_attachment_formats.size(), color_blend_attachment_info );
 
     VkPipelineColorBlendStateCreateInfo color_blend_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .logicOpEnable = VK_FALSE,
-        .attachmentCount = uint32_t(color_attachment_formats.size()),
+        .attachmentCount = uint32_t( color_attachment_formats.size() ),
         .pAttachments = color_attachment_infos.data(),
     };
 
@@ -119,7 +123,7 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     // Use dynamic rendering instead of manually creating render passes
     VkPipelineRenderingCreateInfo pipeline_rendering_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-        .colorAttachmentCount = uint32_t(color_attachment_formats.size()),
+        .colorAttachmentCount = uint32_t( color_attachment_formats.size() ),
         .pColorAttachmentFormats = color_attachment_formats.data(),
         .depthAttachmentFormat = engine.depth_images[0].image_format,
     };
