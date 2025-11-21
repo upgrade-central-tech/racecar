@@ -31,11 +31,6 @@ struct DebugData {
     bool roughness_metal_only;
 }
 
-// State for PCG random number generation
-struct RngState {
-    uint32_t state;
-}
-
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
@@ -161,52 +156,37 @@ float sample_density( float3 march_pos )
 
 static const float3 light_dir = normalize( float3( 1, 1, 1 ) );
 
-static const float absorption_coeff = 11.5f;
+static const float absorption_coeff = 21.0f;
 
-float estimate_lighting( float3 march_pos )
+float estimate_transmittance( float3 march_pos )
 {
     float3 local_light_dir = normalize( mul( (float3x3)camera_buffer_data.inv_model, light_dir ) );
 
     float3 minAABB = float3( -1, -1, -1 );
     float3 maxAABB = float3( 1, 1, 1 );
-
     float t_min, t_max;
     if ( !check_ray_bbox_intersection(
              march_pos, local_light_dir, minAABB, maxAABB, t_min, t_max ) ) {
         return 1.0f;
     }
 
-    float3 right_dir;
-    if ( dot( local_light_dir, float3( 0, 1, 0 ) ) > 0.01 ) {
-        right_dir = cross( local_light_dir, float3( 0, 1, 0 ) );
-    } else {
-        right_dir = cross( local_light_dir, float3( 1, 0, 0 ) );
+    float t0 = 1e-3;
+    float step_size = t_max / (float)16;
+
+    float T = 1.0;
+    for ( int i = 0; i < 16; ++i ) {
+        float t = t0 + ( i + 0.5 ) * step_size; // midpoint sample
+        float3 pos = march_pos + light_dir * t;
+        // if outside the AABB you can break early, but caller will pass proper t_max
+        float d = sample_density( pos );
+        // Beer–Lambert per-step
+        T *= exp( -SIGMA_T * d * step_size );
+
+        if ( T <= 1e-4 ) {
+            return 0.0;
+        } // early out: essentially fully occluded
     }
-
-    float3 up_dir = cross( local_light_dir, right_dir );
-
-    // Cone sample
-    float step_size = 0.01;
-    float throughput = 1.f;
-    for ( uint i = 0; i < 5; i++ ) {
-        float3 prev_marched_pos = march_pos;
-        step_size += step_size * 0.1 * ( rand_float( prev_marched_pos.x ) * 0.5 - 0.25 );
-
-        float2 coneOffset = rand_float3_float3( march_pos ).xy;
-        float dist_along_view = i * step_size;
-        float3 marched_pos = march_pos + local_light_dir * dist_along_view;
-        float coneAngle = 0.3;
-        marched_pos += right_dir * coneOffset.x * dist_along_view * coneAngle;
-        marched_pos += up_dir * coneOffset.y * dist_along_view * coneAngle;
-
-        float density = sample_density( march_pos );
-        throughput
-            *= exp( -absorption_coeff * density * distance( marched_pos, prev_marched_pos ) );
-        step_size = 0.05;
-    }
-
-    float sun_amplitude = 1.0f;
-    return throughput * sun_amplitude;
+    return saturate( T );
 }
 
 float PhaseHG( float cosTheta, float g )
@@ -215,6 +195,15 @@ float PhaseHG( float cosTheta, float g )
     float denom = pow( 1 + g2 - 2 * g * cosTheta, 1.5 );
     return ( 1 - g2 ) / ( 4 * 3.14159265 * denom );
 }
+
+static const float3 SUN_COLOR = float3( 1.0, 0.95, 0.85 );
+static const float SUN_INTENSITY = 30.0; // brightness multiplier for direct light
+static const float AMBIENT_INTENSITY = 0.2; // ambient skylight
+static const float ALBEDO = 0.9; // single-scattering albedo
+static const float SIGMA_T = 4.0; // extinction coefficient (tune for opacity)
+static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forward scattering
+
+float hash11( float n ) { return frac( sin( n ) * 43758.5453 ); }
 
 float3 raymarch( float3 view, float3 origin )
 {
@@ -234,37 +223,55 @@ float3 raymarch( float3 view, float3 origin )
         return 0.0f;
     }
 
-    int steps = 32;
+    int steps = 40;
     float t = 0.0f;
     float step_size = ( t_max - t_min ) / (float)steps;
     float3 accumulated = float3( 0.0f );
 
     float throughput = 1.f;
-    for ( float t = t_min; t < t_max; t += step_size ) {
+    // jitter
+    float jitter
+        = ( rand_float( dot( local_origin.xyz, float3( 12.9898, 78.233, 45.164 ) ) ) - 0.5 )
+        * step_size;
+    for ( int i = 0; i < steps; ++i ) {
+        float t = t_min + ( i + 0.5 ) * step_size + jitter;
         if ( throughput < 0.01 ) {
             break;
         }
-        // jitter
-        t += step_size * 0.1 * ( rand_float( t * origin.x ) * 0.5 - 0.25 );
+        if ( t < t_min ) {
+            continue;
+        }
+        if ( t > t_max ) {
+            break;
+        }
         float3 marched_pos = local_origin + local_dir * t;
         float density = sample_density( marched_pos );
         if ( density > 0.01 ) {
 
-            float lighting = estimate_lighting( marched_pos );
+            float transmittance = estimate_transmittance( marched_pos );
 
             float3 local_light_dir
                 = normalize( mul( (float3x3)camera_buffer_data.inv_model, light_dir ) );
 
             float cosTheta = dot( local_dir, local_light_dir );
-            float phase = PhaseHG( cosTheta, 0.947 );
+            float phase
+                = 0.95 * PhaseHG( cosTheta, 0.75 ) + 0.05 * PhaseHG( cosTheta, -0.2 ); // TTHG
 
-            float scattering = density * lighting * 1.f;
-            accumulated += float3( throughput * scattering );
+            float3 direct_lighting
+                = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * density * transmittance * step_size;
+            accumulated += throughput * direct_lighting;
             throughput *= exp( -density * step_size * absorption_coeff );
         }
     }
+    // Add background sky contribution attenuated by transmittance_along_ray
+    float3 sky = float3( 0.6, 0.75, 0.95 ) * AMBIENT_INTENSITY;
+    float3 color = accumulated + throughput * sky;
 
-    return accumulated * float3( 1.0, 1.0, 0.8 );
+    // simple tonemap (ACES-lite / a gentle clamp)
+    color = color / ( color + float3( 1.0, 1.0, 1.0 ) );
+    color = pow( saturate( color ), float3( 1.0 / 2.2 ) ); // gamma
+
+    return color;
 }
 
 float worley3D( float3 p )
@@ -368,31 +375,6 @@ float4 fs_main( VertexOutput in )
     float3 normal = in.normal;
     float3 light = normalize( float3( 1, 1, 1 ) );
     float3 view = normalize( world_pos - camera_pos );
-
-    // float output_density = raymarch( view, world_pos );
-
-    float3 uv = in.sv_position.xyy / float3( 1280, 1280, 1280 );
-
-    float cumulus_map = noise_sum3D( uv * 6 + 100.f );
-    cumulus_map += 0.5;
-    cumulus_map = smoothstep( 0.6, 1.2, cumulus_map );
-
-    float worley = noise_sum3D_Worley( uv * 7 + 100.f );
-    worley = smoothstep( 0.0, 0.8, worley ) - 0.2;
-
-    float low_freq_perlin = noise_sum3D( uv * 7 + 100.f ) + 0.5;
-    low_freq_perlin = 0.8 * smoothstep( 0.3, 0.6, low_freq_perlin ) + 0.2;
-    float low_freq_noise = low_freq_perlin * ( 1.2 - worley ) * 0.5;
-    low_freq_noise *= 0.5;
-
-    float high_freq_noise = noise_sum3D_Worley( uv * 7 + 100.f );
-    high_freq_noise = 0.8 - 0.7 * smoothstep( 0.0, 0.8, high_freq_noise );
-
-    // return float4( float3( high_freq_noise ), 1.0 );
-    float2 coords = fract( 2 * uv.xy );
-    float height_modulation = ( 0.5 * ( -coords.y + 1 ) ) / coords.x;
-    float value2 = ( 0.5 * ( 10 * coords.y - 8 ) ) / coords.x;
-    height_modulation = smoothstep( 0.6, 0.4, height_modulation ) * smoothstep( 1.0, 0.0, value2 );
 
     float3 output_density = raymarch( view, world_pos );
 
