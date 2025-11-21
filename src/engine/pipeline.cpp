@@ -191,6 +191,7 @@ Pipeline create_compute_pipeline( vk::Common& vulkan,
                    nullptr, &compute_pipeline_handle ),
         "Failed to create compute pipeline" );
 
+    vulkan.destructor_stack.push( vulkan.device, pipeline_layout, vkDestroyPipelineLayout );
     vulkan.destructor_stack.push( vulkan.device, compute_pipeline_handle, vkDestroyPipeline );
 
     compute_pipeline.handle = compute_pipeline_handle;

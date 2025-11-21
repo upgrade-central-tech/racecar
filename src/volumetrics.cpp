@@ -1,7 +1,11 @@
 #include "volumetrics.hpp"
+
+#include "engine/descriptor_set.hpp"
+#include "engine/images.hpp"
 #include "engine/state.hpp"
 #include "vk/common.hpp"
 #include "vk/create.hpp"
+#include "vk/utility.hpp"
 
 #include <string_view>
 
@@ -24,7 +28,7 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
     scene_mesh.mesh_buffers
         = geometry::scene::upload_mesh( vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
 
-    if ( !generate_noise( volumetric ) ) {
+    if ( !generate_noise( volumetric, vulkan, engine ) ) {
         return {};
     }
 
@@ -32,17 +36,17 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
         vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
     // Initialize descriptor sets
-    volumetric.uniform_desc_set
-        = engine::generate_descriptor_set( vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+    volumetric.uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
 
-    volumetric.lut_desc_set
-        = engine::generate_descriptor_set( vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+    volumetric.lut_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
 
-    volumetric.sampler_desc_set
-        = engine::generate_descriptor_set( vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER },
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+    volumetric.sampler_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_SAMPLER },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
 
     engine::update_descriptor_set_uniform(
         vulkan, engine, volumetric.uniform_desc_set, volumetric.uniform_buffer, 0 );
@@ -50,16 +54,72 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
     engine::update_descriptor_set_sampler(
         vulkan, engine, volumetric.sampler_desc_set, vulkan.global_samplers.linear_sampler, 0 );
 
-    log::info( "[Engine] DESCRIPTOR SHOULD BE MADE BY THIS POINT.");
+    log::info( "[Engine] DESCRIPTOR SHOULD BE MADE BY THIS POINT." );
 
     // Create pipelines necesary for the volumetric to work laterr...
     return volumetric;
 }
 
-bool generate_noise( [[maybe_unused]] Volumetric& volumetric ) { return true; }
+bool generate_noise(
+    [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan, engine::State& engine )
+{
+    {
+        uint32_t cumulus_map_size = 1024;
 
-void draw_volumetric(
-    [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan, const engine::State& engine, [[maybe_unused]] engine::TaskList& task_list )
+        volumetric.cumulus_map = engine::allocate_image( vulkan,
+            { cumulus_map_size, cumulus_map_size, 1 }, VK_FORMAT_R8_UNORM, VK_IMAGE_TYPE_2D, 1, 1,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
+
+        engine::DescriptorSet cumulus_desc_set = engine::generate_descriptor_set( vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            VK_SHADER_STAGE_COMPUTE_BIT );
+
+        engine::update_descriptor_set_write_image(
+            vulkan, engine, cumulus_desc_set, volumetric.cumulus_map, 2 );
+
+        VkShaderModule generate_cumulus_module
+            = vk::create::shader_module( vulkan, "../shaders/cloud_debug/cs_generate_cumulus.spv" );
+
+        engine::Pipeline compute_pipeline = engine::create_compute_pipeline( vulkan,
+            { cumulus_desc_set.layouts[0] }, generate_cumulus_module, "cs_generate_cumulus" );
+
+        log::info( "[VOLUMETRIC] Compute pipeline for cumulus made" );
+
+        engine::immediate_submit(
+            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+                vk::utility::transition_image( command_buffer, volumetric.cumulus_map.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_NONE,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+
+                vkCmdBindPipeline(
+                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.handle );
+
+                vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                    compute_pipeline.layout, 0, 1, cumulus_desc_set.descriptor_sets.data(), 0,
+                    nullptr );
+
+                uint32_t x_groups = ( cumulus_map_size + 7 ) / 8;
+                uint32_t y_groups = ( cumulus_map_size + 7 ) / 8;
+
+                vkCmdDispatch( command_buffer, x_groups, y_groups, 1 );
+
+                vk::utility::transition_image( command_buffer, volumetric.cumulus_map.image,
+                    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT );
+            } );
+
+        log::info( "[VOLUMETRIC] Ran awesome submit for the cumulus noise map generation." );
+    }
+
+    return true;
+}
+
+void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan,
+    engine::State& engine, [[maybe_unused]] engine::TaskList& task_list )
 {
     const geometry::scene::Mesh& volumetric_mesh = volumetric.scene_mesh;
 
@@ -70,6 +130,9 @@ void draw_volumetric(
     };
 
     engine::Pipeline volumetric_pipeline;
+
+    engine::update_descriptor_set_image(
+        vulkan, engine, volumetric.lut_desc_set, volumetric.cumulus_map, 0 );
 
     try {
         volumetric_pipeline = engine::create_gfx_pipeline( engine, vulkan,
@@ -103,7 +166,7 @@ void draw_volumetric(
 
     engine::add_gfx_task( task_list, volumetric_gfx_task );
 
-    log::info( "[VOLUMETRIC] Volumetric gfx task added");
+    log::info( "[VOLUMETRIC] Volumetric gfx task added" );
 }
 
 }

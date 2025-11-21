@@ -11,7 +11,10 @@ struct Volumetric {
     scene::Scene scene;
     geometry::scene::Mesh scene_mesh;
 
-    vk::mem::AllocatedImage noise_3D;
+    vk::mem::AllocatedImage cumulus_map;
+    vk::mem::AllocatedImage low_freq_noise;
+    vk::mem::AllocatedImage high_freq_noise;
+
     UniformBuffer<ub_data::Camera> uniform_buffer;
 
     engine::DescriptorSet uniform_desc_set;
@@ -20,8 +23,11 @@ struct Volumetric {
 };
 
 Volumetric initialize( vk::Common& vulkan, engine::State& engine );
-bool generate_noise( [[maybe_unused]] Volumetric& volumetric );
-void draw_volumetric(
-    [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan, const engine::State& engine, [[maybe_unused]] engine::TaskList& task_list );
-    
+
+bool generate_noise(
+    [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan, engine::State& engine );
+
+void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan,
+    engine::State& engine, [[maybe_unused]] engine::TaskList& task_list );
+
 }

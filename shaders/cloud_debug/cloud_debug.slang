@@ -39,9 +39,9 @@ struct RngState {
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
-layout( binding = 0, set = 1 ) Texture3D<float4> volume_data;
+layout( binding = 0, set = 1 ) Texture2D<float> cumulus_map_LUT;
 
-layout( binding = 0, set = 2 ) SamplerState nearest_sampler;
+layout( binding = 0, set = 2 ) SamplerState linear_sampler;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -125,9 +125,13 @@ float sample_density( float3 march_pos )
 {
     float3 p = march_pos * 1.f + float3( 1000.f, 0.f, 1100.f );
 
-    float cumulus_map = noise_sum3D( float3( p.xz * 2.f + 100.f, 1.f ) );
-    cumulus_map += 0.5;
-    cumulus_map = smoothstep( 0.0, 1.0, cumulus_map );
+    // float cumulus_map = noise_sum3D( float3( p.xz * 2.f + 100.f, 1.f ) );
+    // cumulus_map += 0.5;
+    // cumulus_map = smoothstep( 0.0, 1.0, cumulus_map );
+
+    // Maps it back to [0,1]
+    float2 uv = 0.50f * float2( march_pos.x, march_pos.z ) + 0.50f;
+    float cumulus_map = cumulus_map_LUT.Sample( linear_sampler, uv ).r;
 
     float normY = -p.y * 0.5 + 0.5;
     float height_modulation = ( 0.5 * ( -normY + 1 ) ) / ( cumulus_map - 0.2 );
