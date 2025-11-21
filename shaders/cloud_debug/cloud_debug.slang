@@ -118,7 +118,7 @@ bool check_ray_bbox_intersection( float3 local_origin, float3 local_dir, float3 
 
 float sample_density( float3 march_pos )
 {
-    float3 p = march_pos * 1.f + float3( 1000.f, 0.f, 1100.f );
+    float3 p = march_pos * 0.001f + float3( 1000.f, 0.f, 1100.f );
 
     float cumulus_map = noise_sum3D( float3( p.xz * 2.f + 100.f, 1.f ) );
     cumulus_map += 0.5;
@@ -127,7 +127,8 @@ float sample_density( float3 march_pos )
     float normY = -p.y * 0.5 + 0.5;
     float height_modulation = ( 0.5 * ( -normY + 1 ) ) / ( cumulus_map - 0.2 );
     float value2 = ( 0.5 * ( 10 * normY - 8 ) ) / ( cumulus_map - 0.2 );
-    height_modulation = smoothstep( 0.6, 0.4, height_modulation ) * smoothstep( 1.0, 0.0, value2 );
+    height_modulation
+        = 0.5 + smoothstep( 0.6, 0.4, height_modulation ) * smoothstep( 1.0, 0.0, value2 );
 
     float worley = noise_sum3D_Worley( p.xyz * 1.5 + 100.f );
     worley = smoothstep( 0.0, 0.8, worley ) - 0.2;
@@ -152,18 +153,27 @@ float sample_density( float3 march_pos )
 
 static const float3 light_dir = normalize( float3( 1, 1, 1 ) );
 
-static const float absorption_coeff = 21.0f;
+static const float absorption_coeff = 0.01f;
 
 float estimate_transmittance( float3 march_pos )
 {
-    float3 local_light_dir = normalize( mul( (float3x3)camera_buffer_data.inv_model, light_dir ) );
+    float3 local_dir = light_dir;
 
-    float3 minAABB = float3( -1, -1, -1 );
-    float3 maxAABB = float3( 1, 1, 1 );
-    float t_min, t_max;
-    if ( !check_ray_bbox_intersection(
-             march_pos, local_light_dir, minAABB, maxAABB, t_min, t_max ) ) {
-        return 1.0f;
+    if ( local_dir.y < 0.1 && local_dir.y > -0.1 ) {
+        return 0.f;
+    }
+
+    float lower_plane_altitude = 3000;
+    float higher_plane_altitude = 3500;
+    if ( march_pos.y > higher_plane_altitude || march_pos.y < lower_plane_altitude ) {
+        return 1.f;
+    }
+
+    float t_max;
+    if ( march_pos.y > 0 ) {
+        t_max = ( higher_plane_altitude - march_pos.y ) / local_dir.y;
+    } else {
+        t_max = ( lower_plane_altitude - march_pos.y ) / local_dir.y;
     }
 
     float t0 = 1e-3;
@@ -201,23 +211,22 @@ static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forwar
 
 float hash11( float n ) { return frac( sin( n ) * 43758.5453 ); }
 
-float3 raymarch( float3 view, float3 origin )
+float4 raymarch( float3 view, float3 origin )
 {
-    float3 local_dir = normalize( mul( (float3x3)camera_buffer_data.inv_model, view ) );
-    float3 local_origin = mul( camera_buffer_data.inv_model, float4( origin, 1.0f ) ).xyz;
+    // float3 local_dir = normalize( mul( (float3x3)camera_buffer_data.inv_model, view ) );
+    // float3 local_origin = mul( camera_buffer_data.inv_model, float4( origin, 1.0f ) ).xyz;
+    float3 local_dir = view;
+    float3 local_origin = origin;
 
-    // Raymarched space is now in, unfortunately, [-1,1] coordinates - maintained in "object space".
-    // To sample our 3D texture with UVs in [0, 1], we need the dimensions of our 3D object.
-
-    // Hard-coded cube bounds, this would be ideally passed in via a min/max AABB finder in a GLB
-    // loader or something.
-    float3 minAABB = float3( -1, -1, -1 );
-    float3 maxAABB = float3( 1, 1, 1 );
-
-    float t_min, t_max;
-    if ( !check_ray_bbox_intersection( local_origin, local_dir, minAABB, maxAABB, t_min, t_max ) ) {
-        return 0.0f;
+    if ( local_dir.y < 0.1 ) {
+        return float4( 0.f );
     }
+
+    float lower_plane_altitude = 3000;
+    float higher_plane_altitude = 3500;
+
+    float t_min = ( lower_plane_altitude - origin.y ) / local_dir.y;
+    float t_max = ( higher_plane_altitude - origin.y ) / local_dir.y;
 
     int steps = 40;
     float t = 0.0f;
@@ -267,7 +276,7 @@ float3 raymarch( float3 view, float3 origin )
     color = color / ( color + float3( 1.0, 1.0, 1.0 ) );
     color = pow( saturate( color ), float3( 1.0 / 2.2 ) ); // gamma
 
-    return color;
+    return float4( color, 1.0 );
 }
 
 float worley3D( float3 p )
@@ -372,9 +381,9 @@ float4 fs_main( VertexOutput in )
     float3 light = normalize( float3( 1, 1, 1 ) );
     float3 view = normalize( world_pos - camera_pos );
 
-    float3 output_density = raymarch( view, world_pos );
+    float4 output_color = raymarch( view, world_pos );
 
-    return float4( output_density, 1.0 );
+    return output_color;
 }
 
 
