@@ -25,7 +25,7 @@ static const float3 EARTH_CENTER = { 0.f, -6360.f, 0.f };
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
 {
-    let clip_position = float4( input.position, 0.f, 1.f );
+    let clip_position = float4( input.position, 0.99f, 1.f );
     let view_position = mul( uniforms.inverse_proj, clip_position );
     let world_position = mul( uniforms.inverse_view, float4( view_position.xyz, 0.f ) );
 

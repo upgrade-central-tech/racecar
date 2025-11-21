@@ -100,6 +100,18 @@ VkImageViewCreateInfo image_view_info(
     return info;
 }
 
+VkSamplerCreateInfo sampler_info( VkFilter filter_type )
+{
+    return {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = filter_type,
+        .minFilter = filter_type,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    };
+}
+
 VkSemaphoreSubmitInfo semaphore_submit_info(
     VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore )
 {

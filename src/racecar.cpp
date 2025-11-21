@@ -1,6 +1,7 @@
 #include "racecar.hpp"
 
 #include "atmosphere.hpp"
+#include "volumetrics.hpp"
 #include "constants.hpp"
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
@@ -347,6 +348,7 @@ void run( bool use_fullscreen )
 
         engine::add_gfx_task( task_list, atmosphere_gfx_task );
 
+#if 0
         camera::OrbitCamera& camera = engine.camera;
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
@@ -368,11 +370,17 @@ void run( bool use_fullscreen )
 
         // This is probably terrible, but this is necessary for now.
         // Experiment: comment this out, move it somewhere else.
+#endif
+
         atmosphere::initialize_atmosphere_baker( atms_baker, ctx.vulkan, engine );
         engine::update_descriptor_set_image(
             ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 5 );
     }
     // END ATMOSPHERE STUFF
+
+    // Volumetrics stuff
+    volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
+    volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list );
 
     engine::GfxTask sponza_gfx_task = {
         .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
@@ -656,6 +664,12 @@ void run( bool use_fullscreen )
 
             camera_buffer.set_data( camera_ub );
             camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
+        // Update volumetric camera buffer
+        {
+            volumetric.uniform_buffer.set_data( camera_buffer.get_data() );
+            volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
         // Update debug uniform buffer

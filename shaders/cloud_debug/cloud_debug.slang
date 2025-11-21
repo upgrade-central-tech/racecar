@@ -1,5 +1,4 @@
 struct VertexInput {
-    float4 color : COLOR0;
     float3 position : POSITION;
     float3 normal : NORMAL;
     float4 tangent : TANGENT0;
@@ -40,13 +39,9 @@ struct RngState {
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
-layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
-layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
-layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
+layout( binding = 0, set = 1 ) Texture3D<float4> volume_data;
 
-layout( binding = 0, set = 2 ) Texture3D<float4> volume_data;
-
-layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
+layout( binding = 0, set = 2 ) SamplerState nearest_sampler;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -231,7 +226,7 @@ float3 raymarch( float3 view, float3 origin )
         return 0.0f;
     }
 
-    int steps = 128;
+    int steps = 32;
     float t = 0.0f;
     float step_size = ( t_max - t_min ) / (float)steps;
     float3 accumulated = float3( 0.0f );

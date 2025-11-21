@@ -1,4 +1,5 @@
 #include "common.hpp"
+#include "create.hpp"
 
 #include "../exception.hpp"
 #include "../log.hpp"
@@ -237,6 +238,30 @@ Common initialize( SDL_Window* window )
 
             vulkan.graphics_queue_family = gfx_queue_family_res.value();
         }
+
+        // Used by a lot of stuff
+        {
+            vulkan.global_samplers = {};
+
+            VkSampler linear_sampler = VK_NULL_HANDLE;
+            VkSampler nearest_sampler = VK_NULL_HANDLE;
+            {
+                VkSamplerCreateInfo sampler_info = vk::create::sampler_info( VK_FILTER_LINEAR );
+                vk::check( vkCreateSampler( vulkan.device, &sampler_info, nullptr, &linear_sampler ),
+                    "Failed to create global linear sampler" );
+                vulkan.destructor_stack.push( vulkan.device, linear_sampler, vkDestroySampler );
+            }
+            {
+                VkSamplerCreateInfo sampler_info = vk::create::sampler_info( VK_FILTER_NEAREST );
+                vk::check( vkCreateSampler( vulkan.device, &sampler_info, nullptr, &nearest_sampler ),
+                    "Failed to create global nearest sampler" );
+                vulkan.destructor_stack.push( vulkan.device, nearest_sampler, vkDestroySampler );
+            }
+
+            vulkan.global_samplers.linear_sampler = linear_sampler;
+            vulkan.global_samplers.nearest_sampler = nearest_sampler;
+        }
+
     } catch ( const Exception& ex ) {
         log::error( "[vk] {}", ex.what() );
         throw Exception( "[Vulkan] Failed to initialize" );

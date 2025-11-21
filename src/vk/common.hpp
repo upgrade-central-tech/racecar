@@ -30,6 +30,11 @@ constexpr int MAX_IMAGES_BINDED = 4;
 
 } // namespace binding
 
+struct GlobalSamplers {
+    VkSampler linear_sampler;
+    VkSampler nearest_sampler;
+};
+
 /// Stores common Vulkan-related objects.
 struct Common {
     vkb::Instance instance;
@@ -38,6 +43,11 @@ struct Common {
 
     uint32_t graphics_queue_family = 0;
     VkQueue graphics_queue = nullptr;
+
+    // Shared static Vk instances
+    // 0 : for linear sampler
+    // 1 : for nearest sampler
+    GlobalSamplers global_samplers;
 
     VmaAllocator allocator;
 
