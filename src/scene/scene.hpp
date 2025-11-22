@@ -19,7 +19,7 @@ enum class MaterialType {
 enum class ColorSpace { SRGB, UNORM, SFLOAT };
 
 struct Material {
-    glm::vec3 base_color;
+    glm::vec3 base_color = glm::vec3( 1 );
     std::optional<int> base_color_texture_index = std::nullopt;
     float metallic = 0.f;
     float roughness = 1.f;

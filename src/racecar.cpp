@@ -118,8 +118,47 @@ void run( bool use_fullscreen )
         // Generate a separate texture descriptor set for each of the materials
         material_desc_sets[i] = engine::generate_descriptor_set( ctx.vulkan, engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+        scene::Material& mat = scene.materials[i];
+
+        UniformBuffer material_buffer = create_uniform_buffer<ub_data::Material>(
+            ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+        ub_data::Material material_ub = {
+            .has_base_color_texture = mat.base_color_texture_index.has_value() ? 1 : 0,
+            .has_metallic_roughness_texture
+            = mat.metallic_roughness_texture_index.has_value() ? 1 : 0,
+            .has_normal_texture = mat.normal_texture_index.has_value() ? 1 : 0,
+            .has_emmisive_texture = mat.emmisive_texture_index.has_value() ? 1 : 0,
+
+            .base_color = glm::vec4( mat.base_color, 1.0 ),
+
+            .metallic = mat.metallic,
+            .roughness = mat.roughness,
+            .normal_texture_weight = (float)mat.normal_texture_weight,
+            .ior = mat.ior,
+
+            .specular_tint = mat.specular_tint,
+            .specular = mat.specular,
+
+            .sheen_tint = mat.sheen_tint,
+            .sheen_roughness = mat.sheen_roughness,
+
+            .sheen_weight = mat.sheen_weight,
+            .transmission = mat.transmission,
+            .clearcoat = mat.clearcoat,
+            .clearcoat_roughness = mat.clearcoat_roughness,
+
+            .emissive = mat.emissive,
+            .unlit = mat.unlit,
+        };
+
+        material_buffer.set_data( material_ub );
+        material_buffer.update( ctx.vulkan, engine.get_frame_index() );
+
+        engine::update_descriptor_set_uniform(
+            ctx.vulkan, engine, material_desc_sets[i], material_buffer, 3 );
     }
 
     engine::DescriptorSet raymarch_tex_sets;
@@ -213,7 +252,11 @@ void run( bool use_fullscreen )
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT // UV
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // UV
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // ALBEDO
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT // PACKED DATA (metallic, roughness,
+                                                        // clearcoat roughness, clearcoat
+                                                        // weight)
             },
             false, vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
@@ -225,7 +268,7 @@ void run( bool use_fullscreen )
 
     [[maybe_unused]] VkPipelineVertexInputStateCreateInfo test
         = engine::get_vertex_input_state_create_info( quad_mesh );
-
+    log::info( "[main] pre atmo3!" );
     engine::TaskList task_list;
 
     // deferred rendering
@@ -245,6 +288,16 @@ void run( bool use_fullscreen )
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
     engine::RWImage GBuffer_UV = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
+    engine::RWImage GBuffer_Albedo = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
+    engine::RWImage GBuffer_Packed_Data = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
@@ -290,6 +343,22 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     .image = GBuffer_UV,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Albedo,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Packed_Data,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
                     .src_access = VK_ACCESS_2_NONE,
@@ -386,7 +455,8 @@ void run( bool use_fullscreen )
         .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
         .clear_depth = 1.f,
         .render_target_is_swapchain = false,
-        .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Tangent, GBuffer_UV },
+        .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Tangent, GBuffer_UV,
+            GBuffer_Albedo, GBuffer_Packed_Data },
         .depth_image = GBuffer_Depth,
         .extent = engine.swapchain.extent,
     };
@@ -508,6 +578,22 @@ void run( bool use_fullscreen )
                     .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
                     .image = GBuffer_UV,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Albedo,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Packed_Data,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
                     .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                     .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
@@ -529,6 +615,7 @@ void run( bool use_fullscreen )
     engine::DescriptorSet gbuffer_descriptor_set
         = engine::generate_descriptor_set( ctx.vulkan, engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
             VK_SHADER_STAGE_FRAGMENT_BIT );
 
@@ -555,6 +642,10 @@ void run( bool use_fullscreen )
         ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Tangent, 2 );
     engine::update_descriptor_set_rwimage(
         ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_UV, 3 );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Albedo, 4 );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Packed_Data, 5 );
 
     lighting_pass_gfx_task.draw_tasks.push_back({
             .draw_resource_descriptor = {

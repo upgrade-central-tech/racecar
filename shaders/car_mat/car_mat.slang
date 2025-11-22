@@ -29,7 +29,7 @@ struct DebugData {
 
     // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
     float4 packed_data0;
-    // Pack: glint roughness, 
+    // Pack: glint roughness,
     float4 packed_data1;
 
     bool enable_albedo_map;
@@ -51,6 +51,35 @@ struct SHData {
     float4 coeff6;
 }
 
+struct MaterialData {
+    int has_base_color_texture;
+    int has_metallic_roughness_texture;
+    int has_normal_texture;
+    int has_emmisive_texture;
+
+    float4 base_color;
+
+    float metallic;
+    float roughness;
+    float normal_texture_weight;
+    float ior;
+
+    float3 specular_tint;
+    float specular;
+
+    float3 sheen_tint;
+    float sheen_roughness;
+
+    float sheen_weight;
+    float transmission;
+    float clearcoat;
+    float clearcoat_roughness;
+
+    float3 emissive;
+    // 0 if lit, 1 if unlit
+    int unlit = false;
+}
+
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
@@ -58,6 +87,7 @@ layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
 layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
 layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
+layout( binding = 3, set = 1 ) ConstantBuffer<MaterialData> material_data;
 
 // Cubemaps + LUTs
 layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
@@ -99,7 +129,7 @@ float4 fs_main( VertexOutput in )
     // Texture samples
     float3 base_albedo = debug_data.enable_albedo_map
         ? albedo_map.Sample( nearest_sampler, in.uv ).rgb
-        : debug_data.color.rgb;
+        : material_data.base_color.rgb;
 
     float3 normal_map_norm = normal_map.Sample( nearest_sampler, in.uv ).rgb;
 
@@ -142,12 +172,14 @@ float4 fs_main( VertexOutput in )
     // Specular reflection
     ////////////////////////////////////////////////////////////////
 #if 1
-    base_albedo = lerp( float3( 0.3, 0.1, 0.82 ), float3( 0.8, 0.3, 0.5 ), pow( clamped_n_dot_h, 5.0f ) );
+    base_albedo
+        = lerp( float3( 0.3, 0.1, 0.82 ), float3( 0.8, 0.3, 0.5 ), pow( clamped_n_dot_h, 5.0f ) );
 #endif
 
     // So far only the first mip exists. Will need some more complicated efforts to
     // get this stuff to work with roughness.
-    float3 precomputed_lo_specular = cubemap.Sample( nearest_sampler, reflect( -view, normal ) ).rgb;
+    float3 precomputed_lo_specular
+        = cubemap.Sample( nearest_sampler, reflect( -view, normal ) ).rgb;
 
     float3 F0 = float3( 0.04f );
     F0 = lerp( F0, base_albedo * precomputed_lo_specular, metallic );
@@ -200,7 +232,8 @@ float4 fs_main( VertexOutput in )
     // Based on Disney 2012 diffuse model:
     // https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf
     ////////////////////////////////////////////////////////////////
-    float3 diffuse_color = lerp( float3( 0.3, 0.1, 0.82 ), float3( 0.8, 0.3, 0.5 ), pow(clamped_n_dot_h, 5.0f) );
+    float3 diffuse_color
+        = lerp( float3( 0.3, 0.1, 0.82 ), float3( 0.8, 0.3, 0.5 ), pow( clamped_n_dot_h, 5.0f ) );
     float3 lambert = diffuse_color / PI;
 
     // Fresnel weights
@@ -236,7 +269,7 @@ float4 fs_main( VertexOutput in )
     float3 kD = 1.0f - kS;
     kD *= 1.0f - metallic;
 
-    float3 out_color = float3(0.0f);
+    float3 out_color = float3( 0.0f );
 
     // Direct lighting
     out_color += ( diffuse_direct + specular_direct );

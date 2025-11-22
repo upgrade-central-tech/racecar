@@ -43,6 +43,36 @@ struct SHData {
     glm::vec4 coeff6 = {};
 };
 
+struct Material {
+    int has_base_color_texture = false;
+    /// Typically roughness in G, metallic in B
+    int has_metallic_roughness_texture = false;
+    int has_normal_texture = false;
+    int has_emmisive_texture = false;
+
+    glm::vec4 base_color = glm::vec4( 1 );
+
+    float metallic = 0.f;
+    float roughness = 1.f;
+    float normal_texture_weight = 1;
+    float ior = 1.f;
+
+    glm::vec3 specular_tint = glm::vec3( 1 );
+    float specular = 0.f;
+
+    glm::vec3 sheen_tint = glm::vec3( 1 );
+    float sheen_roughness = 1.f;
+
+    float sheen_weight = 0.f;
+    float transmission = 0.f;
+    float clearcoat = 0.f;
+    float clearcoat_roughness = 1.f;
+
+    glm::vec3 emissive = glm::vec3( 0.f );
+    // 0 if lit, 1 if unlit
+    int unlit = false;
+};
+
 struct RaymarchBufferData {
     float step_size;
     uint8_t p0[3];

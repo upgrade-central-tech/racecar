@@ -65,6 +65,9 @@ layout( binding = 0, set = 4 ) Texture2D<float4> GBuffer_Position;
 layout( binding = 1, set = 4 ) Texture2D<float4> GBuffer_Normals;
 layout( binding = 2, set = 4 ) Texture2D<float4> GBuffer_Tangent;
 layout( binding = 3, set = 4 ) Texture2D<float4> GBuffer_UV;
+layout( binding = 4, set = 4 ) Texture2D<float4> GBuffer_Albedo;
+// roughness, metallic, clearcoat roughness, clearcoat weight
+layout( binding = 5, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
 // #include "../utils.slang"
 // #include "../glint/glint_noise_init.hlsl"
@@ -91,26 +94,24 @@ float4 fs_main( VertexOutput in )
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
 
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
-    float2 ddx_uv = float2(
-        GBuffer_Position.Sample( nearest_sampler, in.uv ).a,
-        GBuffer_Normals.Sample( nearest_sampler, in.uv ).a
-    );
+    float2 ddx_uv = float2( GBuffer_Position.Sample( nearest_sampler, in.uv ).a,
+        GBuffer_Normals.Sample( nearest_sampler, in.uv ).a );
 
     float2 ddy_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).ba;
 
-    if ( length(in_nor) == 0.0f ) {
+    if ( length( in_nor ) == 0.0f ) {
         return float4( 0.0f );
     }
 
     // Texture samples
     float3 base_albedo = debug_data.enable_albedo_map
-        ? albedo_map.Sample( nearest_sampler, in.uv ).rgb
+        ? GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb
         : debug_data.color.rgb;
 
     float3 normal_map_norm = normal_map.Sample( nearest_sampler, in.uv ).rgb;
 
     float2 metallic_roughness = debug_data.enable_roughness_metal_map
-        ? metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb
+        ? GBuffer_Packed_Data.Sample( nearest_sampler, in.uv ).gb
         : float2( debug_data.packed_data0.x, debug_data.packed_data0.y );
 
     // Material properties
@@ -120,8 +121,8 @@ float4 fs_main( VertexOutput in )
     // Basic vectors
     float3 light = normalize( debug_data.sun_direction.rgb );
     float3 radiance = float3( 1, 1, 1 );
-    //float attenuation = 1.0f / length( light_pos - in_pos );
-    //attenuation *= attenuation;
+    // float attenuation = 1.0f / length( light_pos - in_pos );
+    // attenuation *= attenuation;
 
     float3 camera_pos = camera_buffer_data.camera_pos;
     float3 normal = debug_data.enable_normal_map
@@ -131,23 +132,16 @@ float4 fs_main( VertexOutput in )
     float3 half = normalize( view + light );
 
     Material pbr = {
-        roughness,
-        metallic,
-        debug_data.packed_data0.z,  // cc roughness
+        roughness, metallic,
+        debug_data.packed_data0.z, // cc roughness
         debug_data.packed_data0.w // cc weight
     };
 
-    GBuffer gbuffer = {
-        in_pos,
-        normal,
-        in_tangent,
-        in_uv,
-        ddx_uv,
-        ddy_uv
-    };
+    GBuffer gbuffer = { in_pos, normal, in_tangent, in_uv, ddx_uv, ddy_uv };
 
     float3 out_color = car_bsdf( normal, view, half, light, pbr, gbuffer );
 
     return float4( out_color, 1.0f );
 }
+
 

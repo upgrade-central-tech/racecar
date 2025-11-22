@@ -31,12 +31,42 @@ struct DebugData {
     bool roughness_metal_only;
 }
 
+struct MaterialData {
+    int has_base_color_texture;
+    int has_metallic_roughness_texture;
+    int has_normal_texture;
+    int has_emmisive_texture;
+
+    float4 base_color;
+
+    float metallic;
+    float roughness;
+    float normal_texture_weight;
+    float ior;
+
+    float3 specular_tint;
+    float specular;
+
+    float3 sheen_tint;
+    float sheen_roughness;
+
+    float sheen_weight;
+    float transmission;
+    float clearcoat;
+    float clearcoat_roughness;
+
+    float3 emissive;
+    // 0 if lit, 1 if unlit
+    int unlit = false;
+}
+
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
 layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
 layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
 layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
+layout( binding = 3, set = 1 ) ConstantBuffer<MaterialData> material_data;
 
 layout( binding = 0, set = 2 ) SamplerState nearest_sampler;
 

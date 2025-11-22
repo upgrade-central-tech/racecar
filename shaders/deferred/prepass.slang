@@ -36,6 +36,35 @@ struct DebugData {
     bool roughness_metal_only;
 }
 
+struct MaterialData {
+    int has_base_color_texture;
+    int has_metallic_roughness_texture;
+    int has_normal_texture;
+    int has_emmisive_texture;
+
+    float4 base_color;
+
+    float metallic;
+    float roughness;
+    float normal_texture_weight;
+    float ior;
+
+    float3 specular_tint;
+    float specular;
+
+    float3 sheen_tint;
+    float sheen_roughness;
+
+    float sheen_weight;
+    float transmission;
+    float clearcoat;
+    float clearcoat_roughness;
+
+    float3 emissive;
+    // 0 if lit, 1 if unlit
+    int unlit = false;
+}
+
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
@@ -43,6 +72,7 @@ layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
 layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
 layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
+layout( binding = 3, set = 1 ) ConstantBuffer<MaterialData> material_data;
 
 // Cubemaps + LUTs
 layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
@@ -95,10 +125,13 @@ VertexOutput vs_main( VertexInput input )
 }
 
 struct FragmentOutput {
-    float4 position: SV_Target0;
-    float4 normal:   SV_Target1;
-    float4 tangent:  SV_Target2;
-    float4 uv:       SV_Target3;
+    float4 position : SV_Target0;
+    float4 normal : SV_Target1;
+    float4 tangent : SV_Target2;
+    float4 uv : SV_Target3;
+    float4 albedo : SV_Target4;
+    /// roughness, metallic, clearcoat roughness, clearcoat weight
+    float4 packed_data : SV_Target5;
 }
 
 [shader( "fragment" )]
@@ -129,10 +162,24 @@ FragmentOutput fs_main( VertexOutput in )
     NDF = SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy ).x;
 #endif
 
-    output.position = float4(in.position, stencil );
-    output.normal = float4(in.normal, 1.0f );
+    output.position = float4( in.position, stencil );
+    output.normal = float4( in.normal, 1.0f );
     output.tangent = in.tangent;
     output.uv = float4( in.uv, NDF, 0.0f );
+
+    if ( material_data.has_base_color_texture != 0 ) {
+        output.albedo = albedo_map.Sample( nearest_sampler, in.uv );
+    } else {
+        output.albedo = material_data.base_color;
+    }
+
+    if ( material_data.has_metallic_roughness_texture != 0 ) {
+        output.packed_data = float4( metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb,
+            material_data.clearcoat_roughness, material_data.clearcoat );
+    } else {
+        output.packed_data = float4( material_data.roughness, material_data.metallic,
+            material_data.clearcoat_roughness, material_data.clearcoat );
+    }
 
     return output;
 }
