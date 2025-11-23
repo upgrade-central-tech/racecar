@@ -356,7 +356,7 @@ void run( bool use_fullscreen )
     // Render to an offscreen image, this is what we'll present to the swapchain.
     engine::RWImage screen_color = engine::create_rwimage( ctx.vulkan, engine,
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
-        VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_TYPE_2D,
+        VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
             | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         false );
@@ -366,7 +366,7 @@ void run( bool use_fullscreen )
     // swapchain. That, or we directly blit to the swapchain. One way is dirtier than the other.
     engine::RWImage screen_buffer = engine::create_rwimage( ctx.vulkan, engine,
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
-        VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_TYPE_2D,
+        VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         false );
 
@@ -478,7 +478,7 @@ void run( bool use_fullscreen )
                 },
                 {
 #if ENABLE_DEFERRED_AA
-                    VK_FORMAT_B8G8R8A8_UNORM
+                    VK_FORMAT_R16G16B16A16_SFLOAT
 #else
                     engine.swapchain.image_format
 #endif
@@ -732,7 +732,7 @@ void run( bool use_fullscreen )
                 gbuffer_descriptor_set.layouts[frame_index] },
             {
 #if ENABLE_DEFERRED_AA
-                VK_FORMAT_B8G8R8A8_UNORM
+                VK_FORMAT_R16G16B16A16_SFLOAT
 #else
                 engine.swapchain.image_format
 #endif
