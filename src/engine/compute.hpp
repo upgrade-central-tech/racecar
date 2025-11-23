@@ -1,7 +1,7 @@
 #pragma once
 
-#include "engine/descriptor_set.hpp"
-#include "engine/pipeline.hpp"
+#include "descriptor_set.hpp"
+#include "pipeline.hpp"
 
 #include <glm/glm.hpp>
 
