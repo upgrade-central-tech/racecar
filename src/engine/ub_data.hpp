@@ -11,10 +11,8 @@ struct Camera {
     glm::mat4 mvp = {};
     glm::mat4 model = glm::mat4( 1.f );
     glm::mat4 inv_model = {};
-    glm::vec3 camera_pos = {};
-    float padding0 = 0.0f;
-    glm::vec3 color = {};
-    float padding1 = 0.0f;
+    glm::vec4 camera_pos = {};
+    glm::vec4 camera_constants = {};
 };
 
 struct Debug {

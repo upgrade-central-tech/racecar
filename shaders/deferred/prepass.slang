@@ -17,8 +17,9 @@ struct CameraBufferData {
     float4x4 mvp;
     float4x4 model;
     float4x4 inv_model;
-    float3 camera_pos;
-    float3 color;
+    float4 camera_pos;
+    // Pack: near plane, far plane, aspect ratio, fov_Y
+    float4 camera_constants;
 };
 
 struct DebugData {
@@ -146,7 +147,7 @@ FragmentOutput fs_main( VertexOutput in )
 #if 1
     float3 normal = normalize( in.normal );
     float3 light = normalize( debug_data.sun_direction.rgb );
-    float3 view = normalize( camera_buffer_data.camera_pos - in.position );
+    float3 view = normalize( camera_buffer_data.camera_pos.rgb - in.position );
     float3 half = normalize( view + light );
     float3 local_half = world_to_local( half, normal );
 

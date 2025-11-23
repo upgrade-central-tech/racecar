@@ -13,7 +13,8 @@ constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
     const std::vector<VkDescriptorSetLayout>& layouts,
-    const std::vector<VkFormat> color_attachment_formats, bool blend, VkShaderModule shader_module )
+    const std::vector<VkFormat> color_attachment_formats, VkSampleCountFlagBits samples, bool blend,
+    VkShaderModule shader_module )
 {
     VkPipelineVertexInputStateCreateInfo vertex_input_info
         = vertex_input_state_create_info.value_or( VkPipelineVertexInputStateCreateInfo {
@@ -66,7 +67,7 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
 
     VkPipelineMultisampleStateCreateInfo multisample_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+        .rasterizationSamples = samples,
         .sampleShadingEnable = VK_FALSE,
     };
 

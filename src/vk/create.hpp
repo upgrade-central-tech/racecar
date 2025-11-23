@@ -15,12 +15,13 @@ VkCommandPoolCreateInfo command_pool_info(
 VkCommandBufferAllocateInfo command_buffer_allocate_info( VkCommandPool pool, uint32_t count );
 VkCommandBufferBeginInfo command_buffer_begin_info( VkCommandBufferUsageFlags flags );
 
-
 // Image related
 VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask );
 
-VkImageCreateInfo image_info(
-    VkFormat format, VkImageType image_type, uint32_t mip_levels, uint32_t array_layers, VkImageUsageFlags usage_flags, VkExtent3D extent );
+VkImageCreateInfo image_info( VkFormat format, VkImageType image_type, uint32_t mip_levels,
+    uint32_t array_layers, VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags,
+    VkExtent3D extent );
+    
 VkImageViewCreateInfo image_view_info(
     VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags );
 

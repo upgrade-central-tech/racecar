@@ -1,7 +1,6 @@
 #include "racecar.hpp"
 
 #include "atmosphere.hpp"
-#include "volumetrics.hpp"
 #include "constants.hpp"
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
@@ -18,6 +17,7 @@
 #include "scene/scene.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
+#include "volumetrics.hpp"
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -39,6 +39,9 @@ constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
+
+constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
+    = "../shaders/deferred/depth_prepass.spv";
 
 }
 
@@ -236,6 +239,41 @@ void run( bool use_fullscreen )
         }
     }
 
+    // Depth prepass setup
+    engine::RWImage GBuffer_DepthMS = engine::create_ms_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_4_BIT,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+
+    engine::DescriptorSet depth_uniform_desc_set = engine::generate_descriptor_set(
+        ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_VERTEX_BIT );
+
+    engine::update_descriptor_set_uniform(
+        ctx.vulkan, engine, depth_uniform_desc_set, camera_buffer, 0 );
+
+    engine::Pipeline depth_ms_pipeline;
+    try {
+        // Pipeline needs to support MSAA
+        size_t frame_index = engine.get_frame_index();
+        depth_ms_pipeline = create_gfx_pipeline( engine, ctx.vulkan,
+            engine::get_vertex_input_state_create_info( scene_mesh ),
+            { depth_uniform_desc_set.layouts[frame_index] }, {}, VK_SAMPLE_COUNT_4_BIT, false,
+            vk::create::shader_module( ctx.vulkan, DEPTH_PREPASS_SHADER_MODULE_PATH ) );
+    } catch ( const Exception& ex ) {
+        log::error( "Failed to create depth-MS-prepass pipeline: {}", ex.what() );
+        throw;
+    }
+
+    // DEPTH_MS PRE-PASS
+    engine::GfxTask depth_ms_gfx_task = {
+        .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
+        .clear_depth = 1.f,
+        .render_target_is_swapchain = false,
+        .color_attachments = {},
+        .depth_image = GBuffer_DepthMS,
+        .extent = engine.swapchain.extent,
+    };
+
     engine::Pipeline scene_pipeline;
 
     try {
@@ -258,7 +296,8 @@ void run( bool use_fullscreen )
                                                         // clearcoat roughness, clearcoat
                                                         // weight)
             },
-            false, vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
+            VK_SAMPLE_COUNT_1_BIT, false,
+            vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create graphics pipeline: {}", ex.what() );
         throw;
@@ -367,7 +406,16 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
                     .image = GBuffer_Depth,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_DepthMS,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                 } } );
 
     // ATMOSPHERE STUFF
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
@@ -393,7 +441,7 @@ void run( bool use_fullscreen )
                     atms.lut_desc_set.layouts[0],
                     atms.sampler_desc_set.layouts[0],
                 },
-                { engine.swapchain.image_format }, false,
+                { engine.swapchain.image_format }, VK_SAMPLE_COUNT_1_BIT, false,
                 vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
         } catch ( const Exception& ex ) {
             log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
@@ -448,10 +496,11 @@ void run( bool use_fullscreen )
     // END ATMOSPHERE STUFF
 
     // Volumetrics stuff
-    volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
-    volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list );
+    // volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
+    // volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list );
 
-    engine::GfxTask sponza_gfx_task = {
+    // GBUFFER PRE-PASS
+    engine::GfxTask prepass_gfx_task = {
         .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
         .clear_depth = 1.f,
         .render_target_is_swapchain = false,
@@ -526,7 +575,7 @@ void run( bool use_fullscreen )
                         static_cast<uint32_t>( scene_mesh.indices.size() ), prim );
 
                 // give the material descriptor set to the draw task
-                sponza_gfx_task.draw_tasks.push_back( {
+                prepass_gfx_task.draw_tasks.push_back( {
                         .draw_resource_descriptor = draw_descriptor,
                         .descriptor_sets = {
                             &uniform_desc_set,
@@ -536,11 +585,19 @@ void run( bool use_fullscreen )
                         },
                         .pipeline = scene_pipeline,
                     } );
+                depth_ms_gfx_task.draw_tasks.push_back( {
+                    .draw_resource_descriptor = draw_descriptor,
+                    .descriptor_sets = {
+                        &depth_uniform_desc_set
+                    },
+                    .pipeline = depth_ms_pipeline,
+                } );
             }
         }
     }
 
-    engine::add_gfx_task( task_list, sponza_gfx_task );
+    engine::add_gfx_task( task_list, depth_ms_gfx_task );
+    engine::add_gfx_task( task_list, prepass_gfx_task );
 
     // Lighting pass
     engine::add_pipeline_barrier( task_list,
@@ -601,6 +658,14 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
                     .image = GBuffer_Depth,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_DepthMS,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
 
     // lighting pass
@@ -614,9 +679,16 @@ void run( bool use_fullscreen )
 
     engine::DescriptorSet gbuffer_descriptor_set
         = engine::generate_descriptor_set( ctx.vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+            {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            },
             VK_SHADER_STAGE_FRAGMENT_BIT );
 
     size_t frame_index = engine.get_frame_index();
@@ -627,7 +699,7 @@ void run( bool use_fullscreen )
             { uniform_desc_set.layouts[frame_index], material_desc_sets[0].layouts[frame_index],
                 lut_sets.layouts[frame_index], sampler_desc_set.layouts[frame_index],
                 gbuffer_descriptor_set.layouts[frame_index] },
-            { engine.swapchain.image_format }, true,
+            { engine.swapchain.image_format }, VK_SAMPLE_COUNT_1_BIT, true,
             vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create lighting pass graphics pipeline: {}", ex.what() );
@@ -644,8 +716,12 @@ void run( bool use_fullscreen )
         ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_UV, 3 );
     engine::update_descriptor_set_rwimage(
         ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Albedo, 4 );
+    engine::update_descriptor_set_depth_image(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Depth, 5 );
+    engine::update_descriptor_set_depth_image(
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_DepthMS, 6 );
     engine::update_descriptor_set_rwimage(
-        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Packed_Data, 5 );
+        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Packed_Data, 7 );
 
     lighting_pass_gfx_task.draw_tasks.push_back({
             .draw_resource_descriptor = {
@@ -750,8 +826,9 @@ void run( bool use_fullscreen )
             camera_ub.mvp = projection * view * model;
             camera_ub.model = model;
             camera_ub.inv_model = glm::inverse( model );
-            camera_ub.camera_pos = camera_position;
-            camera_ub.color = glm::vec3( 0.85f, 0.0f, 0.0f );
+            camera_ub.camera_pos = glm::vec4( camera_position, 1.0f );
+            camera_ub.camera_constants = glm::vec4(
+                camera.near_plane, camera.far_plane, camera.aspect_ratio, camera.fov_y );
 
             camera_buffer.set_data( camera_ub );
             camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
@@ -759,8 +836,8 @@ void run( bool use_fullscreen )
 
         // Update volumetric camera buffer
         {
-            volumetric.uniform_buffer.set_data( camera_buffer.get_data() );
-            volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
+            // volumetric.uniform_buffer.set_data( camera_buffer.get_data() );
+            // v/olumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
         // Update debug uniform buffer

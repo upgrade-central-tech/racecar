@@ -18,8 +18,9 @@ struct CameraBufferData {
     float4x4 mvp;
     float4x4 model;
     float4x4 inv_model;
-    float3 camera_pos;
-    float3 color;
+    float4 camera_pos;
+    // Pack: near plane, far plane, aspect ratio, fov_Y
+    float4 camera_constants;
 };
 
 struct DebugData {
@@ -375,7 +376,7 @@ float4 fs_main( VertexOutput in )
     : SV_Target
 {
     float3 world_pos = in.position;
-    float3 camera_pos = camera_buffer_data.camera_pos;
+    float3 camera_pos = camera_buffer_data.camera_pos.rgb;
 
     float3 normal = in.normal;
     float3 light = normalize( float3( 1, 1, 1 ) );

@@ -12,8 +12,9 @@ struct CameraBufferData {
     float4x4 mvp;
     float4x4 model;
     float4x4 inv_model;
-    float3 camera_pos;
-    float3 color;
+    float4 camera_pos;
+    // Pack: near plane, far plane, aspect ratio, fov_Y
+    float4 camera_constants;
 };
 
 struct DebugData {
@@ -66,14 +67,30 @@ layout( binding = 1, set = 4 ) Texture2D<float4> GBuffer_Normals;
 layout( binding = 2, set = 4 ) Texture2D<float4> GBuffer_Tangent;
 layout( binding = 3, set = 4 ) Texture2D<float4> GBuffer_UV;
 layout( binding = 4, set = 4 ) Texture2D<float4> GBuffer_Albedo;
+layout( binding = 5, set = 4 ) Texture2D<float> GBuffer_Depth;
+layout( binding = 6, set = 4 ) Texture2DMS<float> GBuffer_DepthMS;
 // roughness, metallic, clearcoat roughness, clearcoat weight
-layout( binding = 5, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
+layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
 // #include "../utils.slang"
 // #include "../glint/glint_noise_init.hlsl"
 // #include "../glint/glint.hlsl"
 
 #include "../car_mat/car_lighting.slang"
+
+float LinearDepth( float perspective_depth, float near, float far )
+{
+    return ( near * far ) / ( far - perspective_depth * ( far - near ) );
+}
+
+float LinearDepth01( float perspective_depth )
+{
+    float near = camera_buffer_data.camera_constants.a;
+    float far = camera_buffer_data.camera_constants.b;
+
+    float linear_depth = LinearDepth( perspective_depth, near, far );
+    return ( linear_depth - near ) / ( far - near );
+}
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -98,6 +115,11 @@ float4 fs_main( VertexOutput in )
         GBuffer_Normals.Sample( nearest_sampler, in.uv ).a );
 
     float2 ddy_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).ba;
+
+    float depth = GBuffer_Depth.Sample( nearest_sampler, in.uv ).r;
+    float linear_depth = LinearDepth01( depth );
+
+    float depthMS = GBuffer_DepthMS.Load( uint2(in.sv_position.xy), 0 );
 
     if ( length( in_nor ) == 0.0f ) {
         return float4( 0.0f );
@@ -124,7 +146,7 @@ float4 fs_main( VertexOutput in )
     // float attenuation = 1.0f / length( light_pos - in_pos );
     // attenuation *= attenuation;
 
-    float3 camera_pos = camera_buffer_data.camera_pos;
+    float3 camera_pos = camera_buffer_data.camera_pos.rgb;
     float3 normal = debug_data.enable_normal_map
         ? map_normals( normal_map_norm, in_tangent, in_nor )
         : normalize( in_nor );
@@ -141,7 +163,7 @@ float4 fs_main( VertexOutput in )
 
     float3 out_color = car_bsdf( normal, view, half, light, pbr, gbuffer );
 
-    return float4( out_color, 1.0f );
+    return float4( float3( depthMS ), 1.0f );
 }
 
 

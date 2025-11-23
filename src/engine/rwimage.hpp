@@ -18,4 +18,8 @@ struct RWImage {
 RWImage create_rwimage( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,
     VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags, bool mipmapped );
 
+RWImage create_ms_rwimage( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,
+    VkFormat format, VkImageType image_type, VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags, bool mipmapped );
+
 } // namespace racecar::engine

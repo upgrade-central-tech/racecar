@@ -9,7 +9,6 @@
 
 #include <vector>
 
-
 namespace racecar::engine {
 
 struct DescriptorSet {
@@ -48,6 +47,9 @@ void update_descriptor_set_uniform( vk::Common& vulkan, const State& engine,
 
 void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     vk::mem::AllocatedImage img, int binding_idx );
+
+void update_descriptor_set_depth_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
+    RWImage depth_img, int binding_idx );
 
 void update_descriptor_set_write_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     vk::mem::AllocatedImage img, int binding_idx );

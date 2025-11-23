@@ -317,10 +317,11 @@ vk::mem::AllocatedImage allocate_cube_map( vk::Common& vulkan, VkExtent3D extent
         .image_format = format,
     };
 
-    VkImageCreateInfo image_info = vk::create::image_info( format, VK_IMAGE_TYPE_2D, mip_levels, 6,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-            | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        extent );
+    VkImageCreateInfo image_info
+        = vk::create::image_info( format, VK_IMAGE_TYPE_2D, mip_levels, 6, VK_SAMPLE_COUNT_1_BIT,
+            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+            extent );
 
     image_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 

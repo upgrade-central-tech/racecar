@@ -1,10 +1,10 @@
 #include "images.hpp"
 
 #include "../log.hpp"
+#include "../stb_image.h"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
 
-#include "../stb_image.h"
 
 namespace racecar::engine {
 
@@ -67,9 +67,9 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
     return new_image;
 };
 
-vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
+vk::mem::AllocatedImage allocate_vma_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
     VkImageType image_type, uint32_t mip_levels, uint32_t array_layers,
-    VkImageUsageFlags usage_flags, bool mipmapped )
+    VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags, bool mipmapped )
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
@@ -77,7 +77,7 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
     };
 
     VkImageCreateInfo image_info = vk::create::image_info(
-        format, image_type, mip_levels, array_layers, usage_flags, extent );
+        format, image_type, mip_levels, array_layers, samples, usage_flags, extent );
 
     if ( mipmapped ) {
         image_info.mipLevels = static_cast<uint32_t>( std::floor(
@@ -112,7 +112,8 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
                        vulkan.device, &image_view_info, nullptr, &allocated_image.image_view ),
             "Failed to create image view" );
 
-        // They can be the same, as long as VK_IMAGE_USAGE_STORAGE_BIT is used. The views are different, however, for writing to cubemaps.
+        // They can be the same, as long as VK_IMAGE_USAGE_STORAGE_BIT is used. The views are
+        // different, however, for writing to cubemaps.
         allocated_image.storage_image_view = allocated_image.image_view;
 
         vulkan.destructor_stack.push(
@@ -122,6 +123,21 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
     return allocated_image;
 }
 
+vk::mem::AllocatedImage allocate_ms_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
+    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers,
+    VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags, bool mipmapped )
+{
+    return allocate_vma_image( vulkan, extent, format, image_type, mip_levels, array_layers,
+        samples, usage_flags, mipmapped );
+}
+
+vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
+    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers,
+    VkImageUsageFlags usage_flags, bool mipmapped )
+{
+    return allocate_vma_image( vulkan, extent, format, image_type, mip_levels, array_layers,
+        VK_SAMPLE_COUNT_1_BIT, usage_flags, mipmapped );
+}
 
 std::vector<float> load_image_to_float( const std::string& global_path )
 {
