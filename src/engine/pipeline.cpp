@@ -16,6 +16,10 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     const std::vector<VkFormat> color_attachment_formats, VkSampleCountFlagBits samples, bool blend,
     VkShaderModule shader_module )
 {
+    if (color_attachment_formats.empty()) {
+        throw Exception("[Pipeline] create_gfx_pipeline() called with no color attachment formats!");
+    }
+    
     VkPipelineVertexInputStateCreateInfo vertex_input_info
         = vertex_input_state_create_info.value_or( VkPipelineVertexInputStateCreateInfo {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
