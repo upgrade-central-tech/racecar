@@ -125,10 +125,8 @@ float4 fs_main( VertexOutput in )
         ? GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb
         : debug_data.color.rgb;
 
-    float3 normal_map_norm = normal_map.Sample( nearest_sampler, in.uv ).rgb;
-
     float2 metallic_roughness = debug_data.enable_roughness_metal_map
-        ? GBuffer_Packed_Data.Sample( nearest_sampler, in.uv ).gb
+        ? GBuffer_Packed_Data.Sample( nearest_sampler, in.uv ).xy
         : float2( debug_data.packed_data0.x, debug_data.packed_data0.y );
 
     // Material properties
@@ -142,9 +140,7 @@ float4 fs_main( VertexOutput in )
     // attenuation *= attenuation;
 
     float3 camera_pos = camera_buffer_data.camera_pos.rgb;
-    float3 normal = debug_data.enable_normal_map
-        ? map_normals( normal_map_norm, in_tangent, in_nor )
-        : normalize( in_nor );
+    float3 normal = normalize( in_nor );
     float3 view = normalize( camera_pos - in_pos );
     float3 half = normalize( view + light );
 
@@ -156,7 +152,7 @@ float4 fs_main( VertexOutput in )
 
     GBuffer gbuffer = { in_pos, normal, in_tangent, in_uv, ddx_uv, ddy_uv };
 
-    float3 out_color = car_bsdf( normal, view, half, light, pbr, gbuffer );
+    float3 out_color = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer );
 
     return float4( out_color, 1.0f );
 }

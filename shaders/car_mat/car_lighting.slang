@@ -6,7 +6,9 @@
 #define USE_GLINTS 1
 #define USE_SH_IRRADIANCE 1
 
-float3 car_bsdf( float3 normal, float3 view, float3 half, float3 light, Material pbr, GBuffer g_buffer ) {
+float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 light, Material pbr,
+    GBuffer g_buffer )
+{
     // Essential dot products
     float n_dot_v = ( dot( normal, view ) );
     float n_dot_h = ( dot( normal, half ) );
@@ -92,7 +94,7 @@ float3 car_bsdf( float3 normal, float3 view, float3 half, float3 light, Material
     // Based on Disney 2012 diffuse model:
     // https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf
     ////////////////////////////////////////////////////////////////
-    float3 diffuse_color = lerp( float3( 0.3, 0.1, 0.82 ), float3( 0.8, 0.3, 0.5 ), pow( clamped_n_dot_h, 5.0f ) );
+    float3 diffuse_color = lerp( albedo, float3( 0.8, 0.3, 0.5 ), pow( clamped_n_dot_h, 5.0f ) );
     float3 lambert = diffuse_color / PI;
 
     // Fresnel weights

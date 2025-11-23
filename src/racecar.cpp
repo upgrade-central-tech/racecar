@@ -65,6 +65,7 @@ void run( bool use_fullscreen )
     geometry::scene::Mesh scene_mesh;
     scene::load_gltf(
         ctx.vulkan, engine, GLTF_FILE_PATH, scene, scene_mesh.vertices, scene_mesh.indices );
+    geometry::scene::generate_tangents( scene_mesh );
     scene_mesh.mesh_buffers = geometry::scene::upload_mesh(
         ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
 

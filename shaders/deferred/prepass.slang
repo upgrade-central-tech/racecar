@@ -86,6 +86,20 @@ static const float PI = 3.14159265359;
 
 #include "../glint/glint.hlsl"
 
+float3 map_normals( float3 normal_map, float4 in_tangent, float3 in_normal )
+{
+    float3 normal = normalize( in_normal );
+    float3 tangent = normalize( in_tangent.xyz );
+    float3 bitangent = -cross( normal, tangent )
+        * in_tangent.w; // I hardcoded this flip, but this shouldn't be the case
+    float3x3 TBN = float3x3( tangent, bitangent, normal );
+
+    // Map back to [-1, 1] from [0, 1]
+    float3 normal_tangent = 2.0f * normal_map - 1.0f;
+
+    return mul( transpose( TBN ), normal_tangent );
+}
+
 float DistributionGGX( float n_dot_h, float alpha )
 {
     float alpha2 = max( alpha * alpha, 0.001f );
@@ -165,6 +179,14 @@ FragmentOutput fs_main( VertexOutput in )
 
     output.position = float4( in.position, stencil );
     output.normal = float4( in.normal, 1.0f );
+    if ( debug_data.enable_normal_map && material_data.has_normal_texture != 0 ) {
+        float3 normal_map_norm = normal_map.Sample( nearest_sampler, in.uv ).rgb;
+        float3 new_normal = map_normals( normal_map_norm, in.tangent, in.normal );
+        if ( !any( isnan( new_normal ) ) ) {
+            output.normal = float4( new_normal, 1.0f );
+        }
+    }
+
     output.tangent = in.tangent;
     output.uv = float4( in.uv, NDF, 0.0f );
 
