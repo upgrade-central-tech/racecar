@@ -123,7 +123,8 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     };
 
     vkb::Result<vkb::PhysicalDevice> phys_selector_ret
-        = phys_selector.prefer_gpu_device_type()
+        = phys_selector.prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
+              .allow_any_gpu_device_type(false)
               .set_minimum_version( 1, 3 )
               .add_required_extension( VK_KHR_SWAPCHAIN_EXTENSION_NAME )
               .add_required_extension( VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME )
