@@ -116,11 +116,6 @@ float4 fs_main( VertexOutput in )
 
     float2 ddy_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).ba;
 
-    float depth = GBuffer_Depth.Sample( nearest_sampler, in.uv ).r;
-    float linear_depth = LinearDepth01( depth );
-
-    float depthMS = GBuffer_DepthMS.Load( uint2(in.sv_position.xy), 0 );
-
     if ( length( in_nor ) == 0.0f ) {
         return float4( 0.0f );
     }
@@ -163,7 +158,7 @@ float4 fs_main( VertexOutput in )
 
     float3 out_color = car_bsdf( normal, view, half, light, pbr, gbuffer );
 
-    return float4( float3( depthMS ), 1.0f );
+    return float4( out_color, 1.0f );
 }
 
 

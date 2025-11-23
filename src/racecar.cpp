@@ -30,6 +30,8 @@
 #include <string_view>
 #include <thread>
 
+#define ENABLE_VOLUMETRICS 0
+
 namespace racecar {
 
 namespace {
@@ -465,39 +467,17 @@ void run( bool use_fullscreen )
 
         engine::add_gfx_task( task_list, atmosphere_gfx_task );
 
-#if 0
-        camera::OrbitCamera& camera = engine.camera;
-        glm::mat4 view = camera::calculate_view_matrix( camera );
-        glm::mat4 projection = glm::perspective(
-            camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
-        glm::vec3 camera_position = camera::calculate_eye_position( camera );
-
-        glm::vec3 atmosphere_position = camera_position + glm::vec3( 0.f, 9.f, 0.f );
-
-        ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
-        atms_ub.inverse_proj = glm::inverse( projection );
-        atms_ub.inverse_view = glm::rotate( view, -glm::pi<float>(), glm::vec3( 1.f, 0.f, 0.f ) );
-        atms_ub.camera_position = atmosphere_position;
-        atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
-
-        atms.uniform_buffer.set_data( atms_ub );
-        for ( size_t i = 0; i < engine.frame_overlap; i++ ) {
-            atms.uniform_buffer.update( ctx.vulkan, i );
-        }
-
-        // This is probably terrible, but this is necessary for now.
-        // Experiment: comment this out, move it somewhere else.
-#endif
-
         atmosphere::initialize_atmosphere_baker( atms_baker, ctx.vulkan, engine );
         engine::update_descriptor_set_image(
             ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 5 );
     }
     // END ATMOSPHERE STUFF
 
+#if ENABLE_VOLUMETRICS
     // Volumetrics stuff
-    // volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
-    // volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list );
+    volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
+    volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list );
+#endif
 
     // GBUFFER PRE-PASS
     engine::GfxTask prepass_gfx_task = {
@@ -741,7 +721,6 @@ void run( bool use_fullscreen )
         });
 
     engine::add_gfx_task( task_list, lighting_pass_gfx_task );
-    // }
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
     task_list.junk_tasks.push_back( [&atms_baker]( [[maybe_unused]] engine::State& engine, Context&,
@@ -834,11 +813,13 @@ void run( bool use_fullscreen )
             camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
+#if ENABLE_VOLUMETRICS
         // Update volumetric camera buffer
         {
-            // volumetric.uniform_buffer.set_data( camera_buffer.get_data() );
-            // v/olumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
+            volumetric.uniform_buffer.set_data( camera_buffer.get_data() );
+            volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
+#endif
 
         // Update debug uniform buffer
         {
