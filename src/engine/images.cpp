@@ -5,7 +5,6 @@
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
 
-
 namespace racecar::engine {
 
 vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine, void* data,

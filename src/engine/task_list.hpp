@@ -1,7 +1,7 @@
 #pragma once
 
-#include "gfx_task.hpp"
 #include "compute.hpp"
+#include "gfx_task.hpp"
 #include "pipeline_barrier.hpp"
 
 #include <vector>
@@ -19,7 +19,7 @@ struct Task {
 };
 
 struct TaskList {
-    // Vector are still needed, since the naive add tasks just get rid of 
+    // Vector are still needed, since the naive add tasks just get rid of
     // struct member content. I don't know why.
     std::vector<GfxTask> gfx_tasks;
     std::vector<ComputeTask> cs_tasks;
@@ -30,7 +30,7 @@ struct TaskList {
     std::vector<std::pair<int, PipelineBarrierDescriptor>> pipeline_barriers;
 
     // Very dangerous. DON'T CHECK IN this code!
-    std::vector<std::function<void(State&, Context&, FrameData&)>> junk_tasks;
+    std::vector<std::function<void( State&, Context&, FrameData& )>> junk_tasks;
 };
 
 void add_gfx_task( TaskList& task_list, GfxTask task );

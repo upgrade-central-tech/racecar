@@ -23,7 +23,7 @@ void load_cubemap( vk::Common& vulkan, engine::State& engine,
     std::vector<std::vector<T>>& face_data, vk::mem::AllocatedImage& cm_image, VkExtent3D extent,
     VkFormat format );
 
-vk::mem::AllocatedImage allocate_cube_map( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
-    uint32_t mip_levels, bool readOnly = true );
+vk::mem::AllocatedImage allocate_cube_map(
+    vk::Common& vulkan, VkExtent3D extent, VkFormat format, uint32_t mip_levels );
 
 }

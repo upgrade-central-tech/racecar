@@ -26,7 +26,8 @@ RWImage create_rwimage( vk::Common& vulkan, const engine::State& engine, VkExten
 }
 
 RWImage create_ms_rwimage( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,
-    VkFormat format, VkImageType image_type, VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags, bool mipmapped )
+    VkFormat format, VkImageType image_type, VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags, bool mipmapped )
 {
     RWImage rwimage;
 
@@ -42,6 +43,5 @@ RWImage create_ms_rwimage( vk::Common& vulkan, const engine::State& engine, VkEx
 
     return rwimage;
 }
-
 
 } // namespace racecar::engine

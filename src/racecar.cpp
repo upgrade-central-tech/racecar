@@ -18,7 +18,6 @@
 #include "scene/scene.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
-#include "volumetrics.hpp"
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -110,8 +109,7 @@ void run( bool use_fullscreen )
         ctx.vulkan.destructor_stack.push( ctx.vulkan.device, point_sampler, vkDestroySampler );
 
         sampler_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER,
-                VK_DESCRIPTOR_TYPE_SAMPLER },
+            { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
         engine::update_descriptor_set_sampler(
@@ -312,8 +310,6 @@ void run( bool use_fullscreen )
 
     geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
 
-    [[maybe_unused]] VkPipelineVertexInputStateCreateInfo test
-        = engine::get_vertex_input_state_create_info( quad_mesh );
     log::info( "[main] pre atmo3!" );
     engine::TaskList task_list;
 

@@ -29,7 +29,7 @@ glm::vec3 cubemap_direction( uint32_t face, float u, float v )
 }
 
 vk::mem::AllocatedImage generate_diffuse_irradiance(
-    [[maybe_unused]] std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine )
+    std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine )
 {
     // Parse the cubemap for each face individually. Somehow log important info?
     const size_t layer_count = 6;
@@ -41,7 +41,7 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
         = allocate_cube_map( vulkan, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
 
     vk::mem::AllocatedImage irradiance_rw_image
-        = allocate_cube_map( vulkan, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1, false );
+        = allocate_cube_map( vulkan, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
 
     {
         // hardcode file paths for now because screw you
@@ -300,17 +300,11 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
         }
     }
 
-    for ( size_t i = 0; i < sh_coefficients.size(); i++ ) {
-        // Normalize over the surface area of the sphere, 4 * PI...
-        // I don't want to do anything nasty with figuring out why M_PI isn't here.
-        // sh_coefficients[i] *= 1.0f / ( 4.0f * 3.14159265358979323846f );
-    }
-
     return sh_coefficients;
 }
 
-vk::mem::AllocatedImage allocate_cube_map( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
-    uint32_t mip_levels, [[maybe_unused]] bool readOnly )
+vk::mem::AllocatedImage allocate_cube_map(
+    vk::Common& vulkan, VkExtent3D extent, VkFormat format, uint32_t mip_levels )
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
@@ -393,8 +387,8 @@ vk::mem::AllocatedImage allocate_cube_map( vk::Common& vulkan, VkExtent3D extent
     return allocated_image;
 }
 
-vk::mem::AllocatedImage create_cubemap( [[maybe_unused]] std::filesystem::path file_path,
-    [[maybe_unused]] vk::Common& vulkan, [[maybe_unused]] engine::State& engine )
+vk::mem::AllocatedImage create_cubemap(
+    std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine )
 {
     // Parse the cubemap for each face individually. Somehow log important info?
     const size_t layer_count = 6;

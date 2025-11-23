@@ -8,7 +8,6 @@
 #include "../vk/mem.hpp"
 #include "../vk/utility.hpp"
 
-
 namespace racecar::geometry {
 
 vk::mem::AllocatedImage generate_test_3D( vk::Common& vulkan, engine::State& engine )
@@ -52,9 +51,8 @@ vk::mem::AllocatedImage generate_glint_noise( vk::Common& vulkan, engine::State&
         VK_IMAGE_TYPE_2D, 1, 1, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
 
     {
-        engine::DescriptorSet glint_desc_set = engine::generate_descriptor_set( vulkan,
-            engine, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
-            VK_SHADER_STAGE_COMPUTE_BIT );
+        engine::DescriptorSet glint_desc_set = engine::generate_descriptor_set(
+            vulkan, engine, { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE }, VK_SHADER_STAGE_COMPUTE_BIT );
 
         engine::update_descriptor_set_write_image(
             vulkan, engine, glint_desc_set, glint_noise_texture, 0 );
@@ -62,16 +60,12 @@ vk::mem::AllocatedImage generate_glint_noise( vk::Common& vulkan, engine::State&
         VkShaderModule glint_noise_init_module
             = vk::create::shader_module( vulkan, "../shaders/glint/glint_noise_init.spv" );
 
-        std::vector<engine::DescriptorSet> descs
-            = { glint_desc_set };
+        std::vector<engine::DescriptorSet> descs = { glint_desc_set };
 
-        std::vector<VkDescriptorSet> bind_descs = {
-            glint_desc_set.descriptor_sets[0]
-        };
+        std::vector<VkDescriptorSet> bind_descs = { glint_desc_set.descriptor_sets[0] };
 
-        engine::Pipeline compute_pipeline = engine::create_compute_pipeline( vulkan,
-            { descs[0].layouts[0] }, glint_noise_init_module,
-            "cs_generate_glint_noise" );
+        engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
+            vulkan, { descs[0].layouts[0] }, glint_noise_init_module, "cs_generate_glint_noise" );
 
         engine::immediate_submit(
             vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
@@ -89,10 +83,8 @@ vk::mem::AllocatedImage generate_glint_noise( vk::Common& vulkan, engine::State&
                 vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                     compute_pipeline.layout, 0, 1, sets, 0, nullptr );
 
-                uint32_t x_groups
-                    = ( static_cast<uint32_t>( noise_texture_size ) + 7 ) / 8;
-                uint32_t y_groups
-                    = ( static_cast<uint32_t>( noise_texture_size ) + 7 ) / 8;
+                uint32_t x_groups = ( static_cast<uint32_t>( noise_texture_size ) + 7 ) / 8;
+                uint32_t y_groups = ( static_cast<uint32_t>( noise_texture_size ) + 7 ) / 8;
 
                 vkCmdDispatch( command_buffer, x_groups, y_groups, 1 );
 
