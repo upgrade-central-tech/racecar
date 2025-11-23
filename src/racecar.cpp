@@ -807,24 +807,38 @@ void run( bool use_fullscreen )
 
     // Task setup stuff...
     engine::DescriptorSet cs_test_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
         VK_SHADER_STAGE_COMPUTE_BIT );
 
-    engine::Pipeline cs_test_pipeline
-        = engine::create_compute_pipeline( ctx.vulkan, { cs_test_desc_set.layouts[0] },
-            vk::create::shader_module( ctx.vulkan, PP_TEST_CS_MODULE_PATH ), "cs_pp_test" );
+    engine::DescriptorSet cs_test_uniform_desc_set = engine::generate_descriptor_set(
+        ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_COMPUTE_BIT );
+
+    engine::Pipeline cs_test_pipeline = engine::create_compute_pipeline( ctx.vulkan,
+        { cs_test_desc_set.layouts[0], cs_test_uniform_desc_set.layouts[0] },
+        vk::create::shader_module( ctx.vulkan, PP_TEST_CS_MODULE_PATH ), "cs_pp_test" );
 
     engine::update_descriptor_set_rwimage( ctx.vulkan, engine, cs_test_desc_set, screen_color,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, cs_test_desc_set, GBuffer_Depth,
+        VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL, 1 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, cs_test_desc_set, GBuffer_DepthMS,
+        VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL, 2 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, cs_test_desc_set, GBuffer_Normal,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 3 );
     engine::update_descriptor_set_rwimage(
-        ctx.vulkan, engine, cs_test_desc_set, screen_buffer, VK_IMAGE_LAYOUT_GENERAL, 1 );
+        ctx.vulkan, engine, cs_test_desc_set, screen_buffer, VK_IMAGE_LAYOUT_GENERAL, 4 );
+
+    engine::update_descriptor_set_uniform(
+        ctx.vulkan, engine, cs_test_uniform_desc_set, camera_buffer, 0 );
 
     size_t dims_x = ( engine.swapchain.extent.width + 7 ) / 8;
     size_t dims_y = ( engine.swapchain.extent.height + 7 ) / 8;
 
     engine::ComputeTask test_cs_task = {
         cs_test_pipeline,
-        { &cs_test_desc_set },
+        { &cs_test_desc_set, &cs_test_uniform_desc_set },
         glm::ivec3( dims_x, dims_y, 1 ),
     };
 
