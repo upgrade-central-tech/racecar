@@ -3,6 +3,7 @@
 #include "atmosphere.hpp"
 #include "constants.hpp"
 #include "context.hpp"
+#include "engine/compute.hpp"
 #include "engine/descriptor_set.hpp"
 #include "engine/execute.hpp"
 #include "engine/images.hpp"
@@ -31,6 +32,7 @@
 #include <thread>
 
 #define ENABLE_VOLUMETRICS 0
+#define ENABLE_DEFERRED_AA 1
 
 namespace racecar {
 
@@ -44,6 +46,8 @@ constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
 constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
     = "../shaders/deferred/depth_prepass.spv";
+[[maybe_unused]] constexpr std::string_view PP_TEST_CS_MODULE_PATH
+    = "../shaders/deferred/pp_test.spv";
 
 }
 
@@ -259,7 +263,7 @@ void run( bool use_fullscreen )
         size_t frame_index = engine.get_frame_index();
         depth_ms_pipeline = create_gfx_pipeline( engine, ctx.vulkan,
             engine::get_vertex_input_state_create_info( scene_mesh ),
-            { depth_uniform_desc_set.layouts[frame_index] }, {}, VK_SAMPLE_COUNT_4_BIT, false,
+            { depth_uniform_desc_set.layouts[frame_index] }, {}, VK_SAMPLE_COUNT_4_BIT, false, true,
             vk::create::shader_module( ctx.vulkan, DEPTH_PREPASS_SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create depth-MS-prepass pipeline: {}", ex.what() );
@@ -298,7 +302,7 @@ void run( bool use_fullscreen )
                                                         // clearcoat roughness, clearcoat
                                                         // weight)
             },
-            VK_SAMPLE_COUNT_1_BIT, false,
+            VK_SAMPLE_COUNT_1_BIT, false, true,
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create graphics pipeline: {}", ex.what() );
@@ -348,12 +352,32 @@ void run( bool use_fullscreen )
         VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
 
+#if ENABLE_DEFERRED_AA
+    // Render to an offscreen image, this is what we'll present to the swapchain.
+    engine::RWImage screen_color = engine::create_rwimage( ctx.vulkan, engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+            | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+        false );
+
+    // Buffer needed, this is what the compute pass will write to.
+    // We will later copy the results of this back to the screen_color, and then blit that to the
+    // swapchain. That, or we directly blit to the swapchain. One way is dirtier than the other.
+    engine::RWImage screen_buffer = engine::create_rwimage( ctx.vulkan, engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+        false );
+
+    // Convert screen_color to a color attachment so that we can draw to it
+#endif
     // {
     // deferred transition tasks
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
-            .image_barriers
-            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+            .image_barriers = {
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
                     .src_access = VK_ACCESS_2_NONE,
                     .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
                     .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -417,7 +441,15 @@ void run( bool use_fullscreen )
                     .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
                     .image = GBuffer_DepthMS,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
-                 } } );
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = screen_color,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+            } } );
 
     // ATMOSPHERE STUFF
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
@@ -429,7 +461,8 @@ void run( bool use_fullscreen )
         engine::GfxTask atmosphere_gfx_task = {
             .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
             .clear_depth = 1.f,
-            .render_target_is_swapchain = true,
+            .render_target_is_swapchain = false,
+            .color_attachments = { screen_color },
             .extent = engine.swapchain.extent,
         };
 
@@ -443,7 +476,14 @@ void run( bool use_fullscreen )
                     atms.lut_desc_set.layouts[0],
                     atms.sampler_desc_set.layouts[0],
                 },
-                { engine.swapchain.image_format }, VK_SAMPLE_COUNT_1_BIT, false,
+                {
+#if ENABLE_DEFERRED_AA
+                    VK_FORMAT_B8G8R8A8_UNORM
+#else
+                    engine.swapchain.image_format
+#endif
+                },
+                VK_SAMPLE_COUNT_1_BIT, false, true,
                 vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
         } catch ( const Exception& ex ) {
             log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
@@ -567,9 +607,7 @@ void run( bool use_fullscreen )
                     } );
                 depth_ms_gfx_task.draw_tasks.push_back( {
                     .draw_resource_descriptor = draw_descriptor,
-                    .descriptor_sets = {
-                        &depth_uniform_desc_set
-                    },
+                    .descriptor_sets = { &depth_uniform_desc_set },
                     .pipeline = depth_ms_pipeline,
                 } );
             }
@@ -646,7 +684,15 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
                     .image = GBuffer_DepthMS,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = screen_color,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } } );
 
     // lighting pass
     geometry::quad::Mesh lighting_pass_quad_mesh = geometry::quad::create( ctx.vulkan, engine );
@@ -656,6 +702,11 @@ void run( bool use_fullscreen )
         .render_target_is_swapchain = true,
         .extent = engine.swapchain.extent,
     };
+
+#if ENABLE_DEFERRED_AA
+    lighting_pass_gfx_task.render_target_is_swapchain = false;
+    lighting_pass_gfx_task.color_attachments = { screen_color };
+#endif
 
     engine::DescriptorSet gbuffer_descriptor_set
         = engine::generate_descriptor_set( ctx.vulkan, engine,
@@ -679,29 +730,36 @@ void run( bool use_fullscreen )
             { uniform_desc_set.layouts[frame_index], material_desc_sets[0].layouts[frame_index],
                 lut_sets.layouts[frame_index], sampler_desc_set.layouts[frame_index],
                 gbuffer_descriptor_set.layouts[frame_index] },
-            { engine.swapchain.image_format }, VK_SAMPLE_COUNT_1_BIT, true,
+            {
+#if ENABLE_DEFERRED_AA
+                VK_FORMAT_B8G8R8A8_UNORM
+#else
+                engine.swapchain.image_format
+#endif
+            },
+            VK_SAMPLE_COUNT_1_BIT, true, false,
             vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create lighting pass graphics pipeline: {}", ex.what() );
         throw;
     }
 
-    engine::update_descriptor_set_rwimage(
-        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Position, 0 );
-    engine::update_descriptor_set_rwimage(
-        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Normal, 1 );
-    engine::update_descriptor_set_rwimage(
-        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Tangent, 2 );
-    engine::update_descriptor_set_rwimage(
-        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_UV, 3 );
-    engine::update_descriptor_set_rwimage(
-        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Albedo, 4 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, gbuffer_descriptor_set,
+        GBuffer_Position, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, gbuffer_descriptor_set,
+        GBuffer_Normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, gbuffer_descriptor_set,
+        GBuffer_Tangent, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 2 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_UV,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 3 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, gbuffer_descriptor_set,
+        GBuffer_Albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 4 );
     engine::update_descriptor_set_depth_image(
         ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Depth, 5 );
     engine::update_descriptor_set_depth_image(
         ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_DepthMS, 6 );
-    engine::update_descriptor_set_rwimage(
-        ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_Packed_Data, 7 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, gbuffer_descriptor_set,
+        GBuffer_Packed_Data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 7 );
 
     lighting_pass_gfx_task.draw_tasks.push_back({
             .draw_resource_descriptor = {
@@ -721,6 +779,72 @@ void run( bool use_fullscreen )
         });
 
     engine::add_gfx_task( task_list, lighting_pass_gfx_task );
+
+// TODO: Make this its own function
+#if ENABLE_DEFERRED_AA
+    // Convert the screen_color/rendered image to read-only.
+    // Buffer must be converted to write-only
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers = {
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = screen_color,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .image = screen_buffer,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+            } } );
+
+    // Task setup stuff...
+    engine::DescriptorSet cs_test_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+        VK_SHADER_STAGE_COMPUTE_BIT );
+
+    engine::Pipeline cs_test_pipeline
+        = engine::create_compute_pipeline( ctx.vulkan, { cs_test_desc_set.layouts[0] },
+            vk::create::shader_module( ctx.vulkan, PP_TEST_CS_MODULE_PATH ), "cs_pp_test" );
+
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, cs_test_desc_set, screen_color,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan, engine, cs_test_desc_set, screen_buffer, VK_IMAGE_LAYOUT_GENERAL, 1 );
+
+    size_t dims_x = ( engine.swapchain.extent.width + 7 ) / 8;
+    size_t dims_y = ( engine.swapchain.extent.height + 7 ) / 8;
+
+    engine::ComputeTask test_cs_task = {
+        cs_test_pipeline,
+        { &cs_test_desc_set },
+        glm::ivec3( dims_x, dims_y, 1 ),
+    };
+
+    engine::add_cs_task( task_list, test_cs_task );
+
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers = {
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                    .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    .image = screen_buffer,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+            } } );
+
+    engine::add_blit_task( task_list, { screen_buffer } );
+#endif
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
     task_list.junk_tasks.push_back( [&atms_baker]( [[maybe_unused]] engine::State& engine, Context&,

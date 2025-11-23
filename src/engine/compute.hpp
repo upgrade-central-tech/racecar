@@ -9,11 +9,11 @@ namespace racecar::engine {
 
 struct ComputeTask {
     Pipeline pipeline;
-    std::vector<DescriptorSet*> descriptor_sets;
+    std::vector<engine::DescriptorSet*> descriptor_sets;
 
     glm::ivec3 group_size;
 };
 
-void execute_compute_task(ComputeTask &compute_task);
+void execute_cs_task(const engine::State& engine, const VkCommandBuffer& cmd_buf, ComputeTask &compute_task);
 
 } // namespace racecar::engine

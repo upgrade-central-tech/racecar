@@ -54,8 +54,8 @@ void update_descriptor_set_depth_image( vk::Common& vulkan, State& engine, Descr
 void update_descriptor_set_write_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     vk::mem::AllocatedImage img, int binding_idx );
 
-void update_descriptor_set_rwimage(
-    vk::Common& vulkan, State& engine, DescriptorSet& desc_set, RWImage rw_img, int binding_idx );
+void update_descriptor_set_rwimage( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
+    RWImage rw_img, VkImageLayout img_layout, int binding_idx );
 
 void update_descriptor_set_sampler( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     VkSampler sampler, int binding_idx );

@@ -94,29 +94,80 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
 
         // THIS IS VERY BAD. THIS IS TEMPORARILY HERE SO I CAN RUN ANY ARBITRARY FUNCTION I WANT
         // WITH THE COMFORT OF KNOWING THE FRAME'S RENDER COMMAND BUFFER CAN BE USED. APOLOGIES.
-        // LEAVING THIS HERE FOR NOW UNTIL WE HAVE A DECENT SOLUTION FOR COMPUTE TASKS THAT CAN RUN DURING THE GAME.
-        // MAYBE YOU CAN THINK OF THIS AS A PRE-PASS BUFFER. I DON'T REALLY KNOW, JUST FIGURE SOMETHING OUT BETTER.
+        // LEAVING THIS HERE FOR NOW UNTIL WE HAVE A DECENT SOLUTION FOR COMPUTE TASKS THAT CAN RUN
+        // DURING THE GAME. MAYBE YOU CAN THINK OF THIS AS A PRE-PASS BUFFER. I DON'T REALLY KNOW,
+        // JUST FIGURE SOMETHING OUT BETTER.
         {
             for ( size_t i = 0; i < task_list.junk_tasks.size(); i++ ) {
-                task_list.junk_tasks[i](engine, ctx, frame);
+                task_list.junk_tasks[i]( engine, ctx, frame );
             }
         }
 
-
-        for ( size_t i = 0; i < task_list.gfx_tasks.size(); i++ ) {
-            GfxTask& gfx_task = task_list.gfx_tasks[i];
+        size_t task_ptr = 0;
+        size_t gfx_ptr = 0;
+        size_t cs_ptr = 0;
+        size_t blit_ptr = 0;
+        for ( task_ptr = 0; task_ptr < task_list.tasks.size(); task_ptr++ ) {
+            Task& task = task_list.tasks[task_ptr];
 
             auto search = std::find_if( task_list.pipeline_barriers.begin(),
                 task_list.pipeline_barriers.end(),
                 [=]( const std::pair<int, PipelineBarrierDescriptor>& v ) -> bool {
-                    return v.first == int( i );
+                    return v.first == int( task_ptr );
                 } );
 
             if ( search != task_list.pipeline_barriers.end() ) {
                 run_pipeline_barrier( engine, ( *search ).second, frame.render_cmdbuf );
             }
 
-            execute_gfx_task( engine, frame.render_cmdbuf, gfx_task );
+            if ( task.gfx_task ) {
+                GfxTask& gfx_task = task_list.gfx_tasks[gfx_ptr++];
+                execute_gfx_task( engine, frame.render_cmdbuf, gfx_task );
+            }
+
+            if ( task.cs_task ) {
+                ComputeTask& cs_task = task_list.cs_tasks[cs_ptr++];
+                execute_cs_task( engine, frame.render_cmdbuf, cs_task );
+            }
+
+            // Quick n dirty.
+            if ( task.blit_task ) {
+                BlitTask& blit_task = task_list.blit_tasks[blit_ptr++];
+
+                VkImageBlit blit_region;
+                blit_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                blit_region.srcSubresource.mipLevel = 0;
+                blit_region.srcSubresource.baseArrayLayer = 0;
+                blit_region.srcSubresource.layerCount = 1;
+                blit_region.srcOffsets[0] = { 0, 0, 0 };
+                blit_region.srcOffsets[1] = { static_cast<int32_t>( engine.swapchain.extent.width ),
+                    static_cast<int32_t>( engine.swapchain.extent.height ), 1 };
+
+                blit_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                blit_region.dstSubresource.mipLevel = 0;
+                blit_region.dstSubresource.baseArrayLayer = 0;
+                blit_region.dstSubresource.layerCount = 1;
+                blit_region.dstOffsets[0] = { 0, 0, 0 };
+                blit_region.dstOffsets[1] = { static_cast<int32_t>( engine.swapchain.extent.width ),
+                    static_cast<int32_t>( engine.swapchain.extent.height ), 1 };
+
+                vk::utility::transition_image( frame.render_cmdbuf, output_image,
+                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+
+                vkCmdBlitImage( frame.render_cmdbuf,
+                    blit_task.screen_color.images[frame_number].image,
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, output_image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit_region, VK_FILTER_NEAREST );
+
+                vk::utility::transition_image( frame.render_cmdbuf, output_image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+            }
         }
 
         // GUI render pass

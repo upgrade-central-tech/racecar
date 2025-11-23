@@ -21,14 +21,18 @@ void execute_gfx_task(
         } );
     }
 
-    VkRenderingAttachmentInfo depth_attachment_info = {
-        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = gfx_task.depth_image.images[swapchain_idx].image_view,
-        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        .loadOp = gfx_task.clear_depth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .clearValue = { .depthStencil = { .depth = gfx_task.clear_depth.value_or( {} ) } },
-    };
+    std::optional<VkRenderingAttachmentInfo> depth_attachment_info;
+
+    if ( gfx_task.depth_image ) {
+        depth_attachment_info = {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = gfx_task.depth_image.value().images[swapchain_idx].image_view,
+            .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            .loadOp = gfx_task.clear_depth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .clearValue = { .depthStencil = { .depth = gfx_task.clear_depth.value_or( {} ) } },
+        };
+    }
 
     VkRenderingInfo rendering_info = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
@@ -36,7 +40,7 @@ void execute_gfx_task(
         .layerCount = 1,
         .colorAttachmentCount = static_cast<uint32_t>( color_attachment_infos.size() ),
         .pColorAttachments = color_attachment_infos.data(),
-        .pDepthAttachment = &depth_attachment_info,
+        .pDepthAttachment = depth_attachment_info ? &(*depth_attachment_info) : nullptr,
         .pStencilAttachment = nullptr,
     };
 

@@ -20,7 +20,7 @@ struct GfxTask {
     bool render_target_is_swapchain = false;
 
     std::vector<RWImage> color_attachments;
-    RWImage depth_image;
+    std::optional<RWImage> depth_image;
 
     VkExtent2D extent = {};
 };

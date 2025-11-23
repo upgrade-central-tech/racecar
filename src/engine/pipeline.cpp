@@ -14,6 +14,7 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
     const std::vector<VkDescriptorSetLayout>& layouts,
     const std::vector<VkFormat> color_attachment_formats, VkSampleCountFlagBits samples, bool blend,
+    bool depth_test,
     VkShaderModule shader_module )
 {   
     VkPipelineVertexInputStateCreateInfo vertex_input_info
@@ -56,8 +57,8 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
 
     VkPipelineDepthStencilStateCreateInfo depth_stencil_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable = VK_TRUE,
-        .depthWriteEnable = VK_TRUE,
+        .depthTestEnable = depth_test ? VK_TRUE : VK_FALSE,
+        .depthWriteEnable = depth_test ? VK_TRUE : VK_FALSE,
         .depthCompareOp = VK_COMPARE_OP_LESS,
         .depthBoundsTestEnable = VK_FALSE,
         .stencilTestEnable = VK_FALSE,
