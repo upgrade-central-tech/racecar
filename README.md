@@ -2,31 +2,29 @@
 
 - Team 6: Charles Wang, Anthony Ge, Saahil Gupta, Aaron Jiang
 - Pitch document: [docs.google.com/document/d/1j6_ybNivTQ-5yWpir-YyTrfw25QPabRPDMYnZbbpDFE](https://docs.google.com/document/d/1j6_ybNivTQ-5yWpir-YyTrfw25QPabRPDMYnZbbpDFE)
-### Overview
-RACECAR is a Vulkan Renderer inspired by racing games like the Forza and Gran Turismo Series. It aims to implement state-of-the-art material, environment, and sky renderering based on recent papers and graphic talks.
+- Milestone 2 presentation: [docs.google.com/presentation/d/1SAvpTj8gU0uzmK-C_Fmakty60CFiGGIhXUBPoFP1-iw](https://docs.google.com/presentation/d/1SAvpTj8gU0uzmK-C_Fmakty60CFiGGIhXUBPoFP1-iw)
 
-<img width="1353" height="817" alt="image" src="https://github.com/user-attachments/assets/17a10137-1ce5-40c6-ba60-82f3bb7c9187" />
+RACECAR is a Vulkan renderer written in C++. It's inspired by racing games like the _Forza_ and _Gran Turismo_ series. We aim to implement state-of-the-art material, environment, and sky rendering based on recent papers and graphics techniques.
 
+<img width="1353" height="817" src="https://github.com/user-attachments/assets/17a10137-1ce5-40c6-ba60-82f3bb7c9187" />
 
 ## Material Rendering
-![bugatti](images/glint_car.png)
+
+![](images/materials.png)
 
 Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. Skies are encoded as an octahedral map for reflections.
 
----
 ### Glints
-<img src="images/spinning_glinty_monkey.gif" width="500px">
-</img>
+
+<img src="images/spinning_glinty_monkey.gif" width="500px"></img>
 
 Anisotropic pixel-footprint glints using Deliot's 2023 method, used to replace the NDF for direct lighting evaluation.
 
-### Clouds
+## Clouds
 
-The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC.
-It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts.
+The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC. It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts.
 
-<img width="682" height="605" alt="Screenshot 2025-11-24 161243" src="https://github.com/user-attachments/assets/02cdb3d1-1205-4548-956e-780a79466671" />
-
+<img width="682" height="605" src="https://github.com/user-attachments/assets/02cdb3d1-1205-4548-956e-780a79466671" />
 
 ## Development
 
