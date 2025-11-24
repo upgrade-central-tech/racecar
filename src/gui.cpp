@@ -139,6 +139,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::Checkbox( "Ping-pong zenith", &gui.atms.animate_zenith );
                 ImGui::SliderFloat( "Sun azimuth", &atms.sun_azimuth, 0.f, glm::two_pi<float>() );
                 ImGui::SliderFloat( "Sun zenith", &atms.sun_zenith, 0.f, glm::pi<float>() );
+                ImGui::SliderFloat( "Radiance exposure", &gui.atms.radiance_exposure, 0.f, 20.f );
 
                 ImGui::EndTabItem();
             }

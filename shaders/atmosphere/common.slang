@@ -84,7 +84,6 @@ public static const float INV_PI = 0.3183098861837906715377f;
 
 static const float3 GAMMA_FACTOR = float3( 1.f / 2.2f );
 static const float3 GROUND_ALBEDO = { 0.f, 0.f, 0.04f };
-static const float RADIANCE_EXPOSURE = 10.f;
 
 /// Expressed in radians.
 static const float SUN_ANGULAR_RADIUS = 0.04f;

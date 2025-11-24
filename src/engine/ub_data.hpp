@@ -82,7 +82,7 @@ struct Atmosphere {
     glm::vec3 camera_position = {};
     uint8_t p0 = 0;
     glm::vec3 sun_direction = {};
-    uint8_t p1 = 0;
+    float radiance_exposure = 0.f;
 };
 
 } // namespace racecar::uniform_buffer

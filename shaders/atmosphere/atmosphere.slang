@@ -59,8 +59,7 @@ public func get_sky_radiance(
     return { radiance, transmittance };
 }
 
-public func get_sky_color( float3 view_dir )
-    ->float3
+public func get_sky_color( float3 view_dir )->float3
 {
     let camera_pos = uniforms.camera_position;
     let sun_dir = normalize( uniforms.sun_direction );
@@ -75,7 +74,7 @@ public func get_sky_color( float3 view_dir )
         radiance += sky.transmittance * solar_radiance;
     }
 
-    // Apply tone mapping via Reinhard and sRGB gamma correction
-    let color = pow( float3( 1.f ) - exp( -radiance * RADIANCE_EXPOSURE ), GAMMA_FACTOR );
-    return color;
+    return radiance * uniforms.radiance_exposure;
 }
+
+

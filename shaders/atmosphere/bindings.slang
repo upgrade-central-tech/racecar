@@ -5,6 +5,7 @@ public struct Uniforms {
     public float4x4 inverse_view;
     public float3 camera_position;
     public float3 sun_direction;
+    public float radiance_exposure;
 }
 
 layout( binding = 0, set = 0 ) public ConstantBuffer<Uniforms> uniforms;
