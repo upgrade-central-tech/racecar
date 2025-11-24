@@ -274,6 +274,8 @@ Common initialize( SDL_Window* window )
             vulkan.global_samplers.nearest_sampler = nearest_sampler;
         }
 
+        vulkan.ray_tracing_properties = rt::query_rt_properties(vulkan.device.physical_device);
+
     } catch ( const Exception& ex ) {
         log::error( "[vk] {}", ex.what() );
         throw Exception( "[Vulkan] Failed to initialize" );

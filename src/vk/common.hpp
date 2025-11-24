@@ -11,6 +11,8 @@
 #include <source_location>
 #include <string_view>
 
+#include "ray_tracing.hpp"
+
 namespace racecar::vk {
 
 inline constexpr void check( VkResult result, std::string_view message,
@@ -52,6 +54,8 @@ struct Common {
     VmaAllocator allocator;
 
     DestructorStack destructor_stack;
+
+    rt::RayTracingProperties ray_tracing_properties;
 };
 
 Common initialize( SDL_Window* window );
