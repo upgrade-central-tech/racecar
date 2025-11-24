@@ -2,6 +2,11 @@
 
 - Team 6: Charles Wang, Anthony Ge, Saahil Gupta, Aaron Jiang
 - Pitch document: [docs.google.com/document/d/1j6_ybNivTQ-5yWpir-YyTrfw25QPabRPDMYnZbbpDFE](https://docs.google.com/document/d/1j6_ybNivTQ-5yWpir-YyTrfw25QPabRPDMYnZbbpDFE)
+### Overview
+RACECAR is a Vulkan Renderer inspired by racing games like the Forza and Gran Turismo Series. It aims to implement state-of-the-art material, environment, and sky renderering based on recent papers and graphic talks.
+
+<img width="1353" height="817" alt="image" src="https://github.com/user-attachments/assets/17a10137-1ce5-40c6-ba60-82f3bb7c9187" />
+
 
 ## Material Rendering
 ![bugatti](images/glint_car.png)
