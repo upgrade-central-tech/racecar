@@ -6,7 +6,9 @@
 #include "atmosphere.hpp"
 #include "constants.hpp"
 #include "context.hpp"
+#if ENABLE_DEFERRED_AA
 #include "engine/compute_task.hpp"
+#endif
 #include "engine/descriptor_set.hpp"
 #include "engine/execute.hpp"
 #include "engine/images.hpp"
@@ -48,7 +50,8 @@ constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
 constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
     = "../shaders/deferred/depth_prepass.spv";
-constexpr std::string_view PP_TEST_CS_MODULE_PATH = "../shaders/deferred/pp_test.spv";
+
+constexpr std::string_view PP_BRIGHTNESS_THRESHOLD_PATH = "../shaders/pp/brightness_threshold.spv";
 
 }
 
@@ -790,62 +793,47 @@ void run( bool use_fullscreen )
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
             .image_barriers = {
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                     .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
                     .image = screen_color,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     .src_access = VK_ACCESS_2_NONE,
                     .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
                     .image = screen_buffer,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
             } } );
 
-    // Task setup stuff...
-    engine::DescriptorSet cs_test_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+    engine::DescriptorSet pp_brightness_threshold_desc_set = engine::generate_descriptor_set(
+        ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
         VK_SHADER_STAGE_COMPUTE_BIT );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, pp_brightness_threshold_desc_set,
+        screen_color, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, pp_brightness_threshold_desc_set,
+        screen_buffer, VK_IMAGE_LAYOUT_GENERAL, 1 );
 
-    engine::DescriptorSet cs_test_uniform_desc_set = engine::generate_descriptor_set(
-        ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_COMPUTE_BIT );
+    engine::Pipeline pp_brightness_threshold_cs_pipeline = engine::create_compute_pipeline(
+        ctx.vulkan, { pp_brightness_threshold_desc_set.layouts[0] },
+        vk::create::shader_module( ctx.vulkan, PP_BRIGHTNESS_THRESHOLD_PATH ), "cs_main" );
 
-    engine::Pipeline cs_test_pipeline = engine::create_compute_pipeline( ctx.vulkan,
-        { cs_test_desc_set.layouts[0], cs_test_uniform_desc_set.layouts[0] },
-        vk::create::shader_module( ctx.vulkan, PP_TEST_CS_MODULE_PATH ), "cs_pp_test" );
-
-    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, cs_test_desc_set, screen_color,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
-    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, cs_test_desc_set, GBuffer_Depth,
-        VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL, 1 );
-    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, cs_test_desc_set, GBuffer_DepthMS,
-        VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL, 2 );
-    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, cs_test_desc_set, GBuffer_Normal,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 3 );
-    engine::update_descriptor_set_rwimage(
-        ctx.vulkan, engine, cs_test_desc_set, screen_buffer, VK_IMAGE_LAYOUT_GENERAL, 4 );
-
-    engine::update_descriptor_set_uniform(
-        ctx.vulkan, engine, cs_test_uniform_desc_set, camera_buffer, 0 );
-
-    size_t dims_x = ( engine.swapchain.extent.width + 7 ) / 8;
-    size_t dims_y = ( engine.swapchain.extent.height + 7 ) / 8;
-
-    engine::ComputeTask test_cs_task = {
-        cs_test_pipeline,
-        { &cs_test_desc_set, &cs_test_uniform_desc_set },
-        glm::ivec3( dims_x, dims_y, 1 ),
+    engine::ComputeTask pp_brightness_threshold_cs_task = {
+        pp_brightness_threshold_cs_pipeline,
+        { &pp_brightness_threshold_desc_set },
+        glm::ivec3( ( engine.swapchain.extent.width + 7 ) / 8,
+            ( engine.swapchain.extent.height + 7 ) / 8, 1 ),
     };
-
-    engine::add_cs_task( task_list, test_cs_task );
+    engine::add_cs_task( task_list, pp_brightness_threshold_cs_task );
 
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},

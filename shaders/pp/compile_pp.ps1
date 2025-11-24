@@ -1,0 +1,1 @@
+slangc.exe "$PSScriptRoot\brightness_threshold.slang" -target spirv -profile spirv_1_4 -g2 -fvk-use-entrypoint-name -entry cs_main -o "$PSScriptRoot\brightness_threshold.spv"
