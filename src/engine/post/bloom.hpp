@@ -6,6 +6,7 @@
 #include "../state.hpp"
 #include "../task_list.hpp"
 
+#include <array>
 #include <memory>
 
 namespace racecar::engine::post {
@@ -15,8 +16,8 @@ struct BloomPass {
     RWImage horz_blur;
 
     std::unique_ptr<engine::DescriptorSet> brightness_threshold_desc_set;
-    std::unique_ptr<engine::DescriptorSet> horz_blur_desc_set;
-    std::unique_ptr<engine::DescriptorSet> vert_blur_desc_set;
+    std::array<std::unique_ptr<engine::DescriptorSet>, 5> horz_blur_desc_sets;
+    std::array<std::unique_ptr<engine::DescriptorSet>, 5> vert_blur_desc_sets;
 };
 
 BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_list,
