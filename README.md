@@ -24,7 +24,8 @@ Anisotropic pixel-footprint glints using Deliot's 2023 method, used to replace t
 The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC.
 It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts.
 
-![Uploading Screenshot 2025-11-24 161243.png…]()
+<img width="682" height="605" alt="Screenshot 2025-11-24 161243" src="https://github.com/user-attachments/assets/02cdb3d1-1205-4548-956e-780a79466671" />
+
 
 ## Development
 
