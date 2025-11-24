@@ -18,6 +18,7 @@
 #include "scene/scene.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
+#include "volumetrics.hpp"
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
