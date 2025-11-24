@@ -31,6 +31,8 @@ struct Gui {
         bool normals_only = false;
         bool albedo_only = false;
         bool roughness_metal_only = false;
+
+        bool enable_bloom = true;
     } debug = {};
 
     struct DemoData {

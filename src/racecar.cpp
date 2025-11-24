@@ -811,8 +811,8 @@ void run( bool use_fullscreen )
                 },
             } } );
 
-    engine::post::BloomPass bloom_pass
-        = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
+    engine::post::BloomPass bloom_pass = engine::post::add_bloom(
+        ctx.vulkan, engine, task_list, screen_color, screen_buffer, debug_buffer );
 
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
@@ -933,17 +933,21 @@ void run( bool use_fullscreen )
         // Update debug uniform buffer
         {
             ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+
             ub_data::Debug debug_ub = {
                 .color = gui.debug.color,
                 .packed_data0 = glm::vec4( gui.debug.roughness, gui.debug.metallic,
                     gui.debug.clearcoat_roughness, gui.debug.clearcoat_weight ),
                 .sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f ),
+
                 .enable_albedo_map = gui.debug.enable_albedo_map,
                 .enable_normal_map = gui.debug.enable_normal_map,
                 .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
                 .normals_only = gui.debug.normals_only,
                 .albedo_only = gui.debug.albedo_only,
                 .roughness_metal_only = gui.debug.roughness_metal_only,
+
+                .enable_bloom = gui.debug.enable_bloom,
             };
 
             debug_buffer.set_data( debug_ub );

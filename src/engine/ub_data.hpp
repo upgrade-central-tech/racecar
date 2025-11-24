@@ -27,7 +27,9 @@ struct Debug {
     uint32_t albedo_only = 0;
     uint32_t roughness_metal_only = 0;
 
-    uint32_t padding0[2];
+    uint32_t enable_bloom = 0;
+
+    uint32_t padding;
 };
 
 struct SHData {

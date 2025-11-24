@@ -16,7 +16,8 @@ constexpr std::string_view GATHER_BLUR_PATH = "../shaders/post/bloom/gather.spv"
 }
 
 BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_list,
-    const RWImage& input, const RWImage& output )
+    const RWImage& input, const RWImage& output,
+    const UniformBuffer<ub_data::Debug>& uniform_debug_buffer )
 {
     BloomPass pass = {
         .brightness_threshold = engine::create_rwimage( vulkan, engine,
@@ -56,6 +57,16 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                   .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
               },
           } } );
+
+    {
+        engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set(
+            vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_COMPUTE_BIT );
+        engine::update_descriptor_set_uniform(
+            vulkan, engine, uniform_desc_set, uniform_debug_buffer, 0 );
+
+        pass.uniform_desc_set
+            = std::make_unique<engine::DescriptorSet>( std::move( uniform_desc_set ) );
+    }
 
     glm::ivec2 dims = {
         ( engine.swapchain.extent.width + 7 ) / 8,
@@ -212,9 +223,9 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
         engine::update_descriptor_set_rwimage(
             vulkan, engine, gather_desc_set, output, VK_IMAGE_LAYOUT_GENERAL, 2 );
 
-        engine::Pipeline gather_pipeline
-            = engine::create_compute_pipeline( vulkan, { gather_desc_set.layouts[0] },
-                vk::create::shader_module( vulkan, GATHER_BLUR_PATH ), "cs_main" );
+        engine::Pipeline gather_pipeline = engine::create_compute_pipeline( vulkan,
+            { gather_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
+            vk::create::shader_module( vulkan, GATHER_BLUR_PATH ), "cs_main" );
 
         pass.gather_desc_set
             = std::make_unique<engine::DescriptorSet>( std::move( gather_desc_set ) );
@@ -222,7 +233,7 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
         engine::add_cs_task( task_list,
             {
                 .pipeline = gather_pipeline,
-                .descriptor_sets = { pass.gather_desc_set.get() },
+                .descriptor_sets = { pass.gather_desc_set.get(), pass.uniform_desc_set.get() },
                 .group_size = glm::ivec3( dims, 1 ),
             } );
     }

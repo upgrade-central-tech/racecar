@@ -35,6 +35,8 @@ struct DebugData {
     bool normals_only;
     bool albedo_only;
     bool roughness_metal_only;
+
+    bool enable_bloom;
 }
 
 struct MaterialData {

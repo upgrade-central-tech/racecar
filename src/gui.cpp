@@ -144,6 +144,11 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::EndTabItem();
             }
 
+            if ( ImGui::BeginTabItem( "Post" ) ) {
+                ImGui::Checkbox( "Enable bloom", &gui.debug.enable_bloom );
+                ImGui::EndTabItem();
+            }
+
             ImGui::EndTabBar();
         }
     }
