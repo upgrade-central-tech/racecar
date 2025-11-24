@@ -171,11 +171,8 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
         }
 
         // GUI render pass
-        // TODO: draw tasks currently need to specify many things (pipeline, shader module).
-        // Therefore this step is currently hardcoded as part of the execution. Ideally we
-        // incorporate it as part of the task system
         {
-            VkRenderingAttachmentInfo color_attachment_info = {
+            VkRenderingAttachmentInfo gui_color_attachment_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
                 .imageView = output_image_view,
                 .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -183,15 +180,15 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
                 .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             };
 
-            VkRenderingInfo rendering_info = {
+            VkRenderingInfo gui_rendering_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
                 .renderArea = { .offset = { .x = 0, .y = 0 }, .extent = engine.swapchain.extent },
                 .layerCount = 1,
                 .colorAttachmentCount = 1,
-                .pColorAttachments = &color_attachment_info,
+                .pColorAttachments = &gui_color_attachment_info,
             };
 
-            vkCmdBeginRendering( frame.render_cmdbuf, &rendering_info );
+            vkCmdBeginRendering( frame.render_cmdbuf, &gui_rendering_info );
             ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), frame.render_cmdbuf );
             vkCmdEndRendering( frame.render_cmdbuf );
         }

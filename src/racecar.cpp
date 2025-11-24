@@ -858,10 +858,10 @@ void run( bool use_fullscreen )
 #endif
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
-    task_list.junk_tasks.push_back( [&atms_baker]( [[maybe_unused]] engine::State& engine, Context&,
-                                        engine::FrameData& frame ) {
-        atmosphere::bake_octahedral_sky_task( atms_baker, frame.render_cmdbuf );
-    } );
+    task_list.junk_tasks.push_back(
+        [&atms_baker]( engine::State&, Context&, engine::FrameData& frame ) {
+            atmosphere::bake_octahedral_sky_task( atms_baker, frame.render_cmdbuf );
+        } );
 
     bool will_quit = false;
     bool stop_drawing = false;

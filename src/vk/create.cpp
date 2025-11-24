@@ -1,5 +1,7 @@
 #include "create.hpp"
 
+#include "../log.hpp"
+
 #include <SDL3/SDL.h>
 
 #include <fstream>
@@ -60,7 +62,8 @@ VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask 
 }
 
 VkImageCreateInfo image_info( VkFormat format, VkImageType image_type, uint32_t mip_levels,
-    uint32_t array_layers, VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags, VkExtent3D extent )
+    uint32_t array_layers, VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags,
+    VkExtent3D extent )
 {
     return {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -189,6 +192,8 @@ VkShaderModule shader_module( Common& vulkan, std::filesystem::path shader_path 
     };
 
     VkShaderModule shader_module;
+
+    log::info( "[Shader] Creating shader module \"{}\"", shader_path.filename().string() );
 
     // We don't immediately add the shader module to the destructor stack because we destroy it at
     // the end of the pipeline creation instead

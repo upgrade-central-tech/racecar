@@ -20,9 +20,10 @@ float3 oct_decode( float2 f )
     return normalize( n );
 }
 
-[shader("compute")]
+[shader( "compute" )]
 [numthreads( 8, 8, 8 )]
-void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID ) {
+void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
+{
     // Thread XY represents a direction.
     uint2 pixel = thread_id.xy;
     uint face = thread_id.z;
@@ -37,3 +38,5 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID ) {
 
     octahedral_sky[pixel] = float4( sky_color, 1.0f );
 }
+
+
