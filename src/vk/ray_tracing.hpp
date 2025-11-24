@@ -2,7 +2,10 @@
 
 #include "vma.hpp"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <volk.h>
+
 
 namespace racecar::vk::rt {
 
@@ -43,5 +46,15 @@ VkAccelerationStructureGeometryKHR create_acceleration_structure_from_geometry(
 
 AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
     const RayTracingProperties& rt_props, const MeshData& mesh, VkCommandBuffer cmd_buf );
+
+struct Object {
+    AccelerationStructure* blas;
+    glm::mat4 transform;
+};
+
+AccelerationStructure build_tlas(
+    VkDevice device, VmaAllocator allocator,
+    const RayTracingProperties& rt_props, const std::vector<Object>& objects, 
+    VkCommandBuffer cmd_buf );
 
 }
