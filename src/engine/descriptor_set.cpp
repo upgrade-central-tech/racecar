@@ -59,14 +59,15 @@ void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorS
     }
 }
 
-void update_descriptor_set_rwimage( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
-    RWImage rw_img, VkImageLayout img_layout, int binding_idx )
+void update_descriptor_set_rwimage( vk::Common& vulkan, const State& engine,
+    DescriptorSet& desc_set, const RWImage& rw_img, VkImageLayout img_layout, int binding_idx )
 {
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        vk::mem::AllocatedImage& img = rw_img.images[i];
+        const vk::mem::AllocatedImage& alloc_image = rw_img.images[i];
+
         VkDescriptorImageInfo desc_image_info = {
             .sampler = VK_NULL_HANDLE,
-            .imageView = img.image_view,
+            .imageView = alloc_image.image_view,
             .imageLayout = img_layout, // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         };
 

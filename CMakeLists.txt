@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS NO)
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
+set(POST_DIR "${ENGINE_DIR}/post")
 set(GEOMETRY_DIR "${SRC_DIR}/geometry")
 set(SCENE_DIR "${SRC_DIR}/scene")
 
@@ -46,6 +47,8 @@ add_executable(racecar
   ${ENGINE_DIR}/descriptor_set.cpp
   ${ENGINE_DIR}/compute_task.cpp
   ${ENGINE_DIR}/blit_task.cpp
+
+  ${POST_DIR}/bloom.cpp
 
   ${GEOMETRY_DIR}/scene_mesh.cpp
   ${GEOMETRY_DIR}/procedural.cpp

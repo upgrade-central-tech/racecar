@@ -6,13 +6,11 @@
 #include "atmosphere.hpp"
 #include "constants.hpp"
 #include "context.hpp"
-#if ENABLE_DEFERRED_AA
-#include "engine/compute_task.hpp"
-#endif
 #include "engine/descriptor_set.hpp"
 #include "engine/execute.hpp"
 #include "engine/images.hpp"
 #include "engine/pipeline.hpp"
+#include "engine/post/bloom.hpp"
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
@@ -23,6 +21,7 @@
 #include "scene/scene.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
+
 #if ENABLE_VOLUMETRICS
 #include "volumetrics.hpp"
 #endif
@@ -50,8 +49,6 @@ constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
 constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
     = "../shaders/deferred/depth_prepass.spv";
-
-constexpr std::string_view PP_BRIGHTNESS_THRESHOLD_PATH = "../shaders/pp/brightness_threshold.spv";
 
 }
 
@@ -369,9 +366,8 @@ void run( bool use_fullscreen )
             | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         false );
 
-    // Buffer needed, this is what the compute pass will write to.
-    // We will later copy the results of this back to the screen_color, and then blit that to the
-    // swapchain. That, or we directly blit to the swapchain. One way is dirtier than the other.
+    // Buffer needed, this is what the final compute pass will write to.
+    // We will later copy the results of this back to `screen_color`, and blit it to the swapchain.
     engine::RWImage screen_buffer = engine::create_rwimage( ctx.vulkan, engine,
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
@@ -788,8 +784,8 @@ void run( bool use_fullscreen )
 
 // TODO: Make this its own function
 #if ENABLE_DEFERRED_AA
-    // Convert the screen_color/rendered image to read-only.
-    // Buffer must be converted to write-only
+    // Convert the screen_color/rendered image to read-only. Output screen buffer must be converted
+    // to write-only.
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
             .image_barriers = {
@@ -815,25 +811,8 @@ void run( bool use_fullscreen )
                 },
             } } );
 
-    engine::DescriptorSet pp_brightness_threshold_desc_set = engine::generate_descriptor_set(
-        ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
-        VK_SHADER_STAGE_COMPUTE_BIT );
-    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, pp_brightness_threshold_desc_set,
-        screen_color, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
-    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, pp_brightness_threshold_desc_set,
-        screen_buffer, VK_IMAGE_LAYOUT_GENERAL, 1 );
-
-    engine::Pipeline pp_brightness_threshold_cs_pipeline = engine::create_compute_pipeline(
-        ctx.vulkan, { pp_brightness_threshold_desc_set.layouts[0] },
-        vk::create::shader_module( ctx.vulkan, PP_BRIGHTNESS_THRESHOLD_PATH ), "cs_main" );
-
-    engine::ComputeTask pp_brightness_threshold_cs_task = {
-        pp_brightness_threshold_cs_pipeline,
-        { &pp_brightness_threshold_desc_set },
-        glm::ivec3( ( engine.swapchain.extent.width + 7 ) / 8,
-            ( engine.swapchain.extent.height + 7 ) / 8, 1 ),
-    };
-    engine::add_cs_task( task_list, pp_brightness_threshold_cs_task );
+    engine::post::BloomPass bloom_pass
+        = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
 
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
