@@ -17,7 +17,7 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     let luminance = dot( scene, INTENSITY_COEFFICIENTS );
 
     let final = luminance > BRIGHTNESS_THRESHOLD ? scene : float3( 0.f );
-    out_color[pixel] = float4( final, 1.f );
+    out_color[pixel] = float4( scene, 1.f );
 }
 
 

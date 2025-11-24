@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 4.0)
 
+set(CMAKE_GENERATOR_TOOLSET "ClangCL" CACHE STRING "Force Clang toolset for MSVC-like generators")
+
 project(racecar VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -78,12 +80,6 @@ else()
   target_compile_definitions(racecar PRIVATE DEBUG=0)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
-else()
-  target_compile_options(racecar PRIVATE)
-endif()
-
 find_package(volk CONFIG REQUIRED)
 target_link_libraries(imgui PRIVATE volk::volk)
 
@@ -108,3 +104,29 @@ target_include_directories(racecar PRIVATE ${TINYGLTF_INCLUDE_DIRS})
 
 find_package(Stb REQUIRED)
 target_include_directories(racecar PRIVATE ${Stb_INCLUDE_DIR})
+
+
+set(NVRHI_BUILD_SHARED OFF CACHE BOOL "Build NVRHI as shared library")
+set(NVRHI_WITH_VULKAN ON CACHE BOOL "Build Vulkan backend")
+set(NVRHI_WITH_DX11 OFF CACHE BOOL "Disable DX11 backend")
+set(NVRHI_WITH_DX12 OFF CACHE BOOL "Disable DX12 backend")
+set(NVRHI_WITH_RTXMU OFF CACHE BOOL "Disable RTXMU support")
+set(NVRHI_WITH_AFTERMATH OFF CACHE BOOL "Disable Aftermath support")
+set(NVRHI_WITH_NVAPI OFF CACHE BOOL "Disable NVAPI support")
+set(NVRHI_WITH_VALIDATION ON CACHE BOOL "Enable validation (optional)")
+
+# Add NVRHI
+add_subdirectory(${THIRD_PARTY_DIR}/nvrhi)
+
+target_compile_definitions(nvrhi PRIVATE)
+target_compile_definitions(nvrhi_vk PRIVATE)
+
+# Link to your target
+target_link_libraries(racecar PRIVATE nvrhi nvrhi_vk)
+target_include_directories(racecar PRIVATE ${THIRD_PARTY_DIR}/nvrhi/include)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_compile_options(racecar PRIVATE /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
+else()
+  target_compile_options(racecar PRIVATE)
+endif()

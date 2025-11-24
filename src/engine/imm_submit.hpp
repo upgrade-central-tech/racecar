@@ -1,5 +1,7 @@
 #pragma once
 
+#define NOMINMAX
+
 #include "../vk/common.hpp"
 
 #include <functional>

@@ -8,6 +8,8 @@
 
 #include <format>
 
+#include <nvrhi/vulkan.h>
+
 namespace racecar::vk {
 
 namespace {
