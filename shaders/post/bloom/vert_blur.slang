@@ -1,12 +1,17 @@
+#include "common.slang"
+#include "gaussian.slang"
+
 layout( binding = 0, set = 0 ) Texture2D<float4> input; ///< Horizontal blur result
 layout( binding = 1, set = 0 ) RWTexture2D<float4> output; ///< Full Gaussian blur result
-
-#include "gaussian.slang"
 
 [shader( "compute" )]
 [numthreads( 8, 8, 1 )]
 func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
 {
+    if ( !debug.enable_bloom ) {
+        return;
+    }
+
     let pixel = thread_id.xy;
 
     uint width;

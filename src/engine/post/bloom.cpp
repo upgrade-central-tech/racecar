@@ -82,9 +82,9 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
         engine::update_descriptor_set_rwimage( vulkan, engine, brightness_threshold_desc_set,
             pass.brightness_threshold, VK_IMAGE_LAYOUT_GENERAL, 1 );
 
-        engine::Pipeline brightness_threshold_pipeline
-            = engine::create_compute_pipeline( vulkan, { brightness_threshold_desc_set.layouts[0] },
-                vk::create::shader_module( vulkan, BRIGHTNESS_THRESHOLD_PATH ), "cs_main" );
+        engine::Pipeline brightness_threshold_pipeline = engine::create_compute_pipeline( vulkan,
+            { brightness_threshold_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
+            vk::create::shader_module( vulkan, BRIGHTNESS_THRESHOLD_PATH ), "cs_main" );
 
         pass.brightness_threshold_desc_set
             = std::make_unique<engine::DescriptorSet>( std::move( brightness_threshold_desc_set ) );
@@ -92,7 +92,8 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
         engine::add_cs_task( task_list,
             {
                 .pipeline = brightness_threshold_pipeline,
-                .descriptor_sets = { pass.brightness_threshold_desc_set.get() },
+                .descriptor_sets
+                = { pass.brightness_threshold_desc_set.get(), pass.uniform_desc_set.get() },
                 .group_size = glm::ivec3( dims, 1 ),
             } );
     }
@@ -134,8 +135,9 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             engine::update_descriptor_set_rwimage(
                 vulkan, engine, horz_blur_desc_set, pass.horz_blur, VK_IMAGE_LAYOUT_GENERAL, 1 );
 
-            engine::Pipeline horz_blur_pipeline = engine::create_compute_pipeline(
-                vulkan, { horz_blur_desc_set.layouts[0] }, horz_blur_shader, "cs_main" );
+            engine::Pipeline horz_blur_pipeline = engine::create_compute_pipeline( vulkan,
+                { horz_blur_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
+                horz_blur_shader, "cs_main" );
 
             pass.horz_blur_desc_sets[i]
                 = std::make_unique<engine::DescriptorSet>( std::move( horz_blur_desc_set ) );
@@ -143,7 +145,8 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             engine::add_cs_task( task_list,
                 {
                     .pipeline = horz_blur_pipeline,
-                    .descriptor_sets = { pass.horz_blur_desc_sets[i].get() },
+                    .descriptor_sets
+                    = { pass.horz_blur_desc_sets[i].get(), pass.uniform_desc_set.get() },
                     .group_size = glm::ivec3( dims, 1 ),
                 } );
         }
@@ -181,8 +184,9 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             engine::update_descriptor_set_rwimage( vulkan, engine, vert_blur_desc_set,
                 pass.brightness_threshold, VK_IMAGE_LAYOUT_GENERAL, 1 );
 
-            engine::Pipeline vert_blur_pipeline = engine::create_compute_pipeline(
-                vulkan, { vert_blur_desc_set.layouts[0] }, vert_blur_shader, "cs_main" );
+            engine::Pipeline vert_blur_pipeline = engine::create_compute_pipeline( vulkan,
+                { vert_blur_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
+                vert_blur_shader, "cs_main" );
 
             pass.vert_blur_desc_sets[i]
                 = std::make_unique<engine::DescriptorSet>( std::move( vert_blur_desc_set ) );
@@ -190,7 +194,8 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             engine::add_cs_task( task_list,
                 {
                     .pipeline = vert_blur_pipeline,
-                    .descriptor_sets = { pass.vert_blur_desc_sets[i].get() },
+                    .descriptor_sets
+                    = { pass.vert_blur_desc_sets[i].get(), pass.uniform_desc_set.get() },
                     .group_size = glm::ivec3( dims, 1 ),
                 } );
         }
