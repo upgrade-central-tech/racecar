@@ -48,6 +48,26 @@ The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rende
 
 <img width="682" height="605" src="https://github.com/user-attachments/assets/02cdb3d1-1205-4548-956e-780a79466671" />
 
+## Post-processing
+
+### Bloom
+
+A bloom post-processing pass is added to the final scene color. Our implementation is compute-based and achieves the pass through multiple compute passes:
+
+1. Filter out scene color based on a brightness threshold
+2. Perform 5 iterative Gaussian blur passes
+3. Additive blend blurred result with original scene color
+
+These steps can also be seen in the screenshots below.
+
+|![](images/bloom_1.png)|![](images/bloom_2.png)|
+|:-:|:-:|
+|Original final color|Filter out color via luminance threshold|
+|![](images/bloom_3.png)|![](images/bloom_4.png)|
+|5-step blur pass|Additive blending|
+
+Performance is currently 0.4 ms on a RTX 5060 Ti, and 1.3 ms on a RTX 4070 Laptop GPU.
+
 ## Development
 
 We use vcpkg for managing third-party C++ libraries, CMake for configuration, clang as the C++ compiler, and Ninja as our build system.
