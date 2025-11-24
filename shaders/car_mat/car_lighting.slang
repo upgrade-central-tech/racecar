@@ -24,7 +24,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
 
     // Struct props
     float metallic = pbr.metallic;
-    float roughness =  pbr.roughness;
+    float roughness = pbr.roughness;
     float clearcoat_weight = pbr.clearcoat_weight;
     float clearcoat_roughness = pbr.clearcoat_roughness;
     float2 uv = g_buffer.in_uv;
@@ -33,7 +33,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     // Specular reflection
     ////////////////////////////////////////////////////////////////
 #if 1
-    float3 base_albedo = lerp( float3( 0.3, 0.1, 0.82 ), float3( 0.8, 0.3, 0.5 ), pow( clamped_n_dot_h, 5.0f ) );
+    float3 base_albedo = albedo; // lerp( float3( 0.3, 0.1, 0.82 ), float3( 0.8, 0.3, 0.5 ), pow(
+                                 // clamped_n_dot_h, 5.0f ) );
 #endif
 
     // So far only the first mip exists. Will need some more complicated efforts to
@@ -44,7 +45,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
 
     // float3 sky_color = octahedral_sky.Sample( nearest_sampler, encoded_direction ).rgb;
 
-    float3 precomputed_lo_specular = octahedral_sky.Sample( nearest_sampler, encoded_direction ).rgb;
+    float3 precomputed_lo_specular
+        = octahedral_sky.Sample( nearest_sampler, encoded_direction ).rgb;
 
     float3 F0 = float3( 0.04f );
     F0 = lerp( F0, base_albedo * precomputed_lo_specular, pbr.metallic );
@@ -94,7 +96,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     // Based on Disney 2012 diffuse model:
     // https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf
     ////////////////////////////////////////////////////////////////
-    float3 diffuse_color = lerp( albedo, float3( 0.8, 0.3, 0.5 ), pow( clamped_n_dot_h, 5.0f ) );
+    float3 diffuse_color
+        = albedo; // lerp( albedo, float3( 0.8, 0.3, 0.5 ), pow( clamped_n_dot_h, 5.0f ) );
     float3 lambert = diffuse_color / PI;
 
     // Fresnel weights
