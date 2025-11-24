@@ -136,8 +136,11 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     out_color += ( diffuse_direct + specular_direct );
 
     // IBL
-    out_color += ( kD * diffuse_irradiance + specular_indirect );
+    // Removed kD term due to strange shadows
+    out_color += ( diffuse_irradiance + specular_indirect );
     out_color += clearcoat_ibl;
 
     return out_color;
 }
+
+
