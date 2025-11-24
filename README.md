@@ -19,6 +19,13 @@ Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. S
 
 Anisotropic pixel-footprint glints using Deliot's 2023 method, used to replace the NDF for direct lighting evaluation.
 
+### Clouds
+
+The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC.
+It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts.
+
+![Uploading Screenshot 2025-11-24 161243.png…]()
+
 ## Development
 
 We use vcpkg for managing third-party C++ libraries, CMake for configuration, clang as the C++ compiler, and Ninja as our build system.
