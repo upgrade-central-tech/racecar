@@ -134,8 +134,9 @@ void create_depth_images( State& engine, vk::Common& vulkan )
         depth_image_usages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
         depth_image_usages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-        VkImageCreateInfo depth_image_info = vk::create::image_info( depth_image.image_format,
-            VK_IMAGE_TYPE_2D, 1, 1, VK_SAMPLE_COUNT_1_BIT, depth_image_usages, depth_image.image_extent );
+        VkImageCreateInfo depth_image_info
+            = vk::create::image_info( depth_image.image_format, VK_IMAGE_TYPE_2D, 1, 1,
+                VK_SAMPLE_COUNT_1_BIT, depth_image_usages, depth_image.image_extent );
         VmaAllocationCreateInfo image_allocate_info = { .usage = VMA_MEMORY_USAGE_GPU_ONLY,
             .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) };
 
@@ -213,7 +214,7 @@ State initialize( Context& ctx )
         create_depth_images( engine, vulkan );
 
         engine.camera = {
-            .center = glm::vec3( 0.f, 1.f, 0.f ),
+            .center = glm::vec3( 2.5f, -0.3f, 1.f ),
             .radius = 8.f,
             .azimuth = 0.f,
             .zenith = 0.f,
