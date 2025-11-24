@@ -18,8 +18,11 @@ struct BloomPass {
     std::unique_ptr<engine::DescriptorSet> brightness_threshold_desc_set;
     std::array<std::unique_ptr<engine::DescriptorSet>, 5> horz_blur_desc_sets;
     std::array<std::unique_ptr<engine::DescriptorSet>, 5> vert_blur_desc_sets;
+    std::unique_ptr<engine::DescriptorSet> gather_desc_set;
 };
 
+/// Assumes that `input` is already in `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` and `output` is
+/// already in `VK_IMAGE_LAYOUT_GENERAL` with `VK_ACCESS_2_SHADER_WRITE_BIT`.
 BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_list,
     const RWImage& input, const RWImage& output );
 
