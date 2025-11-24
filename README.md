@@ -20,6 +20,28 @@ Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. S
 
 Anisotropic pixel-footprint glints using Deliot's 2023 method, used to replace the NDF for direct lighting evaluation.
 
+## Sky and atmosphere
+
+Our sky is based on the [2017 implementation](https://ebruneton.github.io/precomputed_atmospheric_scattering) of [Eric Bruneton's 2008 paper](https://inria.hal.science/inria-00288758/en) on precomputed atmospheric scattering. In essence, by solving for Earth's atmospheric parameters, we can precompute the irradiance, transmittance, and scattering coefficients and store the data in a binary format. This data is then loaded as 2D/3D textures at runtime, and we then perform texture look-ups to resolve the sky color for a given viewing angle.
+
+The precomputation step is what allows for real-time rendering of the sky. We measured rendering to take ~0.3 ms on a RTX 4070 Laptop GPU.
+
+|![](images/atmosphere_1.png)|![](images/atmosphere_2.png)|
+|:-:|:-:|
+|High in the sky|Approaching sunset|
+|![](images/atmosphere_3.png)|![](images/atmosphere_4.png)|
+|Sunset|View from outside Earth's atmosphere|
+
+The sample code in the 2017 codebase could not be used directly for a number of reasons. It performs ray-sphere intersection tests to render a "demo sphere" and ground, it hardcodes shadows and lightshafts for the demo, and it is written with OpenGL + GLSL. None of these were applicable to our project.
+
+- Rewrote the code to use Vulkan and Slang
+  - Original code uses +Z as the up axis; we use +Y
+  - OpenGL clip space uses +Y for clip space, Vulkan uses -Y
+  - Original code uses kilometers as base unit, meaning a camera height of Y=9 translated to being 9 kilometers in Earth's atmosphere! Changed to meters instead.
+- Removed ray-sphere intersection tests because we'll be drawing our own terrain later
+  - Also interferes with our sky-to-cubemap conversion, which is used for IBL
+- Removed hardcoded shadows and lightshafts
+
 ## Clouds
 
 The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC. It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts.
