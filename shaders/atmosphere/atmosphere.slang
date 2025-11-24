@@ -43,18 +43,11 @@ public func get_sky_radiance(
     let mu = rmu / r;
     let mu_s = dot( local_camera, sun_dir ) / r;
     let nu = dot( view_ray, sun_dir );
-    let ray_r_mu_intersects_ground = ray_intersects_ground( atms, r, mu );
-
-    var transmittance : float3;
-    if ( ray_r_mu_intersects_ground ) {
-        transmittance = float3( 0.f );
-    } else {
-        transmittance = sample_transmittance_lut( atms, r, mu );
-    }
-
-    let scatter_result = sample_scattering_lut( atms, r, mu, mu_s, nu, ray_r_mu_intersects_ground );
+    let scatter_result = sample_scattering_lut( atms, r, mu, mu_s, nu );
     let radiance = scatter_result.scattering * rayleigh_phase_function( nu )
         + scatter_result.single_mie * mie_phase_function( atms.mie_phase_function_g, nu );
+
+    let transmittance = sample_transmittance_lut( atms, r, mu );
 
     return { radiance, transmittance };
 }

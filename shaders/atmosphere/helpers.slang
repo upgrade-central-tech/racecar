@@ -49,11 +49,10 @@ func sample_transmittance_lut( in atms: Parameters, r: float, mu: float )->float
     return transmittance_lut.Sample( sampler, uv ).rgb;
 }
 
-func sample_scattering_lut( in atms: Parameters, r: float, mu: float, mu_s: float, nu: float,
-    ray_r_mu_intersects_ground: bool )
+func sample_scattering_lut( in atms: Parameters, r: float, mu: float, mu_s: float, nu: float )
     ->ScatteringResult
 {
-    let uvwz = map_to_scattering_texture( atms, r, mu, mu_s, nu, ray_r_mu_intersects_ground );
+    let uvwz = map_to_scattering_texture( atms, r, mu, mu_s, nu );
 
     // Compute which two `nu` slices to sample and interpolation factor
     let tex_coord_x = uvwz.x * (float)( SCATTERING_LUT_NU_SIZE - 1 );
@@ -72,8 +71,7 @@ func sample_scattering_lut( in atms: Parameters, r: float, mu: float, mu_s: floa
     };
 }
 
-func map_to_scattering_texture( in atms: Parameters, r: float, mu: float, mu_s: float, nu: float,
-    ray_r_mu_intersects_ground: bool )
+func map_to_scattering_texture( in atms: Parameters, r: float, mu: float, mu_s: float, nu: float )
     ->float4
 {
     let H = sqrt( atms.top_radius * atms.top_radius - atms.bottom_radius * atms.bottom_radius );
@@ -83,30 +81,15 @@ func map_to_scattering_texture( in atms: Parameters, r: float, mu: float, mu_s: 
     var u_mu : float;
     let r_mu = r * mu;
     let discriminant = r_mu * r_mu - r * r + atms.bottom_radius * atms.bottom_radius;
-    if ( ray_r_mu_intersects_ground ) {
-        let d = -r_mu - safe_sqrt( discriminant );
-        let d_min = r - atms.bottom_radius;
-        let d_max = rho;
+    var d = -r_mu + safe_sqrt( discriminant + H * H );
+    var d_min = atms.top_radius - r;
+    var d_max = rho + H;
+    u_mu = 0.5f
+        + 0.5f * normalize_to_uv( ( d - d_min ) / ( d_max - d_min ), SCATTERING_LUT_MU_SIZE / 2 );
 
-        var ratio : float;
-        if ( d_max == d_min ) {
-            ratio = 0.f;
-        } else {
-            ratio = ( d - d_min ) / ( d_max - d_min );
-        }
-        u_mu = 0.5f - 0.5f * normalize_to_uv( ratio, SCATTERING_LUT_MU_SIZE / 2 );
-    } else {
-        let d = -r_mu + safe_sqrt( discriminant + H * H );
-        let d_min = atms.top_radius - r;
-        let d_max = rho + H;
-        u_mu = 0.5f
-            + 0.5f
-                * normalize_to_uv( ( d - d_min ) / ( d_max - d_min ), SCATTERING_LUT_MU_SIZE / 2 );
-    }
-
-    let d = ray_distance_to_atmosphere_top( atms, atms.bottom_radius, mu_s );
-    let d_min = atms.top_radius - atms.bottom_radius;
-    let d_max = H;
+    d = ray_distance_to_atmosphere_top( atms, atms.bottom_radius, mu_s );
+    d_min = atms.top_radius - atms.bottom_radius;
+    d_max = H;
     let a = ( d - d_min ) / ( d_max - d_min );
     let D = ray_distance_to_atmosphere_top( atms, atms.bottom_radius, atms.mu_s_min );
     let A = ( D - d_min ) / ( d_max - d_min );
@@ -114,12 +97,6 @@ func map_to_scattering_texture( in atms: Parameters, r: float, mu: float, mu_s: 
     let u_nu = ( nu + 1.f ) * 0.5f;
 
     return { u_nu, u_mu_s, u_mu, u_r };
-}
-
-func ray_intersects_ground( in atms: Parameters, r: float, mu: float )->bool
-{
-    return mu < 0.f
-        && ( ( r * r * ( mu * mu - 1.f ) + atms.bottom_radius * atms.bottom_radius ) >= 0.f );
 }
 
 
