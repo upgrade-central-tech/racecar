@@ -60,7 +60,7 @@ struct PipelineBarrierDescriptor {
 void run_pipeline_barrier(
     const State& engine, PipelineBarrierDescriptor barrier, VkCommandBuffer cmd_buf );
 
-const VkImageSubresourceRange VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR = {
+constexpr VkImageSubresourceRange VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR = {
     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
     .baseMipLevel = 0,
     .levelCount = 1,
@@ -68,7 +68,7 @@ const VkImageSubresourceRange VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR = {
     .layerCount = 1,
 };
 
-const VkImageSubresourceRange VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH = {
+constexpr VkImageSubresourceRange VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH = {
     .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
     .baseMipLevel = 0,
     .levelCount = 1,
