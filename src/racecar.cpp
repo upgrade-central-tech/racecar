@@ -1,5 +1,8 @@
 #include "racecar.hpp"
 
+#define ENABLE_VOLUMETRICS 0
+#define ENABLE_DEFERRED_AA 1
+
 #include "atmosphere.hpp"
 #include "constants.hpp"
 #include "context.hpp"
@@ -18,7 +21,9 @@
 #include "scene/scene.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
+#if ENABLE_VOLUMETRICS
 #include "volumetrics.hpp"
+#endif
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -30,9 +35,6 @@
 #include <filesystem>
 #include <string_view>
 #include <thread>
-
-#define ENABLE_VOLUMETRICS 0
-#define ENABLE_DEFERRED_AA 1
 
 namespace racecar {
 
