@@ -3,6 +3,23 @@
 - Team 6: Charles Wang, Anthony Ge, Saahil Gupta, Aaron Jiang
 - Pitch document: [docs.google.com/document/d/1j6_ybNivTQ-5yWpir-YyTrfw25QPabRPDMYnZbbpDFE](https://docs.google.com/document/d/1j6_ybNivTQ-5yWpir-YyTrfw25QPabRPDMYnZbbpDFE)
 
+## Material Rendering
+![bugatti](images/glint_car.png)
+
+Features shown: clearcoat color, glints, PBR microfacet model
+
+---
+### IBL
+<img src="images/octahedral_sky.png" width="200px">
+</img>
+<br>
+Skies are encoded as an octahedral map for reflections.
+
+---
+### Glints
+![glinty demo](images/spinning_glinty_monkey.gif)
+Anisotropic pixel-footprint glints using Deliot's 2023 method, used to replace the NDF for direct lighting evaluation.
+
 ## Development
 
 We use vcpkg for managing third-party C++ libraries, CMake for configuration, clang as the C++ compiler, and Ninja as our build system.
