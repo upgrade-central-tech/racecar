@@ -17,7 +17,7 @@ void create_descriptor_system(
 
     for ( uint32_t i = 0; i < frame_overlap; i++ ) {
         descriptor_allocator::init_pool(
-            vulkan, descriptor_system.frame_allocators[i], 50, pool_sizes );
+            vulkan, descriptor_system.frame_allocators[i], 200, pool_sizes );
     }
 
     log::info( "[engine] Created descriptor system" );

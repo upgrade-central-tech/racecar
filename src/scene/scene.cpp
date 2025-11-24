@@ -235,6 +235,7 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
         }
     }
 
+    int default_material_id = -1;
     // Used for pairing children and parents in the scene graph
     std::vector<std::vector<int>> children_lists;
 
@@ -293,6 +294,16 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
             for ( tinygltf::Primitive& loaded_prim : loaded_mesh.primitives ) {
                 Primitive new_prim;
                 new_prim.material_id = loaded_prim.material;
+                if ( new_prim.material_id == -1 ) {
+                    // Creates a default, white material if a prim is not assigned a material in the
+                    // gltf file
+                    if ( default_material_id == -1 ) {
+                        Material default_material = Material();
+                        default_material_id = static_cast<int>( scene.materials.size() );
+                        scene.materials.push_back( default_material );
+                    }
+                    new_prim.material_id = default_material_id;
+                }
                 if ( loaded_prim.mode != 4 ) {
                     log::warn( "[Scene] GLTF Loading: Mesh detected that uses a mode other than "
                                "TRIANGLES. This is "
