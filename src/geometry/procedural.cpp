@@ -46,9 +46,10 @@ vk::mem::AllocatedImage generate_glint_noise( vk::Common& vulkan, engine::State&
     uint32_t noise_texture_size = 512;
 
     // Allocate the coefficeints.
-    vk::mem::AllocatedImage glint_noise_texture = engine::allocate_image( vulkan,
-        { noise_texture_size, noise_texture_size, 1 }, VK_FORMAT_R32G32B32A32_SFLOAT,
-        VK_IMAGE_TYPE_2D, 1, 1, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
+    vk::mem::AllocatedImage glint_noise_texture
+        = engine::allocate_image( vulkan, { noise_texture_size, noise_texture_size, 1 },
+            VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TYPE_2D, 1, 1, VK_SAMPLE_COUNT_1_BIT,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
 
     {
         engine::DescriptorSet glint_desc_set = engine::generate_descriptor_set(

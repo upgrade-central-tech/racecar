@@ -44,7 +44,8 @@ add_executable(racecar
   ${ENGINE_DIR}/rwimage.cpp
   ${ENGINE_DIR}/gfx_task.cpp
   ${ENGINE_DIR}/descriptor_set.cpp
-  ${ENGINE_DIR}/compute.cpp
+  ${ENGINE_DIR}/compute_task.cpp
+  ${ENGINE_DIR}/blit_task.cpp
 
   ${GEOMETRY_DIR}/scene_mesh.cpp
   ${GEOMETRY_DIR}/procedural.cpp

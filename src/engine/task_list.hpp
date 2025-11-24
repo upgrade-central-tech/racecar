@@ -1,31 +1,32 @@
 #pragma once
 
-#include "compute.hpp"
+#include "blit_task.hpp"
+#include "compute_task.hpp"
 #include "gfx_task.hpp"
 #include "pipeline_barrier.hpp"
 
 #include <vector>
 
+
 namespace racecar::engine {
 
-struct BlitTask {
-    engine::RWImage screen_color;
-};
-
+/// To be space-efficient, a `Task` only stores the type (graphics, compute, blit)
+/// and then an index into the corresponding list which is owned by `TaskList`.
 struct Task {
-    std::optional<GfxTask> gfx_task;
-    std::optional<ComputeTask> cs_task;
-    std::optional<BlitTask> blit_task;
+    enum class Type { GFX, COMP, BLIT } type = Type::GFX;
+
+    int index = -1;
+
+    /// This allows you to skip writing "Type" e.g. you can just write `Task::GFX` or `Task::COMP`.
+    using enum Type;
 };
 
 struct TaskList {
-    // Vector are still needed, since the naive add tasks just get rid of
-    // struct member content. I don't know why.
+    std::vector<Task> tasks;
+
     std::vector<GfxTask> gfx_tasks;
     std::vector<ComputeTask> cs_tasks;
     std::vector<BlitTask> blit_tasks;
-
-    std::vector<Task> tasks;
 
     std::vector<std::pair<int, PipelineBarrierDescriptor>> pipeline_barriers;
 

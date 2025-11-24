@@ -142,7 +142,7 @@ vk::mem::AllocatedImage cs_generate_diffuse_sh( vk::mem::AllocatedImage sample_c
 
     // Allocate the coefficeints.
     vk::mem::AllocatedImage sh_coefficients_image = engine::allocate_image( vulkan, { 9, 6, 1 },
-        VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TYPE_2D, 1, 1,
+        VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TYPE_2D, 1, 1, VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
 
     {

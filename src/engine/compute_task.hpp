@@ -14,6 +14,7 @@ struct ComputeTask {
     glm::ivec3 group_size;
 };
 
-void execute_cs_task(const engine::State& engine, const VkCommandBuffer& cmd_buf, ComputeTask &compute_task);
+void execute_cs_task(
+    const engine::State& engine, const VkCommandBuffer& cmd_buf, ComputeTask& compute_task );
 
 } // namespace racecar::engine

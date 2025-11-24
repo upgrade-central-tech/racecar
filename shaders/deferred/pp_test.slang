@@ -24,7 +24,8 @@ void cs_pp_test( uint2 thread_id: SV_DispatchThreadID )
     float in_depth = GBuffer_Depth.Load( uint3( pixel, 0 ) ).r;
     float in_depthMS = GBuffer_DepthMS.Load( uint3( pixel, 0 ) ).r;
 
-    out_color[pixel] = float4( 1.f - in_color, 1.0f );
+    // out_color[pixel] = float4( 1.f - in_color, 1.0f );
+    out_color[pixel] = float4( in_color, 1.0f );
 }
 
 

@@ -44,7 +44,6 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
 
     const VkImage& output_image = engine.swapchain_images[output_swapchain_index];
     const VkImageView& output_image_view = engine.swapchain_image_views[output_swapchain_index];
-
     const vk::mem::AllocatedImage& out_depth_image = engine.depth_images[output_swapchain_index];
 
     SwapchainSemaphores& swapchain_semaphores = engine.swapchain_semaphores[output_swapchain_index];
@@ -120,53 +119,27 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
                 run_pipeline_barrier( engine, ( *search ).second, frame.render_cmdbuf );
             }
 
-            if ( task.gfx_task ) {
+            switch ( task.type ) {
+            case Task::GFX: {
                 GfxTask& gfx_task = task_list.gfx_tasks[gfx_ptr++];
                 execute_gfx_task( engine, frame.render_cmdbuf, gfx_task );
+                break;
             }
 
-            if ( task.cs_task ) {
+            case Task::COMP: {
                 ComputeTask& cs_task = task_list.cs_tasks[cs_ptr++];
                 execute_cs_task( engine, frame.render_cmdbuf, cs_task );
+                break;
             }
 
-            // Quick n dirty.
-            if ( task.blit_task ) {
+            case Task::BLIT: {
                 BlitTask& blit_task = task_list.blit_tasks[blit_ptr++];
+                execute_blit_task( engine, frame.render_cmdbuf, blit_task, output_image );
+                break;
+            }
 
-                VkImageBlit blit_region;
-                blit_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                blit_region.srcSubresource.mipLevel = 0;
-                blit_region.srcSubresource.baseArrayLayer = 0;
-                blit_region.srcSubresource.layerCount = 1;
-                blit_region.srcOffsets[0] = { 0, 0, 0 };
-                blit_region.srcOffsets[1] = { static_cast<int32_t>( engine.swapchain.extent.width ),
-                    static_cast<int32_t>( engine.swapchain.extent.height ), 1 };
-
-                blit_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                blit_region.dstSubresource.mipLevel = 0;
-                blit_region.dstSubresource.baseArrayLayer = 0;
-                blit_region.dstSubresource.layerCount = 1;
-                blit_region.dstOffsets[0] = { 0, 0, 0 };
-                blit_region.dstOffsets[1] = { static_cast<int32_t>( engine.swapchain.extent.width ),
-                    static_cast<int32_t>( engine.swapchain.extent.height ), 1 };
-
-                vk::utility::transition_image( frame.render_cmdbuf, output_image,
-                    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
-
-                vkCmdBlitImage( frame.render_cmdbuf,
-                    blit_task.screen_color.images[frame_number].image,
-                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, output_image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit_region, VK_FILTER_NEAREST );
-
-                vk::utility::transition_image( frame.render_cmdbuf, output_image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                    VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                    VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+            default:
+                throw Exception( "Unknown task type" );
             }
         }
 

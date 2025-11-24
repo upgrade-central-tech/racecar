@@ -22,7 +22,7 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
 
         std::memcpy( upload_buffer.info.pMappedData, data, data_size );
 
-        new_image = allocate_image( vulkan, extent, format, image_type, 1, 1,
+        new_image = allocate_image( vulkan, extent, format, image_type, 1, 1, VK_SAMPLE_COUNT_1_BIT,
             usage_flags | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
             mipmapped );
 
@@ -122,20 +122,12 @@ vk::mem::AllocatedImage allocate_vma_image( vk::Common& vulkan, VkExtent3D exten
     return allocated_image;
 }
 
-vk::mem::AllocatedImage allocate_ms_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
+vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
     VkImageType image_type, uint32_t mip_levels, uint32_t array_layers,
     VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags, bool mipmapped )
 {
     return allocate_vma_image( vulkan, extent, format, image_type, mip_levels, array_layers,
         samples, usage_flags, mipmapped );
-}
-
-vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
-    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers,
-    VkImageUsageFlags usage_flags, bool mipmapped )
-{
-    return allocate_vma_image( vulkan, extent, format, image_type, mip_levels, array_layers,
-        VK_SAMPLE_COUNT_1_BIT, usage_flags, mipmapped );
 }
 
 std::vector<float> load_image_to_float( const std::string& global_path )

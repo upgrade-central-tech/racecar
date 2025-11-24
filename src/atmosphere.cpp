@@ -183,13 +183,13 @@ void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffe
 }
 
 void initialize_atmosphere_baker( AtmosphereBaker& atms_baker,
-    vk::Common& vulkan, [[maybe_unused]] engine::State& engine )
+    vk::Common& vulkan, engine::State& engine )
 {
     uint32_t octahedral_sky_size = 512;
 
     atms_baker.octahedral_sky
         = engine::allocate_image( vulkan, { octahedral_sky_size, octahedral_sky_size, 1 },
-            VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, 1, 1,
+            VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, 1, 1, VK_SAMPLE_COUNT_1_BIT,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
 
     atms_baker.octahedral_write

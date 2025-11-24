@@ -70,7 +70,7 @@ bool generate_noise(
 
         volumetric.cumulus_map = engine::allocate_image( vulkan,
             { cumulus_map_size, cumulus_map_size, 1 }, VK_FORMAT_R8_UNORM, VK_IMAGE_TYPE_2D, 1, 1,
-            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
+            VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
 
         engine::DescriptorSet cumulus_desc_set = engine::generate_descriptor_set( vulkan, engine,
             { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
@@ -123,8 +123,8 @@ bool generate_noise(
 
         volumetric.low_freq_noise = engine::allocate_image( vulkan,
             { low_freq_noise_size, low_freq_noise_size, low_freq_noise_size }, VK_FORMAT_R8_UNORM,
-            VK_IMAGE_TYPE_3D, 1, 1, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-            false );
+            VK_IMAGE_TYPE_3D, 1, 1, VK_SAMPLE_COUNT_1_BIT,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
 
         engine::DescriptorSet low_freq_desc_set = engine::generate_descriptor_set(
             vulkan, engine, { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE }, VK_SHADER_STAGE_COMPUTE_BIT );
@@ -177,7 +177,7 @@ bool generate_noise(
 
         volumetric.high_freq_noise = engine::allocate_image( vulkan,
             { high_freq_noise_size, high_freq_noise_size, high_freq_noise_size },
-            VK_FORMAT_R8_UNORM, VK_IMAGE_TYPE_3D, 1, 1,
+            VK_FORMAT_R8_UNORM, VK_IMAGE_TYPE_3D, 1, 1, VK_SAMPLE_COUNT_1_BIT,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
 
         engine::DescriptorSet high_freq_desc_set = engine::generate_descriptor_set( vulkan, engine,

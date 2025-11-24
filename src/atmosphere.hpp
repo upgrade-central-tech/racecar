@@ -12,7 +12,6 @@
 
 #include <string_view>
 
-
 namespace racecar::atmosphere {
 
 constexpr std::string_view SHADER_PATH = "../shaders/atmosphere/atmosphere.spv";
