@@ -45,8 +45,7 @@ constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
 constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
     = "../shaders/deferred/depth_prepass.spv";
-[[maybe_unused]] constexpr std::string_view PP_TEST_CS_MODULE_PATH
-    = "../shaders/deferred/pp_test.spv";
+constexpr std::string_view PP_TEST_CS_MODULE_PATH = "../shaders/deferred/pp_test.spv";
 
 }
 
