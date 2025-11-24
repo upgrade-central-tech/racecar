@@ -42,7 +42,7 @@ struct Gui {
 
     struct AtmosphereData {
         bool animate_zenith = false;
-        float radiance_exposure = 5.f;
+        float radiance_exposure = 2.25f;
     } atms = {};
 };
 
