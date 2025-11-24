@@ -6,18 +6,17 @@
 ## Material Rendering
 ![bugatti](images/glint_car.png)
 
-Features shown: clearcoat color, glints, PBR microfacet model
+Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. Skies are encoded as an octahedral map for reflections.
 
----
-### IBL
-<img src="images/octahedral_sky.png" width="200px">
+<img src="images/octahedral_sky.png" width="150px">
 </img>
 <br>
-Skies are encoded as an octahedral map for reflections.
 
 ---
 ### Glints
-![glinty demo](images/spinning_glinty_monkey.gif)
+<img src="images/spinning_glinty_monkey.gif" width="500px">
+</img>
+
 Anisotropic pixel-footprint glints using Deliot's 2023 method, used to replace the NDF for direct lighting evaluation.
 
 ## Development
