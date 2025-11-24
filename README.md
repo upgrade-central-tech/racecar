@@ -8,10 +8,6 @@
 
 Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. Skies are encoded as an octahedral map for reflections.
 
-<img src="images/octahedral_sky.png" width="150px">
-</img>
-<br>
-
 ---
 ### Glints
 <img src="images/spinning_glinty_monkey.gif" width="500px">
