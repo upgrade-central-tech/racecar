@@ -1,6 +1,6 @@
 #include "racecar.hpp"
 
-#define ENABLE_VOLUMETRICS 0
+#define ENABLE_VOLUMETRICS 1
 #define ENABLE_DEFERRED_AA 1
 
 #include "atmosphere.hpp"
@@ -518,7 +518,7 @@ void run( bool use_fullscreen )
 #if ENABLE_VOLUMETRICS
     // Volumetrics stuff
     volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
-    volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list );
+    volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list, screen_color );
 #endif
 
     // GBUFFER PRE-PASS

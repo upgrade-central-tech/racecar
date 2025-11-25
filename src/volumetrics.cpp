@@ -11,23 +11,24 @@
 
 namespace racecar::volumetric {
 
-constexpr std::string_view VOLUMETRIC_FILE_PATH = "../assets/cube.glb";
+// constexpr std::string_view VOLUMETRIC_FILE_PATH = "../assets/cube.glb";
 [[maybe_unused]] constexpr std::string_view VOLUMETRIC_SHADER_MODULE_PATH
     = "../shaders/cloud_debug/cloud_debug.spv";
 
 Volumetric initialize( vk::Common& vulkan, engine::State& engine )
 {
     Volumetric volumetric;
-    scene::Scene& scene = volumetric.scene;
-    geometry::scene::Mesh& scene_mesh = volumetric.scene_mesh;
+    // scene::Scene& scene = volumetric.scene;
+    geometry::quad::Mesh& scene_mesh = volumetric.scene_mesh;
 
     // Generate preliminary data for the volumetrics to work
-    scene::load_gltf(
-        vulkan, engine, VOLUMETRIC_FILE_PATH, scene, scene_mesh.vertices, scene_mesh.indices );
+    // scene::load_gltf(
+    //     vulkan, engine, VOLUMETRIC_FILE_PATH, scene, scene_mesh.vertices, scene_mesh.indices );
+    scene_mesh = geometry::quad::create( vulkan, engine );
 
-    scene_mesh.mesh_buffers
-        = geometry::scene::upload_mesh( vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
-
+    // scene_mesh.mesh_buffers
+    //     = geometry::scene::upload_mesh( vulkan, engine, scene_mesh.indices, scene_mesh.vertices
+    //     );
     if ( !generate_noise( volumetric, vulkan, engine ) ) {
         return {};
     }
@@ -230,13 +231,15 @@ bool generate_noise(
 }
 
 void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan,
-    engine::State& engine, [[maybe_unused]] engine::TaskList& task_list )
+    engine::State& engine, [[maybe_unused]] engine::TaskList& task_list,
+    engine::RWImage& color_attachment )
 {
-    const geometry::scene::Mesh& volumetric_mesh = volumetric.scene_mesh;
+    const geometry::quad::Mesh& volumetric_mesh = volumetric.scene_mesh;
 
     // We ideally don't want to render this at all resolution. That would take too much time!
     engine::GfxTask volumetric_gfx_task = {
-        .render_target_is_swapchain = true,
+        .render_target_is_swapchain = false,
+        .color_attachments = { color_attachment },
         .extent = engine.swapchain.extent,
     };
 

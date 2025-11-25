@@ -1,7 +1,7 @@
 #pragma once
-
 #include "engine/task_list.hpp"
 #include "engine/ub_data.hpp"
+#include "geometry/quad.hpp"
 
 namespace racecar::volumetric {
 
@@ -9,7 +9,7 @@ struct Volumetric {
     // Idiotic solution for now
     // SCENE LOADING/PROCESSING
     scene::Scene scene;
-    geometry::scene::Mesh scene_mesh;
+    geometry::quad::Mesh scene_mesh;
 
     vk::mem::AllocatedImage cumulus_map;
     vk::mem::AllocatedImage low_freq_noise;
@@ -28,6 +28,7 @@ bool generate_noise(
     [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan, engine::State& engine );
 
 void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan,
-    engine::State& engine, [[maybe_unused]] engine::TaskList& task_list );
+    engine::State& engine, [[maybe_unused]] engine::TaskList& task_list,
+    engine::RWImage& color_attachment );
 
 }
