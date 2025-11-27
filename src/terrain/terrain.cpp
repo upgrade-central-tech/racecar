@@ -13,6 +13,7 @@ const std::filesystem::path TERRAIN_SHADER_LIGHTING_MODULE_PATH
 
 // TEST FILE PATHS...
 const std::filesystem::path TEST_LAYER_MASK_PATH = "../assets/LUT/test_terrain_map.bmp";
+const std::filesystem::path TEST_GRASS_ALBEDO_PATH = "../assets/terrain/grass_albedo.jpg";
 
 namespace racecar::geometry {
 
@@ -21,7 +22,7 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     // Generate enough information for just one planar quad. Expand it later on arbitrarily
     [[maybe_unused]] int32_t size = 1;
 
-    float scale = 5.0f;
+    float scale = 50.0f;
     float offset_y = -1.0f;
 
     // Arbitrarily populate this with size later on
@@ -51,6 +52,9 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
 
     terrain.test_layer_mask
         = engine::load_image( TEST_LAYER_MASK_PATH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM );
+
+    terrain.grass_albedo
+        = engine::load_image( TEST_GRASS_ALBEDO_PATH, vulkan, engine, 4, VK_FORMAT_R8G8B8A8_UNORM );
 }
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
@@ -125,8 +129,13 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
         vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_COMPUTE_BIT );
 
     terrain.texture_desc_set = engine::generate_descriptor_set( vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Position
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Normal
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Test layer mask (our fake OMPV solution)
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Grass
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        },
         VK_SHADER_STAGE_COMPUTE_BIT );
 
     terrain.sampler_desc_set = engine::generate_descriptor_set(
@@ -141,8 +150,10 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.texture_desc_set, terrain.test_layer_mask, 2 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.texture_desc_set, terrain.grass_albedo, 3 );
     engine::update_descriptor_set_rwimage(
-        vulkan, engine, terrain.texture_desc_set, color_attachment, VK_IMAGE_LAYOUT_GENERAL, 3 );
+        vulkan, engine, terrain.texture_desc_set, color_attachment, VK_IMAGE_LAYOUT_GENERAL, 4 );
 
     engine::update_descriptor_set_sampler(
         vulkan, engine, terrain.sampler_desc_set, vulkan.global_samplers.linear_sampler, 0 );

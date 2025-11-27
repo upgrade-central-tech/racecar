@@ -18,7 +18,7 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
     VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags, bool mipmapped );
 
 vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common& vulkan,
-    engine::State& engine, size_t chnanels, VkFormat image_format );
+    engine::State& engine, size_t channels, VkFormat image_format );
 
 std::vector<uint16_t> load_image_to_float16( const std::string& global_path );
 std::vector<float> load_image_to_float( const std::string& global_path );

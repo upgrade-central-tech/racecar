@@ -169,10 +169,10 @@ vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common&
     int width, height, channels;
     unsigned char* pixels = stbi_load( abs_file_path.c_str(), &width, &height, &channels, 4 );
 
-    //if ( static_cast<size_t>( channels ) < desired_channels ) {
-    //    log::warn( "[IMAGE LOADER] Channels read doesn't match channels desired!" );
-    //    return {};
-    //}
+    // if ( static_cast<size_t>( channels ) < desired_channels ) {
+    //     log::warn( "[IMAGE LOADER] Channels read doesn't match channels desired!" );
+    //     return {};
+    // }
 
     /// TODO: We only support 8bit and 16bit currently.
     // Naive way to find the format type in terms of bits
@@ -181,6 +181,7 @@ vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common&
 
     switch ( image_format ) {
     case VK_FORMAT_R8G8_UNORM:
+    case VK_FORMAT_R8G8B8A8_UNORM:
         type = FormatType::UNORM8;
         break;
     case VK_FORMAT_R16G16_SFLOAT:
