@@ -11,6 +11,7 @@ set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
 set(POST_DIR "${ENGINE_DIR}/post")
 set(GEOMETRY_DIR "${SRC_DIR}/geometry")
+set(TERRAIN_DIR "${SRC_DIR}/terrain")
 set(SCENE_DIR "${SRC_DIR}/scene")
 
 set(THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
@@ -42,6 +43,7 @@ add_executable(racecar
   ${ENGINE_DIR}/descriptors.cpp
   ${ENGINE_DIR}/images.cpp
   ${ENGINE_DIR}/pipeline_barrier.cpp
+  ${ENGINE_DIR}/prepass.cpp
   ${ENGINE_DIR}/rwimage.cpp
   ${ENGINE_DIR}/gfx_task.cpp
   ${ENGINE_DIR}/descriptor_set.cpp
@@ -50,10 +52,13 @@ add_executable(racecar
 
   ${POST_DIR}/bloom.cpp
 
+  ${GEOMETRY_DIR}/gpu_mesh_buffers.cpp
   ${GEOMETRY_DIR}/scene_mesh.cpp
   ${GEOMETRY_DIR}/procedural.cpp
   ${GEOMETRY_DIR}/quad.cpp
   ${GEOMETRY_DIR}/ibl.cpp
+
+  ${TERRAIN_DIR}/terrain.cpp
 
   ${SCENE_DIR}/scene.cpp
 )

@@ -1,3 +1,4 @@
+#include "../common.slang"
 
 struct VertexInput {
     float2 position : POSITION;
@@ -7,32 +8,6 @@ struct VertexOutput {
     float4 sv_position : SV_Position;
     float2 uv;
 };
-
-struct CameraBufferData {
-    float4x4 mvp;
-    float4x4 model;
-    float4x4 inv_model;
-    float4 camera_pos;
-    // Pack: near plane, far plane, aspect ratio, fov_Y
-    float4 camera_constants;
-};
-
-struct DebugData {
-    float4 color;
-
-    // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
-    float4 packed_data0;
-    float4 sun_direction;
-
-    bool enable_albedo_map;
-    bool enable_normal_map;
-    bool enable_roughness_metal_map;
-    bool normals_only;
-    bool albedo_only;
-    bool roughness_metal_only;
-
-    bool enable_bloom;
-}
 
 struct SHData {
     float4 coeff0;
@@ -73,10 +48,6 @@ layout( binding = 5, set = 4 ) Texture2D<float> GBuffer_Depth;
 layout( binding = 6, set = 4 ) Texture2DMS<float> GBuffer_DepthMS;
 // roughness, metallic, clearcoat roughness, clearcoat weight
 layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
-
-// #include "../utils.slang"
-// #include "../glint/glint_noise_init.hlsl"
-// #include "../glint/glint.hlsl"
 
 #include "../car_mat/car_lighting.slang"
 

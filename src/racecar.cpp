@@ -1,6 +1,7 @@
 #include "racecar.hpp"
 
 #define ENABLE_VOLUMETRICS 0
+#define ENABLE_TERRAIN 1
 #define ENABLE_DEFERRED_AA 1
 
 #include "atmosphere.hpp"
@@ -22,6 +23,10 @@
 #include "sdl.hpp"
 #include "vk/create.hpp"
 
+#if ENABLE_TERRAIN
+#include "terrain/terrain.hpp"
+#endif
+
 #if ENABLE_VOLUMETRICS
 #include "volumetrics.hpp"
 #endif
@@ -41,7 +46,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
@@ -258,6 +263,7 @@ void run( bool use_fullscreen )
     engine::update_descriptor_set_uniform(
         ctx.vulkan, engine, depth_uniform_desc_set, camera_buffer, 0 );
 
+    // DEPTH_MS PRE-PASS
     engine::Pipeline depth_ms_pipeline;
     try {
         // Pipeline needs to support MSAA
@@ -271,7 +277,6 @@ void run( bool use_fullscreen )
         throw;
     }
 
-    // DEPTH_MS PRE-PASS
     engine::GfxTask depth_ms_gfx_task = {
         .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
         .clear_depth = 1.f,
@@ -279,6 +284,12 @@ void run( bool use_fullscreen )
         .color_attachments = {},
         .depth_image = GBuffer_DepthMS,
         .extent = engine.swapchain.extent,
+    };
+
+    engine::DepthPrepassMS depth_prepass_ms = {
+        depth_ms_gfx_task,
+        { &depth_uniform_desc_set },
+        depth_ms_pipeline,
     };
 
     engine::Pipeline scene_pipeline;
@@ -616,8 +627,17 @@ void run( bool use_fullscreen )
         }
     }
 
-    engine::add_gfx_task( task_list, depth_ms_gfx_task );
     engine::add_gfx_task( task_list, prepass_gfx_task );
+
+#if ENABLE_TERRAIN
+    // TODO: INSERT TERRAIN PRE-PASS DRAW HERE
+    geometry::Terrain test_terrain;
+    geometry::initialize_terrain( ctx.vulkan, engine, test_terrain );
+    geometry::draw_terrain_prepass( test_terrain, ctx.vulkan, engine, GBuffer_Position,
+        GBuffer_Normal, GBuffer_Depth, camera_buffer, depth_prepass_ms, task_list );
+#endif
+
+    engine::add_gfx_task( task_list, depth_ms_gfx_task );
 
     // Lighting pass
     engine::add_pipeline_barrier( task_list,

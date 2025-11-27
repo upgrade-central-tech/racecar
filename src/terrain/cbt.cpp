@@ -1,4 +1,4 @@
-#include "cbt.h"
+#include "cbt.hpp"
 
 namespace racecar::terrain {
 
