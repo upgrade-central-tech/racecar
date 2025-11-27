@@ -46,6 +46,8 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
     engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
 
 void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    engine::TaskList& task_list, engine::RWImage& color_attachment );
+    UniformBuffer<ub_data::Camera>& camera_buffer, engine::TaskList& task_list,
+    engine::RWImage& GBuffer_Position, engine::RWImage& GBuffer_Normal,
+    engine::RWImage& color_attachment );
 
 }

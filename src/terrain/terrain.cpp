@@ -7,7 +7,8 @@
 
 const std::filesystem::path TERRAIN_SHADER_PREPASS_MODULE_PATH
     = "../shaders/deferred/terrain_prepass.spv";
-const std::filesystem::path TERRAIN_SHADER_LIGHTING_MODULE_PATH = "";
+const std::filesystem::path TERRAIN_SHADER_LIGHTING_MODULE_PATH
+    = "../shaders/terrain/cs_terrain_draw.spv";
 
 namespace racecar::geometry {
 
@@ -107,24 +108,35 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
 }
 
 void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    engine::TaskList& task_list, engine::RWImage& color_attachment )
+    UniformBuffer<ub_data::Camera>& camera_buffer, engine::TaskList& task_list,
+    engine::RWImage& GBuffer_Position, engine::RWImage& GBuffer_Normal,
+    engine::RWImage& color_attachment )
 {
     // Can we assume the color_attachment, by this point, is in a write-only state?
 
-    terrain.uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+    terrain.uniform_desc_set = engine::generate_descriptor_set(
+        vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_COMPUTE_BIT );
 
     terrain.texture_desc_set = engine::generate_descriptor_set( vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+        VK_SHADER_STAGE_COMPUTE_BIT );
 
-    terrain.sampler_desc_set = engine::generate_descriptor_set( vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+    terrain.sampler_desc_set = engine::generate_descriptor_set(
+        vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_COMPUTE_BIT );
 
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, terrain.uniform_desc_set, camera_buffer, 0 );
+
+    engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
+        GBuffer_Position, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set, GBuffer_Normal,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
     engine::update_descriptor_set_rwimage(
-        vulkan, engine, terrain.texture_desc_set, color_attachment, VK_IMAGE_LAYOUT_GENERAL, 0 );
+        vulkan, engine, terrain.texture_desc_set, color_attachment, VK_IMAGE_LAYOUT_GENERAL, 2 );
+
+    engine::update_descriptor_set_sampler(
+        vulkan, engine, terrain.sampler_desc_set, vulkan.global_samplers.linear_sampler, 0 );
 
     engine::Pipeline cs_terrain_lighting_pipeline = engine::create_compute_pipeline( vulkan,
         { terrain.uniform_desc_set.layouts[0], terrain.texture_desc_set.layouts[0],

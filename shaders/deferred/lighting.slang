@@ -89,7 +89,7 @@ float4 fs_main( VertexOutput in )
 
     float2 ddy_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).ba;
 
-    if ( length( in_nor ) == 0.0f ) {
+    if ( stencil != CAR_ID ) {
         return float4( 0.0f );
     }
 
