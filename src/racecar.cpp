@@ -709,8 +709,8 @@ void run( bool use_fullscreen )
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
 
 #if ENABLE_TERRAIN
-    geometry::draw_terrain( test_terrain, ctx.vulkan, engine, camera_buffer, task_list,
-        GBuffer_Position, GBuffer_Normal, screen_color );
+    geometry::draw_terrain( test_terrain, ctx.vulkan, engine, camera_buffer, debug_buffer,
+        task_list, GBuffer_Position, GBuffer_Normal, screen_color );
 
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},

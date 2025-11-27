@@ -1,6 +1,7 @@
 // module car_lighting;
 
 #include "../utils.slang"
+#include "../sh_utils.slang"
 #include "../glint/glint.hlsl"
 
 #define USE_GLINTS 1

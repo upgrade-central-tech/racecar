@@ -14,6 +14,7 @@ const std::filesystem::path TERRAIN_SHADER_LIGHTING_MODULE_PATH
 // TEST FILE PATHS...
 const std::filesystem::path TEST_LAYER_MASK_PATH = "../assets/LUT/test_terrain_map.bmp";
 const std::filesystem::path TEST_GRASS_ALBEDO_PATH = "../assets/terrain/grass_albedo.jpg";
+const std::filesystem::path TEST_GRASS_NORMAL_AO_PATH = "../assets/terrain/grass_normal_ao.png";
 
 namespace racecar::geometry {
 
@@ -55,6 +56,9 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
 
     terrain.grass_albedo
         = engine::load_image( TEST_GRASS_ALBEDO_PATH, vulkan, engine, 4, VK_FORMAT_R8G8B8A8_UNORM );
+
+    terrain.grass_normal_ao = engine::load_image(
+        TEST_GRASS_NORMAL_AO_PATH, vulkan, engine, 4, VK_FORMAT_R8G8B8A8_UNORM );
 }
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
@@ -119,21 +123,26 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
 }
 
 void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    UniformBuffer<ub_data::Camera>& camera_buffer, engine::TaskList& task_list,
-    engine::RWImage& GBuffer_Position, engine::RWImage& GBuffer_Normal,
+    UniformBuffer<ub_data::Camera>& camera_buffer, UniformBuffer<ub_data::Debug>& debug_buffer,
+    engine::TaskList& task_list, engine::RWImage& GBuffer_Position, engine::RWImage& GBuffer_Normal,
     engine::RWImage& color_attachment )
 {
     // Can we assume the color_attachment, by this point, is in a write-only state?
 
-    terrain.uniform_desc_set = engine::generate_descriptor_set(
-        vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_COMPUTE_BIT );
+    terrain.uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        {
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        },
+        VK_SHADER_STAGE_COMPUTE_BIT );
 
     terrain.texture_desc_set = engine::generate_descriptor_set( vulkan, engine,
         {
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Position
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Normal
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Test layer mask (our fake OMPV solution)
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Grass
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Grass albedo
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Grass normal + AO packed
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
         },
         VK_SHADER_STAGE_COMPUTE_BIT );
@@ -143,6 +152,8 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
 
     engine::update_descriptor_set_uniform(
         vulkan, engine, terrain.uniform_desc_set, camera_buffer, 0 );
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, terrain.uniform_desc_set, debug_buffer, 1 );
 
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
         GBuffer_Position, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
@@ -152,8 +163,10 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
         vulkan, engine, terrain.texture_desc_set, terrain.test_layer_mask, 2 );
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.texture_desc_set, terrain.grass_albedo, 3 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.texture_desc_set, terrain.grass_normal_ao, 4 );
     engine::update_descriptor_set_rwimage(
-        vulkan, engine, terrain.texture_desc_set, color_attachment, VK_IMAGE_LAYOUT_GENERAL, 4 );
+        vulkan, engine, terrain.texture_desc_set, color_attachment, VK_IMAGE_LAYOUT_GENERAL, 5 );
 
     engine::update_descriptor_set_sampler(
         vulkan, engine, terrain.sampler_desc_set, vulkan.global_samplers.linear_sampler, 0 );

@@ -28,6 +28,7 @@ struct Terrain {
     // Maybe one giant atlas will work, actually.
     vk::mem::AllocatedImage test_layer_mask;
     vk::mem::AllocatedImage grass_albedo;
+    vk::mem::AllocatedImage grass_normal_ao;
 
     VkVertexInputBindingDescription vertex_binding_description = {
         .binding = vk::binding::VERTEX_BUFFER,
@@ -51,8 +52,8 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
     engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
 
 void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    UniformBuffer<ub_data::Camera>& camera_buffer, engine::TaskList& task_list,
-    engine::RWImage& GBuffer_Position, engine::RWImage& GBuffer_Normal,
+    UniformBuffer<ub_data::Camera>& camera_buffer, UniformBuffer<ub_data::Debug>& debug_buffer,
+    engine::TaskList& task_list, engine::RWImage& GBuffer_Position, engine::RWImage& GBuffer_Normal,
     engine::RWImage& color_attachment );
 
 }
