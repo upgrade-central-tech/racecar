@@ -18,12 +18,16 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     }
 
     float3 world_position = gbuffer_position[pixel].rgb;
-    float world_scale = 10.0f;
-    float2 sample_uv = float2( world_position.x, world_position.z ) / world_scale;
+    float world_scale = 0.125f;
 
-    uint2 sample_pixel = uint2( uint( sample_uv.x ), uint( sample_uv.y ) );
+    float2 uv = frac( float2( world_position.x - 1.0f, world_position.z - 1.0f ) * world_scale );
+    uv = select( uv < 0.0f, uv + 1.0f, uv );
+
+    // Our test image is 200x200.
+    uint tex_size = 200;
+    uint2 sample_pixel = uint2( uv * float2( tex_size, tex_size ) );
+
     float2 layers = layer_test_mask[sample_pixel];
-
     out_color[pixel] = float4( layers, 0.0f, 1.0f );
 }
 

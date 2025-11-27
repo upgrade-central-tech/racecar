@@ -1,8 +1,8 @@
 #include "common.hpp"
-#include "create.hpp"
 
 #include "../exception.hpp"
 #include "../log.hpp"
+#include "create.hpp"
 
 #include <SDL3/SDL_vulkan.h>
 
@@ -101,16 +101,15 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     //     .shaderImageFloat32AtomicAdd = VK_TRUE,
     // };
 
-    VkPhysicalDeviceVulkan11Features required_features_11 = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-        .shaderDrawParameters = VK_TRUE
-    };
+    VkPhysicalDeviceVulkan11Features required_features_11
+        = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+              .shaderDrawParameters = VK_TRUE };
 
     VkPhysicalDeviceVulkan12Features required_features_12 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
         .shaderFloat16 = VK_TRUE,
         .bufferDeviceAddress = VK_TRUE,
-     };
+    };
 
     VkPhysicalDeviceVulkan13Features required_features_13 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
@@ -123,8 +122,8 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     };
 
     vkb::Result<vkb::PhysicalDevice> phys_selector_ret
-        = phys_selector.prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
-              .allow_any_gpu_device_type(false)
+        = phys_selector.prefer_gpu_device_type( vkb::PreferredDeviceType::discrete )
+              .allow_any_gpu_device_type( false )
               .set_minimum_version( 1, 3 )
               .add_required_extension( VK_KHR_SWAPCHAIN_EXTENSION_NAME )
               .add_required_extension( VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME )
@@ -247,14 +246,17 @@ Common initialize( SDL_Window* window )
             VkSampler linear_sampler = VK_NULL_HANDLE;
             VkSampler nearest_sampler = VK_NULL_HANDLE;
             {
+                // By default, all of these are CLAMPED. That's the nature of create sampler_info.
                 VkSamplerCreateInfo sampler_info = vk::create::sampler_info( VK_FILTER_LINEAR );
-                vk::check( vkCreateSampler( vulkan.device, &sampler_info, nullptr, &linear_sampler ),
+                vk::check(
+                    vkCreateSampler( vulkan.device, &sampler_info, nullptr, &linear_sampler ),
                     "Failed to create global linear sampler" );
                 vulkan.destructor_stack.push( vulkan.device, linear_sampler, vkDestroySampler );
             }
             {
                 VkSamplerCreateInfo sampler_info = vk::create::sampler_info( VK_FILTER_NEAREST );
-                vk::check( vkCreateSampler( vulkan.device, &sampler_info, nullptr, &nearest_sampler ),
+                vk::check(
+                    vkCreateSampler( vulkan.device, &sampler_info, nullptr, &nearest_sampler ),
                     "Failed to create global nearest sampler" );
                 vulkan.destructor_stack.push( vulkan.device, nearest_sampler, vkDestroySampler );
             }
