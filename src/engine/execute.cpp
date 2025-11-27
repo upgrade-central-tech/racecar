@@ -109,6 +109,10 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
         for ( task_ptr = 0; task_ptr < task_list.tasks.size(); task_ptr++ ) {
             Task& task = task_list.tasks[task_ptr];
 
+#if 0
+            // I'm leaving this chunk of code here in-case we want to loop back to its
+            // ideas for refactoring later on. For now, the O(n) search work just fine as long
+            // as we don't have a crazy amount of pipline barrieres per frame.
             auto search = std::find_if( task_list.pipeline_barriers.begin(),
                 task_list.pipeline_barriers.end(),
                 [=]( const std::pair<int, PipelineBarrierDescriptor>& v ) -> bool {
@@ -118,6 +122,19 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
             if ( search != task_list.pipeline_barriers.end() ) {
                 run_pipeline_barrier( engine, ( *search ).second, frame.render_cmdbuf );
             }
+#else
+            // Current implementation only handles 1 pipeline barrier for a given task_ptr.
+            // Builder design assumes that you can append several, but that's not handled.
+
+            // Naive for loop search.
+            int task_index = static_cast<int>( task_ptr );
+
+            for ( auto& [barrier_index, barrier] : task_list.pipeline_barriers ) {
+                if ( barrier_index == task_index ) {
+                    run_pipeline_barrier( engine, barrier, frame.render_cmdbuf );
+                }
+            }
+#endif
 
             switch ( task.type ) {
             case Task::GFX: {
