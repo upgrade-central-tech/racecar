@@ -68,6 +68,9 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float3 world_position = gbuffer_position[pixel].rgb;
     float world_scale = 0.125f;
 
+    // Misc. vectors
+    float3 view = normalize( camera_data.camera_pos.rgb - world_position );
+
     // UV Distortion to reduce layer-mask "blockiness" from texture sampling
     float distort_scale = 5.0f;
     float rand_sx = perlin_noise3D( distort_scale * world_position );
@@ -97,7 +100,11 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float3 grass_color = filter_float4( grass_albedo, world_uv ).rgb;
     float4 grass_normal_map_ao = filter_float4( grass_normal_ao, world_uv );
     float3 grass_normal_map = grass_normal_map_ao.rgb;
-    float3 grass_normal = map_normals( grass_normal_map, float4( 0, 0, 1, -1 ), normal );
+    float3 grass_normal = map_normals( grass_normal_map, float4( 1, 0, 0, -1 ), normal );
+
+    // Bias towards the top.
+    grass_normal = normalize( grass_normal + float3( 0.0f, 1.0f, 0.0f ) );
+
     float grass_ao = grass_normal_map_ao.a;
 
     float3 snow_color = float3( 1.0f, 1.0f, 1.0f );
@@ -116,21 +123,37 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float mixed_ao = lerp( 1.0f, snow_ao, layers.x );
     mixed_ao = lerp( mixed_ao, grass_ao, layers.y );
 
+    // Direct lighting evaluation
     float3 final_color = lighting( mixed_albedo, mixed_normal, mixed_ao, float3( 0.0f ) );
 
-    // Irradiance lighting type shizz
+    // Image-based lighting evaluations
     // Remap to [0-1]
     float2 oct_uv = 0.5f * oct_encode( mixed_normal ) + 0.5f;
+    float2 oct_refl_uv = 0.5f * oct_encode( reflect( -view, mixed_normal ) ) + 0.5f;
 
+    // Irradiance lighting type shizz
     uint irradiance_width, irradiance_height;
     sky_irradiance.GetDimensions( irradiance_width, irradiance_height );
     int2 irradiance_px = int2( oct_uv * float2( irradiance_width, irradiance_height ) );
     irradiance_px
         = clamp( irradiance_px, int2( 0, 0 ), int2( irradiance_width - 1, irradiance_height - 1 ) );
 
-    float3 diffuse_irradiance = sky_irradiance[irradiance_px].rgb;
+    float irradiance_strength = 0.75f;
+    float3 diffuse_irradiance = filter_float4( sky_irradiance, oct_uv ).rgb;
+    ; // sky_irradiance[irradiance_px].rgb;
 
-    out_color[pixel] = float4( diffuse_irradiance, 1.0f );
+    uint specular_width, specular_height;
+    sky.GetDimensions( specular_width, specular_height );
+    int2 sky_px = int2( oct_refl_uv * float2( specular_width, specular_height ) );
+    sky_px = clamp( sky_px, int2( 0, 0 ), int2( specular_width - 1, specular_height - 1 ) );
+
+    float specular_strength = 0.75f;
+    float3 specular_irradiance = filter_float4( sky, oct_refl_uv ).rgb; // [sky_px].rgb;
+
+    final_color += mixed_albedo * diffuse_irradiance * irradiance_strength;
+    final_color += specular_irradiance * 0.2f;
+
+    out_color[pixel] = float4( final_color, 1.0f );
 }
 
 
