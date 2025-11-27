@@ -47,6 +47,8 @@ uint32_t bytes_from_format( VkFormat format )
     switch ( format ) {
     case VK_FORMAT_R8_UNORM:
         return 1;
+    case VK_FORMAT_R8G8_UNORM:
+        return 2;
     case VK_FORMAT_R8G8B8_UNORM:
         return 3;
     case VK_FORMAT_R32_SFLOAT:
@@ -100,12 +102,10 @@ float eval_SH( uint32_t lm_index, glm::vec3 direction )
         return 1.092548f * ( direction.x * direction.z );
     if ( lm_index == 8 ) // 2,  2
         return 0.546274f * ( ( direction.x * direction.x ) - ( direction.y * direction.y ) );
-    
+
     return -1.0f;
 }
 
-float area_element( float x, float y ) {
-    return atan2( x * y , sqrt( x * x + y * y + 1.0f ) );
-}
+float area_element( float x, float y ) { return atan2( x * y, sqrt( x * x + y * y + 1.0f ) ); }
 
 } // namespace racecar::vk::utility

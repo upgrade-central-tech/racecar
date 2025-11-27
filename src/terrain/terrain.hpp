@@ -24,6 +24,8 @@ struct Terrain {
 
     engine::GfxTask terrain_prepass_task;
 
+    vk::mem::AllocatedImage test_layer_mask;
+
     VkVertexInputBindingDescription vertex_binding_description = {
         .binding = vk::binding::VERTEX_BUFFER,
         .stride = sizeof( TerrainVertex ),

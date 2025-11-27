@@ -162,51 +162,75 @@ std::vector<uint16_t> load_image_to_float16( const std::string& global_path )
 }
 
 vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common& vulkan,
-    engine::State& engine, int desired_channels, VkFormat image_format )
+    engine::State& engine, size_t desired_channels, VkFormat image_format )
 {
-    vk::mem::AllocatedImage allocated_image;
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
 
     int width, height, channels;
     unsigned char* pixels = stbi_load( abs_file_path.c_str(), &width, &height, &channels, 4 );
 
-    /// TODO: error checking
-    /// TODO: This only supports 16bit floats! this needs to be extended much furhter
-    ///       to support loading of any arbitrary formats.
-    std::vector<uint16_t> half_data( static_cast<uint32_t>( width * height * desired_channels ) );
+    //if ( static_cast<size_t>( channels ) < desired_channels ) {
+    //    log::warn( "[IMAGE LOADER] Channels read doesn't match channels desired!" );
+    //    return {};
+    //}
 
-    for ( int i = 0; i < width * height; i++ ) {
-        float r = pixels[i * 4] / 255.0f;
-        float g = pixels[i * 4 + 1] / 255.0f;
-        [[maybe_unused]] float b = pixels[i * 4 + 2] / 255.0f;
-        [[maybe_unused]] float a = pixels[i * 4 + 3] / 255.0f;
+    /// TODO: We only support 8bit and 16bit currently.
+    // Naive way to find the format type in terms of bits
 
-        half_data[static_cast<size_t>( i * desired_channels )] = vk::utility::float_to_half( r );
+    FormatType type = FormatType::UNORM8;
 
-        if ( desired_channels > 1 ) {
-            half_data[static_cast<size_t>( i * desired_channels + 1 )]
-                = vk::utility::float_to_half( g );
-        }
-        if ( desired_channels > 2 ) {
-            half_data[static_cast<size_t>( i * desired_channels + 2 )]
-                = vk::utility::float_to_half( b );
-        }
-        if ( desired_channels > 3 ) {
-            half_data[static_cast<size_t>( i * desired_channels + 3 )]
-                = vk::utility::float_to_half( a );
-        }
+    switch ( image_format ) {
+    case VK_FORMAT_R8G8_UNORM:
+        type = FormatType::UNORM8;
+        break;
+    case VK_FORMAT_R16G16_SFLOAT:
+        type = FormatType::FLOAT16;
+        break;
+    default:
+        break;
     }
 
-    stbi_image_free( pixels );
+    size_t total_pixels = static_cast<size_t>( width * height );
 
-    // From half_data, upload to GPU
     bool is_mipmapped = false;
-    allocated_image = engine::create_image( vulkan, engine, half_data.data(),
-        { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 }, image_format,
-        VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        is_mipmapped );
 
-    return allocated_image;
+    if ( type == FormatType::UNORM8 ) {
+        std::vector<uint8_t> byte_data( total_pixels * desired_channels );
+
+        for ( size_t i = 0; i < total_pixels; i++ ) {
+            for ( size_t channel = 0; channel < desired_channels; channel++ ) {
+                byte_data[i * desired_channels + channel] = pixels[i * 4 + channel];
+            }
+        }
+
+        stbi_image_free( pixels );
+
+        return engine::create_image( vulkan, engine, byte_data.data(),
+            { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 }, image_format,
+            VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            is_mipmapped );
+    }
+
+    if ( type == FormatType::FLOAT16 ) {
+        std::vector<uint16_t> half_data( total_pixels * desired_channels );
+
+        for ( size_t i = 0; i < total_pixels; i++ ) {
+            for ( size_t channel = 0; channel < desired_channels; channel++ ) {
+                uint16_t value = vk::utility::float_to_half( pixels[i * 4 + channel] / 255.0f );
+                half_data[i * desired_channels + channel] = value;
+            }
+        }
+
+        stbi_image_free( pixels );
+
+        return engine::create_image( vulkan, engine, half_data.data(),
+            { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 }, image_format,
+            VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            is_mipmapped );
+    }
+
+    log::warn( "[IMAGE LOADER] Desired format currently not supported!" );
+    return {};
 }
 
 } // namespace racecar::engine

@@ -1,6 +1,7 @@
 #include "terrain.hpp"
 
 #include "../engine/gfx_task.hpp"
+#include "../engine/images.hpp"
 #include "../engine/task_list.hpp"
 #include "../geometry/gpu_mesh_buffers.hpp"
 #include "../vk/create.hpp"
@@ -9,6 +10,9 @@ const std::filesystem::path TERRAIN_SHADER_PREPASS_MODULE_PATH
     = "../shaders/deferred/terrain_prepass.spv";
 const std::filesystem::path TERRAIN_SHADER_LIGHTING_MODULE_PATH
     = "../shaders/terrain/cs_terrain_draw.spv";
+
+// TEST FILE PATHS...
+const std::filesystem::path TEST_LAYER_MASK_PATH = "../assets/LUT/test_terrain_map.bmp";
 
 namespace racecar::geometry {
 
@@ -44,6 +48,9 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     terrain.prepass_uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+    terrain.test_layer_mask
+        = engine::load_image( TEST_LAYER_MASK_PATH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM );
 }
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
@@ -119,7 +126,7 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
 
     terrain.texture_desc_set = engine::generate_descriptor_set( vulkan, engine,
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
         VK_SHADER_STAGE_COMPUTE_BIT );
 
     terrain.sampler_desc_set = engine::generate_descriptor_set(
@@ -132,8 +139,10 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
         GBuffer_Position, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set, GBuffer_Normal,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.texture_desc_set, terrain.test_layer_mask, 2 );
     engine::update_descriptor_set_rwimage(
-        vulkan, engine, terrain.texture_desc_set, color_attachment, VK_IMAGE_LAYOUT_GENERAL, 2 );
+        vulkan, engine, terrain.texture_desc_set, color_attachment, VK_IMAGE_LAYOUT_GENERAL, 3 );
 
     engine::update_descriptor_set_sampler(
         vulkan, engine, terrain.sampler_desc_set, vulkan.global_samplers.linear_sampler, 0 );
