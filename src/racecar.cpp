@@ -5,6 +5,7 @@
 #define ENABLE_DEFERRED_AA 1
 
 #include "atmosphere.hpp"
+#include "atmosphere_baker.hpp"
 #include "constants.hpp"
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"

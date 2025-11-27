@@ -5,6 +5,8 @@ import atmosphere;
 
 // In atmosphere, the bindings are already there and used for other things.
 layout( binding = 0, set = 3 ) RWTexture2D<float4> octahedral_sky;
+// Octahedral sky used for irradiance
+layout( binding = 1, set = 3 ) RWTexture2D<float4> octahedral_sky_irradiance;
 
 float3 oct_decode( float2 f )
 {
@@ -37,6 +39,45 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
     float3 sky_color = get_sky_color( view_direction );
 
     octahedral_sky[pixel] = float4( sky_color, 1.0f );
+}
+
+[shader( "compute" )]
+[numthreads( 8, 8, 8 )]
+void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
+{
+    // Thread XY represents a direction.
+    uint2 pixel = thread_id.xy;
+    uint face = thread_id.z;
+
+    float u = ( float( pixel.x ) + 0.5f ) / HARDCODED_OCTAHEDRAL_SIZE;
+    float v = ( float( pixel.y ) + 0.5f ) / HARDCODED_OCTAHEDRAL_SIZE;
+
+    float3 view_direction = oct_decode( float2( u, v ) );
+
+    float3 normal = normalize( view_direction );
+    float3 up = float3( 0.0f, 1.0f, 0.0f );
+    float3 right = normalize( cross( up, normal ) );
+    up = normalize( cross( normal, right ) );
+
+    float3 irradiance = float3( 0.0f );
+    float sample_delta = 0.025f;
+    float number_samples = 0.0f;
+
+    for ( float phi = 0.0f; phi < 2.0f * PI; phi += sample_delta ) {
+        for ( float theta = 0.0f; theta < 0.5f * PI; theta += sample_delta ) {
+            float3 tangent_sample
+                = float3( sin( theta ) * cos( phi ), sin( theta ) * sin( phi ), cos( theta ) );
+            float3 sample_dir = normalize(
+                tangent_sample.x * right + tangent_sample.y * up + tangent_sample.z * normal );
+
+            irradiance += get_sky_color( sample_dir ) * cos( theta ) * sin( theta );
+            number_samples += 1.0f;
+        }
+    }
+
+    irradiance = PI * irradiance * ( 1.0f / number_samples );
+
+    octahedral_sky[pixel] = float4( irradiance, 1.0f );
 }
 
 

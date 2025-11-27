@@ -14,7 +14,7 @@ layout( binding = 4, set = 1 ) Texture2D<float4> grass_normal_ao;
 
 layout( binding = 5, set = 1 ) RWTexture2D<float4> out_color;
 
-layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
+layout( binding = 0, set = 2 ) SamplerState nearest_sampler;
 
 // Manual filtering helper functions
 float4 filter_float4( Texture2D<float4> texture, float2 world_uv )
