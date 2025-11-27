@@ -28,7 +28,7 @@ void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffe
 
     vkCmdBindPipeline( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.handle );
 
-    const Atmosphere& atms = atms_baker.atmosphere;
+    const Atmosphere& atms = *atms_baker.atmosphere;
     std::vector<VkDescriptorSet> bind_descs = { atms.uniform_desc_set.descriptor_sets[0],
         atms.lut_desc_set.descriptor_sets[0], atms.sampler_desc_set.descriptor_sets[0],
         atms_baker.octahedral_write.descriptor_sets[0] };
@@ -50,17 +50,17 @@ void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffe
 void initialize_atmosphere_baker(
     AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::State& engine )
 {
-    uint32_t octahedral_sky_size = 512;
+    uint32_t octahedral_sky_size = 256;
+    uint32_t irradiance_size = 32;
 
     atms_baker.octahedral_sky
         = engine::allocate_image( vulkan, { octahedral_sky_size, octahedral_sky_size, 1 },
             VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, 1, 1, VK_SAMPLE_COUNT_1_BIT,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
 
-    atms_baker.octahedral_sky_irradiance
-        = engine::create_rwimage( vulkan, engine, { octahedral_sky_size, octahedral_sky_size, 1 },
-            VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
-            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
+    atms_baker.octahedral_sky_irradiance = engine::create_rwimage( vulkan, engine,
+        { irradiance_size, irradiance_size, 1 }, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D,
+        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
 
     atms_baker.octahedral_write = engine::generate_descriptor_set( vulkan, engine,
         {
@@ -77,7 +77,7 @@ void initialize_atmosphere_baker(
 
     // Everything down here should be abstracted away.
 
-    const Atmosphere& atms = atms_baker.atmosphere;
+    const Atmosphere& atms = *atms_baker.atmosphere;
 
     atms_baker.compute_pipeline = engine::create_compute_pipeline( vulkan,
         {
@@ -95,7 +95,7 @@ void initialize_atmosphere_baker(
 void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, vk::Common& vulkan,
     [[maybe_unused]] engine::State& engine, [[maybe_unused]] engine::TaskList& task_list )
 {
-    const Atmosphere& atms = atms_baker.atmosphere;
+    Atmosphere& atms = *atms_baker.atmosphere;
 
     engine::Pipeline cs_sky_irradiance_pipeline = engine::create_compute_pipeline( vulkan,
         {
@@ -118,7 +118,12 @@ void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, vk::Common&
 
     engine::ComputeTask cs_sky_irradiance_task = {
         cs_sky_irradiance_pipeline,
-        { &atms_baker.octahedral_write },
+        {
+            &atms.uniform_desc_set,
+            &atms.lut_desc_set,
+            &atms.sampler_desc_set,
+            &atms_baker.octahedral_write,
+        },
         glm::ivec3( x_groups, y_groups, 1 ),
     };
 

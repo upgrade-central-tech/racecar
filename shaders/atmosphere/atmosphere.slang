@@ -70,4 +70,23 @@ public func get_sky_color( float3 view_dir )->float3
     return radiance * uniforms.radiance_exposure;
 }
 
+public func get_irradiance_sky_color( float3 view_dir )->float3
+{
+    let camera_pos = uniforms.camera_position;
+    let sun_dir = normalize( uniforms.sun_direction );
+
+    let sky = get_sky_radiance( EARTH, camera_pos - EARTH_CENTER, view_dir, sun_dir );
+    var radiance = sky.radiance;
+
+    // // Add sun disk if looking toward the sun
+    // if ( dot( view_dir, sun_dir ) > SUN_SIZE ) {
+    //     let solar_radiance
+    //         = EARTH.solar_irradiance / ( PI * EARTH.sun_angular_radius * EARTH.sun_angular_radius
+    //         );
+    //     radiance += sky.transmittance * solar_radiance;
+    // }
+
+    return radiance * uniforms.radiance_exposure;
+}
+
 

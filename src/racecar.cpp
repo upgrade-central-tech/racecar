@@ -467,7 +467,7 @@ void run( bool use_fullscreen )
 
     // ATMOSPHERE STUFF
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
-    atmosphere::AtmosphereBaker atms_baker = { .atmosphere = atms };
+    atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
 
     {
         geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
@@ -524,6 +524,9 @@ void run( bool use_fullscreen )
         atmosphere::initialize_atmosphere_baker( atms_baker, ctx.vulkan, engine );
         engine::update_descriptor_set_image(
             ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 5 );
+
+        // funny business
+        atmosphere::compute_octahedral_sky_irradiance( atms_baker, ctx.vulkan, engine, task_list );
     }
     // END ATMOSPHERE STUFF
 
@@ -710,8 +713,16 @@ void run( bool use_fullscreen )
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
 
 #if ENABLE_TERRAIN
-    geometry::draw_terrain( test_terrain, ctx.vulkan, engine, camera_buffer, debug_buffer,
-        task_list, GBuffer_Position, GBuffer_Normal, screen_color );
+    geometry::TerrainLightingInfo terrain_lighting_info = {
+        &camera_buffer,
+        &debug_buffer,
+        &atms_baker,
+        &GBuffer_Position,
+        &GBuffer_Normal,
+        &screen_color,
+    };
+
+    geometry::draw_terrain( test_terrain, ctx.vulkan, engine, task_list, terrain_lighting_info );
 
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},

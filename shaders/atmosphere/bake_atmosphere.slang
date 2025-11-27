@@ -1,4 +1,5 @@
-#define HARDCODED_OCTAHEDRAL_SIZE 512.0f
+#define HARDCODED_OCTAHEDRAL_SIZE 256.0f
+#define HARDCODED_IRRADIANCE_SIZE 32.0f
 #define COMPUTE_NO_SAMPLE 1
 
 import atmosphere;
@@ -49,8 +50,8 @@ void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
     uint2 pixel = thread_id.xy;
     uint face = thread_id.z;
 
-    float u = ( float( pixel.x ) + 0.5f ) / HARDCODED_OCTAHEDRAL_SIZE;
-    float v = ( float( pixel.y ) + 0.5f ) / HARDCODED_OCTAHEDRAL_SIZE;
+    float u = ( float( pixel.x ) + 0.5f ) / HARDCODED_IRRADIANCE_SIZE;
+    float v = ( float( pixel.y ) + 0.5f ) / HARDCODED_IRRADIANCE_SIZE;
 
     float3 view_direction = oct_decode( float2( u, v ) );
 
@@ -60,24 +61,30 @@ void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
     up = normalize( cross( normal, right ) );
 
     float3 irradiance = float3( 0.0f );
-    float sample_delta = 0.025f;
+    float sample_delta = 0.1f;
     float number_samples = 0.0f;
 
-    for ( float phi = 0.0f; phi < 2.0f * PI; phi += sample_delta ) {
-        for ( float theta = 0.0f; theta < 0.5f * PI; theta += sample_delta ) {
+    int phi_samples = 8;
+    int theta_samples = 8;
+
+    for ( int phi_sample = 0; phi_sample < phi_samples; phi_sample++ ) {
+        float phi = ( phi_sample + 0.5f ) * ( 2.0f * PI / phi_samples );
+
+        for ( int theta_sample = 0; theta_sample < theta_samples; theta_sample++ ) {
+            float theta = ( theta_sample + 0.5f ) * ( 0.5f * PI / theta_samples );
+
             float3 tangent_sample
                 = float3( sin( theta ) * cos( phi ), sin( theta ) * sin( phi ), cos( theta ) );
             float3 sample_dir = normalize(
                 tangent_sample.x * right + tangent_sample.y * up + tangent_sample.z * normal );
 
-            irradiance += get_sky_color( sample_dir ) * cos( theta ) * sin( theta );
-            number_samples += 1.0f;
+            irradiance += get_irradiance_sky_color( sample_dir ) * cos( theta ) * sin( theta );
         }
     }
 
-    irradiance = PI * irradiance * ( 1.0f / number_samples );
+    irradiance = PI * irradiance * ( 1.0f / ( phi_samples * theta_samples ) );
 
-    octahedral_sky[pixel] = float4( irradiance, 1.0f );
+    octahedral_sky_irradiance[pixel] = float4( irradiance, 1.0f );
 }
 
 

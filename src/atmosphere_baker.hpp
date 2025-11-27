@@ -7,7 +7,7 @@
 namespace racecar::atmosphere {
 
 struct AtmosphereBaker {
-    const Atmosphere& atmosphere;
+    Atmosphere* atmosphere;
 
     engine::RWImage octahedral_sky_irradiance;
     vk::mem::AllocatedImage octahedral_sky;
@@ -24,8 +24,8 @@ void initialize_atmosphere_baker(
 void prebake_octahedral_sky(
     const AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::State& engine );
 
-void compute_octahedral_sky_irradiance( const AtmosphereBaker& atms_baker, vk::Common& vulkan,
-    engine::State& engine, engine::TaskList& task_list );
+void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, vk::Common& vulkan,
+    [[maybe_unused]] engine::State& engine, [[maybe_unused]] engine::TaskList& task_list );
 
 void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffer command_buffer );
 

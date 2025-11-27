@@ -7,14 +7,15 @@ layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> scene_data;
 
 layout( binding = 0, set = 1 ) Texture2D<float4> gbuffer_position;
 layout( binding = 1, set = 1 ) Texture2D<float4> gbuffer_normal;
-
 layout( binding = 2, set = 1 ) Texture2D<float2> layer_test_mask;
 layout( binding = 3, set = 1 ) Texture2D<float4> grass_albedo;
 layout( binding = 4, set = 1 ) Texture2D<float4> grass_normal_ao;
-
 layout( binding = 5, set = 1 ) RWTexture2D<float4> out_color;
 
-layout( binding = 0, set = 2 ) SamplerState nearest_sampler;
+layout( binding = 0, set = 2 ) Texture2D<float4> sky;
+layout( binding = 1, set = 2 ) Texture2D<float4> sky_irradiance;
+
+layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
 // Manual filtering helper functions
 float4 filter_float4( Texture2D<float4> texture, float2 world_uv )
@@ -117,7 +118,19 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     float3 final_color = lighting( mixed_albedo, mixed_normal, mixed_ao, float3( 0.0f ) );
 
-    out_color[pixel] = float4( final_color, 1.0f );
+    // Irradiance lighting type shizz
+    // Remap to [0-1]
+    float2 oct_uv = 0.5f * oct_encode( mixed_normal ) + 0.5f;
+
+    uint irradiance_width, irradiance_height;
+    sky_irradiance.GetDimensions( irradiance_width, irradiance_height );
+    int2 irradiance_px = int2( oct_uv * float2( irradiance_width, irradiance_height ) );
+    irradiance_px
+        = clamp( irradiance_px, int2( 0, 0 ), int2( irradiance_width - 1, irradiance_height - 1 ) );
+
+    float3 diffuse_irradiance = sky_irradiance[irradiance_px].rgb;
+
+    out_color[pixel] = float4( diffuse_irradiance, 1.0f );
 }
 
 

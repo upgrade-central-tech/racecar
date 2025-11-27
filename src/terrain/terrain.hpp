@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../atmosphere_baker.hpp"
 #include "../engine/prepass.hpp"
 #include "../engine/task_list.hpp"
 #include "../engine/ub_data.hpp"
@@ -12,6 +13,17 @@ struct TerrainVertex {
     glm::vec3 normal;
 };
 
+struct TerrainLightingInfo {
+    UniformBuffer<ub_data::Camera>* camera_buffer;
+    UniformBuffer<ub_data::Debug>* debug_buffer;
+
+    atmosphere::AtmosphereBaker* atmosphere_baker;
+
+    engine::RWImage* GBuffer_Position;
+    engine::RWImage* GBuffer_Normal;
+    engine::RWImage* color_attachment;
+};
+
 struct Terrain {
     std::vector<TerrainVertex> vertices;
     std::vector<uint32_t> indices;
@@ -20,6 +32,7 @@ struct Terrain {
     engine::DescriptorSet prepass_uniform_desc_set;
     engine::DescriptorSet uniform_desc_set;
     engine::DescriptorSet texture_desc_set;
+    engine::DescriptorSet lut_desc_set;
     engine::DescriptorSet sampler_desc_set;
 
     engine::GfxTask terrain_prepass_task;
@@ -52,8 +65,6 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
     engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
 
 void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    UniformBuffer<ub_data::Camera>& camera_buffer, UniformBuffer<ub_data::Debug>& debug_buffer,
-    engine::TaskList& task_list, engine::RWImage& GBuffer_Position, engine::RWImage& GBuffer_Normal,
-    engine::RWImage& color_attachment );
+    engine::TaskList& task_list, TerrainLightingInfo& info );
 
 }

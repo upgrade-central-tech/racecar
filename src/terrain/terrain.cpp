@@ -123,9 +123,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
 }
 
 void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    UniformBuffer<ub_data::Camera>& camera_buffer, UniformBuffer<ub_data::Debug>& debug_buffer,
-    engine::TaskList& task_list, engine::RWImage& GBuffer_Position, engine::RWImage& GBuffer_Normal,
-    engine::RWImage& color_attachment )
+    engine::TaskList& task_list, TerrainLightingInfo& info )
 {
     // Can we assume the color_attachment, by this point, is in a write-only state?
 
@@ -147,33 +145,57 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
         },
         VK_SHADER_STAGE_COMPUTE_BIT );
 
-    terrain.sampler_desc_set = engine::generate_descriptor_set(
-        vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_COMPUTE_BIT );
+    terrain.lut_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral irradiance
+        },
+        VK_SHADER_STAGE_COMPUTE_BIT );
 
-    engine::update_descriptor_set_uniform(
-        vulkan, engine, terrain.uniform_desc_set, camera_buffer, 0 );
-    engine::update_descriptor_set_uniform(
-        vulkan, engine, terrain.uniform_desc_set, debug_buffer, 1 );
+    terrain.sampler_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLER,
+        },
+        VK_SHADER_STAGE_COMPUTE_BIT );
 
+    // Uniform assignments
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, terrain.uniform_desc_set, *info.camera_buffer, 0 );
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, terrain.uniform_desc_set, *info.debug_buffer, 1 );
+
+    // Material image assignments
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
-        GBuffer_Position, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
-    engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set, GBuffer_Normal,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
+        *info.GBuffer_Position, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
+        *info.GBuffer_Normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.texture_desc_set, terrain.test_layer_mask, 2 );
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.texture_desc_set, terrain.grass_albedo, 3 );
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.texture_desc_set, terrain.grass_normal_ao, 4 );
-    engine::update_descriptor_set_rwimage(
-        vulkan, engine, terrain.texture_desc_set, color_attachment, VK_IMAGE_LAYOUT_GENERAL, 5 );
+    engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
+        *info.color_attachment, VK_IMAGE_LAYOUT_GENERAL, 5 );
 
+    // LUT desc assignments
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.lut_desc_set, info.atmosphere_baker->octahedral_sky, 0 );
+    engine::update_descriptor_set_rwimage( vulkan, engine, terrain.lut_desc_set,
+        info.atmosphere_baker->octahedral_sky_irradiance, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        1 );
+
+    // Sampler assignments
     engine::update_descriptor_set_sampler(
         vulkan, engine, terrain.sampler_desc_set, vulkan.global_samplers.linear_sampler, 0 );
 
     engine::Pipeline cs_terrain_lighting_pipeline = engine::create_compute_pipeline( vulkan,
-        { terrain.uniform_desc_set.layouts[0], terrain.texture_desc_set.layouts[0],
-            terrain.sampler_desc_set.layouts[0] },
+        {
+            terrain.uniform_desc_set.layouts[0],
+            terrain.texture_desc_set.layouts[0],
+            terrain.lut_desc_set.layouts[0],
+            terrain.sampler_desc_set.layouts[0],
+        },
         vk::create::shader_module( vulkan, TERRAIN_SHADER_LIGHTING_MODULE_PATH ),
         "cs_terrain_draw" );
 
@@ -185,7 +207,12 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     // Full-screen quad draw.
     engine::ComputeTask cs_terrain_draw_task = {
         cs_terrain_lighting_pipeline,
-        { &terrain.uniform_desc_set, &terrain.texture_desc_set, &terrain.sampler_desc_set },
+        {
+            &terrain.uniform_desc_set,
+            &terrain.texture_desc_set,
+            &terrain.lut_desc_set,
+            &terrain.sampler_desc_set,
+        },
         dispatch_dims,
     };
 
