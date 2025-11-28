@@ -1,3 +1,5 @@
+#include "../common.slang"
+
 struct VertexInput {
     float3 position : POSITION;
     float3 normal : NORMAL;
@@ -12,61 +14,6 @@ struct VertexOutput {
     float4 tangent;
     float2 uv;
 };
-
-struct CameraBufferData {
-    float4x4 mvp;
-    float4x4 model;
-    float4x4 inv_model;
-    float4 camera_pos;
-    // Pack: near plane, far plane, aspect ratio, fov_Y
-    float4 camera_constants;
-};
-
-struct DebugData {
-    float4 color;
-
-    // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
-    float4 packed_data0;
-    float4 sun_direction;
-
-    bool enable_albedo_map;
-    bool enable_normal_map;
-    bool enable_roughness_metal_map;
-    bool normals_only;
-    bool albedo_only;
-    bool roughness_metal_only;
-
-    bool enable_bloom;
-}
-
-struct MaterialData {
-    int has_base_color_texture;
-    int has_metallic_roughness_texture;
-    int has_normal_texture;
-    int has_emmisive_texture;
-
-    float4 base_color;
-
-    float metallic;
-    float roughness;
-    float normal_texture_weight;
-    float ior;
-
-    float3 specular_tint;
-    float specular;
-
-    float3 sheen_tint;
-    float sheen_roughness;
-
-    float sheen_weight;
-    float transmission;
-    float clearcoat;
-    float clearcoat_roughness;
-
-    float3 emissive;
-    // 0 if lit, 1 if unlit
-    int unlit = false;
-}
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
@@ -156,9 +103,11 @@ FragmentOutput fs_main( VertexOutput in )
 {
     FragmentOutput output;
 
-    // awesome packing hacks
-
-    float stencil = 1.0f;
+    // Stencil is defined as such:
+    // 0 - nothing shaded
+    // 1 - car shading
+    // 2 - terrain shading
+    float stencil = CAR_ID;
 
 #if 1
     float3 normal = normalize( in.normal );

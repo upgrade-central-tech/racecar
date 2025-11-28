@@ -7,7 +7,6 @@
 
 #include <vector>
 
-
 namespace racecar::engine {
 
 /// To be space-efficient, a `Task` only stores the type (graphics, compute, blit)

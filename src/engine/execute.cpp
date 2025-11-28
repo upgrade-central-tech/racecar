@@ -135,7 +135,6 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
                 }
             }
 #endif
-
             switch ( task.type ) {
             case Task::GFX: {
                 GfxTask& gfx_task = task_list.gfx_tasks[gfx_ptr++];

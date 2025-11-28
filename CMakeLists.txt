@@ -7,6 +7,7 @@ set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
 set(POST_DIR "${ENGINE_DIR}/post")
 set(GEOMETRY_DIR "${SRC_DIR}/geometry")
+set(TERRAIN_DIR "${SRC_DIR}/terrain")
 set(SCENE_DIR "${SRC_DIR}/scene")
 
 add_executable(racecar
@@ -17,6 +18,7 @@ add_executable(racecar
     ${SRC_DIR}/gui.cpp
     ${SRC_DIR}/stb.cpp
     ${SRC_DIR}/atmosphere.cpp
+    ${SRC_DIR}/atmosphere_baker.cpp
     ${SRC_DIR}/volumetrics.cpp
 
     ${VK_DIR}/common.cpp
@@ -47,6 +49,9 @@ add_executable(racecar
     ${GEOMETRY_DIR}/procedural.cpp
     ${GEOMETRY_DIR}/quad.cpp
     ${GEOMETRY_DIR}/ibl.cpp
+    ${GEOMETRY_DIR}/gpu_mesh_buffers.cpp
+
+    ${TERRAIN_DIR}/terrain.cpp
 
     ${SCENE_DIR}/scene.cpp
 )

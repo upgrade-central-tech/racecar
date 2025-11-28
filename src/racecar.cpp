@@ -1,9 +1,11 @@
 #include "racecar.hpp"
 
 #define ENABLE_VOLUMETRICS 0
+#define ENABLE_TERRAIN 1
 #define ENABLE_DEFERRED_AA 1
 
 #include "atmosphere.hpp"
+#include "atmosphere_baker.hpp"
 #include "constants.hpp"
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
@@ -11,6 +13,7 @@
 #include "engine/images.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/post/bloom.hpp"
+#include "engine/prepass.hpp"
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
@@ -21,6 +24,10 @@
 #include "scene/scene.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
+
+#if ENABLE_TERRAIN
+#include "terrain/terrain.hpp"
+#endif
 
 #if ENABLE_VOLUMETRICS
 #include "volumetrics.hpp"
@@ -258,6 +265,7 @@ void run( bool use_fullscreen )
     engine::update_descriptor_set_uniform(
         ctx.vulkan, engine, depth_uniform_desc_set, camera_buffer, 0 );
 
+    // DEPTH_MS PRE-PASS
     engine::Pipeline depth_ms_pipeline;
     try {
         // Pipeline needs to support MSAA
@@ -271,7 +279,6 @@ void run( bool use_fullscreen )
         throw;
     }
 
-    // DEPTH_MS PRE-PASS
     engine::GfxTask depth_ms_gfx_task = {
         .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
         .clear_depth = 1.f,
@@ -279,6 +286,12 @@ void run( bool use_fullscreen )
         .color_attachments = {},
         .depth_image = GBuffer_DepthMS,
         .extent = engine.swapchain.extent,
+    };
+
+    engine::DepthPrepassMS depth_prepass_ms = {
+        depth_ms_gfx_task,
+        { &depth_uniform_desc_set },
+        depth_ms_pipeline,
     };
 
     engine::Pipeline scene_pipeline;
@@ -446,16 +459,16 @@ void run( bool use_fullscreen )
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
                     .src_access = VK_ACCESS_2_NONE,
                     .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
                     .image = screen_color,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
             } } );
 
     // ATMOSPHERE STUFF
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
-    atmosphere::AtmosphereBaker atms_baker = { .atmosphere = atms };
+    atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
 
     {
         geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
@@ -512,6 +525,9 @@ void run( bool use_fullscreen )
         atmosphere::initialize_atmosphere_baker( atms_baker, ctx.vulkan, engine );
         engine::update_descriptor_set_image(
             ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 5 );
+
+        // funny business
+        atmosphere::compute_octahedral_sky_irradiance( atms_baker, ctx.vulkan, engine, task_list );
     }
     // END ATMOSPHERE STUFF
 
@@ -616,8 +632,17 @@ void run( bool use_fullscreen )
         }
     }
 
-    engine::add_gfx_task( task_list, depth_ms_gfx_task );
     engine::add_gfx_task( task_list, prepass_gfx_task );
+
+#if ENABLE_TERRAIN
+    // TODO: INSERT TERRAIN PRE-PASS DRAW HERE
+    geometry::Terrain test_terrain;
+    geometry::initialize_terrain( ctx.vulkan, engine, test_terrain );
+    geometry::draw_terrain_prepass( test_terrain, ctx.vulkan, engine, GBuffer_Position,
+        GBuffer_Normal, GBuffer_Depth, camera_buffer, depth_prepass_ms, task_list );
+#endif
+
+    engine::add_gfx_task( task_list, depth_ms_gfx_task );
 
     // Lighting pass
     engine::add_pipeline_barrier( task_list,
@@ -686,15 +711,32 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
                     .image = GBuffer_DepthMS,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    .image = screen_color,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } } );
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
+
+#if ENABLE_TERRAIN
+    geometry::TerrainLightingInfo terrain_lighting_info = {
+        &camera_buffer,
+        &debug_buffer,
+        &atms_baker,
+        &GBuffer_Position,
+        &GBuffer_Normal,
+        &screen_color,
+    };
+
+    geometry::draw_terrain( test_terrain, ctx.vulkan, engine, task_list, terrain_lighting_info );
+
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers
+            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                .src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+                .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                .image = screen_color,
+                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } } );
+#endif
 
     // lighting pass
     geometry::quad::Mesh lighting_pass_quad_mesh = geometry::quad::create( ctx.vulkan, engine );

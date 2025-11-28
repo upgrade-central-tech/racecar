@@ -36,6 +36,13 @@ constexpr int MAX_IMAGES_BINDED = 4;
 
 } // namespace binding
 
+namespace GeeometryClass {
+
+constexpr int CAR_ID = 1;
+constexpr int TERRAIN_ID = 2;
+
+}
+
 struct GlobalSamplers {
     VkSampler linear_sampler;
     VkSampler nearest_sampler;
