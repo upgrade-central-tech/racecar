@@ -6,6 +6,12 @@
 
 #include <SDL3/SDL_video.h>
 #include <volk.h>
+
+#if RACECAR_MACOS
+/// Terrible hack that's needed because of mismatched Vulkan headers. Honestly IDK what's happening,
+/// this function is never used (and not even supported), I blame vcpkg for everything
+#define fp_vkCmdDispatchTileQCOM( commandBuffer ) fp_vkCmdDispatchTileQCOM( commandBuffer, nullptr )
+#endif
 #include <VkBootstrap.h>
 
 #include <source_location>

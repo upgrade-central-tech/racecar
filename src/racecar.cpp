@@ -1,7 +1,6 @@
 #include "racecar.hpp"
 
 #define ENABLE_VOLUMETRICS 0
-#define ENABLE_TERRAIN 1
 #define ENABLE_DEFERRED_AA 1
 
 #include "atmosphere.hpp"

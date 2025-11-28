@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL_log.h>
 
+#include <filesystem>
 #include <format>
 #include <source_location>
 #include <utility>
@@ -30,8 +31,9 @@ template <typename... Args> struct error {
         const std::source_location& loc = std::source_location::current() )
     {
         std::string message = std::format( format, std::forward<Args>( args )... );
-        SDL_LogError( SDL_LOG_CATEGORY_APPLICATION, "[%s(%d:%d)] %s", loc.file_name(), loc.line(),
-            loc.column(), message.c_str() );
+        std::filesystem::path source = loc.file_name();
+        SDL_LogError( SDL_LOG_CATEGORY_APPLICATION, "[%s(%d:%d)] %s",
+            source.filename().string().c_str(), loc.line(), loc.column(), message.c_str() );
     }
 };
 

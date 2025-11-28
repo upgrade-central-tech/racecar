@@ -110,6 +110,9 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
             Task& task = task_list.tasks[task_ptr];
 
 #if 0
+            // I'm leaving this chunk of code here in-case we want to loop back to its
+            // ideas for refactoring later on. For now, the O(n) search work just fine as long
+            // as we don't have a crazy amount of pipline barrieres per frame.
             auto search = std::find_if( task_list.pipeline_barriers.begin(),
                 task_list.pipeline_barriers.end(),
                 [=]( const std::pair<int, PipelineBarrierDescriptor>& v ) -> bool {

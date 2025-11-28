@@ -5,6 +5,7 @@
 #include "../vk/create.hpp"
 
 #include <algorithm>
+#include <functional>
 
 namespace racecar::engine {
 
@@ -18,30 +19,39 @@ vkb::Swapchain create_swapchain( SDL_Window* window, const vk::Common& vulkan )
                    vulkan.device.physical_device, vulkan.surface, &capabilities ),
         "vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed" );
 
-    VkExtent2D swap_extent = { .width = 0, .height = 0 };
-    if ( capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max() ) {
-        swap_extent = capabilities.currentExtent;
-    } else {
-        int width = 0;
-        int height = 0;
-
-        if ( !SDL_GetWindowSizeInPixels( window, &width, &height ) ) {
-            throw Exception( "[SDL] SDL_GetWindowSizeInPixels: {}", SDL_GetError() );
+    VkExtent2D swap_extent = std::invoke( [&]() -> VkExtent2D {
+        if ( capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max() ) {
+            log::info(
+                "[engine] Using current extent from vkGetPhysicalDeviceSurfaceCapabilitiesKHR" );
+            return capabilities.currentExtent;
         }
 
-        swap_extent = {
-            .width = std::clamp( static_cast<uint32_t>( width ), capabilities.minImageExtent.width,
-                capabilities.maxImageExtent.width ),
-            .height = std::clamp( static_cast<uint32_t>( height ),
-                capabilities.minImageExtent.height, capabilities.maxImageExtent.height ),
-        };
-    }
+        if ( int width = 0, height = 0; !SDL_GetWindowSizeInPixels( window, &width, &height ) ) {
+            return {
+                .width = std::clamp( static_cast<uint32_t>( width ),
+                    capabilities.minImageExtent.width, capabilities.maxImageExtent.width ),
+                .height = std::clamp( static_cast<uint32_t>( height ),
+                    capabilities.minImageExtent.height, capabilities.maxImageExtent.height ),
+            };
+        } else {
+            throw Exception( "[SDL] SDL_GetWindowSizeInPixels: {}", SDL_GetError() );
+        }
+    } );
+
+    // This is VSync
+    VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+
+#if RACECAR_MACOS
+    // On macOS there is no other way of disabling VSync; for NVIDIA on Windows, we have the NVIDIA
+    // Control Panel to do that
+    present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+#endif
 
     vkb::SwapchainBuilder swapchain_builder( vulkan.device );
     vkb::Result<vkb::Swapchain> swapchain_ret
         = swapchain_builder.set_desired_extent( swap_extent.width, swap_extent.height )
               .set_desired_min_image_count( capabilities.minImageCount )
-              .set_desired_present_mode( VK_PRESENT_MODE_FIFO_RELAXED_KHR ) // this is vsync
+              .set_desired_present_mode( present_mode )
               .set_image_usage_flags( VK_IMAGE_USAGE_TRANSFER_SRC_BIT
                   | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT )
               .build();

@@ -1,19 +1,22 @@
 {
     "configurations": [
-    {
-        "type": "lldb",
-        "request": "launch",
-        "name": "Launch",
-        "program": "${workspaceFolder}/build/racecar.exe",
-        "args": [],
-        "cwd": "${workspaceFolder}/build",
-        "stopOnEntry": false,
-        "env": {},
-        "console": "integratedTerminal",
-        "initCommands": [
-            "settings set target.import-std-module false",
-            "settings set target.prefer-dynamic-value no-dynamic-values"
-        ]
-    }
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Launch",
+            "program": "${workspaceFolder}/build/racecar.exe",
+            "osx": {
+                "program": "${workspaceFolder}/build/racecar"
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/build",
+            "stopOnEntry": false,
+            "env": {},
+            "console": "integratedTerminal",
+            "initCommands": [
+                "settings set target.import-std-module false",
+                "settings set target.prefer-dynamic-value no-dynamic-values"
+            ]
+        },
     ]
 }

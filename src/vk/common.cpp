@@ -35,7 +35,7 @@ vkb::Instance create_instance()
         .set_app_version( 1, 0, 0 )
         .require_api_version( 1, 4 );
 
-#if DEBUG
+#if RACECAR_DEBUG
     if ( system_info.validation_layers_available ) {
         instance_builder.enable_validation_layers().use_default_debug_messenger();
     }
@@ -95,15 +95,10 @@ vkb::Device pick_and_create_device( const Common& vulkan )
 {
     vkb::PhysicalDeviceSelector phys_selector( vulkan.instance, vulkan.surface );
 
-    // VkPhysicalDeviceShaderAtomicFloatFeaturesEXT float_features = {
-    //     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT,
-    //     .shaderImageFloat32Atomics = VK_TRUE,
-    //     .shaderImageFloat32AtomicAdd = VK_TRUE,
-    // };
-
-    VkPhysicalDeviceVulkan11Features required_features_11
-        = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-              .shaderDrawParameters = VK_TRUE };
+    VkPhysicalDeviceVulkan11Features required_features_11 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .shaderDrawParameters = VK_TRUE,
+    };
 
     VkPhysicalDeviceVulkan12Features required_features_12 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
@@ -187,10 +182,10 @@ void initialize_vmaallocator( vk::Common& vulkan )
         .vulkanApiVersion = VK_API_VERSION_1_4,
     };
 
-    VmaVulkanFunctions vulkan_functions = {};
-
-    check( vmaImportVulkanFunctionsFromVolk( &allocator_info, &vulkan_functions ),
-        "[VMA] Failed to import Vulkan functions from volk" );
+    VmaVulkanFunctions vulkan_functions = {
+        .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+        .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+    };
 
     allocator_info.pVulkanFunctions = &vulkan_functions;
 
@@ -241,30 +236,21 @@ Common initialize( SDL_Window* window )
 
         // Used by a lot of stuff
         {
-            vulkan.global_samplers = {};
+            VkSamplerCreateInfo linear_sampler_info = vk::create::sampler_info( VK_FILTER_LINEAR );
+            vk::check( vkCreateSampler( vulkan.device, &linear_sampler_info, nullptr,
+                           &vulkan.global_samplers.linear_sampler ),
+                "Failed to create global linear sampler" );
+            vulkan.destructor_stack.push(
+                vulkan.device, vulkan.global_samplers.linear_sampler, vkDestroySampler );
 
-            VkSampler linear_sampler = VK_NULL_HANDLE;
-            VkSampler nearest_sampler = VK_NULL_HANDLE;
-            {
-                // By default, all of these are CLAMPED. That's the nature of create sampler_info.
-                VkSamplerCreateInfo sampler_info = vk::create::sampler_info( VK_FILTER_LINEAR );
-                vk::check(
-                    vkCreateSampler( vulkan.device, &sampler_info, nullptr, &linear_sampler ),
-                    "Failed to create global linear sampler" );
-                vulkan.destructor_stack.push( vulkan.device, linear_sampler, vkDestroySampler );
-            }
-            {
-                VkSamplerCreateInfo sampler_info = vk::create::sampler_info( VK_FILTER_NEAREST );
-                vk::check(
-                    vkCreateSampler( vulkan.device, &sampler_info, nullptr, &nearest_sampler ),
-                    "Failed to create global nearest sampler" );
-                vulkan.destructor_stack.push( vulkan.device, nearest_sampler, vkDestroySampler );
-            }
-
-            vulkan.global_samplers.linear_sampler = linear_sampler;
-            vulkan.global_samplers.nearest_sampler = nearest_sampler;
+            VkSamplerCreateInfo nearest_sampler_info
+                = vk::create::sampler_info( VK_FILTER_NEAREST );
+            vk::check( vkCreateSampler( vulkan.device, &nearest_sampler_info, nullptr,
+                           &vulkan.global_samplers.nearest_sampler ),
+                "Failed to create global nearest sampler" );
+            vulkan.destructor_stack.push(
+                vulkan.device, vulkan.global_samplers.nearest_sampler, vkDestroySampler );
         }
-
     } catch ( const Exception& ex ) {
         log::error( "[vk] {}", ex.what() );
         throw Exception( "[Vulkan] Failed to initialize" );
