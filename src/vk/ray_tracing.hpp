@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vma.hpp"
+#include "../engine/destructor_stack.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -45,7 +46,7 @@ VkAccelerationStructureGeometryKHR create_acceleration_structure_from_geometry(
     const MeshData& mesh );
 
 AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
-    const RayTracingProperties& rt_props, const MeshData& mesh, VkCommandBuffer cmd_buf );
+    RayTracingProperties& rt_props, MeshData mesh, VkCommandBuffer cmd_buf, DestructorStack& destructor_stack );
 
 struct Object {
     AccelerationStructure* blas;
@@ -55,6 +56,6 @@ struct Object {
 AccelerationStructure build_tlas(
     VkDevice device, VmaAllocator allocator,
     const RayTracingProperties& rt_props, const std::vector<Object>& objects, 
-    VkCommandBuffer cmd_buf );
+    VkCommandBuffer cmd_buf, DestructorStack& destructor_stack );
 
 }

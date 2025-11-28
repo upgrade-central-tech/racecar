@@ -616,6 +616,48 @@ void run( bool use_fullscreen )
         }
     }
 
+    // INITIAL PRECOMPUTE CMDBUFFER
+    VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
+    VkFence precompute_fence;
+    vk::check( vkCreateFence( ctx.vulkan.device, &fence_info, nullptr, &precompute_fence ),
+        "Failed to create precompute fence" );
+    VkCommandBufferBeginInfo command_buffer_begin_info
+        = vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
+    vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
+    vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
+    vkBeginCommandBuffer( engine.frames[0].start_cmdbuf, &command_buffer_begin_info );
+
+    engine.blas.push_back( vk::rt::build_blas( ctx.vulkan.device, ctx.vulkan.allocator,
+        ctx.vulkan.ray_tracing_properties,
+        {
+            .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
+            .index_buffer = scene_mesh.mesh_buffers.index_buffer.handle,
+            .vertex_count = uint32_t( scene_mesh.vertices.size() ),
+            .index_count = uint32_t( scene_mesh.indices.size() ),
+        },
+        engine.frames[0].start_cmdbuf, ctx.vulkan.destructor_stack ) );
+
+    engine.tlas = vk::rt::build_tlas( ctx.vulkan.device, ctx.vulkan.allocator,
+        ctx.vulkan.ray_tracing_properties, {
+            vk::rt::Object {
+                .blas = &engine.blas[0],
+                .transform = glm::mat4()
+            }
+        },
+        engine.frames[0].start_cmdbuf, ctx.vulkan.destructor_stack );
+
+    vkEndCommandBuffer( engine.frames[0].start_cmdbuf );
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &engine.frames[0].start_cmdbuf;
+    vkQueueSubmit( ctx.vulkan.graphics_queue, 1, &submit_info, precompute_fence );
+    vkWaitForFences( ctx.vulkan.device, 1, &precompute_fence, VK_TRUE, UINT64_MAX );
+    vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
+    vkDestroyFence(ctx.vulkan.device, precompute_fence, VK_NULL_HANDLE);
+    vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
+    //
+
     engine::add_gfx_task( task_list, depth_ms_gfx_task );
     engine::add_gfx_task( task_list, prepass_gfx_task );
 

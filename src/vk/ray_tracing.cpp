@@ -1,4 +1,5 @@
 #include "ray_tracing.hpp"
+#include "mem.hpp"
 
 namespace racecar::vk::rt {
 
@@ -57,7 +58,7 @@ VkAccelerationStructureGeometryKHR create_acceleration_structure_from_geometry(
 }
 
 AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
-    const RayTracingProperties& rt_props, MeshData& mesh, VkCommandBuffer cmd_buf )
+    RayTracingProperties& rt_props, MeshData mesh, VkCommandBuffer cmd_buf, [[maybe_unused]] DestructorStack& destructor_stack )
 {
     VkBufferDeviceAddressInfo info{.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
     info.buffer = mesh.vertex_buffer;
@@ -105,7 +106,11 @@ AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
     VmaAllocationCreateInfo blas_alloc_create_info = { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
     vmaCreateBuffer( allocator, &blas_buffer_create_info, &blas_alloc_create_info, &blas.buffer,
         &blas.allocation, nullptr );
-
+    destructor_stack.push_free_vmabuffer(allocator, {
+        .handle = blas.buffer,
+        .allocation = blas.allocation,
+    });
+ 
     VkBufferDeviceAddressInfo blas_address_info
         = { .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, .buffer = blas.buffer };
     blas.device_address = vkGetBufferDeviceAddress( device, &blas_address_info );
@@ -122,6 +127,11 @@ AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
     VmaAllocationCreateInfo scratchAllocCI = { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
     vmaCreateBuffer(
         allocator, &scratchBufferCI, &scratchAllocCI, &scratchBuffer, &scratchAllocation, nullptr );
+    destructor_stack.push_free_vmabuffer(allocator, {
+        .handle = scratchBuffer,
+        .allocation = scratchAllocation,
+    });
+
 
     VkBufferDeviceAddressInfo scratchAddressInfo
         = { .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, .buffer = scratchBuffer };
@@ -172,7 +182,7 @@ AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
 AccelerationStructure build_tlas(
     VkDevice device, VmaAllocator allocator,
     const RayTracingProperties& rt_props, const std::vector<Object>& objects, 
-    VkCommandBuffer cmd_buf )
+    VkCommandBuffer cmd_buf, DestructorStack& destructor_stack )
 {
     std::vector<VkAccelerationStructureInstanceKHR> instances;
     instances.reserve(objects.size());
@@ -217,6 +227,11 @@ AccelerationStructure build_tlas(
 
     vmaCreateBuffer(allocator, &instanceBufferCI, &instanceAllocCI, 
                     &instance_buffer, &instance_allocation, nullptr);
+    destructor_stack.push_free_vmabuffer(allocator, {
+        .handle = instance_buffer,
+        .allocation = instance_allocation,
+    });
+
 
     void* data;
     vmaMapMemory(allocator, instance_allocation, &data);
@@ -280,6 +295,11 @@ AccelerationStructure build_tlas(
     VmaAllocationCreateInfo tlasAllocCI = {.usage = VMA_MEMORY_USAGE_GPU_ONLY };
     vmaCreateBuffer(allocator, &tlasBufferCI, &tlasAllocCI, 
                     &tlas.buffer, &tlas.allocation, nullptr);
+    destructor_stack.push_free_vmabuffer(allocator, {
+        .handle = tlas.buffer,
+        .allocation = tlas.allocation,
+    });
+
     
     VkBufferDeviceAddressInfo tlasAddressInfo = {
       .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
@@ -305,6 +325,11 @@ AccelerationStructure build_tlas(
     // 2. Allocate the Scratch Buffer using VMA
     vmaCreateBuffer(
         allocator, &scratchBufferCI, &scratchAllocCI, &scratchBuffer, &scratchAllocation, nullptr );
+    destructor_stack.push_free_vmabuffer(allocator, {
+        .handle = scratchBuffer,
+        .allocation = scratchAllocation,
+    });
+
 
     // 3. Get the raw device address
     VkBufferDeviceAddressInfo scratchAddressInfo
@@ -364,6 +389,9 @@ AccelerationStructure build_tlas(
     // and destroy them after synchronization.
 
     tlas.type = AccelerationStructure::Type::TLAS;
+
+    destructor_stack.push(device, scratchBuffer, vkDestroyBuffer);
+    destructor_stack.push(device, tlas.buffer, vkDestroyBuffer);
     
     return tlas;
 }
