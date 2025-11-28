@@ -108,7 +108,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float3 grass_color = grass_color_roughness.rgb;
 
     // Bias towards the top.
-    grass_normal = normalize( grass_normal + float3( 0.0f, 0.5f, 0.0f ) );
+    grass_normal = normalize( grass_normal + float3( 0.0f, 0.1f, 0.0f ) );
 
     float grass_roughness = grass_color_roughness.a;
     float grass_ao = grass_normal_map_ao.a;
@@ -173,8 +173,8 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float3 final_color
         = direct_lighting( mixed_albedo, mixed_normal, mixed_roughness, mixed_ao, view );
 
-    // final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
-    final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) ) * 0.2f;
+    final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
+    final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) ) * 0.01f;
 
     out_color[pixel] = float4( final_color, 1.0f );
 }
