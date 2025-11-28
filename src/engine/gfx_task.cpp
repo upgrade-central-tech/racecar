@@ -17,7 +17,7 @@ void execute_gfx_task(
             .loadOp
             = gfx_task.clear_color ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-            .clearValue = { .color = gfx_task.clear_color.value_or( {} ) },
+            .clearValue = { .color = gfx_task.clear_color.value_or( VkClearColorValue {} ) },
         } );
     }
 
@@ -31,7 +31,7 @@ void execute_gfx_task(
             .loadOp
             = gfx_task.clear_depth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-            .clearValue = { .depthStencil = { .depth = gfx_task.clear_depth.value_or( {} ) } },
+            .clearValue = { .depthStencil = { .depth = gfx_task.clear_depth.value_or( 0.f ) } },
         };
     }
 

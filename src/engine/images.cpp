@@ -1,9 +1,10 @@
 #include "images.hpp"
 
 #include "../log.hpp"
-#include "../stb_image.h"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
+
+#include <stb_image.h>
 
 namespace racecar::engine {
 

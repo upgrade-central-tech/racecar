@@ -3,10 +3,11 @@
 #include "../engine/descriptor_set.hpp"
 #include "../engine/images.hpp"
 #include "../engine/pipeline.hpp"
-#include "../stb_image.h"
 #include "../vk/create.hpp"
 #include "../vk/mem.hpp"
 #include "../vk/utility.hpp"
+
+#include <stb_image.h>
 
 namespace racecar::geometry {
 
