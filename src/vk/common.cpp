@@ -245,7 +245,7 @@ Common initialize( SDL_Window* window )
 
             VkSamplerCreateInfo nearest_sampler_info
                 = vk::create::sampler_info( VK_FILTER_NEAREST );
-            vk::check( vkCreateSampler( vulkan.device, &linear_sampler_info, nullptr,
+            vk::check( vkCreateSampler( vulkan.device, &nearest_sampler_info, nullptr,
                            &vulkan.global_samplers.nearest_sampler ),
                 "Failed to create global nearest sampler" );
             vulkan.destructor_stack.push(
