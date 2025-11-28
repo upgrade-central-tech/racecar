@@ -3,7 +3,9 @@
 #include "exception.hpp"
 #include "log.hpp"
 
+#if RACECAR_MACOS
 #include <SDL3/SDL_vulkan.h>
+#endif
 
 namespace racecar::sdl {
 
