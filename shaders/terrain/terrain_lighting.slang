@@ -8,6 +8,8 @@ layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> scene_data;
 layout( binding = 0, set = 1 ) Texture2D<float4> gbuffer_position;
 layout( binding = 1, set = 1 ) Texture2D<float4> gbuffer_normal;
 layout( binding = 2, set = 1 ) Texture2D<float2> layer_test_mask;
+
+// Specific material stuff
 layout( binding = 3, set = 1 ) Texture2D<float4> grass_albedo_roughness;
 layout( binding = 4, set = 1 ) Texture2D<float4> grass_normal_ao;
 
@@ -79,11 +81,11 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
         = 2.0f * float2( rand_sx, rand_sy ) * distort_amplitude - distort_amplitude;
 
     // Layer map texture
-    float layer_map_scale = 0.05f;
+    float layer_map_scale = 0.025f;
     float world_scale = 0.05f;
 
-    float2 uv = frac(
-        ( distortion_offset + float2( world_position.x, world_position.z ) ) * layer_map_scale );
+    float2 uv = frac( ( distortion_offset + float2( world_position.x - 18.0f, world_position.z ) )
+        * layer_map_scale );
     float2 world_uv = frac( float2( world_position.x, world_position.z ) * world_scale );
     // uv = select( uv < 0.0f, uv + 1.0f, uv );
 
