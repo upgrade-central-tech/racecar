@@ -20,7 +20,7 @@ SDL_Window* initialize( int screen_w, int screen_h, bool fullscreen )
         throw Exception( "Failed to initialize SDL" );
     }
 
-    SDL_WindowFlags flags = SDL_WINDOW_VULKAN;
+    SDL_WindowFlags flags = SDL_WINDOW_VULKAN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
     if ( fullscreen ) {
         flags |= SDL_WINDOW_FULLSCREEN;

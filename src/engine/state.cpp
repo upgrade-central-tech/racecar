@@ -5,6 +5,7 @@
 #include "../vk/create.hpp"
 
 #include <algorithm>
+#include <functional>
 
 namespace racecar::engine {
 
@@ -18,24 +19,24 @@ vkb::Swapchain create_swapchain( SDL_Window* window, const vk::Common& vulkan )
                    vulkan.device.physical_device, vulkan.surface, &capabilities ),
         "vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed" );
 
-    VkExtent2D swap_extent = { .width = 0, .height = 0 };
-    if ( capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max() ) {
-        swap_extent = capabilities.currentExtent;
-    } else {
-        int width = 0;
-        int height = 0;
-
-        if ( !SDL_GetWindowSizeInPixels( window, &width, &height ) ) {
-            throw Exception( "[SDL] SDL_GetWindowSizeInPixels: {}", SDL_GetError() );
+    VkExtent2D swap_extent = std::invoke( [&]() -> VkExtent2D {
+        if ( capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max() ) {
+            log::info(
+                "[engine] Using current extent from vkGetPhysicalDeviceSurfaceCapabilitiesKHR" );
+            return capabilities.currentExtent;
         }
 
-        swap_extent = {
-            .width = std::clamp( static_cast<uint32_t>( width ), capabilities.minImageExtent.width,
-                capabilities.maxImageExtent.width ),
-            .height = std::clamp( static_cast<uint32_t>( height ),
-                capabilities.minImageExtent.height, capabilities.maxImageExtent.height ),
-        };
-    }
+        if ( int width = 0, height = 0; !SDL_GetWindowSizeInPixels( window, &width, &height ) ) {
+            return {
+                .width = std::clamp( static_cast<uint32_t>( width ),
+                    capabilities.minImageExtent.width, capabilities.maxImageExtent.width ),
+                .height = std::clamp( static_cast<uint32_t>( height ),
+                    capabilities.minImageExtent.height, capabilities.maxImageExtent.height ),
+            };
+        } else {
+            throw Exception( "[SDL] SDL_GetWindowSizeInPixels: {}", SDL_GetError() );
+        }
+    } );
 
     // This is VSync
     VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
