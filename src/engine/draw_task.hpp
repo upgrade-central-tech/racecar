@@ -1,51 +1,39 @@
 #pragma once
 
-#include "../geometry/mesh.hpp"
 #include "../scene/scene.hpp"
+#include "descriptor_set.hpp"
 #include "pipeline.hpp"
-#include "uniform_buffer.hpp"
 
 #include <volk.h>
+
+#include <optional>
 
 namespace racecar::engine {
 
 struct DrawResourceDescriptor {
     std::vector<VkBuffer> vertex_buffers;
-    VkBuffer index_buffer;
+    VkBuffer index_buffer = VK_NULL_HANDLE;
 
     std::vector<VkDeviceSize> vertex_buffer_offsets;
-    int32_t index_buffer_offset;
-    int32_t first_index;
+    int32_t index_buffer_offset = 0;
+    int32_t first_index = 0;
 
-    uint32_t index_count;
+    uint32_t index_count = 0;
 
-    static DrawResourceDescriptor from_mesh( const geometry::Mesh& mesh,
-                                             const std::optional<scene::Primitive>& primitive );
+    static DrawResourceDescriptor from_mesh( VkBuffer vertex_buffer, VkBuffer index_buffer,
+        uint32_t num_indices, const std::optional<scene::Primitive>& primitive );
 };
 
-/// Descriptor for a draw call.
+/// A draw task represents one Vulkan pipeline, and more specifically, the shader to be used
+/// in the pipeline. For example, you would use one draw task for each material, because each
+/// material uses its own shader module.
 struct DrawTask {
-    /// User-defined parameters:
-    DrawResourceDescriptor draw_resource_desc;
-    std::vector<IUniformBuffer*> uniform_buffers;
-
+    DrawResourceDescriptor draw_resource_descriptor;
+    std::vector<DescriptorSet*> descriptor_sets;
     Pipeline pipeline = {};
-    VkExtent2D extent = {};
-    bool clear_screen = false;
-
-    bool render_target_is_swapchain = false;
-
-    /// Uninitialized by default below
-    VkImage draw_target = VK_NULL_HANDLE;
-    VkImageView draw_target_view = VK_NULL_HANDLE;
-
-    VkImage depth_image = VK_NULL_HANDLE;
-    VkImageView depth_image_view = VK_NULL_HANDLE;
 };
 
-bool draw( vk::Common& vulkan,
-           const engine::State& engine,
-           const DrawTask& draw_task,
-           const VkCommandBuffer& cmd_buf );
+void draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
+    const VkExtent2D extent );
 
-}  // namespace racecar::engine
+} // namespace racecar::engine

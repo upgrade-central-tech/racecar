@@ -1,14 +1,12 @@
 #pragma once
 
-#include "../scene/camera.hpp"
-#include "../vk/common.hpp"
+#include "../context.hpp"
+#include "../orbit_camera.hpp"
 #include "../vk/mem.hpp"
 #include "descriptors.hpp"
 #include "imm_submit.hpp"
 
 #include <SDL3/SDL.h>
-
-#include <optional>
 
 namespace racecar::engine {
 
@@ -22,8 +20,6 @@ struct FrameData {
     VkSemaphore acquire_start_smp = VK_NULL_HANDLE;
     VkSemaphore start_render_smp = VK_NULL_HANDLE;
     VkSemaphore render_end_smp = VK_NULL_HANDLE;
-
-    vk::mem::UniformBuffer triangle_uniform_buffer;
 };
 
 struct SwapchainSemaphores {
@@ -35,14 +31,12 @@ struct State {
     vkb::Swapchain swapchain;
     std::vector<VkImage> swapchain_images;
     std::vector<VkImageView> swapchain_image_views;
-
     std::vector<vk::mem::AllocatedImage> depth_images;
 
-    // Initialized in initalize
-    scene::Camera global_camera = {};
+    camera::OrbitCamera camera;
 
     uint32_t frame_overlap = 1;
-    uint32_t frame_number = 0;
+    uint32_t frame_number = 1;
     uint32_t rendered_frames = 0;
 
     ImmediateSubmit immediate_submit = {};
@@ -54,10 +48,10 @@ struct State {
 
     DescriptorSystem descriptor_system = {};
 
-    int get_frame_index() const { return frame_number % frame_overlap; };
+    size_t get_frame_index() const;
 };
 
-std::optional<State> initialize( SDL_Window* window, vk::Common& vulkan );
-void free( State& engine, vk::Common& vulkan );
+State initialize( Context& ctx );
+void free( State& engine );
 
-}  // namespace racecar::engine
+} // namespace racecar::engine

@@ -11,4 +11,4 @@ struct Context {
     vk::Common vulkan;
 };
 
-}  // namespace racecar
+} // namespace racecar

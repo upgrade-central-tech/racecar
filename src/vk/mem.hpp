@@ -3,8 +3,6 @@
 #include "common.hpp"
 #include "vma.hpp"
 
-#include <optional>
-
 namespace racecar::vk::mem {
 
 struct AllocatedBuffer {
@@ -16,7 +14,8 @@ struct AllocatedBuffer {
 struct AllocatedImage {
     VkImage image = VK_NULL_HANDLE;
     VkImageView image_view = VK_NULL_HANDLE;
-    VmaAllocation allocation = nullptr;
+    VkImageView storage_image_view = VK_NULL_HANDLE;
+    VmaAllocation allocation = VK_NULL_HANDLE;
     VkExtent3D image_extent = {};
     VkFormat image_format = VK_FORMAT_UNDEFINED;
 };
@@ -27,18 +26,7 @@ struct UniformBuffer {
     void* mapped_data = nullptr;
 };
 
-std::optional<UniformBuffer> create_uniform_buffer( Common& vulkan,
-                                                    const void* uniform_data,
-                                                    size_t data_size,
-                                                    uint32_t binding_slot );
+AllocatedBuffer create_buffer( Common& vulkan, size_t alloc_size, VkBufferUsageFlags usage_flags,
+    VmaMemoryUsage memory_usage );
 
-template <typename T>
-bool update_uniform_buffer( UniformBuffer& uniform_buffer, const T& updated_buffer_data );
-
-/// Memory creation.
-std::optional<AllocatedBuffer> create_buffer( Common& vulkan,
-                                              size_t alloc_size,
-                                              VkBufferUsageFlags usage_flags,
-                                              VmaMemoryUsage memory_usage );
-
-}  // namespace racecar::vk::mem
+} // namespace racecar::vk::mem

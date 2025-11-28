@@ -1,9 +1,10 @@
-BasedOnStyle: Chromium
+BasedOnStyle: WebKit
 
 ColumnLimit: 100
 InsertNewlineAtEOF: true
 WrapNamespaceBodyWithEmptyLines: Always
 SeparateDefinitionBlocks: Always
+NamespaceIndentation: None
 
 UseTab: Never
 IndentWidth: 4 
@@ -22,7 +23,7 @@ IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^".*"'
     Priority: 1
-  - Regex: '^<(SDL|glm|imgui|vulkan)/?.*>'
+  - Regex: '^<(SDL|glm|imgui|vulkan|tiny_gltf|stb)/?.*>'
     Priority: 2
   - Regex: '^<(volk)/?.*>'
     Priority: 2
