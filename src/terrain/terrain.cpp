@@ -13,8 +13,10 @@ const std::filesystem::path TERRAIN_SHADER_LIGHTING_MODULE_PATH
 
 // TEST FILE PATHS...
 const std::filesystem::path TEST_LAYER_MASK_PATH = "../assets/LUT/test_terrain_map.bmp";
-const std::filesystem::path TEST_GRASS_ALBEDO_PATH = "../assets/terrain/grass_albedo.jpg";
-const std::filesystem::path TEST_GRASS_NORMAL_AO_PATH = "../assets/terrain/grass_normal_ao.png";
+const std::filesystem::path TEST_GRASS_ALBEDO_ROUGHNESS_PATH
+    = "../assets/terrain/better_grass/grass_albedo_roughness.png";
+const std::filesystem::path TEST_GRASS_NORMAL_AO_PATH
+    = "../assets/terrain/better_grass/grass_normal_ao.png";
 
 namespace racecar::geometry {
 
@@ -54,8 +56,8 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     terrain.test_layer_mask
         = engine::load_image( TEST_LAYER_MASK_PATH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM );
 
-    terrain.grass_albedo
-        = engine::load_image( TEST_GRASS_ALBEDO_PATH, vulkan, engine, 4, VK_FORMAT_R8G8B8A8_UNORM );
+    terrain.grass_albedo_roughness = engine::load_image(
+        TEST_GRASS_ALBEDO_ROUGHNESS_PATH, vulkan, engine, 4, VK_FORMAT_R8G8B8A8_UNORM );
 
     terrain.grass_normal_ao = engine::load_image(
         TEST_GRASS_NORMAL_AO_PATH, vulkan, engine, 4, VK_FORMAT_R8G8B8A8_UNORM );
@@ -172,7 +174,7 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.texture_desc_set, terrain.test_layer_mask, 2 );
     engine::update_descriptor_set_image(
-        vulkan, engine, terrain.texture_desc_set, terrain.grass_albedo, 3 );
+        vulkan, engine, terrain.texture_desc_set, terrain.grass_albedo_roughness, 3 );
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.texture_desc_set, terrain.grass_normal_ao, 4 );
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,

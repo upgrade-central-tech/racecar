@@ -40,7 +40,7 @@ struct Terrain {
     // Crap-ton of images. We need a bindless-texture solution or something.
     // Maybe one giant atlas will work, actually.
     vk::mem::AllocatedImage test_layer_mask;
-    vk::mem::AllocatedImage grass_albedo;
+    vk::mem::AllocatedImage grass_albedo_roughness;
     vk::mem::AllocatedImage grass_normal_ao;
 
     VkVertexInputBindingDescription vertex_binding_description = {

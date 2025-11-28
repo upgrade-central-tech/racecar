@@ -21,6 +21,40 @@ struct Material {
     float clearcoat_weight;
 }
 
+struct BSDF_Dots {
+    // Essential dot products
+    float n_dot_v;
+    float n_dot_h;
+    float n_dot_l;
+    float h_dot_l;
+    float v_dot_h;
+
+    float clamped_n_dot_v;
+    float clamped_n_dot_h;
+    float clamped_n_dot_l;
+    float clamped_h_dot_l;
+    float clamped_v_dot_h;
+}
+
+BSDF_Dots get_dots( float3 normal, float3 view, float3 half, float3 light )
+{
+    // Essential dot products
+    BSDF_Dots dots;
+    dots.n_dot_v = ( dot( normal, view ) );
+    dots.n_dot_h = ( dot( normal, half ) );
+    dots.n_dot_l = ( dot( normal, light ) );
+    dots.h_dot_l = ( dot( half, light ) );
+    dots.v_dot_h = ( dot( view, half ) );
+
+    dots.clamped_n_dot_v = max( dots.n_dot_v, 0.0f );
+    dots.clamped_n_dot_h = max( dots.n_dot_h, 0.0f );
+    dots.clamped_n_dot_l = max( dots.n_dot_l, 0.0f );
+    dots.clamped_h_dot_l = max( dots.h_dot_l, 0.0f );
+    dots.clamped_v_dot_h = max( dots.v_dot_h, 0.0f );
+
+    return dots;
+}
+
 float2 oct_encode( float3 n )
 {
     // Project the normal onto the octahedron
@@ -100,6 +134,36 @@ float3 world_to_local( float3 world_dir, float3 normal )
     float3x3 TBN = float3x3( tangent, bitangent, normal );
 
     return mul( transpose( TBN ), world_dir );
+}
+
+//=======================================================================================
+// Manual filtering helper functions
+//=======================================================================================
+float4 filter_float4( Texture2D<float4> texture, float2 world_uv )
+{
+    uint width, height;
+    texture.GetDimensions( width, height );
+
+    float2 texel_space = world_uv * float2( width, height );
+
+    float2 texel0 = floor( texel_space - 0.5f );
+    float2 subpixel = frac( texel_space - 0.5f );
+
+    int2 i00 = int2( texel0 ); // tl
+    int2 i10 = i00 + int2( 1, 0 ); // tr
+    int2 i01 = i00 + int2( 0, 1 ); // bl
+    int2 i11 = i00 + int2( 1, 1 ); // br
+
+    float4 c00 = texture[i00];
+    float4 c10 = texture[i10];
+    float4 c01 = texture[i01];
+    float4 c11 = texture[i11];
+
+    float4 w
+        = float4( ( 1.0f - subpixel.x ) * ( 1.0f - subpixel.y ), subpixel.x * ( 1.0f - subpixel.y ),
+            ( 1.0f - subpixel.x ) * subpixel.y, subpixel.x * subpixel.y, );
+
+    return c00 * w.x + c10 * w.y + c01 * w.z + c11 * w.w;
 }
 
 
