@@ -1,6 +1,7 @@
 #include "racecar.hpp"
 
 #define ENABLE_VOLUMETRICS 0
+#define ENABLE_TERRAIN 1
 #define ENABLE_DEFERRED_AA 1
 
 #include "atmosphere.hpp"
@@ -12,6 +13,7 @@
 #include "engine/images.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/post/bloom.hpp"
+#include "engine/prepass.hpp"
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"

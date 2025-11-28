@@ -25,7 +25,7 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     // Generate enough information for just one planar quad. Expand it later on arbitrarily
     [[maybe_unused]] int32_t size = 1;
 
-    float scale = 50.0f;
+    float scale = 10.0f;
     float offset_y = -0.15f;
 
     // Arbitrarily populate this with size later on

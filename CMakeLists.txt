@@ -49,6 +49,7 @@ add_executable(racecar
     ${GEOMETRY_DIR}/procedural.cpp
     ${GEOMETRY_DIR}/quad.cpp
     ${GEOMETRY_DIR}/ibl.cpp
+    ${GEOMETRY_DIR}/gpu_mesh_buffers.cpp
 
     ${TERRAIN_DIR}/terrain.cpp
 
