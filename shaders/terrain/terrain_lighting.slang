@@ -128,8 +128,8 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     // Image-based lighting evaluations
     // Remap to [0-1]
-    float2 oct_uv = 0.5f * oct_encode( mixed_normal ) + 0.5f;
-    float2 oct_refl_uv = 0.5f * oct_encode( reflect( -view, mixed_normal ) ) + 0.5f;
+    float2 oct_uv = oct_encode( mixed_normal );
+    float2 oct_refl_uv = oct_encode( normalize( reflect( -view, mixed_normal ) ) );
 
     // Irradiance lighting type shizz
     uint irradiance_width, irradiance_height;
