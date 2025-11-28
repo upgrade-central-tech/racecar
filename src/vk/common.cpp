@@ -251,7 +251,6 @@ Common initialize( SDL_Window* window )
             vulkan.destructor_stack.push(
                 vulkan.device, vulkan.global_samplers.nearest_sampler, vkDestroySampler );
         }
-
     } catch ( const Exception& ex ) {
         log::error( "[vk] {}", ex.what() );
         throw Exception( "[Vulkan] Failed to initialize" );
