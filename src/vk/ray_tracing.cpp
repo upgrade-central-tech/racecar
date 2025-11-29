@@ -21,12 +21,12 @@ RayTracingProperties query_rt_properties( VkPhysicalDevice physical_device )
 
     RayTracingProperties result = {};
 
-    result.shader_group_handle_size = int( rt_pipeline_properties.shaderGroupHandleSize );
-    result.shader_group_handle_alignment = int( rt_pipeline_properties.shaderGroupHandleAlignment );
-    result.shader_group_base_alignment = int( rt_pipeline_properties.shaderGroupBaseAlignment );
+    result.shader_group_handle_size = rt_pipeline_properties.shaderGroupHandleSize;
+    result.shader_group_handle_alignment = rt_pipeline_properties.shaderGroupHandleAlignment;
+    result.shader_group_base_alignment = rt_pipeline_properties.shaderGroupBaseAlignment;
 
     result.min_acceleration_structure_scratch_offset_alignment
-        = int( as_properties.minAccelerationStructureScratchOffsetAlignment );
+        = as_properties.minAccelerationStructureScratchOffsetAlignment;
 
     return result;
 }
@@ -60,12 +60,24 @@ VkAccelerationStructureGeometryKHR create_acceleration_structure_from_geometry(
 AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
     RayTracingProperties& rt_props, MeshData mesh, VkCommandBuffer cmd_buf, [[maybe_unused]] DestructorStack& destructor_stack )
 {
-    VkBufferDeviceAddressInfo info{.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-    info.buffer = mesh.vertex_buffer;
-    mesh.vertex_buffer_address = vkGetBufferDeviceAddress(device, &info);
+    if ( mesh.vertex_buffer == VK_NULL_HANDLE ) {
+        throw Exception("[Build BLAS] MeshData vertex buffer is null");
+    }
+    if ( mesh.index_buffer == VK_NULL_HANDLE ) {
+        throw Exception("[Build BLAS] MeshData index buffer is null");
+    }
 
-    info.buffer = mesh.index_buffer;
-    mesh.index_buffer_address = vkGetBufferDeviceAddress(device, &info);
+    VkBufferDeviceAddressInfo vertex_info {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = mesh.vertex_buffer
+    };
+    mesh.vertex_buffer_address = vkGetBufferDeviceAddress(device, &vertex_info);
+
+    VkBufferDeviceAddressInfo index_info {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = mesh.index_buffer
+    };
+    mesh.index_buffer_address = vkGetBufferDeviceAddress(device, &index_info);
 
     VkAccelerationStructureGeometryKHR geometry
         = create_acceleration_structure_from_geometry( mesh );
@@ -142,11 +154,14 @@ AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
 
     VkAccelerationStructureCreateInfoKHR asCI
         = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+              .createFlags = VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR,
               .buffer = blas.buffer,
               .size = sizeInfo.accelerationStructureSize,
               .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
-              .deviceAddress = blas.device_address };
-    vkCreateAccelerationStructureKHR( device, &asCI, nullptr, &blas.handle );
+              .deviceAddress = blas.device_address,
+        };
+    vk::check( vkCreateAccelerationStructureKHR( device, &asCI, nullptr, &blas.handle ), "Failed to call vkCreateAccelerationStructureKHR for BLAS");
+    destructor_stack.push(device, blas.handle, vkDestroyAccelerationStructureKHR);
 
     buildInfo.dstAccelerationStructure = blas.handle;
     buildInfo.scratchData.deviceAddress = alignedScratchAddress; // The aligned address
@@ -219,7 +234,7 @@ AccelerationStructure build_tlas(
     VkBufferCreateInfo instanceBufferCI = { 
        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
        .size = instances.size() * sizeof(VkAccelerationStructureInstanceKHR),
-       .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+       .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
     };
     VmaAllocationCreateInfo instanceAllocCI = { 
        .usage = VMA_MEMORY_USAGE_CPU_TO_GPU 
@@ -345,12 +360,14 @@ AccelerationStructure build_tlas(
     
     VkAccelerationStructureCreateInfoKHR asCI = {
       .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+      .createFlags = VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR,
       .buffer = tlas.buffer,
       .size = sizeInfo.accelerationStructureSize,
       .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
       .deviceAddress = tlas.device_address
     };
-    vkCreateAccelerationStructureKHR(device, &asCI, nullptr, &tlas.handle);
+    vk::check(vkCreateAccelerationStructureKHR(device, &asCI, nullptr, &tlas.handle), "Failed to call vkCreateAccelerationStructureKHR for TLAS");
+    destructor_stack.push(device, tlas.handle, vkDestroyAccelerationStructureKHR);
 
     // 7. Update Build Info and Execute Build Command
     buildInfo.dstAccelerationStructure = tlas.handle;
@@ -365,7 +382,6 @@ AccelerationStructure build_tlas(
 
     const VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = &rangeInfo;
     vkCmdBuildAccelerationStructuresKHR( cmd_buf, 1, &buildInfo, &pRangeInfo );
-
 
     // 8. Synchronization and Cleanup
     
@@ -390,9 +406,6 @@ AccelerationStructure build_tlas(
 
     tlas.type = AccelerationStructure::Type::TLAS;
 
-    destructor_stack.push(device, scratchBuffer, vkDestroyBuffer);
-    destructor_stack.push(device, tlas.buffer, vkDestroyBuffer);
-    
     return tlas;
 }
 

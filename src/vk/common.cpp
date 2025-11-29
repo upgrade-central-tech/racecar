@@ -95,6 +95,12 @@ vkb::Device pick_and_create_device( const Common& vulkan )
 {
     vkb::PhysicalDeviceSelector phys_selector( vulkan.instance, vulkan.surface );
 
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+        .pNext = nullptr,
+        .accelerationStructure = VK_TRUE,
+        .accelerationStructureCaptureReplay = VK_TRUE
+    };
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_pipeline_features = {
        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
@@ -139,6 +145,8 @@ vkb::Device pick_and_create_device( const Common& vulkan )
               .add_required_extension( VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME )
               .add_required_extension( VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME )
               .add_required_extension( VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME )
+              .add_required_extension_features(as_features)
+              .add_required_extension_features(rt_pipeline_features)
               .set_required_features_13( required_features_13 )
               .set_required_features_12( required_features_12 )
               .set_required_features_11( required_features_11 )

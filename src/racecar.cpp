@@ -656,7 +656,7 @@ void run( bool use_fullscreen )
     vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
     vkDestroyFence(ctx.vulkan.device, precompute_fence, VK_NULL_HANDLE);
     vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
-    //
+    
 
     engine::add_gfx_task( task_list, depth_ms_gfx_task );
     engine::add_gfx_task( task_list, prepass_gfx_task );
