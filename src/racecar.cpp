@@ -49,7 +49,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
@@ -986,6 +986,17 @@ void run( bool use_fullscreen )
 
             camera_buffer.set_data( camera_ub );
             camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
+        // AO update
+        {
+            ub_data::AOData ao_ub = ao_pass.ao_buffer.get_data();
+
+            ao_ub.packed_floats0 = glm::vec4(
+                gui.ao.thickness, gui.ao.radius, gui.ao.offset, gui.ao.debug_enable ? 1.0f : 0.0f );
+
+            ao_pass.ao_buffer.set_data( ao_ub );
+            ao_pass.ao_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
 #if ENABLE_VOLUMETRICS

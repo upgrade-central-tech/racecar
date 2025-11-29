@@ -8,8 +8,12 @@ namespace racecar::engine::post {
 
 void initialize_ao_pass( vk::Common& vulkan, engine::State& engine, AoPass& ao_pass )
 {
+    ao_pass.ao_buffer = create_uniform_buffer<ub_data::AOData>(
+        vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+
     ao_pass.uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
         {
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         },
         VK_SHADER_STAGE_COMPUTE_BIT );
@@ -25,6 +29,9 @@ void initialize_ao_pass( vk::Common& vulkan, engine::State& engine, AoPass& ao_p
 
     engine::update_descriptor_set_uniform(
         vulkan, engine, ao_pass.uniform_desc_set, *ao_pass.camera_buffer, 0 );
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, ao_pass.uniform_desc_set, ao_pass.ao_buffer, 1 );
+
     engine::update_descriptor_set_rwimage(
         vulkan, engine, ao_pass.texture_desc_set, *ao_pass.out_color, VK_IMAGE_LAYOUT_GENERAL, 0 );
 

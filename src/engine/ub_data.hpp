@@ -33,7 +33,13 @@ struct Debug {
     uint32_t padding;
 };
 
+struct AOData {
+    // Pack: thickness, radius, offset, null
+    glm::vec4 packed_floats0;
+};
+
 struct SHData {
+
     // Packs all 9 spherical harmonics
     glm::vec4 coeff0 = {};
     glm::vec4 coeff1 = {};

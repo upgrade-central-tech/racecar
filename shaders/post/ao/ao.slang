@@ -2,13 +2,14 @@
 #include "../../utils.slang"
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_data;
+layout( binding = 1, set = 0 ) ConstantBuffer<AOData> ao_data;
 
 layout( binding = 0, set = 1 ) RWTexture2D<float4> output;
 layout( binding = 1, set = 1 ) Texture2D<float4> scene_color;
 layout( binding = 2, set = 1 ) Texture2D<float4> gbuffer_normal;
 layout( binding = 3, set = 1 ) Texture2D<float4> gbuffer_depth;
 
-const static uint SLICES = 5;
+const static uint SLICES = 20;
 const static float RADIUS = 1;
 
 const static float FOV = 60.0f;
@@ -60,7 +61,23 @@ float sample_linear_depth( uint2 pixel_sample )
     return LinearDepth( ndc_depth, camera_data.camera_constants.x, camera_data.camera_constants.y );
 }
 
-float SSAO( float3 view_position, float3 view_normal )
+float2 rng_from_float( float x )
+{
+    // Convert float to uint-ish domain
+    uint xi = asuint( x * 1e4f ); // scale to get some bits
+    xi = ( xi ^ 61u ) ^ ( xi >> 16 );
+    xi *= 9u;
+    xi = xi ^ ( xi >> 4 );
+    xi *= 0x27d4eb2du;
+    xi = xi ^ ( xi >> 15 );
+
+    float x_rand = frac( float( xi ) * 0.000000059604644775390625f ); // 1/2^24
+    float y_rand = frac( float( xi * 0x7f4a7c15u ) * 0.000000059604644775390625f );
+
+    return float2( x_rand, y_rand );
+}
+
+float3 SSAO( float3 view_position, float3 view_normal )
 {
     float g = 1.220744084605759;
 
@@ -68,19 +85,33 @@ float SSAO( float3 view_position, float3 view_normal )
     float samples = 0.0f;
 
     for ( uint i = 0; i < SLICES; i++ ) {
-        float2 rng = frac( i * g );
+        float2 rng = rng_from_float( g + view_position.x + view_position.y + float( i ) );
         // Assume one step per direction for now
-        float3 view_offset = get_cos_vec( view_normal, rng );
+        float radius = 1.0f * ao_data.packed_floats0.y;
+        float3 view_offset = radius * get_cos_vec( view_normal, rng );
+        float sample_view_depth = ( view_offset + view_position ).z;
 
         // Convert to screenspace back
-        uint2 pixel_sample = view_to_pixel( 0.05f * view_offset + view_position );
+        uint2 pixel_sample = view_to_pixel( view_offset + view_position );
         float sample_depth = sample_linear_depth( pixel_sample );
 
-        occlusion += select( sample_depth >= view_position.z + 0.01f, 1.0f, 0.0f );
+        // Depth check
+        float offset = 1.0f * ao_data.packed_floats0.z;
+        bool isOccluded = ( sample_depth + offset ) < sample_view_depth;
+
+        // Distance check
+        float thickness_strength = ao_data.packed_floats0.x;
+        float threshold
+            = smoothstep( 0.0f, 1.0f, radius / abs( sample_view_depth - sample_depth ) );
+        float thickness = threshold * thickness_strength;
+
+        occlusion += select( isOccluded, 1.0f, 0.0f ) * thickness;
         samples += 1.0f;
     }
 
-    return 1.0f - ( occlusion / samples );
+    float ao = 1.0f - ( occlusion / samples ) * 1.50f;
+
+    return float3( ao );
 }
 
 // Very clever sampling trick. Thanks, Zenteon.
@@ -93,6 +124,8 @@ float3 get_cos_vec( float3 normal, float2 rng )
     sincos( 6.28f * rng.x, sphere.y, sphere.x );
     sphere.xy *= sqrt( 1.0f - rng.y * rng.y );
     sphere.z = rng.y;
+
+    sphere = normalize( sphere );
 
     if ( dot( normal, sphere ) < 0.0f ) {
         sphere = -sphere;
@@ -115,11 +148,12 @@ func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
     // The only goal for it is to essentially be an origin for our next sample, which we will
     // sample the same depth from for consistency.
     float3 view_pos = pixel_to_view( pixel );
-    float3 view_normal = world_nor_to_view( normal );
+    float3 view_normal = normalize( world_nor_to_view( normal ) );
 
-    float ao = SSAO( view_pos, view_normal );
+    float3 ao = SSAO( view_pos, normal );
 
-    float3 result = float3( 0.0f, ao, 0.0f ); // sample_linear_depth( pixel );
+    bool enable_debug = ao_data.packed_floats0.w > 0.5f;
+    float3 result = select( enable_debug, ao, ao * scene_color[pixel].rgb );
 
     output[pixel] = float4( result, 1.f );
 }

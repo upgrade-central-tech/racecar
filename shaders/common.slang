@@ -13,6 +13,11 @@ struct CameraBufferData {
     float4 camera_constants;
 };
 
+struct AOData {
+    // Pack: thickness, radius, offset, null
+    float4 packed_floats0;
+}
+
 struct DebugData {
     float4 color;
 
