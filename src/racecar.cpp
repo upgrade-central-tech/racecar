@@ -656,8 +656,15 @@ void run( bool use_fullscreen )
     vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
     vkDestroyFence(ctx.vulkan.device, precompute_fence, VK_NULL_HANDLE);
     vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
-    
 
+    engine::DescriptorSet as_desc_set = engine::generate_descriptor_set(ctx.vulkan, engine, {
+        VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR
+    }, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+
+    engine::DescriptorSet raytracing_desc_set = engine::generate_descriptor_set(ctx.vulkan, engine, {
+        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+    }, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    
     engine::add_gfx_task( task_list, depth_ms_gfx_task );
     engine::add_gfx_task( task_list, prepass_gfx_task );
 
