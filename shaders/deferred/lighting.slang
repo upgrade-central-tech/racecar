@@ -51,20 +51,6 @@ layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
 #include "../car_mat/car_lighting.slang"
 
-float LinearDepth( float perspective_depth, float near, float far )
-{
-    return ( near * far ) / ( far - perspective_depth * ( far - near ) );
-}
-
-float LinearDepth01( float perspective_depth )
-{
-    float near = camera_buffer_data.camera_constants.a;
-    float far = camera_buffer_data.camera_constants.b;
-
-    float linear_depth = LinearDepth( perspective_depth, near, far );
-    return ( linear_depth - near ) / ( far - near );
-}
-
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
 {

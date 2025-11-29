@@ -32,8 +32,8 @@ void initialize_ao_pass( vk::Common& vulkan, engine::State& engine, AoPass& ao_p
         *ao_pass.in_color, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
     engine::update_descriptor_set_rwimage( vulkan, engine, ao_pass.texture_desc_set,
         *ao_pass.GBuffer_Normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 2 );
-    engine::update_descriptor_set_rwimage( vulkan, engine, ao_pass.texture_desc_set,
-        *ao_pass.GBuffer_Depth, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 3 );
+    engine::update_descriptor_set_depth_image(
+        vulkan, engine, ao_pass.texture_desc_set, *ao_pass.GBuffer_Depth, 3 );
 
     return;
 }

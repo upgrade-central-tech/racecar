@@ -978,6 +978,7 @@ void run( bool use_fullscreen )
 
             camera_ub.mvp = projection * view * model;
             camera_ub.model = model;
+            camera_ub.view_mat = view;
             camera_ub.inv_model = glm::inverse( model );
             camera_ub.camera_pos = glm::vec4( camera_position, 1.0f );
             camera_ub.camera_constants = glm::vec4(

@@ -11,6 +11,7 @@ struct Camera {
     glm::mat4 mvp = {};
     glm::mat4 model = glm::mat4( 1.f );
     glm::mat4 inv_model = {};
+    glm::mat4 view_mat = {};
     glm::vec4 camera_pos = {};
     glm::vec4 camera_constants = {};
 };
