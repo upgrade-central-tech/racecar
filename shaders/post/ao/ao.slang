@@ -89,6 +89,10 @@ float3 SSAO( float3 view_position, float3 view_normal )
         // Assume one step per direction for now
         float radius = 1.0f * ao_data.packed_floats0.y;
         float3 view_offset = radius * get_cos_vec( view_normal, rng );
+
+        // Bias towards normal
+        view_offset = normalize( view_offset + view_normal * 0.2f );
+
         float sample_view_depth = ( view_offset + view_position ).z;
 
         // Convert to screenspace back
@@ -150,7 +154,7 @@ func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
     float3 view_pos = pixel_to_view( pixel );
     float3 view_normal = normalize( world_nor_to_view( normal ) );
 
-    float3 ao = SSAO( view_pos, normal );
+    float3 ao = SSAO( view_pos, view_normal );
 
     bool enable_debug = ao_data.packed_floats0.w > 0.5f;
     float3 result = select( enable_debug, ao, ao * scene_color[pixel].rgb );
