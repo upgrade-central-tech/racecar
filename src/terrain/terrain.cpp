@@ -96,8 +96,12 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
         terrain_prepass_pipeline = engine::create_gfx_pipeline( engine, vulkan,
             engine::get_vertex_input_state_create_info( terrain ),
             { terrain.prepass_uniform_desc_set.layouts[0] },
-            { VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT }, VK_SAMPLE_COUNT_1_BIT,
-            false, true, vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ) );
+            {
+                VK_FORMAT_R16G16B16A16_SFLOAT,
+                VK_FORMAT_R16G16B16A16_SFLOAT,
+            },
+            VK_SAMPLE_COUNT_1_BIT, false, true,
+            vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create terrain prepass graphics pipeline: {}", ex.what() );
         throw;

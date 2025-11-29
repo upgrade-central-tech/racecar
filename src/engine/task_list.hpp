@@ -38,4 +38,7 @@ void add_cs_task( TaskList& task_list, ComputeTask task );
 void add_blit_task( TaskList& task_list, BlitTask task );
 void add_pipeline_barrier( TaskList& task_list, PipelineBarrierDescriptor barrier );
 
+void transition_cs_read_to_write( engine::TaskList& task_list, engine::RWImage& image );
+void transition_cs_write_to_read( engine::TaskList& task_list, engine::RWImage& image );
+
 } // namespace racecar::engine

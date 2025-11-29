@@ -12,6 +12,7 @@
 #include "engine/execute.hpp"
 #include "engine/images.hpp"
 #include "engine/pipeline.hpp"
+#include "engine/post/ao.hpp"
 #include "engine/post/bloom.hpp"
 #include "engine/prepass.hpp"
 #include "engine/state.hpp"
@@ -48,7 +49,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
@@ -826,8 +827,14 @@ void run( bool use_fullscreen )
 
 // TODO: Make this its own function
 #if ENABLE_DEFERRED_AA
-    // Convert the screen_color/rendered image to read-only. Output screen buffer must be converted
-    // to write-only.
+    // Convert the screen_color/rendered image to read-only.
+    // Output screen buffer must be converted to write-only.
+    // These are special pipeline barriers, since it is assumed that
+    // the scene color was rendered to via gfx draw calls, hence the attachment.
+    // We may need future helpers to convert from attachment to cs write, etc. and vice versa.
+    //
+    // Current limitation assumes that all post-processing calls are done via compute shader
+    // hence the VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT stage.
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
             .image_barriers = {
@@ -856,6 +863,22 @@ void run( bool use_fullscreen )
     engine::post::BloomPass bloom_pass = engine::post::add_bloom(
         ctx.vulkan, engine, task_list, screen_color, screen_buffer, debug_buffer );
 
+    engine::post::AoPass ao_pass = {
+        &camera_buffer,
+        &GBuffer_Normal,
+        &GBuffer_Depth,
+        &screen_buffer,
+        &screen_color,
+    };
+    {
+        engine::transition_cs_read_to_write( task_list, screen_color );
+        engine::transition_cs_write_to_read( task_list, screen_buffer );
+
+        add_ao( ao_pass, ctx.vulkan, engine, task_list );
+    }
+
+    // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
+    // screen.
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
             .image_barriers = {
@@ -865,11 +888,11 @@ void run( bool use_fullscreen )
                     .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = screen_buffer,
+                    .image = screen_color,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
             } } );
 
-    engine::add_blit_task( task_list, { screen_buffer } );
+    engine::add_blit_task( task_list, { screen_color } );
 #endif
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
