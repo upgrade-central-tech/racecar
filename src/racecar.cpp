@@ -43,7 +43,7 @@ namespace {
 
 constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
-constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
+constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/raytracing/shadow.spv";
 constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
@@ -659,10 +659,6 @@ void run( bool use_fullscreen )
 
     engine::DescriptorSet as_desc_set = engine::generate_descriptor_set(ctx.vulkan, engine, {
         VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR
-    }, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-
-    engine::DescriptorSet raytracing_desc_set = engine::generate_descriptor_set(ctx.vulkan, engine, {
-        VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
     }, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     
     engine::add_gfx_task( task_list, depth_ms_gfx_task );
