@@ -130,6 +130,7 @@ void run( bool use_fullscreen )
 
     size_t num_materials = scene.materials.size();
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
+    std::vector<UniformBuffer<ub_data::Material>> material_uniform_buffers( num_materials );
 
     for ( size_t i = 0; i < num_materials; i++ ) {
         // Generate a separate texture descriptor set for each of the materials
@@ -176,6 +177,7 @@ void run( bool use_fullscreen )
 
         engine::update_descriptor_set_uniform(
             ctx.vulkan, engine, material_desc_sets[i], material_buffer, 3 );
+        material_uniform_buffers[i] = std::move(material_buffer);
     }
 
     engine::DescriptorSet raymarch_tex_sets;
@@ -1053,6 +1055,28 @@ void run( bool use_fullscreen )
 
             debug_buffer.set_data( debug_ub );
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
+        // update materials 
+        {
+            gui.debug.current_editing_material = glm::clamp(gui.debug.current_editing_material, 0, int(num_materials));
+            int mat_idx = gui.debug.current_editing_material;
+            auto mat_data = material_uniform_buffers[size_t(mat_idx)].get_data();
+            if ( gui.debug.load_material_into_gui ) {
+                gui.debug.color = mat_data.base_color;
+                gui.debug.roughness = mat_data.roughness;
+                gui.debug.metallic = mat_data.metallic;
+                gui.debug.clearcoat_weight = mat_data.clearcoat;
+                gui.debug.clearcoat_roughness = mat_data.clearcoat_roughness;
+                gui.debug.load_material_into_gui = false;
+            }
+            mat_data.base_color = gui.debug.color;
+            mat_data.roughness = gui.debug.roughness;
+            mat_data.metallic = gui.debug.metallic;
+            mat_data.clearcoat = gui.debug.clearcoat_weight;
+            mat_data.clearcoat_roughness = gui.debug.clearcoat_roughness;
+            material_uniform_buffers[size_t(mat_idx)].set_data(mat_data);
+            material_uniform_buffers[size_t(mat_idx)].update(ctx.vulkan, engine.get_frame_index());
         }
 
         // {

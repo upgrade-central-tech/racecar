@@ -109,6 +109,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
         if ( ImGui::BeginTabBar( "Categories" ) ) {
             if ( ImGui::BeginTabItem( "General" ) ) {
                 ImGui::SeparatorText( "Material Settings" );
+                gui.debug.load_material_into_gui = ImGui::InputInt( "Editing Material", &gui.debug.current_editing_material );
                 ImGui::ColorEdit4( "Base color", &gui.debug.color[0] );
                 ImGui::SliderFloat( "Roughness", &gui.debug.roughness, 0, 1.0f );
                 ImGui::SliderFloat( "Metallic", &gui.debug.metallic, 0, 1.0f );

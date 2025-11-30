@@ -109,6 +109,20 @@ FragmentOutput fs_main( VertexOutput in )
     // 2 - terrain shading
     float stencil = CAR_ID;
 
+    if ( material_data.has_base_color_texture != 0 && debug_data.enable_albedo_map != 1 ) {
+        output.albedo = albedo_map.Sample( nearest_sampler, in.uv );
+    } else {
+        output.albedo = material_data.base_color;
+    }
+
+    if ( material_data.has_metallic_roughness_texture != 0 && debug_data.enable_roughness_metal_map ) {
+        output.packed_data = float4( metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb,
+            material_data.clearcoat_roughness, material_data.clearcoat );
+    } else {
+        output.packed_data = float4( material_data.roughness, material_data.metallic,
+            material_data.clearcoat_roughness, material_data.clearcoat );
+    }
+
 #if 1
     float3 normal = normalize( in.normal );
     float3 light = normalize( debug_data.sun_direction.rgb );
@@ -119,7 +133,7 @@ FragmentOutput fs_main( VertexOutput in )
     float2 duvdx = ddx( in.uv );
     float2 duvdy = ddy( in.uv );
 
-    float alpha = debug_data.packed_data0.x * debug_data.packed_data0.x;
+    float alpha = material_data.roughness * material_data.roughness;
     float clamped_n_dot_h = max( dot( normal, half ), 0.0f );
     float NDF = DistributionGGX( clamped_n_dot_h, alpha );
 
@@ -140,20 +154,6 @@ FragmentOutput fs_main( VertexOutput in )
 
     output.tangent = in.tangent;
     output.uv = float4( in.uv, NDF, 0.0f );
-
-    if ( material_data.has_base_color_texture != 0 ) {
-        output.albedo = albedo_map.Sample( nearest_sampler, in.uv );
-    } else {
-        output.albedo = material_data.base_color;
-    }
-
-    if ( material_data.has_metallic_roughness_texture != 0 ) {
-        output.packed_data = float4( metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb,
-            material_data.clearcoat_roughness, material_data.clearcoat );
-    } else {
-        output.packed_data = float4( material_data.roughness, material_data.metallic,
-            material_data.clearcoat_roughness, material_data.clearcoat );
-    }
 
     return output;
 }

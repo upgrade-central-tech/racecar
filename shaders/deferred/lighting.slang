@@ -22,11 +22,6 @@ struct SHData {
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
-// Material stuff strictly
-layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
-layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
-layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
-
 // Cubemaps + LUTs
 layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
 layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
@@ -138,13 +133,9 @@ float4 fs_main( VertexOutput in )
     }
 
     // Texture samples
-    float3 base_albedo = debug_data.enable_albedo_map
-        ? GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb
-        : debug_data.color.rgb;
+    float3 base_albedo = GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb;
 
-    float2 metallic_roughness = debug_data.enable_roughness_metal_map
-        ? GBuffer_Packed_Data.Sample( nearest_sampler, in.uv ).xy
-        : float2( debug_data.packed_data0.x, debug_data.packed_data0.y );
+    float4 metallic_roughness = GBuffer_Packed_Data.Sample( nearest_sampler, in.uv );
 
     // Material properties
     float metallic = metallic_roughness.y;
@@ -163,8 +154,8 @@ float4 fs_main( VertexOutput in )
 
     Material pbr = {
         roughness, metallic,
-        debug_data.packed_data0.z, // cc roughness
-        debug_data.packed_data0.w // cc weight
+        metallic_roughness.z, // cc roughness
+        metallic_roughness.w // cc weight
     };
 
     GBuffer gbuffer = { in_pos, normal, in_tangent, in_uv, ddx_uv, ddy_uv };

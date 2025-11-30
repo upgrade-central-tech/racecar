@@ -33,6 +33,8 @@ struct Gui {
         bool roughness_metal_only = false;
         bool enable_bloom = true;
         bool ray_traced_shadows = true;
+        int current_editing_material = 0;
+        bool load_material_into_gui = true;
     } debug = {};
 
     struct DemoData {
