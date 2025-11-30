@@ -72,6 +72,8 @@ layout( binding = 6, set = 4 ) Texture2DMS<float> GBuffer_DepthMS;
 // roughness, metallic, clearcoat roughness, clearcoat weight
 layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
+layout( binding = 0, set = 5 ) RaytracingAccelerationStructure sceneBVH;
+
 // #include "../utils.slang"
 // #include "../glint/glint_noise_init.hlsl"
 // #include "../glint/glint.hlsl"
@@ -90,6 +92,44 @@ float LinearDepth01( float perspective_depth )
 
     float linear_depth = LinearDepth( perspective_depth, near, far );
     return ( linear_depth - near ) / ( far - near );
+}
+
+bool traceRayFirstHit(
+    RaytracingAccelerationStructure sceneBVH,
+    float3 rayOrigin,
+    float3 rayDir,
+    out float t,
+    out int primitiveIndex )
+{
+    RayDesc ray;
+    ray.Origin = rayOrigin;
+    ray.TMin = 0.001f;
+    ray.Direction = rayDir;
+    ray.TMax = 1e4f;
+    RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+        //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
+
+    let rayFlags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+        //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
+
+    q.TraceRayInline(
+        sceneBVH,
+        rayFlags,
+        0xff,
+        ray );
+    q.Proceed();
+
+    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT )
+    {
+        t = q.CommittedRayT();
+        primitiveIndex = q.CommittedPrimitiveIndex();
+        return true;
+    }
+    primitiveIndex = q.CandidatePrimitiveIndex();
+    unused( t );
+    return false;
 }
 
 [shader( "vertex" )]
@@ -152,7 +192,17 @@ float4 fs_main( VertexOutput in )
 
     GBuffer gbuffer = { in_pos, normal, in_tangent, in_uv, ddx_uv, ddy_uv };
 
-    float3 out_color = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer );
+    float t;
+    int primitive_index;
+    bool hit = traceRayFirstHit(
+        sceneBVH,
+        in_pos + 0.01 * normalize( in_nor ),
+        light,
+        t,
+        primitive_index
+    );
+
+    float3 out_color = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0 );
 
     return float4( out_color, 1.0f );
 }

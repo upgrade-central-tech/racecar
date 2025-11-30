@@ -92,12 +92,15 @@ bool traceRayFirstHit(
 {
     RayDesc ray;
     ray.Origin = rayOrigin;
-    ray.TMin = 0.01f;
+    ray.TMin = 0.001f;
     ray.Direction = rayDir;
     ray.TMax = 1e4f;
     RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+            //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
              RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
+
     let rayFlags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+            //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
              RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
 
     q.TraceRayInline(
@@ -124,7 +127,7 @@ float4 fs_main( VertexOutput in )
 {
     float3 in_pos = GBuffer_Position.Sample( nearest_sampler, in.uv ).rgb;
     float3 in_nor = GBuffer_Normals.Sample( nearest_sampler, in.uv ).rgb;
-    float4 in_tangent = GBuffer_Position.Sample( nearest_sampler, in.uv );
+    float4 in_tangent = GBuffer_Tangent.Sample( nearest_sampler, in.uv );
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
 
     float3 light = normalize( debug_data.sun_direction.rgb );
@@ -138,7 +141,8 @@ float4 fs_main( VertexOutput in )
 
     bool hit = traceRayFirstHit(
         sceneBVH,
-        in_pos + 0.001 * normalize( in_nor ),
+        in_pos + 0.01 * normalize( in_nor ),
+        // in_pos,
         light,
         t,
         primitive_index
@@ -148,12 +152,12 @@ float4 fs_main( VertexOutput in )
         ? GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb
         : debug_data.color.rgb;
 
-    // float3 out_color = base_albedo * ( max( dot( light, normalize( in_nor ) ), 0.0 ) * 0.7 + 0.01 );
-    float3 out_color = base_albedo;
-
+    float shadow = 0.7;
     if ( hit ) {
-        out_color = 0.1 * base_albedo;
+        shadow = 0.0;
     }
+
+    float3 out_color = base_albedo * ( max( dot( light, normalize( in_nor ) ), 0.0 ) * shadow + 0.01 );
 
     return float4( out_color, 1.0f );
 }

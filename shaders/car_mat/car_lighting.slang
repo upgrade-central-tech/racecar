@@ -7,7 +7,7 @@
 #define USE_SH_IRRADIANCE 1
 
 float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 light, Material pbr,
-    GBuffer g_buffer )
+    GBuffer g_buffer, float sun_V )
 {
     // Essential dot products
     float n_dot_v = ( dot( normal, view ) );
@@ -124,7 +124,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 specular_indirect = precomputed_specular_cc;
 
     float3 clearcoat_ibl = clearcoat_weight * 1.0f * precomputed_specular_cc;
-    float3 clearcoat_direct = max( clearcoat_specular + ( 1.0f - F_cc ) * base_specular, 0.0f );
+    float3 clearcoat_direct = max( clearcoat_specular + ( 1.0f - F_cc ) * base_specular, 0.0f ) * sun_V;
 
     float3 kS = F;
     float3 kD = 1.0f - kS;
@@ -133,7 +133,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 out_color = float3( 0.0f );
 
     // Direct lighting
-    out_color += ( diffuse_direct + specular_direct );
+    out_color += ( diffuse_direct + specular_direct ) * sun_V;
 
     // IBL
     // Removed kD term due to strange shadows
