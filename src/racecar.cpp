@@ -1005,6 +1005,7 @@ void run( bool use_fullscreen )
                 .normals_only = gui.debug.normals_only,
                 .albedo_only = gui.debug.albedo_only,
                 .roughness_metal_only = gui.debug.roughness_metal_only,
+                .ray_traced_shadows = gui.debug.ray_traced_shadows
             };
 
             debug_buffer.set_data( debug_ub );

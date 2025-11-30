@@ -30,6 +30,7 @@ struct DebugData {
     bool normals_only;
     bool albedo_only;
     bool roughness_metal_only;
+    bool ray_traced_shadows;
 }
 
 struct SHData {
@@ -192,15 +193,19 @@ float4 fs_main( VertexOutput in )
 
     GBuffer gbuffer = { in_pos, normal, in_tangent, in_uv, ddx_uv, ddy_uv };
 
-    float t;
-    int primitive_index;
-    bool hit = traceRayFirstHit(
-        sceneBVH,
-        in_pos + 0.01 * normalize( in_nor ),
-        light,
-        t,
-        primitive_index
-    );
+    bool hit = false;
+
+    if ( debug_data.ray_traced_shadows ) {
+        float t;
+        int primitive_index;
+        hit = traceRayFirstHit(
+            sceneBVH,
+            in_pos + 0.01 * normalize( in_nor ),
+            light,
+            t,
+            primitive_index
+        );
+    }
 
     float3 out_color = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0 );
 

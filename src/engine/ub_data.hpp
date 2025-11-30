@@ -26,8 +26,9 @@ struct Debug {
     uint32_t normals_only = 0;
     uint32_t albedo_only = 0;
     uint32_t roughness_metal_only = 0;
+    uint32_t ray_traced_shadows = 0;
 
-    uint32_t padding0[2];
+    uint32_t padding0[1];
 };
 
 struct SHData {
