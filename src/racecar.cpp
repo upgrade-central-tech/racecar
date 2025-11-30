@@ -641,22 +641,20 @@ void run( bool use_fullscreen )
                 } );
 
                 uint32_t max_idx = 0;
-                for (size_t x = 0; x < prim.ind_count; x++) {
-                    size_t offset_x = x + size_t(prim.ind_offset);
+                for ( size_t x = 0; x < prim.ind_count; x++ ) {
+                    size_t offset_x = x + size_t( prim.ind_offset );
                     uint32_t idx = scene_mesh.indices[offset_x];
-                    max_idx = glm::max(max_idx, idx);
+                    max_idx = glm::max( max_idx, idx );
                 }
-                
+
                 engine.blas.push_back( vk::rt::build_blas( ctx.vulkan.device, ctx.vulkan.allocator,
                     ctx.vulkan.ray_tracing_properties,
-                    {
-                        .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
+                    { .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
                         .index_buffer = scene_mesh.mesh_buffers.index_buffer.handle,
                         .max_vertex = uint32_t( max_idx ) - 1,
                         .index_count = uint32_t( draw_descriptor.index_count ),
-                        .vertex_offset = uint32_t(draw_descriptor.vertex_offset),
-                        .index_offset = uint32_t(draw_descriptor.index_offset)
-                    },
+                        .vertex_offset = uint32_t( draw_descriptor.vertex_offset ),
+                        .index_offset = uint32_t( draw_descriptor.index_offset ) },
                     engine.frames[0].start_cmdbuf, ctx.vulkan.destructor_stack ) );
             }
         }
@@ -664,15 +662,13 @@ void run( bool use_fullscreen )
 
     std::vector<vk::rt::Object> objects;
     for ( auto& blas : engine.blas ) {
-        objects.push_back(vk::rt::Object {
-            .blas = &blas,
-            .transform = glm::identity<glm::mat4>()
-        });
+        objects.push_back(
+            vk::rt::Object { .blas = &blas, .transform = glm::identity<glm::mat4>() } );
     }
 
     engine.tlas = vk::rt::build_tlas( ctx.vulkan.device, ctx.vulkan.allocator,
-        ctx.vulkan.ray_tracing_properties, objects,
-        engine.frames[0].start_cmdbuf, ctx.vulkan.destructor_stack );
+        ctx.vulkan.ray_tracing_properties, objects, engine.frames[0].start_cmdbuf,
+        ctx.vulkan.destructor_stack );
 
     vkEndCommandBuffer( engine.frames[0].start_cmdbuf );
     VkSubmitInfo submit_info = {};
@@ -682,13 +678,14 @@ void run( bool use_fullscreen )
     vkQueueSubmit( ctx.vulkan.graphics_queue, 1, &submit_info, precompute_fence );
     vkWaitForFences( ctx.vulkan.device, 1, &precompute_fence, VK_TRUE, UINT64_MAX );
     vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
-    vkDestroyFence(ctx.vulkan.device, precompute_fence, VK_NULL_HANDLE);
+    vkDestroyFence( ctx.vulkan.device, precompute_fence, VK_NULL_HANDLE );
     vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
 
-    engine::DescriptorSet as_desc_set = engine::generate_descriptor_set(ctx.vulkan, engine, {
-        VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR
-    }, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT);
-    
+    engine::DescriptorSet as_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR },
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT
+            | VK_SHADER_STAGE_COMPUTE_BIT );
+
     engine::add_gfx_task( task_list, prepass_gfx_task );
 
 #if ENABLE_TERRAIN
@@ -697,6 +694,7 @@ void run( bool use_fullscreen )
     geometry::initialize_terrain( ctx.vulkan, engine, test_terrain );
     geometry::draw_terrain_prepass( test_terrain, ctx.vulkan, engine, GBuffer_Position,
         GBuffer_Normal, GBuffer_Depth, camera_buffer, depth_prepass_ms, task_list );
+    test_terrain.accel_structure_desc_set = &as_desc_set;
 #endif
 
     engine::add_gfx_task( task_list, depth_ms_gfx_task );
@@ -862,7 +860,8 @@ void run( bool use_fullscreen )
     engine::update_descriptor_set_rwimage( ctx.vulkan, engine, gbuffer_descriptor_set,
         GBuffer_Packed_Data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 7 );
 
-    engine::update_descriptor_set_acceleration_structure(ctx.vulkan, engine, as_desc_set, engine.tlas.handle, 0);
+    engine::update_descriptor_set_acceleration_structure(
+        ctx.vulkan, engine, as_desc_set, engine.tlas.handle, 0 );
 
     lighting_pass_gfx_task.draw_tasks.push_back({
             .draw_resource_descriptor = {
@@ -1010,8 +1009,8 @@ void run( bool use_fullscreen )
             ub_data::Camera camera_ub = camera_buffer.get_data();
 
             // glm::mat4 model = gui.demo.rotate_on
-                // ? glm::rotate( camera_ub.model, gui.demo.rotate_speed, glm::vec3( 0, 1, 0 ) )
-                // : camera_ub.model;
+            // ? glm::rotate( camera_ub.model, gui.demo.rotate_speed, glm::vec3( 0, 1, 0 ) )
+            // : camera_ub.model;
             glm::mat4 model = glm::identity<glm::mat4>();
 
             camera_ub.mvp = projection * view * model;
@@ -1037,8 +1036,7 @@ void run( bool use_fullscreen )
         {
             ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
 
-            ub_data::Debug debug_ub = {
-                .color = gui.debug.color,
+            ub_data::Debug debug_ub = { .color = gui.debug.color,
                 .packed_data0 = glm::vec4( gui.debug.roughness, gui.debug.metallic,
                     gui.debug.clearcoat_roughness, gui.debug.clearcoat_weight ),
                 .sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f ),
@@ -1051,8 +1049,7 @@ void run( bool use_fullscreen )
                 .roughness_metal_only = gui.debug.roughness_metal_only,
 
                 .enable_bloom = gui.debug.enable_bloom,
-                .ray_traced_shadows = gui.debug.ray_traced_shadows
-            };
+                .ray_traced_shadows = gui.debug.ray_traced_shadows };
 
             debug_buffer.set_data( debug_ub );
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );

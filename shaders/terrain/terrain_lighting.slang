@@ -20,6 +20,8 @@ layout( binding = 1, set = 2 ) Texture2D<float4> sky_irradiance;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
+layout( binding = 0, set = 4 ) RaytracingAccelerationStructure sceneBVH;
+
 // Misc.
 float3 direct_lighting( float3 albedo, float3 normal, float roughness, float ao, float3 view )
 {
@@ -49,6 +51,44 @@ float3 direct_lighting( float3 albedo, float3 normal, float roughness, float ao,
     float clamped_lambert = clamp( dot( normal, light ), 0.0f, 1.0f );
 
     return ( ( 1.0f - F ) * diffuse_albedo + specular ) * clamped_lambert * local_shadows;
+}
+
+bool traceRayFirstHit(
+    RaytracingAccelerationStructure sceneBVH,
+    float3 rayOrigin,
+    float3 rayDir,
+    out float t,
+    out int primitiveIndex )
+{
+    RayDesc ray;
+    ray.Origin = rayOrigin;
+    ray.TMin = 0.001f;
+    ray.Direction = rayDir;
+    ray.TMax = 1e4f;
+    RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+        //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
+
+    let rayFlags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+        //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
+
+    q.TraceRayInline(
+        sceneBVH,
+        rayFlags,
+        0xff,
+        ray );
+    q.Proceed();
+
+    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT )
+    {
+        t = q.CommittedRayT();
+        primitiveIndex = q.CommittedPrimitiveIndex();
+        return true;
+    }
+    primitiveIndex = q.CandidatePrimitiveIndex();
+    unused( t );
+    return false;
 }
 
 // Main
@@ -172,8 +212,28 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     //=======================================================================================
     // Final lighting evaluation
     //=======================================================================================
-    float3 final_color
-        = direct_lighting( mixed_albedo, mixed_normal, mixed_roughness, mixed_ao, view );
+
+    bool hit = false;
+    float3 light = normalize( scene_data.sun_direction.rgb );
+    if ( scene_data.ray_traced_shadows ) {
+        float t;
+        int primitive_index;
+        hit = traceRayFirstHit(
+            sceneBVH,
+            world_position + 0.01 * normalize( normal ),
+            light,
+            t,
+            primitive_index
+        );
+    }
+
+    float3 final_color;
+    if ( !hit ) {
+        final_color
+            = direct_lighting( mixed_albedo, mixed_normal, mixed_roughness, mixed_ao, view );
+    } else {
+        final_color = float3( 0.0, 0.0, 0.0 );
+    }
 
     final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
     final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) ) * 0.01f;
