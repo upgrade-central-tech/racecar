@@ -1,4 +1,3 @@
-#include "../common.slang"
 
 struct VertexInput {
     float2 position : POSITION;
@@ -8,6 +7,30 @@ struct VertexOutput {
     float4 sv_position : SV_Position;
     float2 uv;
 };
+
+struct CameraBufferData {
+    float4x4 mvp;
+    float4x4 model;
+    float4x4 inv_model;
+    float4 camera_pos;
+    // Pack: near plane, far plane, aspect ratio, fov_Y
+    float4 camera_constants;
+};
+
+struct DebugData {
+    float4 color;
+
+    // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
+    float4 packed_data0;
+    float4 sun_direction;
+
+    bool enable_albedo_map;
+    bool enable_normal_map;
+    bool enable_roughness_metal_map;
+    bool normals_only;
+    bool albedo_only;
+    bool roughness_metal_only;
+}
 
 struct SHData {
     float4 coeff0;
@@ -51,24 +74,13 @@ layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
 layout( binding = 0, set = 5 ) RaytracingAccelerationStructure sceneBVH;
 
-// #include "../utils.slang"
-// #include "../glint/glint_noise_init.hlsl"
-// #include "../glint/glint.hlsl"
-
-#include "../car_mat/car_lighting.slang"
-
-float LinearDepth( float perspective_depth, float near, float far )
+[shader( "vertex" )]
+VertexOutput vs_main( VertexInput input )
 {
-    return ( near * far ) / ( far - perspective_depth * ( far - near ) );
-}
-
-float LinearDepth01( float perspective_depth )
-{
-    float near = camera_buffer_data.camera_constants.a;
-    float far = camera_buffer_data.camera_constants.b;
-
-    float linear_depth = LinearDepth( perspective_depth, near, far );
-    return ( linear_depth - near ) / ( far - near );
+    VertexOutput output;
+    output.sv_position = float4( input.position, 0.1f, 1.f );
+    output.uv = ( input.position + 1.f ) * 0.5f;
+    return output;
 }
 
 bool traceRayFirstHit(
@@ -84,12 +96,12 @@ bool traceRayFirstHit(
     ray.Direction = rayDir;
     ray.TMax = 1e4f;
     RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
-        //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
-        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
+            //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+             RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
 
     let rayFlags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
-        //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
-        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
+            //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+             RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
 
     q.TraceRayInline(
         sceneBVH,
@@ -109,81 +121,43 @@ bool traceRayFirstHit(
     return false;
 }
 
-[shader( "vertex" )]
-VertexOutput vs_main( VertexInput input )
-{
-    VertexOutput output;
-    output.sv_position = float4( input.position, 0.1f, 1.f );
-    output.uv = ( input.position + 1.f ) * 0.5f;
-    return output;
-}
-
 [shader( "fragment" )]
 float4 fs_main( VertexOutput in )
     : SV_Target
 {
     float3 in_pos = GBuffer_Position.Sample( nearest_sampler, in.uv ).rgb;
     float3 in_nor = GBuffer_Normals.Sample( nearest_sampler, in.uv ).rgb;
-    float4 in_tangent = GBuffer_Position.Sample( nearest_sampler, in.uv );
+    float4 in_tangent = GBuffer_Tangent.Sample( nearest_sampler, in.uv );
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
 
-    float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
-    float2 ddx_uv = float2( GBuffer_Position.Sample( nearest_sampler, in.uv ).a,
-        GBuffer_Normals.Sample( nearest_sampler, in.uv ).a );
+    float3 light = normalize( debug_data.sun_direction.rgb );
 
-    float2 ddy_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).ba;
-
-    if ( stencil != CAR_ID ) {
+    if ( length( in_nor ) == 0.0f ) {
         return float4( 0.0f );
     }
 
-    // Texture samples
+    float t;
+    int primitive_index;
+
+    bool hit = traceRayFirstHit(
+        sceneBVH,
+        in_pos + 0.01 * normalize( in_nor ),
+        // in_pos,
+        light,
+        t,
+        primitive_index
+    );
+
     float3 base_albedo = debug_data.enable_albedo_map
         ? GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb
         : debug_data.color.rgb;
 
-    float2 metallic_roughness = debug_data.enable_roughness_metal_map
-        ? GBuffer_Packed_Data.Sample( nearest_sampler, in.uv ).xy
-        : float2( debug_data.packed_data0.x, debug_data.packed_data0.y );
-
-    // Material properties
-    float metallic = metallic_roughness.y;
-    float roughness = metallic_roughness.x;
-
-    // Basic vectors
-    float3 light = normalize( debug_data.sun_direction.rgb );
-    float3 radiance = float3( 1, 1, 1 );
-    // float attenuation = 1.0f / length( light_pos - in_pos );
-    // attenuation *= attenuation;
-
-    float3 camera_pos = camera_buffer_data.camera_pos.rgb;
-    float3 normal = normalize( in_nor );
-    float3 view = normalize( camera_pos - in_pos );
-    float3 half = normalize( view + light );
-
-    Material pbr = {
-        roughness, metallic,
-        debug_data.packed_data0.z, // cc roughness
-        debug_data.packed_data0.w // cc weight
-    };
-
-    GBuffer gbuffer = { in_pos, normal, in_tangent, in_uv, ddx_uv, ddy_uv };
-
-    bool hit = false;
-
-    if ( debug_data.ray_traced_shadows ) {
-        float t;
-        int primitive_index;
-        hit = traceRayFirstHit(
-            sceneBVH,
-            in_pos + 0.01 * normalize( in_nor ),
-            light,
-            t,
-            primitive_index
-        );
+    float shadow = 0.7;
+    if ( hit ) {
+        shadow = 0.0;
     }
 
-    float3 out_color = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0 );
+    float3 out_color = base_albedo * ( max( dot( light, normalize( in_nor ) ), 0.0 ) * shadow + 0.01 );
 
     return float4( out_color, 1.0f );
 }

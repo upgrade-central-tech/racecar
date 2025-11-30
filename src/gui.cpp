@@ -126,6 +126,9 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::Checkbox( "Turn on normals only", &gui.debug.normals_only );
                 ImGui::Checkbox(
                     "Turn on roughness + metallic only", &gui.debug.roughness_metal_only );
+                ImGui::Checkbox(
+                    "Ray Traced Shadows", &gui.debug.ray_traced_shadows );
+
 
                 ImGui::SeparatorText( "Demo Settings" );
                 ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );

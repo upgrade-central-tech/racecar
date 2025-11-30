@@ -26,6 +26,7 @@ add_executable(racecar
     ${VK_DIR}/utility.cpp
     ${VK_DIR}/vma.cpp
     ${VK_DIR}/mem.cpp
+    ${VK_DIR}/ray_tracing.cpp
 
     ${ENGINE_DIR}/execute.cpp
     ${ENGINE_DIR}/state.cpp
