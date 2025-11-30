@@ -2,6 +2,11 @@
 #define HARDCODED_IRRADIANCE_SIZE 32.0f
 #define COMPUTE_NO_SAMPLE 1
 
+struct OctahedralData {
+    // Pack: mip level
+    float4 packedfloats0;
+}
+
 import atmosphere;
 
 // In atmosphere, the bindings are already there and used for other things.
@@ -9,6 +14,7 @@ layout( binding = 0, set = 3 ) RWTexture2D<float4> octahedral_sky;
 // Octahedral sky used for irradiance
 layout( binding = 1, set = 3 ) RWTexture2D<float4> octahedral_sky_irradiance;
 layout( binding = 2, set = 3 ) RWTexture2D<float4> octahedral_sky_mip;
+layout( binding = 3, set = 3 ) ConstantBuffer<OctahedralData> octahedral_data;
 
 float3 oct_decode( float2 f )
 {
@@ -34,10 +40,32 @@ float RadicalInverse_VdC( uint bits )
     return float( bits ) * 2.3283064365386963e-10; // / 0x100000000
 }
 
-// ----------------------------------------------------------------------------
 float2 Hammersley( uint i, uint N )
 {
     return float2( float( i ) / float( N ), RadicalInverse_VdC( i ) );
+}
+
+float3 ImportanceSampleGGX( float2 Xi, float3 N, float roughness )
+{
+    float a = roughness * roughness;
+
+    float phi = 2.0 * PI * Xi.x;
+    float cosTheta = sqrt( ( 1.0 - Xi.y ) / ( 1.0 + ( a * a - 1.0 ) * Xi.y ) );
+    float sinTheta = sqrt( 1.0 - cosTheta * cosTheta );
+
+    // from spherical coordinates to cartesian coordinates
+    float3 H;
+    H.x = cos( phi ) * sinTheta;
+    H.y = sin( phi ) * sinTheta;
+    H.z = cosTheta;
+
+    // from tangent-space vector to world-space sample vector
+    float3 up = select( abs( N.z ) < 0.999, float3( 0.0, 0.0, 1.0 ), float3( 1.0, 0.0, 0.0 ) );
+    float3 tangent = normalize( cross( up, N ) );
+    float3 bitangent = cross( N, tangent );
+
+    float3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
+    return normalize( sampleVec );
 }
 
 [shader( "compute" )]
@@ -109,7 +137,37 @@ void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
 void cs_bake_atmosphere_mips( uint3 thread_id: SV_DispatchThreadID )
 {
     uint2 pixel = thread_id.xy;
-    octahedral_sky_mip[pixel] = float4( 1.0f, 0.0f, 0.0f, 1.0f );
+    uint mip = uint( octahedral_data.packedfloats0.x );
+    uint size = 512 >> mip;
+
+    float u = ( float( pixel.x ) + 0.5f ) / float( size );
+    float v = ( float( pixel.y ) + 0.5f ) / float( size );
+
+    float3 view_direction = oct_decode( float2( u, v ) );
+
+    // Split-sum assumption
+    float3 normal = normalize( view_direction );
+    float3 reflect = normal;
+    float3 view = normal;
+
+    uint sample_count = 16;
+    float total_weight = 0.0f;
+    float roughness = octahedral_data.packedfloats0.y;
+    float3 prefiltered_color = 0.0f;
+
+    for ( uint i = 0; i < sample_count; i++ ) {
+        float2 xi = Hammersley( i, sample_count );
+        float3 half = ImportanceSampleGGX( xi, normal, roughness );
+        float3 light = normalize( 2.0f * dot( view, half ) * half - view );
+        float n_dot_l = max( dot( normal, light ), 0.0f );
+        if ( n_dot_l > 0.0f ) {
+            prefiltered_color += get_sky_color( light ) * n_dot_l;
+            total_weight += n_dot_l;
+        }
+    }
+
+    prefiltered_color /= total_weight;
+    octahedral_sky_mip[pixel] = float4( prefiltered_color, 1.0f );
 }
 
 

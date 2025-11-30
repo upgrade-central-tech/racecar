@@ -155,6 +155,7 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
         {
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral irradiance
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky mips
         },
         VK_SHADER_STAGE_COMPUTE_BIT );
 
@@ -190,19 +191,17 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.lut_desc_set,
         info.atmosphere_baker->octahedral_sky_irradiance, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1 );
+    engine::update_descriptor_set_rwimage( vulkan, engine, terrain.lut_desc_set,
+        info.atmosphere_baker->octahedral_sky_test, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 2 );
 
     // Sampler assignments
     engine::update_descriptor_set_sampler(
         vulkan, engine, terrain.sampler_desc_set, vulkan.global_samplers.linear_sampler, 0 );
 
     engine::Pipeline cs_terrain_lighting_pipeline = engine::create_compute_pipeline( vulkan,
-        {
-            terrain.uniform_desc_set.layouts[0],
-            terrain.texture_desc_set.layouts[0],
-            terrain.lut_desc_set.layouts[0],
-            terrain.sampler_desc_set.layouts[0],
-            terrain.accel_structure_desc_set->layouts[0]
-        },
+        { terrain.uniform_desc_set.layouts[0], terrain.texture_desc_set.layouts[0],
+            terrain.lut_desc_set.layouts[0], terrain.sampler_desc_set.layouts[0],
+            terrain.accel_structure_desc_set->layouts[0] },
         vk::create::shader_module( vulkan, TERRAIN_SHADER_LIGHTING_MODULE_PATH ),
         "cs_terrain_draw" );
 
@@ -214,13 +213,8 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     // Full-screen quad draw.
     engine::ComputeTask cs_terrain_draw_task = {
         cs_terrain_lighting_pipeline,
-        {
-            &terrain.uniform_desc_set,
-            &terrain.texture_desc_set,
-            &terrain.lut_desc_set,
-            &terrain.sampler_desc_set,
-            terrain.accel_structure_desc_set
-        },
+        { &terrain.uniform_desc_set, &terrain.texture_desc_set, &terrain.lut_desc_set,
+            &terrain.sampler_desc_set, terrain.accel_structure_desc_set },
         dispatch_dims,
     };
 

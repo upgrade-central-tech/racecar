@@ -38,6 +38,11 @@ struct AOData {
     glm::vec4 packed_floats1;
 };
 
+struct OctahedralData {
+    // Pack: mip level, roughness
+    glm::vec4 packedfloats0;
+};
+
 struct SHData {
 
     // Packs all 9 spherical harmonics

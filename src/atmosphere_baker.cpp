@@ -67,6 +67,7 @@ void initialize_atmosphere_baker(
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         },
         VK_SHADER_STAGE_COMPUTE_BIT ),
 
@@ -160,7 +161,7 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, vk::Common& vulka
     engine::State& engine, engine::TaskList& task_list )
 {
     uint32_t mip0_size = 512;
-    uint32_t mip_levels = 6;
+    uint32_t mip_levels = 5;
 
     atms_baker.octahedral_sky_test
         = engine::create_rwimage_mips( vulkan, engine, { mip0_size, mip0_size, 1 },
@@ -175,12 +176,26 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, vk::Common& vulka
                 VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                 VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                 VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             },
             VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT ) );
 
         engine::update_descriptor_set_rwimage_mip( vulkan, engine,
             atms_baker.octahedral_mip_writes[mip], atms_baker.octahedral_sky_test,
             VK_IMAGE_LAYOUT_GENERAL, 2, mip );
+
+        UniformBuffer mip_data
+            = create_uniform_buffer<ub_data::OctahedralData>( vulkan, {}, engine.frame_overlap );
+        float roughness = (float)mip / (float)( mip_levels - 1 );
+        mip_data.set_data( { glm::vec4( mip, roughness, 0.0f, 0.0f ) } );
+
+        // Set this only once per frame.
+        for ( uint32_t frame_index = 0; frame_index < engine.frame_overlap; frame_index++ ) {
+            mip_data.update( vulkan, frame_index );
+        }
+
+        engine::update_descriptor_set_uniform(
+            vulkan, engine, atms_baker.octahedral_mip_writes[mip], mip_data, 3 );
     }
 
     engine::Pipeline cs_octahedral_mip_pipeline = engine::create_compute_pipeline( vulkan,
