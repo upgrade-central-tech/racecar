@@ -72,6 +72,8 @@ layout( binding = 6, set = 4 ) Texture2DMS<float> GBuffer_DepthMS;
 // roughness, metallic, clearcoat roughness, clearcoat weight
 layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
+layout( binding = 0, set = 5 ) RaytracingAccelerationStructure sceneBVH;
+
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
 {
@@ -79,6 +81,41 @@ VertexOutput vs_main( VertexInput input )
     output.sv_position = float4( input.position, 0.1f, 1.f );
     output.uv = ( input.position + 1.f ) * 0.5f;
     return output;
+}
+
+bool traceRayFirstHit(
+    RaytracingAccelerationStructure sceneBVH,
+    float3 rayOrigin,
+    float3 rayDir,
+    out float t,
+    out int primitiveIndex )
+{
+    RayDesc ray;
+    ray.Origin = rayOrigin;
+    ray.TMin = 0.01f;
+    ray.Direction = rayDir;
+    ray.TMax = 1e4f;
+    RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+             RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
+    let rayFlags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+             RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
+
+    q.TraceRayInline(
+        sceneBVH,
+        rayFlags,
+        0xff,
+        ray );
+    q.Proceed();
+
+    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT )
+    {
+        t = q.CommittedRayT();
+        primitiveIndex = q.CommittedPrimitiveIndex();
+        return true;
+    }
+    primitiveIndex = q.CandidatePrimitiveIndex();
+    unused( t );
+    return false;
 }
 
 [shader( "fragment" )]
@@ -90,18 +127,33 @@ float4 fs_main( VertexOutput in )
     float4 in_tangent = GBuffer_Position.Sample( nearest_sampler, in.uv );
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
 
+    float3 light = normalize( debug_data.sun_direction.rgb );
+
     if ( length( in_nor ) == 0.0f ) {
         return float4( 0.0f );
     }
+
+    float t;
+    int primitive_index;
+
+    bool hit = traceRayFirstHit(
+        sceneBVH,
+        in_pos + 0.001 * normalize( in_nor ),
+        light,
+        t,
+        primitive_index
+    );
 
     float3 base_albedo = debug_data.enable_albedo_map
         ? GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb
         : debug_data.color.rgb;
 
-    float3 light = normalize( debug_data.sun_direction.rgb );
-
     // float3 out_color = base_albedo * ( max( dot( light, normalize( in_nor ) ), 0.0 ) * 0.7 + 0.01 );
     float3 out_color = base_albedo;
+
+    if ( hit ) {
+        out_color = 0.1 * base_albedo;
+    }
 
     return float4( out_color, 1.0f );
 }

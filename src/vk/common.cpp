@@ -108,11 +108,6 @@ vkb::Device pick_and_create_device( const Common& vulkan )
        .rayTracingPipeline = VK_TRUE, // Explicitly enable ray tracing pipelines 
     };
 
-    VkPhysicalDeviceBufferDeviceAddressFeatures bda = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
-        .bufferDeviceAddress = VK_TRUE
-    };
-
     // VkPhysicalDeviceShaderAtomicFloatFeaturesEXT float_features = {
     //     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT,
     //     .shaderImageFloat32Atomics = VK_TRUE,
@@ -155,12 +150,10 @@ vkb::Device pick_and_create_device( const Common& vulkan )
               .add_required_extension( VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME )
               .add_required_extension( VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME )
               .add_required_extension( VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME )
-              .add_required_extension( VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME )
               .add_required_extension( VK_KHR_RAY_QUERY_EXTENSION_NAME )
               .add_required_extension_features(as_features)
               .add_required_extension_features(rt_pipeline_features)
               .add_required_extension_features(ray_query_features)
-              .add_required_extension_features(bda)
               .set_required_features_13( required_features_13 )
               .set_required_features_12( required_features_12 )
               .set_required_features_11( required_features_11 )

@@ -36,8 +36,10 @@ struct AccelerationStructure {
 struct MeshData {
     VkBuffer vertex_buffer;
     VkBuffer index_buffer;
-    uint32_t vertex_count;
+    uint32_t max_vertex;
     uint32_t index_count;
+    uint32_t vertex_offset;
+    uint32_t index_offset;
     VkDeviceAddress vertex_buffer_address; // Retrieved via vkGetBufferDeviceAddress
     VkDeviceAddress index_buffer_address; // Retrieved via vkGetBufferDeviceAddress
 };

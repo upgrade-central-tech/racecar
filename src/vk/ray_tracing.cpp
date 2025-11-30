@@ -1,5 +1,7 @@
 #include "ray_tracing.hpp"
 #include "mem.hpp"
+#include "../geometry/scene_mesh.hpp"
+#include "../log.hpp"
 
 namespace racecar::vk::rt {
 
@@ -38,12 +40,12 @@ VkAccelerationStructureGeometryKHR create_acceleration_structure_from_geometry(
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
         .pNext = nullptr,
         .vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-        .vertexData = { .deviceAddress = mesh.vertex_buffer_address },
-        .vertexStride = sizeof( float ) * 3,
-        .maxVertex = mesh.vertex_count,
+        .vertexData = { .deviceAddress = mesh.vertex_buffer_address + mesh.vertex_offset * sizeof(geometry::scene::Vertex) },
+        .vertexStride = sizeof( geometry::scene::Vertex ),
+        .maxVertex = mesh.max_vertex,
 
         .indexType = VK_INDEX_TYPE_UINT32,
-        .indexData = { .deviceAddress = mesh.index_buffer_address },
+        .indexData = { .deviceAddress = mesh.index_buffer_address + mesh.index_offset * sizeof(uint32_t) },
     };
 
     VkAccelerationStructureGeometryKHR geometry = {
@@ -205,6 +207,21 @@ AccelerationStructure build_tlas(
     for (size_t i = 0; i < objects.size(); ++i) {
         const Object& obj = objects[i];
         
+        bool nonzero = false;
+
+        for (int a = 0; a < 4; a++) {
+            for (int b = 0; b < 4; b++) {
+                if ( obj.transform[a][b] != 0.0f) {
+                    nonzero = true;
+                }
+            }
+        }
+
+
+        if (!nonzero) {
+            log::warn("[Build TLAS] The provided object at index {} has a zeroed transform matrix. This will cause the BLAS to completely not appear in the TLAS", i);
+        }
+
         VkTransformMatrixKHR transform_matrix;
         memcpy(&transform_matrix.matrix, glm::value_ptr(obj.transform), sizeof(float) * 12);
         
@@ -234,7 +251,7 @@ AccelerationStructure build_tlas(
     VkBufferCreateInfo instanceBufferCI = { 
        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
        .size = instances.size() * sizeof(VkAccelerationStructureInstanceKHR),
-       .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
+       .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
     };
     VmaAllocationCreateInfo instanceAllocCI = { 
        .usage = VMA_MEMORY_USAGE_CPU_TO_GPU 
