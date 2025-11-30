@@ -201,6 +201,7 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
             terrain.texture_desc_set.layouts[0],
             terrain.lut_desc_set.layouts[0],
             terrain.sampler_desc_set.layouts[0],
+            terrain.accel_structure_desc_set->layouts[0]
         },
         vk::create::shader_module( vulkan, TERRAIN_SHADER_LIGHTING_MODULE_PATH ),
         "cs_terrain_draw" );
@@ -218,6 +219,7 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
             &terrain.texture_desc_set,
             &terrain.lut_desc_set,
             &terrain.sampler_desc_set,
+            terrain.accel_structure_desc_set
         },
         dispatch_dims,
     };

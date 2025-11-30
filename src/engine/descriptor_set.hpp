@@ -64,4 +64,8 @@ void update_descriptor_set_rwimage_mip( vk::Common& vulkan, const State& engine,
 void update_descriptor_set_sampler( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     VkSampler sampler, int binding_idx );
 
+void update_descriptor_set_acceleration_structure( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
+    VkAccelerationStructureKHR tlas, int binding_idx );
+
+
 } // namespace racecar::engine

@@ -1,0 +1,2 @@
+# Assumes compiler is on your PATH (which it should be)
+slangc.exe "$PSScriptRoot\shadow.slang" -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name -entry vs_main -entry fs_main -o "$PSScriptRoot\shadow.spv"

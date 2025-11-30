@@ -27,10 +27,8 @@ struct Debug {
     uint32_t normals_only = 0;
     uint32_t albedo_only = 0;
     uint32_t roughness_metal_only = 0;
-
     uint32_t enable_bloom = 0;
-
-    uint32_t padding;
+    uint32_t ray_traced_shadows = 0;
 };
 
 struct AOData {

@@ -22,11 +22,6 @@ struct SHData {
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
-// Material stuff strictly
-layout( binding = 0, set = 1 ) Texture2D<float4> albedo_map;
-layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
-layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
-
 // Cubemaps + LUTs
 layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
 layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
@@ -49,7 +44,42 @@ layout( binding = 6, set = 4 ) Texture2DMS<float> GBuffer_DepthMS;
 // roughness, metallic, clearcoat roughness, clearcoat weight
 layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
+layout( binding = 0, set = 5 ) RaytracingAccelerationStructure sceneBVH;
+
+// #include "../utils.slang"
+// #include "../glint/glint_noise_init.hlsl"
+// #include "../glint/glint.hlsl"
+
 #include "../car_mat/car_lighting.slang"
+
+bool traceRayFirstHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigin, float3 rayDir,
+    out float t, out int primitiveIndex )
+{
+    RayDesc ray;
+    ray.Origin = rayOrigin;
+    ray.TMin = 0.001f;
+    ray.Direction = rayDir;
+    ray.TMax = 1e4f;
+    RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+        //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
+
+    let rayFlags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+        //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
+        RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
+
+    q.TraceRayInline( sceneBVH, rayFlags, 0xff, ray );
+    q.Proceed();
+
+    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ) {
+        t = q.CommittedRayT();
+        primitiveIndex = q.CommittedPrimitiveIndex();
+        return true;
+    }
+    primitiveIndex = q.CandidatePrimitiveIndex();
+    unused( t );
+    return false;
+}
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -80,13 +110,9 @@ float4 fs_main( VertexOutput in )
     }
 
     // Texture samples
-    float3 base_albedo = debug_data.enable_albedo_map
-        ? GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb
-        : debug_data.color.rgb;
+    float3 base_albedo = GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb;
 
-    float2 metallic_roughness = debug_data.enable_roughness_metal_map
-        ? GBuffer_Packed_Data.Sample( nearest_sampler, in.uv ).xy
-        : float2( debug_data.packed_data0.x, debug_data.packed_data0.y );
+    float4 metallic_roughness = GBuffer_Packed_Data.Sample( nearest_sampler, in.uv );
 
     // Material properties
     float metallic = metallic_roughness.y;
@@ -105,13 +131,23 @@ float4 fs_main( VertexOutput in )
 
     Material pbr = {
         roughness, metallic,
-        debug_data.packed_data0.z, // cc roughness
-        debug_data.packed_data0.w // cc weight
+        metallic_roughness.z, // cc roughness
+        metallic_roughness.w // cc weight
     };
 
     GBuffer gbuffer = { in_pos, normal, in_tangent, in_uv, ddx_uv, ddy_uv };
 
-    float3 out_color = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer );
+    bool hit = false;
+
+    if ( debug_data.ray_traced_shadows ) {
+        float t;
+        int primitive_index;
+        hit = traceRayFirstHit(
+            sceneBVH, in_pos + 0.01 * normalize( in_nor ), light, t, primitive_index );
+    }
+
+    float3 out_color
+        = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0 );
 
     return float4( out_color, 1.0f );
 }

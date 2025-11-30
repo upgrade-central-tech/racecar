@@ -35,6 +35,7 @@ struct DebugData {
     bool roughness_metal_only;
 
     bool enable_bloom;
+    bool ray_traced_shadows;
 }
 
 struct MaterialData {
