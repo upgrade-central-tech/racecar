@@ -16,6 +16,8 @@ struct CameraBufferData {
 struct AOData {
     // Pack: thickness, radius, offset, null
     float4 packed_floats0;
+    // Pack: enable ao, or don't
+    float4 packed_floats1;
 }
 
 struct DebugData {

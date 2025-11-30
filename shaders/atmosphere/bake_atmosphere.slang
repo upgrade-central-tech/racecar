@@ -8,6 +8,7 @@ import atmosphere;
 layout( binding = 0, set = 3 ) RWTexture2D<float4> octahedral_sky;
 // Octahedral sky used for irradiance
 layout( binding = 1, set = 3 ) RWTexture2D<float4> octahedral_sky_irradiance;
+layout( binding = 2, set = 3 ) RWTexture2D<float4> octahedral_sky_mip;
 
 float3 oct_decode( float2 f )
 {
@@ -21,6 +22,22 @@ float3 oct_decode( float2 f )
         n.xy = ( 1.0f - abs( n.yx ) ) * sign( n.xy );
 
     return normalize( n );
+}
+
+float RadicalInverse_VdC( uint bits )
+{
+    bits = ( bits << 16u ) | ( bits >> 16u );
+    bits = ( ( bits & 0x55555555u ) << 1u ) | ( ( bits & 0xAAAAAAAAu ) >> 1u );
+    bits = ( ( bits & 0x33333333u ) << 2u ) | ( ( bits & 0xCCCCCCCCu ) >> 2u );
+    bits = ( ( bits & 0x0F0F0F0Fu ) << 4u ) | ( ( bits & 0xF0F0F0F0u ) >> 4u );
+    bits = ( ( bits & 0x00FF00FFu ) << 8u ) | ( ( bits & 0xFF00FF00u ) >> 8u );
+    return float( bits ) * 2.3283064365386963e-10; // / 0x100000000
+}
+
+// ----------------------------------------------------------------------------
+float2 Hammersley( uint i, uint N )
+{
+    return float2( float( i ) / float( N ), RadicalInverse_VdC( i ) );
 }
 
 [shader( "compute" )]
@@ -85,6 +102,14 @@ void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
     irradiance = PI * irradiance * ( 1.0f / ( phi_samples * theta_samples ) );
 
     octahedral_sky_irradiance[pixel] = float4( irradiance, 1.0f );
+}
+
+[shader( "compute" )]
+[numthreads( 8, 8, 8 )]
+void cs_bake_atmosphere_mips( uint3 thread_id: SV_DispatchThreadID )
+{
+    uint2 pixel = thread_id.xy;
+    octahedral_sky_mip[pixel] = float4( 1.0f, 0.0f, 0.0f, 1.0f );
 }
 
 

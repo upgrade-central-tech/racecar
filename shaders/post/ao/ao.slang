@@ -142,6 +142,11 @@ float3 get_cos_vec( float3 normal, float2 rng )
 [numthreads( 8, 8, 1 )]
 func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
 {
+    bool enable_ao = ao_data.packed_floats1.x > 0.5f;
+    if ( !enable_ao ) {
+        return;
+    }
+
     uint2 pixel = thread_id.xy;
 
     // World-space normal
@@ -154,7 +159,7 @@ func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
     float3 view_pos = pixel_to_view( pixel );
     float3 view_normal = normalize( world_nor_to_view( normal ) );
 
-    float3 ao = SSAO( view_pos, view_normal );
+    float3 ao = SSAO( view_pos, normal );
 
     bool enable_debug = ao_data.packed_floats0.w > 0.5f;
     float3 result = select( enable_debug, ao, ao * scene_color[pixel].rgb );

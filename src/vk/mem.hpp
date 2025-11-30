@@ -18,6 +18,8 @@ struct AllocatedImage {
     VmaAllocation allocation = VK_NULL_HANDLE;
     VkExtent3D image_extent = {};
     VkFormat image_format = VK_FORMAT_UNDEFINED;
+
+    std::vector<VkImageView> mip_levels;
 };
 
 struct UniformBuffer {

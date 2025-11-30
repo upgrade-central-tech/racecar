@@ -50,7 +50,8 @@ struct Gui {
         float thickness = 1.0f;
         float radius = 0.20f;
         float offset = 0.20f;
-        bool debug_enable = false;
+        bool enable_debug = false;
+        bool enable_ao = false;
     } ao = {};
 };
 

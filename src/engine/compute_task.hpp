@@ -12,6 +12,10 @@ struct ComputeTask {
     std::vector<engine::DescriptorSet*> descriptor_sets;
 
     glm::ivec3 group_size;
+
+    // temporary addition
+    bool is_single_run = false;
+    bool ran = false;
 };
 
 void execute_cs_task(

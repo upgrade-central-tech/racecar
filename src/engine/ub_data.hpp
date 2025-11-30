@@ -36,6 +36,8 @@ struct Debug {
 struct AOData {
     // Pack: thickness, radius, offset, null
     glm::vec4 packed_floats0;
+    // Pack: enable ao, null, null, null
+    glm::vec4 packed_floats1;
 };
 
 struct SHData {

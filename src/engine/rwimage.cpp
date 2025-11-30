@@ -7,16 +7,16 @@
 
 namespace racecar::engine {
 
-RWImage create_rwimage( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,
+RWImage allocate_rwimage( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,
     VkFormat format, VkImageType image_type, VkSampleCountFlagBits samples,
-    VkImageUsageFlags usage_flags, bool mipmapped )
+    VkImageUsageFlags usage_flags, uint32_t mip_levels, bool mipmapped )
 {
     RWImage rwimage;
 
     try {
         for ( size_t i = 0; i < engine.swapchain_images.size(); ++i ) {
-            rwimage.images.push_back( allocate_image(
-                vulkan, extent, format, image_type, 1, 1, samples, usage_flags, mipmapped ) );
+            rwimage.images.push_back( allocate_image( vulkan, extent, format, image_type,
+                mip_levels, 1, samples, usage_flags, mipmapped ) );
         }
     } catch ( const Exception& ex ) {
         log::error( "[RWImage] Error occurred: {}", ex.what() );
@@ -24,6 +24,22 @@ RWImage create_rwimage( vk::Common& vulkan, const engine::State& engine, VkExten
     }
 
     return rwimage;
+}
+
+RWImage create_rwimage( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,
+    VkFormat format, VkImageType image_type, VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags )
+{
+    return allocate_rwimage(
+        vulkan, engine, extent, format, image_type, samples, usage_flags, 1, false );
+}
+
+RWImage create_rwimage_mips( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,
+    VkFormat format, VkImageType image_type, VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags, uint32_t mip_levels )
+{
+    return allocate_rwimage(
+        vulkan, engine, extent, format, image_type, samples, usage_flags, mip_levels, true );
 }
 
 } // namespace racecar::engine

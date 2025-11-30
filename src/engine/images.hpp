@@ -6,6 +6,7 @@
 #include <filesystem>
 
 enum class FormatType { UNORM8, FLOAT16 };
+enum class MIP_TYPE : uint32_t { AUTO_GENERATE = 0 };
 
 namespace racecar::engine {
 
