@@ -9,7 +9,7 @@ static const float REFERENCE_LUMINANCE = 100.f;
 static const float GT_SDR_PAPER_WHITE = 250.f;
 
 /// To match the sRGB range, the tonemapped values are scaled using this factor.
-static const float SDR_CORRECTION_FACTOR = REFERENCE_LUMINANCE / GT_SDR_PAPER_WHITE;
+static const float SDR_CORRECTION_FACTOR = 1.f;
 
 /// Scale factor for exponent.
 static const float JZAZBZ_EXPONENT_SCALE_FACTOR = 1.7f;
@@ -214,7 +214,9 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     let pixel = thread_id.xy;
     let scene = input.Load( uint3( pixel, 0 ) ).rgb;
 
-    let framebuffer_luminance_target = physical_value_to_framebuffer_value( GT_SDR_PAPER_WHITE );
+    // let target_luminance = GT_SDR_PAPER_WHITE;
+    let target_luminance = 10000.f;
+    let framebuffer_luminance_target = physical_value_to_framebuffer_value( target_luminance );
     let curve = GTTonemappingCurveV2( framebuffer_luminance_target, 0.25f, 0.538f, 0.444f, 1.28f );
 
     let rgb = float3( framebuffer_luminance_target );
