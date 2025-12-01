@@ -143,11 +143,12 @@ float3 get_cos_vec( float3 normal, float2 rng )
 func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
 {
     bool enable_ao = ao_data.packed_floats1.x > 0.5f;
+    uint2 pixel = thread_id.xy;
+
     if ( !enable_ao ) {
+        output[pixel] = scene_color[pixel];
         return;
     }
-
-    uint2 pixel = thread_id.xy;
 
     // World-space normal
     float3 normal = gbuffer_normal[pixel].rgb;
