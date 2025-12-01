@@ -7,13 +7,13 @@
 
 RACECAR is a Vulkan renderer written in C++. It's inspired by racing games like the _Forza_ and _Gran Turismo_ series. We aim to implement state-of-the-art material, environment, and sky rendering based on recent papers and graphics techniques.
 
-<img width="1353" height="817" src="https://github.com/user-attachments/assets/17a10137-1ce5-40c6-ba60-82f3bb7c9187" />
+<img width="1353" src="images/thumbnail.png" />
 
 ## Material Rendering
 
-![](images/materials.png)
+![](images/materials2.png)
 
-Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. Skies are encoded as an octahedral map for reflections.
+Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. Skies, irradiance, and rough glossy mips are encoded as an octahedral map for reflections.
 
 ### Glints
 
@@ -47,7 +47,12 @@ The sample code in the 2017 codebase could not be used directly for a number of 
 
 The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC. It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts.
 
-<img width="682" height="605" src="https://github.com/user-attachments/assets/02cdb3d1-1205-4548-956e-780a79466671" />
+<img width="682" src="images/clouds.png" />
+
+## Terrain
+The terrain is rendered via a separate deferred pass, using an artist-authored material-mask to determine which types of materials (snow, grass, etc.) exist at a given world position. We blend materials together seamelessly and use UV distortion to break-up harsh transitions.
+
+![Terrain breakdown](images/terrain_breakdown.png)
 
 ## Post-processing
 
@@ -68,6 +73,15 @@ These steps can also be seen in the screenshots below.
 |5-step blur pass|Additive blending|
 
 Performance is currently 0.4 ms on a RTX 5060 Ti, and 1.3 ms on a RTX 4070 Laptop GPU.
+
+### Tonemapping
+We implement [Gran Turismo 7's tonemapping solution](https://blog.selfshadow.com/publications/s2025-shading-course/pdi/s2025_pbs_pdi_slides_v1.1.pdf) presented at SIGGRAPH 2025.
+
+|![](images/pretonemap.png)|![](images/posttonemap.png)|![](images/posttonemap2.png)
+|:-:|:-:|:-:|
+|Original|Post-tonemapped|Post-tonemapped
+
+
 
 ## Development
 
