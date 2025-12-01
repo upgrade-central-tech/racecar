@@ -108,4 +108,9 @@ struct Clouds {
     float cloud_offset_y = 0.f;
 };
 
+struct Tonemapping {
+    int mode = 0;
+    float hdr_target_luminance = 0.f;
+};
+
 } // namespace racecar::uniform_buffer
