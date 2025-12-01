@@ -6,7 +6,16 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 
+#include <array>
+#include <string_view>
+
 namespace racecar::gui {
+
+static constexpr std::array TONEMAPPING_OPTIONS = std::to_array<std::string_view>( {
+    "None",
+    "SDR output",
+    "HDR output",
+} );
 
 Gui initialize( Context& ctx, const engine::State& engine )
 {
@@ -109,7 +118,8 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
         if ( ImGui::BeginTabBar( "Categories" ) ) {
             if ( ImGui::BeginTabItem( "General" ) ) {
                 ImGui::SeparatorText( "Material Settings" );
-                gui.debug.load_material_into_gui = ImGui::InputInt( "Editing Material", &gui.debug.current_editing_material );
+                gui.debug.load_material_into_gui
+                    = ImGui::InputInt( "Editing Material", &gui.debug.current_editing_material );
                 ImGui::ColorEdit4( "Base color", &gui.debug.color[0] );
                 ImGui::SliderFloat( "Roughness", &gui.debug.roughness, 0, 1.0f );
                 ImGui::SliderFloat( "Metallic", &gui.debug.metallic, 0, 1.0f );
@@ -127,9 +137,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::Checkbox( "Turn on normals only", &gui.debug.normals_only );
                 ImGui::Checkbox(
                     "Turn on roughness + metallic only", &gui.debug.roughness_metal_only );
-                ImGui::Checkbox(
-                    "Ray Traced Shadows", &gui.debug.ray_traced_shadows );
-
+                ImGui::Checkbox( "Ray Traced Shadows", &gui.debug.ray_traced_shadows );
 
                 ImGui::SeparatorText( "Demo Settings" );
                 ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );
@@ -159,7 +167,32 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
             }
 
             if ( ImGui::BeginTabItem( "Post" ) ) {
-                ImGui::Checkbox( "Enable bloom", &gui.debug.enable_bloom );
+                ImGui::SeparatorText( "Bloom" );
+                ImGui::Checkbox( "Enable", &gui.debug.enable_bloom );
+
+                ImGui::SeparatorText( "Tonemapping" );
+                size_t selected_index = static_cast<size_t>( gui.tonemapping.mode );
+                std::string_view preview_value = TONEMAPPING_OPTIONS[selected_index];
+                if ( ImGui::BeginCombo( "Mode", preview_value.data() ) ) {
+                    for ( size_t i = 0; i < TONEMAPPING_OPTIONS.size(); ++i ) {
+                        bool is_selected = ( selected_index == i );
+
+                        if ( ImGui::Selectable( TONEMAPPING_OPTIONS[i].data(), is_selected ) ) {
+                            selected_index = i;
+                        }
+
+                        if ( is_selected ) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+
+                    gui.tonemapping.mode
+                        = static_cast<Gui::TonemappingData::Mode>( selected_index );
+                    ImGui::EndCombo();
+                }
+                ImGui::SliderFloat(
+                    "HDR luminance target", &gui.tonemapping.hdr_target_luminance, 0.f, 40'000.f );
+
                 ImGui::EndTabItem();
             }
 

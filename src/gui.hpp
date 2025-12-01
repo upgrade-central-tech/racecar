@@ -56,8 +56,14 @@ struct Gui {
     } ao = {};
 
     struct TonemappingData {
-        bool use_sdr_mode = false;
-        float hdr_target_luminance = 1000.f;
+        enum class Mode : int {
+            NONE,
+            SDR,
+            HDR,
+        } mode
+            = Mode::HDR;
+
+        float hdr_target_luminance = 10000.f;
     } tonemapping = {};
 };
 

@@ -1064,6 +1064,18 @@ void run( bool use_fullscreen )
             ao_pass.ao_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
+        // Tonemapping update
+        {
+            ub_data::Tonemapping tm_ub = tm_pass.buffer.get_data();
+            tm_ub.mode = static_cast<int>( gui.tonemapping.mode );
+            tm_ub.hdr_target_luminance = gui.tonemapping.hdr_target_luminance;
+
+            log::info( "luminance: {}", tm_ub.hdr_target_luminance );
+
+            tm_pass.buffer.set_data( tm_ub );
+            tm_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
 #if ENABLE_VOLUMETRICS
         // Update volumetric camera buffer
         {

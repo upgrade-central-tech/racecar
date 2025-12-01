@@ -1,5 +1,6 @@
 layout( binding = 0, set = 0 ) Texture2D<float4> input;
 layout( binding = 1, set = 0 ) RWTexture2D<float4> output;
+layout( binding = 2, set = 0 ) ConstantBuffer<Settings> settings;
 
 /// In Gran Turismo, 1.0f in the linear frame-buffer space corresponds to
 /// `REFERENCE_LUMINANCE` cd/m^2 of physical luminance (typically 100 cd/m^2).
@@ -18,6 +19,11 @@ static const float JZAZBZ_EXPONENT_SCALE_FACTOR = 1.7f;
 static const float BLEND_RATIO = 0.6f;
 static const float FADE_START = 0.98f;
 static const float FADE_END = 1.16f;
+
+struct Settings {
+    int mode;
+    float luminance_target;
+};
 
 namespace jzazbz {
 
@@ -214,9 +220,21 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     let pixel = thread_id.xy;
     let scene = input.Load( uint3( pixel, 0 ) ).rgb;
 
-    // let target_luminance = GT_SDR_PAPER_WHITE;
-    let target_luminance = 10000.f;
-    let framebuffer_luminance_target = physical_value_to_framebuffer_value( target_luminance );
+    if ( settings.mode == 0 ) {
+        output[pixel] = float4( scene, 1.f );
+        return;
+    }
+
+    var luminance_target = 0.f;
+    if ( settings.mode == 1 ) {
+        // SDR
+        luminance_target = GT_SDR_PAPER_WHITE;
+    } else {
+        // HDR
+        luminance_target = settings.luminance_target;
+    }
+
+    let framebuffer_luminance_target = physical_value_to_framebuffer_value( luminance_target );
     let curve = GTTonemappingCurveV2( framebuffer_luminance_target, 0.25f, 0.538f, 0.444f, 1.28f );
 
     let rgb = float3( framebuffer_luminance_target );
