@@ -110,9 +110,6 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
             new_mat.base_color_texture_index = std::nullopt;
         }
 
-        log::info( "[Scene] PBR base color texture index: {}",
-            loaded_mat.pbrMetallicRoughness.baseColorTexture.index );
-
         new_mat.metallic = static_cast<float>( loaded_mat.pbrMetallicRoughness.metallicFactor );
         new_mat.roughness = static_cast<float>( loaded_mat.pbrMetallicRoughness.roughnessFactor );
         new_mat.metallic_roughness_texture_index

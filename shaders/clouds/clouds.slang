@@ -115,29 +115,6 @@ float rand_float( float seed )
     return ( wang32( asuint( seed ) ) & 0x00FFFFFFu ) / 16777216.0;
 }
 
-float rand_float2( float2 p )
-{
-    uint32_t seed = ( asuint( p.x ) ) * 73856093u ^ ( asuint( p.y ) ) * 19349663u;
-    return rand_float( seed );
-}
-
-float rand_float3( float3 p )
-{
-    uint32_t seed = ( asuint( p.x ) ) * 73856093u ^ ( asuint( p.y ) ) * 19349663u
-        ^ ( asuint( p.z ) ) * 83492791u;
-    return rand_float( seed );
-}
-
-float3 rand_float3_float3( float3 p )
-{
-    uint32_t seed = ( asuint( p.x ) ) * 73856093u ^ ( asuint( p.y ) ) * 19349663u
-        ^ ( asuint( p.z ) ) * 83492791u;
-    float x = rand_float3( seed );
-    float y = rand_float( x );
-    float z = rand_float( y );
-    return normalize( 2.f * float3( x, y, z ) - float3( 1.f ) );
-}
-
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection.html
 bool check_ray_bbox_intersection( float3 local_origin, float3 local_dir, float3 minAABB,
     float3 maxAABB, out float t_min, out float t_max )
@@ -160,10 +137,6 @@ float sample_density( float3 march_pos )
 {
     float3 p = march_pos * 0.00005f;
 
-    //  float cumulus_map = noise_sum3D( float3( p.xz * 2.f + 100.f, 1.f ) );
-    //  cumulus_map += 0.5;
-    //  cumulus_map = smoothstep( 0.0, 1.0, cumulus_map );
-
     float cumulus_map = cumulus_map_LUT.Sample( linear_mirrored_repeat_sampler, p.xz );
     float3 uvw = fract( p );
 
@@ -172,26 +145,13 @@ float sample_density( float3 march_pos )
     float value2 = ( 0.5 * ( 10 * normY - 8 ) ) / ( cumulus_map - 0.2 );
     height_modulation
         = 0.5 + smoothstep( 0.6, 0.4, height_modulation ) * smoothstep( 1.0, 0.0, value2 );
-
     height_modulation
         = ( smoothstep( 3000, 3100, march_pos.y ) + smoothstep( 3500, 3100, march_pos.y ) ) - 1;
 
-    // float worley = noise_sum3D_Worley( p.xyz * 1.5 + 100.f );
-    // worley = smoothstep( 0.0, 0.8, worley ) - 0.2;
-
-    // float low_freq_perlin = noise_sum3D( p.xyz * 1.5 + 100.f ) + 0.5;
-    // low_freq_perlin = 0.8 * smoothstep( 0.3, 0.6, low_freq_perlin ) + 0.2;
-    // float low_freq_noise = low_freq_perlin * ( 1.2 - worley ) * 0.5;
-    // low_freq_noise *= 0.5;
-    // low_freq_noise -= 0.25;
-    uvw = fract( p * 4 );
     float low_freq_noise = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 4 );
 
     float low_freq_modulation = 1.f - height_modulation;
 
-    // float high_freq_noise = noise_sum3D_Worley( p.xyz * 7 + 100.f );
-    // high_freq_noise = 0.8 - 0.7 * smoothstep( 0.0, 0.8, high_freq_noise );
-    uvw = fract( p * 12 );
     float high_freq_noise = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 12 );
 
     cumulus_map = lerp(
@@ -261,14 +221,44 @@ static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forwar
 
 float hash11( float n ) { return frac( sin( n ) * 43758.5453 ); }
 
+float offset_sphere_intersection( float3 view, float3 origin, float surface_level, float rad )
+{
+    // a Triangle forms between the earth's core, the current position, and the intersection point
+    float PI = 3.141592654;
+    float obtuse_angle = PI;
+    if ( length( float3( view.x, 0, view.z ) ) > 0.01 ) {
+        float3 ground_vector = normalize( float3( view.x, 0, view.z ) );
+        float angle_to_ground = acos( dot( view, ground_vector ) );
+        obtuse_angle = angle_to_ground + PI / 2;
+    }
+
+    // use law of sines to find t
+    float atmo_angle = asin( surface_level * sin( obtuse_angle ) / rad );
+    float core_angle = PI - atmo_angle - obtuse_angle;
+    float t = rad * sin( core_angle ) / sin( obtuse_angle );
+
+    return t;
+}
+
 float4 raymarch( float3 view, float3 origin )
 {
-    // float3 local_dir = normalize( mul( (float3x3)camera_buffer_data.inv_model, view ) );
-    // float3 local_origin = mul( camera_buffer_data.inv_model, float4( origin, 1.0f ) ).xyz;
-    float3 local_dir = float3( view.x, -view.y, view.z );
+    float PI = 3.141592654f;
+    view.y *= -1;
+
+    float theta = acos( saturate( view.y ) );
+    // theta = clamp( theta, 0.0, radians( 80 ) );
+
+    float lerp = ( theta ) / PI * 2.f;
+
+    float thetaRemap = lerp * radians( 80 ); 
+    float phi = atan2( view.z, view.x );
+    
+
+    float sinTheta = sin( thetaRemap );
+    float3 local_dir = float3( sinTheta * cos( phi ), cos( thetaRemap ), sinTheta * sin( phi ) );
     float3 local_origin = origin;
 
-    if ( local_dir.y < 0.1 ) {
+    if ( view.y < 0.0 ) {
         return float4( 0.f );
     }
 
@@ -330,98 +320,16 @@ float4 raymarch( float3 view, float3 origin )
     color = color / ( color + float3( 1.0, 1.0, 1.0 ) );
     color = pow( saturate( color ), float3( 1.0 / 2.2 ) ); // gamma
 
-    return float4( color, 1.0 );
-}
-
-float worley3D( float3 p )
-{
-    float r = 3.0;
-    float3 f = floor( p );
-    float3 x = fract( p );
-    for ( int i = -1; i <= 1; i++ ) {
-        for ( int j = -1; j <= 1; j++ ) {
-            for ( int k = -1; k <= 1; k++ ) {
-                float3 q = float3( float( i ), float( j ), float( k ) );
-                float3 v = q
-                    + float3( rand_float3( ( q + f ) * 1.11 ), rand_float3( ( q + f ) * 1.14 ),
-                        rand_float3( ( q + f ) * 1.17 ) )
-                    - x;
-                float d = dot( v, v );
-                r = min( r, d );
-            }
-        }
-    }
-    return sqrt( r );
-}
-
-float perlin_noise3D( float3 p )
-{
-    float3 grid_cell = floor( p );
-    float3 fractional = p - grid_cell;
-
-    float3 w = fractional * fractional * ( 3. - 2. * fractional );
-
-    float f000 = dot(
-        rand_float3_float3( grid_cell + float3( .0, .0, 0. ) ), fractional - float3( .0, .0, 0. ) );
-    float f010 = dot(
-        rand_float3_float3( grid_cell + float3( .0, 1., 0. ) ), fractional - float3( .0, 1., 0. ) );
-    float f100 = dot(
-        rand_float3_float3( grid_cell + float3( 1., 0., 0. ) ), fractional - float3( 1., 0., 0. ) );
-    float f110 = dot(
-        rand_float3_float3( grid_cell + float3( 1., 1., 0. ) ), fractional - float3( 1., 1., 0. ) );
-    float f001 = dot(
-        rand_float3_float3( grid_cell + float3( .0, .0, 1. ) ), fractional - float3( .0, .0, 1. ) );
-    float f011 = dot(
-        rand_float3_float3( grid_cell + float3( .0, 1., 1. ) ), fractional - float3( .0, 1., 1. ) );
-    float f101 = dot(
-        rand_float3_float3( grid_cell + float3( 1., 0., 1. ) ), fractional - float3( 1., 0., 1. ) );
-    float f111 = dot(
-        rand_float3_float3( grid_cell + float3( 1., 1., 1. ) ), fractional - float3( 1., 1., 1. ) );
-
-    float f00 = lerp( f000, f001, w.z );
-    float f01 = lerp( f010, f011, w.z );
-    float f10 = lerp( f100, f101, w.z );
-    float f11 = lerp( f110, f111, w.z );
-
-    float xm1 = lerp( f00, f10, w.x );
-    float xm2 = lerp( f01, f11, w.x );
-
-    float ym = lerp( xm1, xm2, w.y );
-    return ym;
-}
-
-// fractal perlin noise
-float noise_sum3D( float3 p )
-{
-    p *= 1.; // Cell size
-    // amplitude, noise_sum, total_sum
-    float a = 1., r = 0., s = 0.;
-
-    for ( int i = 0; i < 5; i++ ) {
-        r += a * perlin_noise3D( p );
-        s += a;
-        p *= 2.;
-        a *= .5;
+    // make clouds opaque at the sun.
+    if ( dot( local_dir, -light_dir ) > 0.9985 ) {
+        return float4( color, 1.0 );
     }
 
-    return r / s;
-}
-
-// fractal worley noise
-float noise_sum3D_Worley( float3 p )
-{
-    p *= 4.; // Cell size
-    // amplitude, noise_sum, total_sum
-    float a = 1., r = 0., s = 0.;
-
-    for ( int i = 0; i < 5; i++ ) {
-        r += a * worley3D( p );
-        s += a;
-        p *= 2.;
-        a *= .5;
+    if ( view.y < 0.1 ) {
+        throughput *= view.y * 10.f;
     }
 
-    return r / s;
+    return float4( color, max( 0, throughput ) );
 }
 
 [shader( "fragment" )]
@@ -437,11 +345,7 @@ float4 fs_main( VertexOutput in )
 
     float4 output_color = raymarch( view, world_pos );
 
-    if ( output_color.a < 0.1 ) {
-        discard;
-    }
-
-    return output_color;
+    return float4( output_color.rgb * output_color.a, output_color.a );
 }
 
 

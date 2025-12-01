@@ -13,7 +13,7 @@ namespace racecar::volumetric {
 
 // constexpr std::string_view VOLUMETRIC_FILE_PATH = "../assets/cube.glb";
 [[maybe_unused]] constexpr std::string_view VOLUMETRIC_SHADER_MODULE_PATH
-    = "../shaders/cloud_debug/cloud_debug.spv";
+    = "../shaders/clouds/clouds.spv";
 
 Volumetric initialize( vk::Common& vulkan, engine::State& engine )
 {
@@ -85,7 +85,7 @@ bool generate_noise(
             vulkan, engine, cumulus_desc_set, volumetric.cumulus_map, 2 );
 
         VkShaderModule generate_cumulus_module
-            = vk::create::shader_module( vulkan, "../shaders/cloud_debug/cs_generate_cumulus.spv" );
+            = vk::create::shader_module( vulkan, "../shaders/clouds/cs_generate_cumulus.spv" );
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline( vulkan,
             { cumulus_desc_set.layouts[0] }, generate_cumulus_module, "cs_generate_cumulus" );
@@ -137,7 +137,7 @@ bool generate_noise(
             vulkan, engine, low_freq_desc_set, volumetric.low_freq_noise, 0 );
 
         VkShaderModule generate_low_freq_module = vk::create::shader_module(
-            vulkan, "../shaders/cloud_debug/cs_generate_low_frequency.spv" );
+            vulkan, "../shaders/clouds/cs_generate_low_frequency.spv" );
 
         engine::Pipeline compute_pipeline
             = engine::create_compute_pipeline( vulkan, { low_freq_desc_set.layouts[0] },
@@ -192,7 +192,7 @@ bool generate_noise(
             vulkan, engine, high_freq_desc_set, volumetric.high_freq_noise, 1 );
 
         VkShaderModule generate_high_freq_module = vk::create::shader_module(
-            vulkan, "../shaders/cloud_debug/cs_generate_high_frequency.spv" );
+            vulkan, "../shaders/clouds/cs_generate_high_frequency.spv" );
 
         engine::Pipeline compute_pipeline
             = engine::create_compute_pipeline( vulkan, { high_freq_desc_set.layouts[0] },
@@ -263,7 +263,7 @@ void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulka
                 volumetric.lut_desc_set.layouts[0],
                 volumetric.sampler_desc_set.layouts[0],
             },
-            { color_attachment.images[0].image_format }, VK_SAMPLE_COUNT_1_BIT, false, true,
+            { color_attachment.images[0].image_format }, VK_SAMPLE_COUNT_1_BIT, true, true,
             vk::create::shader_module( vulkan, VOLUMETRIC_SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create volumetrics graphics pipeline: {}", ex.what() );
