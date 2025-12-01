@@ -18,6 +18,10 @@ const std::filesystem::path TEST_GRASS_ALBEDO_ROUGHNESS_PATH
 const std::filesystem::path TEST_GRASS_NORMAL_AO_PATH
     = "../assets/terrain/better_grass/grass_normal_ao.png";
 
+
+const float TERRAIN_TILE_WIDTH = 10.0f;
+const size_t TERRAIN_NUM_TILES = 50;
+
 namespace racecar::geometry {
 
 void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain )
@@ -25,19 +29,42 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     // Generate enough information for just one planar quad. Expand it later on arbitrarily
     [[maybe_unused]] int32_t size = 1;
 
-    float scale = 10.0f;
+    // float scale = 10.0f;
     float offset_y = -0.15f;
 
-    // Arbitrarily populate this with size later on
-    terrain.vertices = {
-        { glm::vec3( -scale, offset_y, -scale ), glm::vec3( 0, 1, 0 ) },
-        { glm::vec3( -scale, offset_y, scale ), glm::vec3( 0, 1, 0 ) },
-        { glm::vec3( scale, offset_y, -scale ), glm::vec3( 0, 1, 0 ) },
-        { glm::vec3( scale, offset_y, scale ), glm::vec3( 0, 1, 0 ) },
-    };
+    terrain.vertices.clear();
+    terrain.indices.clear();
 
-    // Hardcoded indices for now
-    terrain.indices = { 0, 1, 2, 2, 1, 3 };
+    const float half_width = (TERRAIN_NUM_TILES * TERRAIN_TILE_WIDTH) / 2.0f;
+
+    // Generate vertices
+    for (size_t z = 0; z <= TERRAIN_NUM_TILES; ++z) {
+        for (size_t x = 0; x <= TERRAIN_NUM_TILES; ++x) {
+            float xpos = float(x) * TERRAIN_TILE_WIDTH - half_width;
+            float zpos = float(z) * TERRAIN_TILE_WIDTH - half_width;
+            terrain.vertices.push_back({ glm::vec3(xpos, offset_y, zpos), glm::vec3(0,1,0) });
+        }
+    }
+
+    // Generate indices
+    for (size_t z = 0; z < TERRAIN_NUM_TILES; ++z) {
+        for (size_t x = 0; x < TERRAIN_NUM_TILES; ++x) {
+            unsigned int top_left = (unsigned int)(z * (TERRAIN_NUM_TILES + 1) + x);
+            unsigned int top_right = (unsigned int)(top_left + 1);
+            unsigned int bottom_left = (unsigned int)((z + 1) * (TERRAIN_NUM_TILES + 1) + x);
+            unsigned int bottom_right = (unsigned int)(bottom_left + 1);
+
+            // First triangle
+            terrain.indices.push_back(top_left);
+            terrain.indices.push_back(bottom_left);
+            terrain.indices.push_back(top_right);
+
+            // Second triangle
+            terrain.indices.push_back(top_right);
+            terrain.indices.push_back(bottom_left);
+            terrain.indices.push_back(bottom_right);
+        }
+    }
 
     // Create respective mesh buffers using CPU data
     geometry::create_mesh_buffers( vulkan, terrain.mesh_buffers,
