@@ -18,7 +18,7 @@ layout( binding = 5, set = 1 ) RWTexture2D<float4> out_color;
 layout( binding = 0, set = 2 ) Texture2D<float4> sky;
 layout( binding = 1, set = 2 ) Texture2D<float4> sky_irradiance;
 layout( binding = 2, set = 2 ) Texture2D<float4> sky_mips;
-layout( binding = 3, set = 3 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 3, set = 2 ) Texture2D<float2> BRDF_LUT;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
@@ -211,7 +211,14 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     sky_px = clamp( sky_px, int2( 0, 0 ), int2( specular_width - 1, specular_height - 1 ) );
 
     float specular_strength = 0.75f;
-    float3 specular_irradiance = sample_glossy_ibl( mixed_roughness, oct_encode( mixed_normal ) );
+    float3 specular_irradiance = sample_glossy_ibl( mixed_roughness, oct_refl_uv );
+
+    float metallic = 0.0f;
+    float n_dot_v = max( dot( mixed_normal, view ), 0.0f );
+
+    float3 F0 = lerp( float3( 0.04f ), mixed_albedo, 0.04f );
+    float2 BRDF = BRDF_LUT.SampleLevel( nearest_sampler, float2( n_dot_v, mixed_roughness ), 0.0f );
+    specular_irradiance *= ( F0 * BRDF.x + BRDF.y );
 
     // sky[sky_px].rgb; // ]filter_float4( sky, oct_refl_uv ).rgb; // [sky_px].rgb;
 
@@ -237,9 +244,9 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     }
 
     final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
-    final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) ) * 0.01f;
+    final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) );
 
-    out_color[pixel] = float4( specular_irradiance, 1.0f );
+    out_color[pixel] = float4( final_color, 1.0f );
 }
 
 

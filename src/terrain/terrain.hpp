@@ -23,7 +23,7 @@ struct TerrainLightingInfo {
     engine::RWImage* GBuffer_Normal;
     engine::RWImage* color_attachment;
 
-    vk::mem::AllocatedImage* brdf_lut;
+    vk::mem::AllocatedImage* lut_brdf;
 };
 
 struct Terrain {

@@ -199,6 +199,7 @@ void run( bool use_fullscreen )
     }
 
     engine::DescriptorSet lut_sets;
+    vk::mem::AllocatedImage lut_brdf;
     {
         lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
             {
@@ -211,7 +212,7 @@ void run( bool use_fullscreen )
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
                 | VK_SHADER_STAGE_COMPUTE_BIT );
 
-        vk::mem::AllocatedImage lut_brdf
+        lut_brdf
             = engine::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
 
         vk::mem::AllocatedImage glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
@@ -773,6 +774,7 @@ void run( bool use_fullscreen )
         &GBuffer_Position,
         &GBuffer_Normal,
         &screen_color,
+        &lut_brdf,
     };
 
     geometry::draw_terrain( test_terrain, ctx.vulkan, engine, task_list, terrain_lighting_info );
