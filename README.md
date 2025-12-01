@@ -8,7 +8,7 @@
 
 RACECAR is a Vulkan renderer written in C++. It's inspired by racing games like the _Forza_ and _Gran Turismo_ series. We aim to implement state-of-the-art material, environment, and sky rendering based on recent papers and graphics techniques.
 
-<img width="1353" src="images/thumbnail.png" />
+<img width="1894" height="1052" alt="image" src="https://github.com/user-attachments/assets/d09c2a09-9438-4afa-a3e1-b0ffbdd8f05e" />
 
 ## Material Rendering
 
