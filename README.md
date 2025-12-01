@@ -44,6 +44,14 @@ The sample code in the 2017 codebase could not be used directly for a number of 
   - Also interferes with our sky-to-cubemap conversion, which is used for IBL
 - Removed hardcoded shadows and lightshafts
 
+## Raytracing
+Our renderer features fully raytraced shadows, enabling self-shadowing and realistic lighting.
+
+|![](images/rt_off.png)|![](images/rt_on.png)|
+|:-:|:-:|
+|Raytracing off|Raytracing on|
+|![](images/rt_off1.png)|![](images/rt_off2.png)|
+|Raytracing off|Raytracing on|
 ## Clouds
 
 The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC. It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts.
