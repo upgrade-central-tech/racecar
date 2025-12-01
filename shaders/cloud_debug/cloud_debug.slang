@@ -18,6 +18,7 @@ struct CameraBufferData {
     float4x4 mvp;
     float4x4 model;
     float4x4 inv_model;
+    float4x4 view_mat;
     float4 camera_pos;
     // Pack: near plane, far plane, aspect ratio, fov_Y
     float4 camera_constants;
@@ -40,6 +41,7 @@ layout( binding = 1, set = 1 ) Texture3D<float> high_freq_noise_LUT;
 layout( binding = 2, set = 1 ) Texture2D<float> cumulus_map_LUT;
 
 layout( binding = 0, set = 2 ) SamplerState linear_sampler;
+layout( binding = 1, set = 2 ) SamplerState linear_mirrored_repeat_sampler;
 
 float4x4 InversePerspective_DX( float fovY, float aspect, float nearZ, float farZ )
 {
@@ -158,12 +160,12 @@ float sample_density( float3 march_pos )
 {
     float3 p = march_pos * 0.00005f;
 
-    float3 uvw = fract( p );
     //  float cumulus_map = noise_sum3D( float3( p.xz * 2.f + 100.f, 1.f ) );
     //  cumulus_map += 0.5;
     //  cumulus_map = smoothstep( 0.0, 1.0, cumulus_map );
 
-    float cumulus_map = cumulus_map_LUT.Sample( linear_sampler, uvw.xz );
+    float cumulus_map = cumulus_map_LUT.Sample( linear_mirrored_repeat_sampler, p.xz );
+    float3 uvw = fract( p );
 
     float normY = -p.y * 0.5 + 0.5;
     float height_modulation = ( 0.5 * ( -normY + 1 ) ) / ( cumulus_map - 0.2 );
@@ -183,14 +185,14 @@ float sample_density( float3 march_pos )
     // low_freq_noise *= 0.5;
     // low_freq_noise -= 0.25;
     uvw = fract( p * 4 );
-    float low_freq_noise = low_freq_noise_LUT.Sample( linear_sampler, uvw );
+    float low_freq_noise = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 4 );
 
     float low_freq_modulation = 1.f - height_modulation;
 
     // float high_freq_noise = noise_sum3D_Worley( p.xyz * 7 + 100.f );
     // high_freq_noise = 0.8 - 0.7 * smoothstep( 0.0, 0.8, high_freq_noise );
     uvw = fract( p * 12 );
-    float high_freq_noise = low_freq_noise_LUT.Sample( linear_sampler, uvw );
+    float high_freq_noise = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 12 );
 
     cumulus_map = lerp(
         cumulus_map, cumulus_map + 4 * low_freq_noise + 1 * high_freq_noise, low_freq_modulation );

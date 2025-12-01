@@ -262,20 +262,29 @@ Common initialize( SDL_Window* window )
 
         // Used by a lot of stuff
         {
-            VkSamplerCreateInfo linear_sampler_info = vk::create::sampler_info( VK_FILTER_LINEAR );
+            VkSamplerCreateInfo linear_sampler_info = vk::create::sampler_info(
+                VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE );
             vk::check( vkCreateSampler( vulkan.device, &linear_sampler_info, nullptr,
                            &vulkan.global_samplers.linear_sampler ),
                 "Failed to create global linear sampler" );
             vulkan.destructor_stack.push(
                 vulkan.device, vulkan.global_samplers.linear_sampler, vkDestroySampler );
 
-            VkSamplerCreateInfo nearest_sampler_info
-                = vk::create::sampler_info( VK_FILTER_NEAREST );
+            VkSamplerCreateInfo nearest_sampler_info = vk::create::sampler_info(
+                VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE );
             vk::check( vkCreateSampler( vulkan.device, &nearest_sampler_info, nullptr,
                            &vulkan.global_samplers.nearest_sampler ),
                 "Failed to create global nearest sampler" );
             vulkan.destructor_stack.push(
                 vulkan.device, vulkan.global_samplers.nearest_sampler, vkDestroySampler );
+
+            VkSamplerCreateInfo linear_mirrored_repeat_sampler_info = vk::create::sampler_info(
+                VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT );
+            vk::check( vkCreateSampler( vulkan.device, &linear_mirrored_repeat_sampler_info,
+                           nullptr, &vulkan.global_samplers.linear_mirrored_repeat_sampler ),
+                "Failed to create global linear mirrored repeat sampler" );
+            vulkan.destructor_stack.push( vulkan.device,
+                vulkan.global_samplers.linear_mirrored_repeat_sampler, vkDestroySampler );
         }
         vulkan.ray_tracing_properties = rt::query_rt_properties(vulkan.device.physical_device);
 

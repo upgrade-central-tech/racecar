@@ -47,7 +47,7 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
 
     volumetric.sampler_desc_set = engine::generate_descriptor_set( vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_SAMPLER },
+        { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
 
     engine::update_descriptor_set_uniform(
@@ -55,6 +55,9 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
 
     engine::update_descriptor_set_sampler(
         vulkan, engine, volumetric.sampler_desc_set, vulkan.global_samplers.linear_sampler, 0 );
+
+    engine::update_descriptor_set_sampler( vulkan, engine, volumetric.sampler_desc_set,
+        vulkan.global_samplers.linear_mirrored_repeat_sampler, 1 );
 
     log::info( "[Engine] DESCRIPTOR SHOULD BE MADE BY THIS POINT." );
 

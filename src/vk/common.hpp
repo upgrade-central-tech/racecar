@@ -48,6 +48,7 @@ constexpr int TERRAIN_ID = 2;
 struct GlobalSamplers {
     VkSampler linear_sampler;
     VkSampler nearest_sampler;
+    VkSampler linear_mirrored_repeat_sampler;
 };
 
 /// Stores common Vulkan-related objects.
