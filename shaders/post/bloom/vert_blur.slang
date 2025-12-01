@@ -19,16 +19,13 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     input.GetDimensions( width, height );
 
     var result = input.Load( uint3( pixel, 0 ) ).rgb * WEIGHTS[0];
-    result = min( MAX_RADIANCE, result );
 
     for ( var i = 1; i < BLUR_RADIUS; ++i ) {
         let up_offset = min( pixel.y + i, height - 1 );
         let down_offset = max( pixel.y - i, 0 );
 
-        result
-            += min( MAX_RADIANCE, input.Load( uint3( pixel.x, up_offset, 0 ) ).rgb * WEIGHTS[i] );
-        result
-            += min( MAX_RADIANCE, input.Load( uint3( pixel.x, down_offset, 0 ) ).rgb * WEIGHTS[i] );
+        result += input.Load( uint3( pixel.x, up_offset, 0 ) ).rgb * WEIGHTS[i];
+        result += input.Load( uint3( pixel.x, down_offset, 0 ) ).rgb * WEIGHTS[i];
     }
 
     output[pixel] = float4( result, 1.f );
