@@ -53,12 +53,8 @@ float3 direct_lighting( float3 albedo, float3 normal, float roughness, float ao,
     return ( ( 1.0f - F ) * diffuse_albedo + specular ) * clamped_lambert * local_shadows;
 }
 
-bool traceRayFirstHit(
-    RaytracingAccelerationStructure sceneBVH,
-    float3 rayOrigin,
-    float3 rayDir,
-    out float t,
-    out int primitiveIndex )
+bool traceRayFirstHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigin, float3 rayDir,
+    out float t, out int primitiveIndex )
 {
     RayDesc ray;
     ray.Origin = rayOrigin;
@@ -73,15 +69,10 @@ bool traceRayFirstHit(
         //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
 
-    q.TraceRayInline(
-        sceneBVH,
-        rayFlags,
-        0xff,
-        ray );
+    q.TraceRayInline( sceneBVH, rayFlags, 0xff, ray );
     q.Proceed();
 
-    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT )
-    {
+    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ) {
         t = q.CommittedRayT();
         primitiveIndex = q.CommittedPrimitiveIndex();
         return true;
@@ -219,12 +210,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
         float t;
         int primitive_index;
         hit = traceRayFirstHit(
-            sceneBVH,
-            world_position + 0.01 * normalize( normal ),
-            light,
-            t,
-            primitive_index
-        );
+            sceneBVH, world_position + 0.01 * normalize( normal ), light, t, primitive_index );
     }
 
     float3 final_color;
@@ -238,7 +224,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
     final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) ) * 0.01f;
 
-    out_color[pixel] = float4( final_color, 1.0f );
+    out_color[pixel] = float4( float3( mixed_roughness ), 1.0f );
 }
 
 

@@ -5,7 +5,7 @@
 #include "../glint/glint.hlsl"
 
 #define USE_GLINTS 1
-#define USE_SH_IRRADIANCE 1
+#define USE_SH_IRRADIANCE 0
 
 float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 light, Material pbr,
     GBuffer g_buffer, float sun_V )
@@ -47,7 +47,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     // float3 sky_color = octahedral_sky.Sample( nearest_sampler, encoded_direction ).rgb;
 
     float3 precomputed_lo_specular
-        = octahedral_sky.Sample( nearest_sampler, encoded_direction ).rgb;
+        = octahedral_sky_mips.SampleLevel( nearest_sampler, encoded_direction, roughness * 5.0f )
+              .rgb;
 
     float3 F0 = float3( 0.04f );
     F0 = lerp( F0, base_albedo * precomputed_lo_specular, pbr.metallic );
@@ -116,10 +117,14 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     // float3 out_color = base_color + clearcoat_specular;
 
 #if USE_SH_IRRADIANCE
-    float3 irradiance = eval_SH( sh_data, normal );
-    float3 diffuse_irradiance = diffuse_final * irradiance;
-    float3 diffuse_irradiance2 = irradiance_cubemap.Sample( nearest_sampler, normal ).rgb;
-    // out_color *= irradiance;
+    // float3 irradiance = eval_SH( sh_data, normal );
+    // float3 diffuse_irradiance = diffuse_final * irradiance;
+    // float3 diffuse_irradiance2 = irradiance_cubemap.Sample( nearest_sampler, normal ).rgb;
+    //  out_color *= irradiance;
+#else
+    float3 diffuse_irradiance
+        = octahedral_sky_irradiance.Sample( nearest_sampler, encoded_direction ).rgb;
+    diffuse_irradiance *= albedo / PI;
 #endif
 
     float3 diffuse_direct = diffuse_final * clamped_n_dot_l;
@@ -128,7 +133,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 specular_indirect = precomputed_specular_cc;
 
     float3 clearcoat_ibl = clearcoat_weight * 1.0f * precomputed_specular_cc;
-    float3 clearcoat_direct = max( clearcoat_specular + ( 1.0f - F_cc ) * base_specular, 0.0f ) * sun_V;
+    float3 clearcoat_direct
+        = max( clearcoat_specular + ( 1.0f - F_cc ) * base_specular, 0.0f ) * sun_V;
 
     float3 kS = F;
     float3 kD = 1.0f - kS;

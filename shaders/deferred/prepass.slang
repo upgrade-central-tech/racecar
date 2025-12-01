@@ -25,9 +25,11 @@ layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 layout( binding = 3, set = 1 ) ConstantBuffer<MaterialData> material_data;
 
 // Cubemaps + LUTs
-layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
-layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
-layout( binding = 4, set = 2 ) Texture2D<float4> glint_noise;
+layout( binding = 0, set = 2 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 1, set = 2 ) Texture2D<float4> glint_noise;
+layout( binding = 2, set = 2 ) Texture2D<float4> octahedral_sky;
+layout( binding = 3, set = 2 ) Texture2D<float4> octahedral_sky_irradiance;
+layout( binding = 4, set = 2 ) Texture2D<float4> octahedral_sky_mips;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
@@ -115,7 +117,8 @@ FragmentOutput fs_main( VertexOutput in )
         output.albedo = material_data.base_color;
     }
 
-    if ( material_data.has_metallic_roughness_texture != 0 && debug_data.enable_roughness_metal_map ) {
+    if ( material_data.has_metallic_roughness_texture != 0
+        && debug_data.enable_roughness_metal_map ) {
         output.packed_data = float4( metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb,
             material_data.clearcoat_roughness, material_data.clearcoat );
     } else {

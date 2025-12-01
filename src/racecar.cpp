@@ -52,7 +52,6 @@ namespace {
 constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
-constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
 constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
@@ -178,7 +177,7 @@ void run( bool use_fullscreen )
 
         engine::update_descriptor_set_uniform(
             ctx.vulkan, engine, material_desc_sets[i], material_buffer, 3 );
-        material_uniform_buffers[i] = std::move(material_buffer);
+        material_uniform_buffers[i] = std::move( material_buffer );
     }
 
     engine::DescriptorSet raymarch_tex_sets;
@@ -195,38 +194,23 @@ void run( bool use_fullscreen )
     engine::DescriptorSet lut_sets;
     {
         lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+            {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF LUT
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Glint noise
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky irradiance
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky with mips
+            },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-        vk::mem::AllocatedImage test_cubemap
-            = geometry::create_cubemap( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
         vk::mem::AllocatedImage lut_brdf
             = engine::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
 
-        UniformBuffer sh_buffer = create_uniform_buffer<ub_data::SHData>(
-            ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-
-        vk::mem::AllocatedImage diffuse_irradiance
-            = geometry::generate_diffuse_irradiance( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
-
-        vk::mem::AllocatedImage diffuse_irradiance_sh
-            = geometry::cs_generate_diffuse_sh( test_cubemap, linear_sampler, ctx.vulkan, engine );
-
         vk::mem::AllocatedImage glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
 
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, test_cubemap, 0 );
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 1 );
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, diffuse_irradiance, 2 );
-        engine::update_descriptor_set_image(
-            ctx.vulkan, engine, lut_sets, diffuse_irradiance_sh, 3 );
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, glint_noise, 4 );
-
-        // nothing in the lut for the sky.. YET
-        engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 6 );
-
+        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 0 );
+        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, glint_noise, 1 );
+#if 0
         std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );
         for ( size_t i = 0; i < sh_coefficients.size(); ++i ) {
             log::info( "SH coeff: {}, {}, {}", sh_coefficients[i].x, sh_coefficients[i].y,
@@ -254,6 +238,7 @@ void run( bool use_fullscreen )
             sh_buffer.set_data( SH_ub );
             sh_buffer.update( ctx.vulkan, i );
         }
+#endif
     }
 
     // Depth prepass setup
@@ -518,14 +503,20 @@ void run( bool use_fullscreen )
         engine::add_gfx_task( task_list, atmosphere_gfx_task );
 
         atmosphere::initialize_atmosphere_baker( atms_baker, ctx.vulkan, engine );
-        engine::update_descriptor_set_image(
-            ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 5 );
 
         // funny business
         atmosphere::compute_octahedral_sky_irradiance( atms_baker, ctx.vulkan, engine, task_list );
 
         // FUNNIER business!
         atmosphere::compute_octahedral_sky_mips( atms_baker, ctx.vulkan, engine, task_list );
+
+        // LUT setes pt2 assignment
+        engine::update_descriptor_set_image(
+            ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 2 );
+        engine::update_descriptor_set_rwimage( ctx.vulkan, engine, lut_sets,
+            atms_baker.octahedral_sky_irradiance, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 3 );
+        engine::update_descriptor_set_rwimage( ctx.vulkan, engine, lut_sets,
+            atms_baker.octahedral_sky_test, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 4 );
     }
     // END ATMOSPHERE STUFF
 
@@ -1088,11 +1079,12 @@ void run( bool use_fullscreen )
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        // update materials 
+        // update materials
         {
-            gui.debug.current_editing_material = glm::clamp(gui.debug.current_editing_material, 0, int(num_materials));
+            gui.debug.current_editing_material
+                = glm::clamp( gui.debug.current_editing_material, 0, int( num_materials ) );
             int mat_idx = gui.debug.current_editing_material;
-            auto mat_data = material_uniform_buffers[size_t(mat_idx)].get_data();
+            auto mat_data = material_uniform_buffers[size_t( mat_idx )].get_data();
             if ( gui.debug.load_material_into_gui ) {
                 gui.debug.color = mat_data.base_color;
                 gui.debug.roughness = mat_data.roughness;
@@ -1106,8 +1098,9 @@ void run( bool use_fullscreen )
             mat_data.metallic = gui.debug.metallic;
             mat_data.clearcoat = gui.debug.clearcoat_weight;
             mat_data.clearcoat_roughness = gui.debug.clearcoat_roughness;
-            material_uniform_buffers[size_t(mat_idx)].set_data(mat_data);
-            material_uniform_buffers[size_t(mat_idx)].update(ctx.vulkan, engine.get_frame_index());
+            material_uniform_buffers[size_t( mat_idx )].set_data( mat_data );
+            material_uniform_buffers[size_t( mat_idx )].update(
+                ctx.vulkan, engine.get_frame_index() );
         }
 
         // {
