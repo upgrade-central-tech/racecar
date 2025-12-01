@@ -1,3 +1,8 @@
+/// Based on
+/// https://blog.selfshadow.com/publications/s2025-shading-course/pdi/supplemental/gt7_tone_mapping.cpp.
+
+/// What mode to render in (no tonemapping, clamp to SDR display, clamp to HDR display), and the
+/// physical luminance target in HDR mode.
 struct Settings {
     int mode;
     float luminance_target;
