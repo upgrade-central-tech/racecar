@@ -1,3 +1,8 @@
+struct Settings {
+    int mode;
+    float luminance_target;
+};
+
 layout( binding = 0, set = 0 ) Texture2D<float4> input;
 layout( binding = 1, set = 0 ) RWTexture2D<float4> output;
 layout( binding = 2, set = 0 ) ConstantBuffer<Settings> settings;
@@ -9,9 +14,6 @@ static const float REFERENCE_LUMINANCE = 100.f;
 /// Defines the SDR reference white level used in GT7's tone mapping (typically 250 nits).
 static const float GT_SDR_PAPER_WHITE = 250.f;
 
-/// To match the sRGB range, the tonemapped values are scaled using this factor.
-static const float SDR_CORRECTION_FACTOR = 1.f;
-
 /// Scale factor for exponent.
 static const float JZAZBZ_EXPONENT_SCALE_FACTOR = 1.7f;
 
@@ -19,11 +21,6 @@ static const float JZAZBZ_EXPONENT_SCALE_FACTOR = 1.7f;
 static const float BLEND_RATIO = 0.6f;
 static const float FADE_START = 0.98f;
 static const float FADE_END = 1.16f;
-
-struct Settings {
-    int mode;
-    float luminance_target;
-};
 
 namespace jzazbz {
 
@@ -70,7 +67,7 @@ func eotf_st_2084( n: float, exponent_scale_factor: float )->float
 }
 
 /// Input: linear Rec.2020.
-func from_rgb( float3 rgb )->float3
+func from_rgb( rgb: float3 )->float3
 {
     let l = rgb[0] * 0.530004f + rgb[1] * 0.355704f + rgb[2] * 0.086090f;
     let m = rgb[0] * 0.289388f + rgb[1] * 0.525395f + rgb[2] * 0.157481f;
@@ -91,7 +88,7 @@ func from_rgb( float3 rgb )->float3
 }
 
 /// Output: linear Rec.2020.
-func to_rgb( float3 jab )->float3
+func to_rgb( jab: float3 )->float3
 {
     let jz = jab[0] + 1.6295499532821566e-11f;
     let iz = jz / ( 0.44f + 0.56f * jz );
@@ -182,7 +179,8 @@ struct GTTonemappingCurveV2 {
 /// Input: linear Rec.2020 RGB (framebuffer values), output is tonemapped RGB (we currently only
 /// support SDR mode, which maps values to `[0, 1]`).
 func apply_tonemapping( rgb: float3, in GTTonemappingCurveV2 curve,
-    framebuffer_luminance_target: float, framebuffer_luminance_target_ucs: float )
+    framebuffer_luminance_target: float, framebuffer_luminance_target_ucs: float,
+    sdr_correction_factor: float )
     ->float3
 {
     // Convert to UCS to separate luminance and chroma
@@ -207,7 +205,7 @@ func apply_tonemapping( rgb: float3, in GTTonemappingCurveV2 curve,
         let blended = ( 1.f - BLEND_RATIO ) * skewed_rgb[i] + BLEND_RATIO * scaled_rgb[i];
 
         // We're using SDR, so apply the correction factor (in HDR mode, the factor is simply 1.f)
-        output[i] = SDR_CORRECTION_FACTOR * min( blended, framebuffer_luminance_target );
+        output[i] = sdr_correction_factor * min( blended, framebuffer_luminance_target );
     }
 
     return output;
@@ -226,12 +224,15 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     }
 
     var luminance_target = 0.f;
+    var sdr_correction_factor = 0.f;
     if ( settings.mode == 1 ) {
         // SDR
         luminance_target = GT_SDR_PAPER_WHITE;
+        sdr_correction_factor = 1.f / physical_value_to_framebuffer_value( GT_SDR_PAPER_WHITE );
     } else {
         // HDR
         luminance_target = settings.luminance_target;
+        sdr_correction_factor = 1.f;
     }
 
     let framebuffer_luminance_target = physical_value_to_framebuffer_value( luminance_target );
@@ -242,7 +243,7 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     let framebuffer_luminance_target_ucs = ucs.r; // Use the first UCS component (Jz) as luminance
 
     output[pixel] = float4( apply_tonemapping( scene, curve, framebuffer_luminance_target,
-                                framebuffer_luminance_target_ucs ),
+                                framebuffer_luminance_target_ucs, sdr_correction_factor ),
         1.f );
 }
 

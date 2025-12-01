@@ -190,8 +190,16 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                         = static_cast<Gui::TonemappingData::Mode>( selected_index );
                     ImGui::EndCombo();
                 }
+
+                bool is_not_hdr = gui.tonemapping.mode != Gui::TonemappingData::Mode::HDR;
+                if ( is_not_hdr ) {
+                    ImGui::BeginDisabled();
+                }
                 ImGui::SliderFloat(
-                    "HDR luminance target", &gui.tonemapping.hdr_target_luminance, 0.f, 40'000.f );
+                    "HDR luminance target", &gui.tonemapping.hdr_target_luminance, 0.f, 500.f );
+                if ( is_not_hdr ) {
+                    ImGui::EndDisabled();
+                }
 
                 ImGui::EndTabItem();
             }

@@ -63,7 +63,7 @@ struct Gui {
         } mode
             = Mode::HDR;
 
-        float hdr_target_luminance = 10000.f;
+        float hdr_target_luminance = 500.f;
     } tonemapping = {};
 };
 
