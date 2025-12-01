@@ -196,7 +196,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                     ImGui::BeginDisabled();
                 }
                 ImGui::SliderFloat(
-                    "HDR luminance target", &gui.tonemapping.hdr_target_luminance, 0.f, 500.f );
+                    "HDR luminance target", &gui.tonemapping.hdr_target_luminance, 0.f, 10'000.f );
                 if ( is_not_hdr ) {
                     ImGui::EndDisabled();
                 }

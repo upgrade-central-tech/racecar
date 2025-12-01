@@ -1070,8 +1070,6 @@ void run( bool use_fullscreen )
             tm_ub.mode = static_cast<int>( gui.tonemapping.mode );
             tm_ub.hdr_target_luminance = gui.tonemapping.hdr_target_luminance;
 
-            log::info( "luminance: {}", tm_ub.hdr_target_luminance );
-
             tm_pass.buffer.set_data( tm_ub );
             tm_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
