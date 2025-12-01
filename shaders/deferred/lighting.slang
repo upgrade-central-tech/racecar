@@ -23,13 +23,11 @@ layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_da
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
 // Cubemaps + LUTs
-layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
-layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
-layout( binding = 2, set = 2 ) TextureCube<float4> irradiance_cubemap;
-layout( binding = 3, set = 2 ) Texture2D<float4> irradiance_SH;
-layout( binding = 4, set = 2 ) Texture2D<float4> glint_noise;
-layout( binding = 5, set = 2 ) Texture2D<float4> octahedral_sky;
-layout( binding = 6, set = 2 ) ConstantBuffer<SHData> sh_data;
+layout( binding = 0, set = 2 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 1, set = 2 ) Texture2D<float4> glint_noise;
+layout( binding = 2, set = 2 ) Texture2D<float4> octahedral_sky;
+layout( binding = 3, set = 2 ) Texture2D<float4> octahedral_sky_irradiance;
+layout( binding = 4, set = 2 ) Texture2D<float4> octahedral_sky_mips;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 layout( binding = 1, set = 3 ) SamplerState point_sampler;
@@ -52,26 +50,8 @@ layout( binding = 0, set = 5 ) RaytracingAccelerationStructure sceneBVH;
 
 #include "../car_mat/car_lighting.slang"
 
-float LinearDepth( float perspective_depth, float near, float far )
-{
-    return ( near * far ) / ( far - perspective_depth * ( far - near ) );
-}
-
-float LinearDepth01( float perspective_depth )
-{
-    float near = camera_buffer_data.camera_constants.a;
-    float far = camera_buffer_data.camera_constants.b;
-
-    float linear_depth = LinearDepth( perspective_depth, near, far );
-    return ( linear_depth - near ) / ( far - near );
-}
-
-bool traceRayFirstHit(
-    RaytracingAccelerationStructure sceneBVH,
-    float3 rayOrigin,
-    float3 rayDir,
-    out float t,
-    out int primitiveIndex )
+bool traceRayFirstHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigin, float3 rayDir,
+    out float t, out int primitiveIndex )
 {
     RayDesc ray;
     ray.Origin = rayOrigin;
@@ -86,15 +66,10 @@ bool traceRayFirstHit(
         //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
 
-    q.TraceRayInline(
-        sceneBVH,
-        rayFlags,
-        0xff,
-        ray );
+    q.TraceRayInline( sceneBVH, rayFlags, 0xff, ray );
     q.Proceed();
 
-    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT )
-    {
+    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ) {
         t = q.CommittedRayT();
         primitiveIndex = q.CommittedPrimitiveIndex();
         return true;
@@ -166,15 +141,11 @@ float4 fs_main( VertexOutput in )
         float t;
         int primitive_index;
         hit = traceRayFirstHit(
-            sceneBVH,
-            in_pos + 0.01 * normalize( in_nor ),
-            light,
-            t,
-            primitive_index
-        );
+            sceneBVH, in_pos + 0.01 * normalize( in_nor ), light, t, primitive_index );
     }
 
-    float3 out_color = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0 );
+    float3 out_color
+        = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0 );
 
     return float4( out_color, 1.0f );
 }

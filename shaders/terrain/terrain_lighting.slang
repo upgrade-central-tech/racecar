@@ -17,6 +17,8 @@ layout( binding = 5, set = 1 ) RWTexture2D<float4> out_color;
 
 layout( binding = 0, set = 2 ) Texture2D<float4> sky;
 layout( binding = 1, set = 2 ) Texture2D<float4> sky_irradiance;
+layout( binding = 2, set = 2 ) Texture2D<float4> sky_mips;
+layout( binding = 3, set = 2 ) Texture2D<float2> BRDF_LUT;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
@@ -53,12 +55,20 @@ float3 direct_lighting( float3 albedo, float3 normal, float roughness, float ao,
     return ( ( 1.0f - F ) * diffuse_albedo + specular ) * clamped_lambert * local_shadows;
 }
 
-bool traceRayFirstHit(
-    RaytracingAccelerationStructure sceneBVH,
-    float3 rayOrigin,
-    float3 rayDir,
-    out float t,
-    out int primitiveIndex )
+float3 sample_glossy_ibl( float roughness, float2 direction )
+{
+    float lod = roughness * 5.0f;
+    uint lod0 = uint( floor( roughness * 5.0f ) );
+    uint lod1 = min( lod0 + 1, 5 );
+    float lod_t = lod - lod0;
+
+    float3 glossy_lod0 = sky_mips.SampleLevel( nearest_sampler, direction, lod0 ).rgb;
+    float3 glossy_lod1 = sky_mips.SampleLevel( nearest_sampler, direction, lod1 ).rgb;
+    return lerp( glossy_lod0, glossy_lod1, lod_t );
+}
+
+bool traceRayFirstHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigin, float3 rayDir,
+    out float t, out int primitiveIndex )
 {
     RayDesc ray;
     ray.Origin = rayOrigin;
@@ -73,15 +83,10 @@ bool traceRayFirstHit(
         //  RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
         RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
 
-    q.TraceRayInline(
-        sceneBVH,
-        rayFlags,
-        0xff,
-        ray );
+    q.TraceRayInline( sceneBVH, rayFlags, 0xff, ray );
     q.Proceed();
 
-    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT )
-    {
+    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ) {
         t = q.CommittedRayT();
         primitiveIndex = q.CommittedPrimitiveIndex();
         return true;
@@ -206,8 +211,16 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     sky_px = clamp( sky_px, int2( 0, 0 ), int2( specular_width - 1, specular_height - 1 ) );
 
     float specular_strength = 0.75f;
-    float3 specular_irradiance
-        = sky[sky_px].rgb; // ]filter_float4( sky, oct_refl_uv ).rgb; // [sky_px].rgb;
+    float3 specular_irradiance = sample_glossy_ibl( mixed_roughness, oct_refl_uv );
+
+    float metallic = 0.0f;
+    float n_dot_v = max( dot( mixed_normal, view ), 0.0f );
+
+    float3 F0 = lerp( float3( 0.04f ), mixed_albedo, 0.04f );
+    float2 BRDF = BRDF_LUT.SampleLevel( nearest_sampler, float2( n_dot_v, mixed_roughness ), 0.0f );
+    specular_irradiance *= ( F0 * BRDF.x + BRDF.y );
+
+    // sky[sky_px].rgb; // ]filter_float4( sky, oct_refl_uv ).rgb; // [sky_px].rgb;
 
     //=======================================================================================
     // Final lighting evaluation
@@ -219,12 +232,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
         float t;
         int primitive_index;
         hit = traceRayFirstHit(
-            sceneBVH,
-            world_position + 0.01 * normalize( normal ),
-            light,
-            t,
-            primitive_index
-        );
+            sceneBVH, world_position + 0.01 * normalize( normal ), light, t, primitive_index );
     }
 
     float3 final_color;
@@ -236,7 +244,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     }
 
     final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
-    final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) ) * 0.01f;
+    final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) );
 
     out_color[pixel] = float4( final_color, 1.0f );
 }

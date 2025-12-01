@@ -24,14 +24,12 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
             VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
-                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-            false ),
+                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT ),
         .horz_blur = engine::create_rwimage( vulkan, engine,
             { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
             VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
-                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-            false ),
+                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT ),
     };
 
     engine::add_pipeline_barrier( task_list,

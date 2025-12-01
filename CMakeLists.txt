@@ -45,6 +45,7 @@ add_executable(racecar
     ${ENGINE_DIR}/blit_task.cpp
 
     ${POST_DIR}/bloom.cpp
+    ${POST_DIR}/ao.cpp
 
     ${GEOMETRY_DIR}/scene_mesh.cpp
     ${GEOMETRY_DIR}/procedural.cpp

@@ -11,6 +11,7 @@ struct Camera {
     glm::mat4 mvp = {};
     glm::mat4 model = glm::mat4( 1.f );
     glm::mat4 inv_model = {};
+    glm::mat4 view_mat = {};
     glm::vec4 camera_pos = {};
     glm::vec4 camera_constants = {};
 };
@@ -30,7 +31,20 @@ struct Debug {
     uint32_t ray_traced_shadows = 0;
 };
 
+struct AOData {
+    // Pack: thickness, radius, offset, null
+    glm::vec4 packed_floats0;
+    // Pack: enable ao, null, null, null
+    glm::vec4 packed_floats1;
+};
+
+struct OctahedralData {
+    // Pack: mip level, roughness
+    glm::vec4 packedfloats0;
+};
+
 struct SHData {
+
     // Packs all 9 spherical harmonics
     glm::vec4 coeff0 = {};
     glm::vec4 coeff1 = {};

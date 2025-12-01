@@ -12,6 +12,7 @@
 #include "engine/execute.hpp"
 #include "engine/images.hpp"
 #include "engine/pipeline.hpp"
+#include "engine/post/ao.hpp"
 #include "engine/post/bloom.hpp"
 #include "engine/prepass.hpp"
 #include "engine/state.hpp"
@@ -51,7 +52,6 @@ namespace {
 constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
-constexpr std::string_view TEST_CUBEMAP_PATH = "../assets/cubemaps/test";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
 
 constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
@@ -100,6 +100,7 @@ void run( bool use_fullscreen )
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .magFilter = VK_FILTER_LINEAR,
             .minFilter = VK_FILTER_LINEAR,
+            .maxLod = 100,
         };
 
         vk::check( vkCreateSampler(
@@ -107,10 +108,12 @@ void run( bool use_fullscreen )
             "Failed to create sampler" );
         ctx.vulkan.destructor_stack.push( ctx.vulkan.device, linear_sampler, vkDestroySampler );
 
-        VkSamplerCreateInfo sampler_nearest_create_info
-            = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-                  .magFilter = VK_FILTER_NEAREST,
-                  .minFilter = VK_FILTER_NEAREST };
+        VkSamplerCreateInfo sampler_nearest_create_info = {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .magFilter = VK_FILTER_NEAREST,
+            .minFilter = VK_FILTER_NEAREST,
+            .maxLod = 100,
+        };
 
         vk::check( vkCreateSampler(
                        ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &point_sampler ),
@@ -135,8 +138,12 @@ void run( bool use_fullscreen )
     for ( size_t i = 0; i < num_materials; i++ ) {
         // Generate a separate texture descriptor set for each of the materials
         material_desc_sets[i] = engine::generate_descriptor_set( ctx.vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+            {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
         scene::Material& mat = scene.materials[i];
@@ -177,7 +184,7 @@ void run( bool use_fullscreen )
 
         engine::update_descriptor_set_uniform(
             ctx.vulkan, engine, material_desc_sets[i], material_buffer, 3 );
-        material_uniform_buffers[i] = std::move(material_buffer);
+        material_uniform_buffers[i] = std::move( material_buffer );
     }
 
     engine::DescriptorSet raymarch_tex_sets;
@@ -192,40 +199,27 @@ void run( bool use_fullscreen )
     }
 
     engine::DescriptorSet lut_sets;
+    vk::mem::AllocatedImage lut_brdf;
     {
         lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+            {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF LUT
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Glint noise
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky irradiance
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky with mips
+            },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+                | VK_SHADER_STAGE_COMPUTE_BIT );
 
-        vk::mem::AllocatedImage test_cubemap
-            = geometry::create_cubemap( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
-        vk::mem::AllocatedImage lut_brdf
+        lut_brdf
             = engine::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
-
-        UniformBuffer sh_buffer = create_uniform_buffer<ub_data::SHData>(
-            ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-
-        vk::mem::AllocatedImage diffuse_irradiance
-            = geometry::generate_diffuse_irradiance( TEST_CUBEMAP_PATH, ctx.vulkan, engine );
-
-        vk::mem::AllocatedImage diffuse_irradiance_sh
-            = geometry::cs_generate_diffuse_sh( test_cubemap, linear_sampler, ctx.vulkan, engine );
 
         vk::mem::AllocatedImage glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
 
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, test_cubemap, 0 );
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 1 );
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, diffuse_irradiance, 2 );
-        engine::update_descriptor_set_image(
-            ctx.vulkan, engine, lut_sets, diffuse_irradiance_sh, 3 );
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, glint_noise, 4 );
-
-        // nothing in the lut for the sky.. YET
-        engine::update_descriptor_set_uniform( ctx.vulkan, engine, lut_sets, sh_buffer, 6 );
-
+        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 0 );
+        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, glint_noise, 1 );
+#if 0
         std::vector<glm::vec3> sh_coefficients = geometry::generate_diffuse_sh( TEST_CUBEMAP_PATH );
         for ( size_t i = 0; i < sh_coefficients.size(); ++i ) {
             log::info( "SH coeff: {}, {}, {}", sh_coefficients[i].x, sh_coefficients[i].y,
@@ -253,13 +247,14 @@ void run( bool use_fullscreen )
             sh_buffer.set_data( SH_ub );
             sh_buffer.update( ctx.vulkan, i );
         }
+#endif
     }
 
     // Depth prepass setup
     engine::RWImage GBuffer_DepthMS = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_4_BIT,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
     engine::DescriptorSet depth_uniform_desc_set = engine::generate_descriptor_set(
         ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_VERTEX_BIT );
@@ -334,43 +329,37 @@ void run( bool use_fullscreen )
     engine::RWImage GBuffer_Normal = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        false );
+        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
     engine::RWImage GBuffer_Position = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        false );
+        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
     engine::RWImage GBuffer_Tangent = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        false );
+        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
     engine::RWImage GBuffer_UV = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        false );
+        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
     engine::RWImage GBuffer_Albedo = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        false );
+        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
     engine::RWImage GBuffer_Packed_Data = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        false );
+        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
     engine::RWImage GBuffer_Depth = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, false );
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
 #if ENABLE_DEFERRED_AA
     // Render to an offscreen image, this is what we'll present to the swapchain.
@@ -378,16 +367,14 @@ void run( bool use_fullscreen )
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-            | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-        false );
+            | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
 
     // Buffer needed, this is what the final compute pass will write to.
     // We will later copy the results of this back to `screen_color`, and blit it to the swapchain.
     engine::RWImage screen_buffer = engine::create_rwimage( ctx.vulkan, engine,
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-        false );
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
 #endif
 
     // deferred transition tasks
@@ -525,11 +512,20 @@ void run( bool use_fullscreen )
         engine::add_gfx_task( task_list, atmosphere_gfx_task );
 
         atmosphere::initialize_atmosphere_baker( atms_baker, ctx.vulkan, engine );
-        engine::update_descriptor_set_image(
-            ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 5 );
 
         // funny business
         atmosphere::compute_octahedral_sky_irradiance( atms_baker, ctx.vulkan, engine, task_list );
+
+        // FUNNIER business!
+        atmosphere::compute_octahedral_sky_mips( atms_baker, ctx.vulkan, engine, task_list );
+
+        // LUT setes pt2 assignment
+        engine::update_descriptor_set_image(
+            ctx.vulkan, engine, lut_sets, atms_baker.octahedral_sky, 2 );
+        engine::update_descriptor_set_rwimage( ctx.vulkan, engine, lut_sets,
+            atms_baker.octahedral_sky_irradiance, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 3 );
+        engine::update_descriptor_set_rwimage( ctx.vulkan, engine, lut_sets,
+            atms_baker.octahedral_sky_test, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 4 );
     }
     // END ATMOSPHERE STUFF
 
@@ -778,6 +774,7 @@ void run( bool use_fullscreen )
         &GBuffer_Position,
         &GBuffer_Normal,
         &screen_color,
+        &lut_brdf,
     };
 
     geometry::draw_terrain( test_terrain, ctx.vulkan, engine, task_list, terrain_lighting_info );
@@ -887,8 +884,14 @@ void run( bool use_fullscreen )
 
 // TODO: Make this its own function
 #if ENABLE_DEFERRED_AA
-    // Convert the screen_color/rendered image to read-only. Output screen buffer must be converted
-    // to write-only.
+    // Convert the screen_color/rendered image to read-only.
+    // Output screen buffer must be converted to write-only.
+    // These are special pipeline barriers, since it is assumed that
+    // the scene color was rendered to via gfx draw calls, hence the attachment.
+    // We may need future helpers to convert from attachment to cs write, etc. and vice versa.
+    //
+    // Current limitation assumes that all post-processing calls are done via compute shader
+    // hence the VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT stage.
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
             .image_barriers = {
@@ -917,6 +920,22 @@ void run( bool use_fullscreen )
     engine::post::BloomPass bloom_pass = engine::post::add_bloom(
         ctx.vulkan, engine, task_list, screen_color, screen_buffer, debug_buffer );
 
+    engine::post::AoPass ao_pass = {
+        &camera_buffer,
+        &GBuffer_Normal,
+        &GBuffer_Depth,
+        &screen_buffer,
+        &screen_color,
+    };
+    {
+        engine::transition_cs_read_to_write( task_list, screen_color );
+        engine::transition_cs_write_to_read( task_list, screen_buffer );
+
+        add_ao( ao_pass, ctx.vulkan, engine, task_list );
+    }
+
+    // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
+    // screen.
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
             .image_barriers = {
@@ -926,11 +945,11 @@ void run( bool use_fullscreen )
                     .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = screen_buffer,
+                    .image = screen_color,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
             } } );
 
-    engine::add_blit_task( task_list, { screen_buffer } );
+    engine::add_blit_task( task_list, { screen_color } );
 #endif
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
@@ -1017,6 +1036,7 @@ void run( bool use_fullscreen )
 
             camera_ub.mvp = projection * view * model;
             camera_ub.model = model;
+            camera_ub.view_mat = view;
             camera_ub.inv_model = glm::inverse( model );
             camera_ub.camera_pos = glm::vec4( camera_position, 1.0f );
             camera_ub.camera_constants = glm::vec4(
@@ -1024,6 +1044,18 @@ void run( bool use_fullscreen )
 
             camera_buffer.set_data( camera_ub );
             camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
+        // AO update
+        {
+            ub_data::AOData ao_ub = ao_pass.ao_buffer.get_data();
+
+            ao_ub.packed_floats0 = glm::vec4(
+                gui.ao.thickness, gui.ao.radius, gui.ao.offset, gui.ao.enable_debug ? 1.0f : 0.0f );
+            ao_ub.packed_floats1 = glm::vec4( gui.ao.enable_ao ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f );
+
+            ao_pass.ao_buffer.set_data( ao_ub );
+            ao_pass.ao_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
 #if ENABLE_VOLUMETRICS
@@ -1057,11 +1089,12 @@ void run( bool use_fullscreen )
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        // update materials 
+        // update materials
         {
-            gui.debug.current_editing_material = glm::clamp(gui.debug.current_editing_material, 0, int(num_materials));
+            gui.debug.current_editing_material
+                = glm::clamp( gui.debug.current_editing_material, 0, int( num_materials ) );
             int mat_idx = gui.debug.current_editing_material;
-            auto mat_data = material_uniform_buffers[size_t(mat_idx)].get_data();
+            auto mat_data = material_uniform_buffers[size_t( mat_idx )].get_data();
             if ( gui.debug.load_material_into_gui ) {
                 gui.debug.color = mat_data.base_color;
                 gui.debug.roughness = mat_data.roughness;
@@ -1075,8 +1108,9 @@ void run( bool use_fullscreen )
             mat_data.metallic = gui.debug.metallic;
             mat_data.clearcoat = gui.debug.clearcoat_weight;
             mat_data.clearcoat_roughness = gui.debug.clearcoat_roughness;
-            material_uniform_buffers[size_t(mat_idx)].set_data(mat_data);
-            material_uniform_buffers[size_t(mat_idx)].update(ctx.vulkan, engine.get_frame_index());
+            material_uniform_buffers[size_t( mat_idx )].set_data( mat_data );
+            material_uniform_buffers[size_t( mat_idx )].update(
+                ctx.vulkan, engine.get_frame_index() );
         }
 
         // {

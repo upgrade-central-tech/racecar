@@ -148,6 +148,16 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::EndTabItem();
             }
 
+            if ( ImGui::BeginTabItem( "AO" ) ) {
+                ImGui::Checkbox( "Enable AO", &gui.ao.enable_ao );
+                ImGui::Checkbox( "Enable Debug", &gui.ao.enable_debug );
+                ImGui::SliderFloat( "Thickness", &gui.ao.thickness, 0.0f, 1.0f );
+                ImGui::SliderFloat( "Radius", &gui.ao.radius, 0.0f, 1.0f );
+                ImGui::SliderFloat( "Offset", &gui.ao.offset, 0.0f, 1.0f );
+
+                ImGui::EndTabItem();
+            }
+
             if ( ImGui::BeginTabItem( "Post" ) ) {
                 ImGui::Checkbox( "Enable bloom", &gui.debug.enable_bloom );
                 ImGui::EndTabItem();

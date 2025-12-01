@@ -2,6 +2,7 @@
 
 #include "atmosphere.hpp"
 #include "context.hpp"
+#include "engine/post/ao.hpp"
 #include "engine/state.hpp"
 #include "orbit_camera.hpp"
 
@@ -46,6 +47,14 @@ struct Gui {
         bool animate_zenith = false;
         float radiance_exposure = 2.25f;
     } atms = {};
+
+    struct AoData {
+        float thickness = 1.0f;
+        float radius = 0.20f;
+        float offset = 0.20f;
+        bool enable_debug = false;
+        bool enable_ao = false;
+    } ao = {};
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );

@@ -86,6 +86,34 @@ void update_descriptor_set_rwimage( vk::Common& vulkan, const State& engine,
     }
 }
 
+void update_descriptor_set_rwimage_mip( vk::Common& vulkan, const State& engine,
+    DescriptorSet& desc_set, const RWImage& rw_img, VkImageLayout img_layout, int binding_idx,
+    size_t mip )
+{
+    for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
+        const vk::mem::AllocatedImage& alloc_image = rw_img.images[i];
+
+        VkDescriptorImageInfo desc_image_info = {
+            .sampler = VK_NULL_HANDLE,
+            .imageView = alloc_image.mip_levels[mip],
+            .imageLayout = img_layout, // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
+
+        VkWriteDescriptorSet write_desc_set = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = desc_set.descriptor_sets[i],
+            .dstBinding = static_cast<uint32_t>( binding_idx ),
+            .descriptorCount = 1,
+            .descriptorType = ( img_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
+                ? VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+                : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            .pImageInfo = &desc_image_info,
+        };
+
+        vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
+    }
+}
+
 void update_descriptor_set_depth_image(
     vk::Common& vulkan, State& engine, DescriptorSet& desc_set, RWImage depth_img, int binding_idx )
 {

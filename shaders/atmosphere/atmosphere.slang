@@ -70,7 +70,7 @@ public func get_sky_color( float3 view_dir )->float3
     return radiance * uniforms.radiance_exposure;
 }
 
-public func get_irradiance_sky_color( float3 view_dir )->float3
+public func get_rough_sky_color( float3 view_dir )->float3
 {
     let camera_pos = uniforms.camera_position;
     let sun_dir = normalize( uniforms.sun_direction );

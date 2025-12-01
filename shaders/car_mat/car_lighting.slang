@@ -5,7 +5,19 @@
 #include "../glint/glint.hlsl"
 
 #define USE_GLINTS 1
-#define USE_SH_IRRADIANCE 1
+#define USE_SH_IRRADIANCE 0
+
+float3 sample_glossy_ibl( float roughness, float2 direction )
+{
+    float lod = roughness * 5.0f;
+    uint lod0 = uint( floor( roughness * 5.0f ) );
+    uint lod1 = min( lod0 + 1, 5 );
+    float lod_t = lod - lod0;
+
+    float3 glossy_lod0 = octahedral_sky_mips.SampleLevel( nearest_sampler, direction, lod0 ).rgb;
+    float3 glossy_lod1 = octahedral_sky_mips.SampleLevel( nearest_sampler, direction, lod1 ).rgb;
+    return lerp( glossy_lod0, glossy_lod1, lod_t );
+}
 
 float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 light, Material pbr,
     GBuffer g_buffer, float sun_V )
@@ -41,13 +53,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     // So far only the first mip exists. Will need some more complicated efforts to
     // get this stuff to work with roughness.
 
-    // write out ugly ass code here first, then make it nicer later
     float2 encoded_direction = oct_encode( reflect( -view, normal ) );
-
-    // float3 sky_color = octahedral_sky.Sample( nearest_sampler, encoded_direction ).rgb;
-
-    float3 precomputed_lo_specular
-        = octahedral_sky.Sample( nearest_sampler, encoded_direction ).rgb;
+    float3 precomputed_lo_specular = sample_glossy_ibl( roughness, encoded_direction );
 
     float3 F0 = float3( 0.04f );
     F0 = lerp( F0, base_albedo * precomputed_lo_specular, pbr.metallic );
@@ -61,36 +68,32 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float2 brdf_uv = float2( clamped_n_dot_v, pbr.roughness );
     float2 brdf = BRDF_LUT.Sample( nearest_sampler, brdf_uv ).rg;
 
+    float2 brdf_uv_cc = float2( clamped_n_dot_v, pbr.clearcoat_roughness );
+    float2 brdf_cc = BRDF_LUT.Sample( nearest_sampler, brdf_uv_cc );
+
     // Point-light solution is found via:
 #if USE_GLINTS
-    float3 local_half = world_to_local( half, normal );
-    float2 duvdx = g_buffer.ddx_uv;
-    float2 duvdy = g_buffer.ddy_uv;
-
-    float maxNDF = 10000.0f;
-    float targetNDF = NDF;
-    NDF = duvdy.x; // SampleGlints2023NDF( local_half, targetNDF, maxNDF, uv, duvdx, duvdy ).x;
+    float NDF_glints = g_buffer.ddy_uv.x;
+    NDF = NDF_glints;
 #endif
 
-    float3 base_specular = ( NDF * G * F ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
-    // We use Split-sum approximation instead:
-    // float3 base_specular = precomputed_lo_specular * ( F0 * brdf.x + brdf.y );
+    float3 glint_specular = ( NDF * G * F ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
 
     // Clearcoat evaluation
-    float alpha_cc = clearcoat_roughness * clearcoat_roughness;
-    float D_cc = DistributionGTR( lerp( 0.1f, 0.001f, alpha_cc ), abs( n_dot_h ) );
-    float G_cc = GeometrySmith( clamped_n_dot_v, clamped_n_dot_l, alpha_cc );
-    float3 F_cc = FresnelSchlick( clamped_v_dot_h, float3( 0.04 ) );
-    float3 specular_cc
-        = ( F_cc * D_cc * G_cc ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
+    // float alpha_cc = clearcoat_roughness * clearcoat_roughness;
+    // float D_cc = DistributionGTR( lerp( 0.1f, 0.001f, alpha_cc ), abs( n_dot_h ) );
+    // float G_cc = GeometrySmith( clamped_n_dot_v, clamped_n_dot_l, alpha_cc );
+    // float3 F_cc = FresnelSchlick( clamped_v_dot_h, float3( 0.04 ) );
+    // float3 specular_cc
+    //     = ( F_cc * D_cc * G_cc ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
 
     // brdf_cc needs to be prefiltered using the GTR1 (Generalized Trowbridge Reitz) NDF
     float3 F0_cc = float3( 0.04f );
-    float2 brdf_cc = brdf;
-    float3 precomputed_specular_cc = precomputed_lo_specular * ( F0_cc * brdf.x + brdf.y );
+
+    float3 precomputed_specular_cc = sample_glossy_ibl( clearcoat_roughness, encoded_direction );
+    precomputed_specular_cc *= ( F0_cc * brdf_cc.x + brdf_cc.y );
 
     float3 clearcoat_specular = clearcoat_weight * 1.0f * precomputed_specular_cc;
-    float3 specular_final = max( clearcoat_specular + ( 1.0f - F_cc ) * base_specular, 0.0f );
 
     ////////////////////////////////////////////////////////////////
     // Diffuse reflection
@@ -112,23 +115,26 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     ////////////////////////////////////////////////////////////////
     // Composite results
     ////////////////////////////////////////////////////////////////
-    float3 base_color = ( diffuse_final + max( ( 1.0f - F_cc ) * base_specular, 0.0f ) );
-    // float3 out_color = base_color + clearcoat_specular;
 
 #if USE_SH_IRRADIANCE
-    float3 irradiance = eval_SH( sh_data, normal );
-    float3 diffuse_irradiance = diffuse_final * irradiance;
-    float3 diffuse_irradiance2 = irradiance_cubemap.Sample( nearest_sampler, normal ).rgb;
-    // out_color *= irradiance;
+    // float3 irradiance = eval_SH( sh_data, normal );
+    // float3 diffuse_irradiance = diffuse_final * irradiance;
+    // float3 diffuse_irradiance2 = irradiance_cubemap.Sample( nearest_sampler, normal ).rgb;
+    //  out_color *= irradiance;
+#else
+    float3 diffuse_irradiance
+        = octahedral_sky_irradiance.Sample( nearest_sampler, encoded_direction ).rgb;
+    diffuse_irradiance *= albedo / PI;
 #endif
 
     float3 diffuse_direct = diffuse_final * clamped_n_dot_l;
 
-    float3 specular_direct = base_specular * clamped_n_dot_l;
-    float3 specular_indirect = precomputed_specular_cc;
+    float3 specular_direct = glint_specular * clamped_n_dot_l;
+    float3 specular_indirect = precomputed_lo_specular * ( F0 * brdf.x + brdf.y );
 
-    float3 clearcoat_ibl = clearcoat_weight * 1.0f * precomputed_specular_cc;
-    float3 clearcoat_direct = max( clearcoat_specular + ( 1.0f - F_cc ) * base_specular, 0.0f ) * sun_V;
+    float3 clearcoat_indirect = clearcoat_specular;
+    // float3 clearcoat_direct
+    //     = max( clearcoat_specular + ( 1.0f - F_cc ) * glint_specular, 0.0f ) * sun_V;
 
     float3 kS = F;
     float3 kD = 1.0f - kS;
@@ -139,10 +145,9 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     // Direct lighting
     out_color += ( diffuse_direct + specular_direct ) * sun_V;
 
-    // IBL
-    // Removed kD term due to strange shadows
+    // IBL - Removed kD term due to strange shadows
     out_color += ( diffuse_irradiance + specular_indirect );
-    out_color += clearcoat_ibl;
+    out_color += clearcoat_indirect;
 
     return out_color;
 }

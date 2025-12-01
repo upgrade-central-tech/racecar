@@ -166,4 +166,18 @@ float4 filter_float4( Texture2D<float4> texture, float2 world_uv )
     return c00 * w.x + c10 * w.y + c01 * w.z + c11 * w.w;
 }
 
+//=======================================================================================
+// Depth functions
+//=======================================================================================
+float LinearDepth( float perspective_depth, float near, float far )
+{
+    return ( near * far ) / ( far - perspective_depth * ( far - near ) );
+}
+
+float LinearDepth01( float perspective_depth, float near, float far )
+{
+    float linear_depth = LinearDepth( perspective_depth, near, far );
+    return ( linear_depth - near ) / ( far - near );
+}
+
 

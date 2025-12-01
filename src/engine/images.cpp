@@ -69,7 +69,7 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
 
 vk::mem::AllocatedImage allocate_vma_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
     VkImageType image_type, uint32_t mip_levels, uint32_t array_layers,
-    VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags, bool mipmapped )
+    VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags )
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
@@ -78,12 +78,6 @@ vk::mem::AllocatedImage allocate_vma_image( vk::Common& vulkan, VkExtent3D exten
 
     VkImageCreateInfo image_info = vk::create::image_info(
         format, image_type, mip_levels, array_layers, samples, usage_flags, extent );
-
-    if ( mipmapped ) {
-        image_info.mipLevels = static_cast<uint32_t>( std::floor(
-                                   std::log2( std::max( extent.width, extent.height ) ) ) )
-            + 1;
-    }
 
     {
         VmaAllocationCreateInfo allocation_create_info = {
@@ -116,6 +110,30 @@ vk::mem::AllocatedImage allocate_vma_image( vk::Common& vulkan, VkExtent3D exten
         // different, however, for writing to cubemaps.
         allocated_image.storage_image_view = allocated_image.image_view;
 
+        if ( mip_levels > 1 ) {
+            // Need to build views per mip, useful for writing
+            for ( uint32_t mip = 0; mip < mip_levels; mip++ ) {
+                VkImageViewType image_view_type = ( image_type == VK_IMAGE_TYPE_2D )
+                    ? VK_IMAGE_VIEW_TYPE_2D
+                    : VK_IMAGE_VIEW_TYPE_3D;
+
+                VkImageViewCreateInfo image_view_info
+                    = vk::create::image_view_info( format, allocated_image.image, image_view_type,
+                        format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                                       : VK_IMAGE_ASPECT_COLOR_BIT );
+
+                image_view_info.subresourceRange.baseMipLevel = mip;
+                image_view_info.subresourceRange.levelCount = 1;
+
+                VkImageView mip_view;
+                vk::check( vkCreateImageView( vulkan.device, &image_view_info, nullptr, &mip_view ),
+                    "Failed to create image view" );
+
+                allocated_image.mip_levels.push_back( mip_view );
+                vulkan.destructor_stack.push( vulkan.device, mip_view, vkDestroyImageView );
+            }
+        }
+
         vulkan.destructor_stack.push(
             vulkan.device, allocated_image.image_view, vkDestroyImageView );
     }
@@ -127,8 +145,18 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
     VkImageType image_type, uint32_t mip_levels, uint32_t array_layers,
     VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags, bool mipmapped )
 {
-    return allocate_vma_image( vulkan, extent, format, image_type, mip_levels, array_layers,
-        samples, usage_flags, mipmapped );
+    uint32_t sent_mips = mip_levels;
+
+    // Currently, the auto_generate == 0. I'm going under a wild assumption that
+    // if you ARE enabling mipmapping, and you pass in 0 mip_levels, then we'll just auto-generate.
+    if ( mipmapped && mip_levels == static_cast<uint32_t>( MIP_TYPE::AUTO_GENERATE ) ) {
+        sent_mips = static_cast<uint32_t>(
+                        std::floor( std::log2( std::max( extent.width, extent.height ) ) ) )
+            + 1;
+    }
+
+    return allocate_vma_image(
+        vulkan, extent, format, image_type, sent_mips, array_layers, samples, usage_flags );
 }
 
 std::vector<float> load_image_to_float( const std::string& global_path )
