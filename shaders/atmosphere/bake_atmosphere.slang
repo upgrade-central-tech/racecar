@@ -30,6 +30,19 @@ float3 oct_decode( float2 f )
     return normalize( n );
 }
 
+float2 oct_encode( float3 n )
+{
+    // Project the normal onto the octahedron
+    n /= ( abs( n.x ) + abs( n.y ) + abs( n.z ) );
+
+    // Fold the lower hemisphere
+    if ( n.z < 0.0f )
+        n.xy = ( 1.0f - abs( n.yx ) ) * sign( n.xy );
+
+    // Map from [-1, 1] to [0, 1]
+    return n.xy * 0.5f + 0.5f;
+}
+
 float RadicalInverse_VdC( uint bits )
 {
     bits = ( bits << 16u ) | ( bits >> 16u );
@@ -82,7 +95,7 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
     float3 view_direction = oct_decode( float2( u, v ) );
 
     // Insert the work to actually derive a 3D global direction from pixel and face
-    float3 sky_color = get_sky_color( view_direction );
+    float3 sky_color = get_rough_sky_color( view_direction ); // get_sky_color( view_direction );
 
     octahedral_sky[pixel] = float4( sky_color, 1.0f );
 }
@@ -123,7 +136,7 @@ void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
             float3 sample_dir = normalize(
                 tangent_sample.x * right + tangent_sample.y * up + tangent_sample.z * normal );
 
-            irradiance += get_irradiance_sky_color( sample_dir ) * cos( theta ) * sin( theta );
+            irradiance += get_rough_sky_color( sample_dir ) * cos( theta ) * sin( theta );
         }
     }
 
@@ -150,7 +163,19 @@ void cs_bake_atmosphere_mips( uint3 thread_id: SV_DispatchThreadID )
     float3 reflect = normal;
     float3 view = normal;
 
-    uint sample_count = 16;
+    // If we're at mip0, the most detailed level, its results are nearly
+    // identical to the perfect specular. No reason to just return the default map!
+    if ( mip == 0 ) {
+        float2 sample_uv = oct_encode( normal );
+        uint2 sample_px
+            = uint2( sample_uv * float2( HARDCODED_OCTAHEDRAL_SIZE, HARDCODED_OCTAHEDRAL_SIZE ) );
+
+        octahedral_sky_mip[pixel] = octahedral_sky[sample_px];
+        return;
+    }
+
+    // Sample count should vary per mip-level.
+    uint sample_count = 256;
     float total_weight = 0.0f;
     float roughness = octahedral_data.packedfloats0.y;
     float3 prefiltered_color = 0.0f;
@@ -161,7 +186,10 @@ void cs_bake_atmosphere_mips( uint3 thread_id: SV_DispatchThreadID )
         float3 light = normalize( 2.0f * dot( view, half ) * half - view );
         float n_dot_l = max( dot( normal, light ), 0.0f );
         if ( n_dot_l > 0.0f ) {
-            prefiltered_color += get_sky_color( light ) * n_dot_l;
+            float2 sample_uv = oct_encode( light );
+            uint2 sample_px = uint2(
+                sample_uv * float2( HARDCODED_OCTAHEDRAL_SIZE, HARDCODED_OCTAHEDRAL_SIZE ) );
+            prefiltered_color += octahedral_sky[sample_px].rgb * n_dot_l;
             total_weight += n_dot_l;
         }
     }

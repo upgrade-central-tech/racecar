@@ -193,6 +193,7 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
         1 );
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.lut_desc_set,
         info.atmosphere_baker->octahedral_sky_test, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 2 );
+    engine::update_descriptor_set_image( vulkan, engine, terrain.lut_desc_set, *info.brdf_lut, 3 );
 
     // Sampler assignments
     engine::update_descriptor_set_sampler(

@@ -12,12 +12,12 @@
 /// this function is never used (and not even supported), I blame vcpkg for everything
 #define fp_vkCmdDispatchTileQCOM( commandBuffer ) fp_vkCmdDispatchTileQCOM( commandBuffer, nullptr )
 #endif
+#include "ray_tracing.hpp"
+
 #include <VkBootstrap.h>
 
 #include <source_location>
 #include <string_view>
-
-#include "ray_tracing.hpp"
 
 namespace racecar::vk {
 

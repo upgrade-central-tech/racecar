@@ -41,10 +41,10 @@ void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffe
 
     vkCmdDispatch( command_buffer, x_groups, y_groups, 1 );
 
-    vk::utility::transition_image( command_buffer, octahedral_sky.image, VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT,
-        VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+    // vk::utility::transition_image( command_buffer, octahedral_sky.image, VK_IMAGE_LAYOUT_GENERAL,
+    //     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_WRITE_BIT,
+    //     VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+    //     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
 }
 
 void initialize_atmosphere_baker(
@@ -69,7 +69,7 @@ void initialize_atmosphere_baker(
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         },
-        VK_SHADER_STAGE_COMPUTE_BIT ),
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT ),
 
     engine::update_descriptor_set_write_image(
         vulkan, engine, atms_baker.octahedral_write, atms_baker.octahedral_sky, 0 );
@@ -180,6 +180,8 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, vk::Common& vulka
             },
             VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT ) );
 
+        engine::update_descriptor_set_write_image(
+            vulkan, engine, atms_baker.octahedral_mip_writes[mip], atms_baker.octahedral_sky, 0 );
         engine::update_descriptor_set_rwimage_mip( vulkan, engine,
             atms_baker.octahedral_mip_writes[mip], atms_baker.octahedral_sky_test,
             VK_IMAGE_LAYOUT_GENERAL, 2, mip );
@@ -248,22 +250,23 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, vk::Common& vulka
         engine::add_cs_task( task_list, cs_mip_task );
     }
 
-    // engine::add_pipeline_barrier( task_list,
-    //     engine::PipelineBarrierDescriptor { .buffer_barriers = {},
-    //         .image_barriers = { engine::ImageBarrier { .src_stage = VK_ACCESS_SHADER_WRITE_BIT,
-    //             .src_access = VK_ACCESS_SHADER_WRITE_BIT,
-    //             .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-    //             .dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-    //             .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-    //             .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    //             .image = atms_baker.octahedral_sky_test,
-    //             .range = {
-    //                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-    //                 .baseMipLevel = 0,
-    //                 .levelCount = mip_levels,
-    //                 .baseArrayLayer = 0,
-    //                 .layerCount = 1,
-    //             } } } } );
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers
+            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                .src_access = VK_ACCESS_SHADER_WRITE_BIT,
+                .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                .dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                .image = atms_baker.octahedral_sky_test,
+                .range = {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = mip_levels,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                } } } } );
 }
 
 }

@@ -49,7 +49,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
@@ -100,6 +100,7 @@ void run( bool use_fullscreen )
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .magFilter = VK_FILTER_LINEAR,
             .minFilter = VK_FILTER_LINEAR,
+            .maxLod = 100,
         };
 
         vk::check( vkCreateSampler(
@@ -107,10 +108,12 @@ void run( bool use_fullscreen )
             "Failed to create sampler" );
         ctx.vulkan.destructor_stack.push( ctx.vulkan.device, linear_sampler, vkDestroySampler );
 
-        VkSamplerCreateInfo sampler_nearest_create_info
-            = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-                  .magFilter = VK_FILTER_NEAREST,
-                  .minFilter = VK_FILTER_NEAREST };
+        VkSamplerCreateInfo sampler_nearest_create_info = {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .magFilter = VK_FILTER_NEAREST,
+            .minFilter = VK_FILTER_NEAREST,
+            .maxLod = 100,
+        };
 
         vk::check( vkCreateSampler(
                        ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &point_sampler ),
@@ -135,8 +138,12 @@ void run( bool use_fullscreen )
     for ( size_t i = 0; i < num_materials; i++ ) {
         // Generate a separate texture descriptor set for each of the materials
         material_desc_sets[i] = engine::generate_descriptor_set( ctx.vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+            {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            },
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
         scene::Material& mat = scene.materials[i];
@@ -201,7 +208,8 @@ void run( bool use_fullscreen )
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky irradiance
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky with mips
             },
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+                | VK_SHADER_STAGE_COMPUTE_BIT );
 
         vk::mem::AllocatedImage lut_brdf
             = engine::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
