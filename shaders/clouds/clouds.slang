@@ -8,20 +8,15 @@ struct VertexInput {
 struct VertexOutput {
     float4 sv_position : SV_POSITION;
     float3 position;
-    float3 normal;
-    float4 tangent;
-    float3 color;
-    float2 uv;
 };
 
-struct CameraBufferData {
-    float4x4 mvp;
-    float4x4 model;
-    float4x4 inv_model;
-    float4x4 view_mat;
-    float4 camera_pos;
-    // Pack: near plane, far plane, aspect ratio, fov_Y
-    float4 camera_constants;
+struct CloudUniformData {
+    float4x4 inverse_proj;
+    float4x4 inverse_view;
+    float3 camera_position;
+    float cloud_offset_x;
+    float3 sun_direction;
+    float cloud_offset_y;
 };
 
 struct DebugData {
@@ -33,7 +28,7 @@ struct DebugData {
     bool roughness_metal_only;
 }
 
-layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
+layout( binding = 0, set = 0 ) ConstantBuffer<CloudUniformData> clouds_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
 layout( binding = 0, set = 1 ) Texture3D<float> low_freq_noise_LUT;
@@ -43,57 +38,17 @@ layout( binding = 2, set = 1 ) Texture2D<float> cumulus_map_LUT;
 layout( binding = 0, set = 2 ) SamplerState linear_sampler;
 layout( binding = 1, set = 2 ) SamplerState linear_mirrored_repeat_sampler;
 
-float4x4 InversePerspective_DX( float fovY, float aspect, float nearZ, float farZ )
-{
-    float f = 1.0 / tan( fovY * 0.5 );
-    float A = f / aspect;
-    float B = f;
-    float C = farZ / ( farZ - nearZ );
-    float D = ( -nearZ * farZ ) / ( farZ - nearZ );
-
-    return float4x4( 1.0 / A, 0, 0, 0, 0, 1.0 / B, 0, 0, 0, 0, 0, 1.0 / D, 0, 0, 1.0, -C / D );
-}
-
-float3 UnprojectNDC_SphericalCamera_ToWorld(
-    float3 ndc, float3 camPos, float nearZ, float farZ, float aspect, float fovY )
-{
-    float4x4 invP = InversePerspective_DX( fovY, aspect, nearZ, farZ );
-    float4 viewH = mul( float4( ndc, 1.0 ), invP );
-    float3 viewPos = viewH.xyz / viewH.w;
-
-    float3 forward = normalize( camPos );
-    float3 worldUp = abs( forward.y ) > 0.999 ? float3( 0, 0, 1 ) : float3( 0, 1, 0 );
-    float3 right = normalize( cross( worldUp, forward ) );
-    if ( all( right == 0 ) ) {
-        worldUp = float3( 0, 0, 1 );
-        right = normalize( cross( worldUp, forward ) );
-    }
-    float3 up = cross( forward, right );
-
-    return camPos + -viewPos.x * right + viewPos.y * up + viewPos.z * forward;
-}
-
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
 {
     VertexOutput output;
-    // output.sv_position = mul( camera_buffer_data.mvp, float4( input.position, 1.0 ) );
-    output.sv_position = float4( input.position, 1.0 );
 
-    float4 cam_consts = camera_buffer_data.camera_constants;
-    output.position = UnprojectNDC_SphericalCamera_ToWorld(
-        float3( input.position.x, input.position.y, input.position.z ),
-        camera_buffer_data.camera_pos.xyz, cam_consts.x, cam_consts.y, cam_consts.z, cam_consts.w );
-    output.color = input.position.xyz;
+    let clip_position = float4( input.position, 1.f );
+    let view_position = mul( clouds_buffer_data.inverse_proj, clip_position );
+    let world_position = mul( clouds_buffer_data.inverse_view, float4( view_position.xyz, 1.f ) );
 
-    float3x3 normal_matrix = (float3x3)transpose( camera_buffer_data.inv_model );
-    float3 normal = normalize( mul( normal_matrix, input.normal ) );
-    float3 tangent = normalize( mul( normal_matrix, input.tangent.xyz ) );
-    tangent = normalize( tangent - normal * dot( normal, tangent ) );
-
-    output.normal = normal;
-    output.tangent = float4( tangent, input.tangent.w );
-    output.uv = input.uv;
+    output.sv_position = clip_position;
+    output.position = world_position.xyz;
 
     return output;
 }
@@ -161,13 +116,11 @@ float sample_density( float3 march_pos )
     return 0.5f * ( max( cumulus_map * height_modulation, 0 ) );
 }
 
-static const float3 light_dir = normalize( float3( 1, 1, 1 ) );
-
 static const float absorption_coeff = 0.002f;
 
 float estimate_transmittance( float3 march_pos )
 {
-    float3 local_dir = light_dir;
+    float3 local_dir = normalize( clouds_buffer_data.sun_direction );
 
     if ( local_dir.y < 0.1 && local_dir.y > -0.1 ) {
         return 0.f;
@@ -192,7 +145,7 @@ float estimate_transmittance( float3 march_pos )
     float T = 1.0;
     for ( int i = 0; i < 16; ++i ) {
         float t = t0 + ( i + 0.5 ) * step_size; // midpoint sample
-        float3 pos = march_pos + light_dir * t;
+        float3 pos = march_pos + local_dir * t;
         // if outside the AABB you can break early, but caller will pass proper t_max
         float d = sample_density( pos );
         // Beer–Lambert per-step
@@ -243,16 +196,14 @@ float offset_sphere_intersection( float3 view, float3 origin, float surface_leve
 float4 raymarch( float3 view, float3 origin )
 {
     float PI = 3.141592654f;
-    view.y *= -1;
 
     float theta = acos( saturate( view.y ) );
     // theta = clamp( theta, 0.0, radians( 80 ) );
 
     float lerp = ( theta ) / PI * 2.f;
 
-    float thetaRemap = lerp * radians( 80 ); 
+    float thetaRemap = lerp * radians( 80 );
     float phi = atan2( view.z, view.x );
-    
 
     float sinTheta = sin( thetaRemap );
     float3 local_dir = float3( sinTheta * cos( phi ), cos( thetaRemap ), sinTheta * sin( phi ) );
@@ -295,10 +246,7 @@ float4 raymarch( float3 view, float3 origin )
 
             float transmittance = estimate_transmittance( marched_pos );
 
-            float3 local_light_dir
-                = normalize( mul( (float3x3)camera_buffer_data.inv_model, light_dir ) );
-
-            float cosTheta = dot( local_dir, local_light_dir );
+            float cosTheta = dot( local_dir, clouds_buffer_data.sun_direction );
             float phase
                 = 0.95 * PhaseHG( cosTheta, 0.75 ) + 0.05 * PhaseHG( cosTheta, -0.2 ); // TTHG
 
@@ -321,7 +269,7 @@ float4 raymarch( float3 view, float3 origin )
     color = pow( saturate( color ), float3( 1.0 / 2.2 ) ); // gamma
 
     // make clouds opaque at the sun.
-    if ( dot( local_dir, -light_dir ) > 0.9985 ) {
+    if ( dot( view, clouds_buffer_data.sun_direction ) > 0.9985 ) {
         return float4( color, 1.0 );
     }
 
@@ -337,10 +285,8 @@ float4 fs_main( VertexOutput in )
     : SV_Target
 {
     float3 world_pos = in.position;
-    float3 camera_pos = camera_buffer_data.camera_pos.rgb;
+    float3 camera_pos = clouds_buffer_data.camera_position.rgb;
 
-    float3 normal = in.normal;
-    float3 light = normalize( float3( 1, 1, 1 ) );
     float3 view = normalize( world_pos - camera_pos );
 
     float4 output_color = raymarch( view, world_pos );

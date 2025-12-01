@@ -33,7 +33,7 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
         return {};
     }
 
-    volumetric.uniform_buffer = create_uniform_buffer<ub_data::Camera>(
+    volumetric.uniform_buffer = create_uniform_buffer<ub_data::Clouds>(
         vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
     // Initialize descriptor sets

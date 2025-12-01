@@ -1061,7 +1061,17 @@ void run( bool use_fullscreen )
 #if ENABLE_VOLUMETRICS
         // Update volumetric camera buffer
         {
-            volumetric.uniform_buffer.set_data( camera_buffer.get_data() );
+            ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+
+            ub_data::Clouds cloud_ub = volumetric.uniform_buffer.get_data();
+            cloud_ub.inverse_proj = glm::inverse( projection );
+            cloud_ub.inverse_view = glm::inverse( view );
+            cloud_ub.camera_position = camera::calculate_eye_position( camera );
+            cloud_ub.cloud_offset_x = 0.f;
+            cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
+            cloud_ub.cloud_offset_y = 0.f;
+
+            volumetric.uniform_buffer.set_data( cloud_ub );
             volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 #endif
