@@ -261,7 +261,7 @@ void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulka
                 volumetric.sampler_desc_set.layouts[0],
             },
             { color_attachment.images[0].image_format }, VK_SAMPLE_COUNT_1_BIT, false, true,
-            vk::create::shader_module( vulkan, VOLUMETRIC_SHADER_MODULE_PATH ) );
+            vk::create::shader_module( vulkan, VOLUMETRIC_SHADER_MODULE_PATH ), false );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create volumetrics graphics pipeline: {}", ex.what() );
         throw;
