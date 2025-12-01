@@ -54,15 +54,10 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
             unsigned int bottom_left = (unsigned int)((z + 1) * (TERRAIN_NUM_TILES + 1) + x);
             unsigned int bottom_right = (unsigned int)(bottom_left + 1);
 
-            // First triangle
-            terrain.indices.push_back(top_left);
-            terrain.indices.push_back(bottom_left);
-            terrain.indices.push_back(top_right);
-
-            // Second triangle
-            terrain.indices.push_back(top_right);
-            terrain.indices.push_back(bottom_left);
-            terrain.indices.push_back(bottom_right);
+            terrain.indices.push_back(top_left);     // [0] TL
+            terrain.indices.push_back(top_right);    // [1] TR
+            terrain.indices.push_back(bottom_left);  // [2] BL
+            terrain.indices.push_back(bottom_right); // [3] BR
         }
     }
 
@@ -124,7 +119,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
             engine::get_vertex_input_state_create_info( terrain ),
             { terrain.prepass_uniform_desc_set.layouts[0] },
             { VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT }, VK_SAMPLE_COUNT_1_BIT,
-            false, true, vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ) );
+            false, true, vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ), false);
     } catch ( const Exception& ex ) {
         log::error( "Failed to create terrain prepass graphics pipeline: {}", ex.what() );
         throw;

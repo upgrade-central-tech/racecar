@@ -132,6 +132,7 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     };
 
     VkPhysicalDeviceFeatures required_features = {
+        .tessellationShader = VK_TRUE,
         .shaderInt16 = VK_TRUE,
     };
 
