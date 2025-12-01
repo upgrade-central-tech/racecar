@@ -1,5 +1,7 @@
 #include "racecar.hpp"
 
+#include "engine/post/tonemapping.hpp"
+
 #define ENABLE_VOLUMETRICS 1
 #define ENABLE_TERRAIN 1
 #define ENABLE_DEFERRED_AA 1
@@ -18,7 +20,6 @@
 #include "engine/state.hpp"
 #include "engine/task_list.hpp"
 #include "engine/uniform_buffer.hpp"
-#include "geometry/ibl.hpp"
 #include "geometry/procedural.hpp"
 #include "geometry/quad.hpp"
 #include "gui.hpp"
@@ -934,6 +935,11 @@ void run( bool use_fullscreen )
         add_ao( ao_pass, ctx.vulkan, engine, task_list );
     }
 
+    engine::transition_cs_read_to_write( task_list, screen_buffer );
+    engine::transition_cs_write_to_read( task_list, screen_color );
+    engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
+        ctx.vulkan, engine, screen_color, screen_buffer, task_list );
+
     // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
     // screen.
     engine::add_pipeline_barrier( task_list,
@@ -945,11 +951,11 @@ void run( bool use_fullscreen )
                     .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = screen_color,
+                    .image = screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
             } } );
 
-    engine::add_blit_task( task_list, { screen_color } );
+    engine::add_blit_task( task_list, { screen_buffer } );
 #endif
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.

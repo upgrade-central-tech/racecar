@@ -2,7 +2,6 @@
 
 #include "atmosphere.hpp"
 #include "context.hpp"
-#include "engine/post/ao.hpp"
 #include "engine/state.hpp"
 #include "orbit_camera.hpp"
 
@@ -55,6 +54,11 @@ struct Gui {
         bool enable_debug = false;
         bool enable_ao = false;
     } ao = {};
+
+    struct TonemappingData {
+        bool use_sdr_mode = false;
+        float hdr_target_luminance = 1000.f;
+    } tonemapping = {};
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );
