@@ -2,7 +2,6 @@
 
 #include "atmosphere.hpp"
 #include "context.hpp"
-#include "engine/post/ao.hpp"
 #include "engine/state.hpp"
 #include "orbit_camera.hpp"
 
