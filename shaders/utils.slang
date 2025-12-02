@@ -110,6 +110,14 @@ float3 FresnelSchlick( float cos_theta, float3 F0 )
 }
 
 //=======================================================================================
+// Fresnel schlick roughness
+//=======================================================================================
+float3 FresnelSchlickRoughness( float cos_theta, float3 F0, float roughness )
+{
+    return F0 + ( max( float3(1.0f - roughness), F0) - F0 ) * pow( clamp(1.0f - cos_theta, 0.0f, 1.0f), 5.0f );
+}
+
+//=======================================================================================
 // Normal mapping helper funcs
 //=======================================================================================
 float3 map_normals( float3 normal_map, float4 in_tangent, float3 in_normal )

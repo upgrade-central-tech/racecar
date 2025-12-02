@@ -85,9 +85,9 @@ struct Material {
     int unlit = false;
 
     float glintiness = 0.0f;
-    float glint_log_density = 0.0f;
-    float glint_roughness = 0.0f;
-    float glint_randomness = 0.0f;
+    float glint_log_density = 22.0f;
+    float glint_roughness = 0.518f;
+    float glint_randomness = 2.0f;
 };
 
 struct RaymarchBufferData {

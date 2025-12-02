@@ -57,7 +57,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 precomputed_lo_specular = sample_glossy_ibl( roughness, encoded_direction );
 
     float3 F0 = float3( 0.04f );
-    F0 = lerp( F0, base_albedo * precomputed_lo_specular, pbr.metallic );
+    F0 = lerp( F0, base_albedo, pbr.metallic );
+    float3 F_indirect = FresnelSchlickRoughness( clamped_n_dot_v, F0, pbr.roughness);
 
     // Base specular
     float alpha = pbr.roughness * pbr.roughness;
@@ -89,9 +90,9 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
 
     // brdf_cc needs to be prefiltered using the GTR1 (Generalized Trowbridge Reitz) NDF
     float3 F0_cc = float3( 0.04f );
-
+    float3 F_cc = FresnelSchlickRoughness( clamped_n_dot_v, F0_cc, clearcoat_roughness);
     float3 precomputed_specular_cc = sample_glossy_ibl( clearcoat_roughness, encoded_direction );
-    precomputed_specular_cc *= ( F0_cc * brdf_cc.x + brdf_cc.y );
+    precomputed_specular_cc *= ( F_cc * brdf_cc.x + brdf_cc.y );
 
     float3 clearcoat_specular = clearcoat_weight * 1.0f * precomputed_specular_cc;
 
@@ -126,27 +127,29 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
         = octahedral_sky_irradiance.Sample( nearest_sampler, encoded_direction ).rgb;
     diffuse_irradiance *= albedo / PI;
 #endif
+    float3 kD_direct = float3(1.0f) - F;
+    kD_direct *= 1.0f - metallic;
 
-    float3 diffuse_direct = diffuse_final * clamped_n_dot_l;
+    float3 diffuse_direct = diffuse_final;
 
-    float3 specular_direct = glint_specular * clamped_n_dot_l;
-    float3 specular_indirect = precomputed_lo_specular * ( F0 * brdf.x + brdf.y );
+    float3 specular_direct = glint_specular;
+    float3 specular_indirect = precomputed_lo_specular * ( F_indirect * brdf.x + brdf.y );
 
     float3 clearcoat_indirect = clearcoat_specular;
     // float3 clearcoat_direct
     //     = max( clearcoat_specular + ( 1.0f - F_cc ) * glint_specular, 0.0f ) * sun_V;
 
-    float3 kS = F;
+    float3 kS = F_indirect;
     float3 kD = 1.0f - kS;
     kD *= 1.0f - metallic;
 
     float3 out_color = float3( 0.0f );
 
     // Direct lighting
-    out_color += ( diffuse_direct + specular_direct ) * sun_V;
+    out_color += ( kD_direct * diffuse_direct + specular_direct ) * sun_V * clamped_n_dot_l;
 
     // IBL - Removed kD term due to strange shadows
-    out_color += ( diffuse_irradiance + specular_indirect );
+    out_color += ( kD * diffuse_irradiance + specular_indirect );
     out_color += clearcoat_indirect;
 
     return out_color;
