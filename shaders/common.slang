@@ -66,7 +66,12 @@ struct MaterialData {
     // 0 if lit, 1 if unlit
     int unlit = false;
 
-    // Stencil ID
+    // glint params
+    // Glint: 
+    float glintiness; // 1.0f
+    float glint_log_density; // 18.0f
+    float glint_roughness; // 0.28f
+    float glint_randomness; // 2.0f
 };
 
 

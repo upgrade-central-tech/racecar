@@ -116,8 +116,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
         ImGui::Text( "Camera: [x=%.1f, y=%.1f, z=%1.f]", cam_pos.x, cam_pos.y, cam_pos.z );
 
         if ( ImGui::BeginTabBar( "Categories" ) ) {
-            if ( ImGui::BeginTabItem( "General" ) ) {
-                ImGui::SeparatorText( "Material Settings" );
+            if ( ImGui::BeginTabItem( "Material Editor" ) ) {
                 gui.debug.load_material_into_gui
                     = ImGui::InputInt( "Editing Material", &gui.debug.current_editing_material );
                 ImGui::ColorEdit4( "Base color", &gui.debug.color[0] );
@@ -127,6 +126,16 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                     "Clearcoat Roughness", &gui.debug.clearcoat_roughness, 0, 1.0f );
                 ImGui::SliderFloat( "Clearcoat Weight", &gui.debug.clearcoat_weight, 0, 1.0f );
 
+                ImGui::SeparatorText( "Glint Params" );
+                ImGui::SliderFloat( "Glintiness", &gui.debug.glintiness, 0, 1.0f );
+                ImGui::SliderFloat( "Glint log density", &gui.debug.glint_log_density, 0, 26.0f );
+                ImGui::SliderFloat( "Glint rouhgness", &gui.debug.glint_roughness, 0, 1.0f );
+                ImGui::SliderFloat( "Glint randomness", &gui.debug.glint_randomness, 0, 10.0f );
+
+                ImGui::EndTabItem();
+            }
+
+            if ( ImGui::BeginTabItem( "General" ) ) {
                 ImGui::SeparatorText( "Debug" );
                 ImGui::Checkbox( "Enable albedo map", &gui.debug.enable_albedo_map );
                 ImGui::Checkbox( "Enable normal map", &gui.debug.enable_normal_map );

@@ -83,6 +83,11 @@ struct Material {
     glm::vec3 emissive = glm::vec3( 0.f );
     // 0 if lit, 1 if unlit
     int unlit = false;
+
+    float glintiness = 0.0f;
+    float glint_log_density = 0.0f;
+    float glint_roughness = 0.0f;
+    float glint_randomness = 0.0f;
 };
 
 struct RaymarchBufferData {

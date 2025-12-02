@@ -50,7 +50,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/porsche.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/BRDF.bmp";
@@ -1135,6 +1135,12 @@ void run( bool use_fullscreen )
             mat_data.metallic = gui.debug.metallic;
             mat_data.clearcoat = gui.debug.clearcoat_weight;
             mat_data.clearcoat_roughness = gui.debug.clearcoat_roughness;
+
+            mat_data.glintiness = gui.debug.glintiness;
+            mat_data.glint_log_density = gui.debug.glint_log_density;
+            mat_data.glint_roughness = gui.debug.glint_roughness;
+            mat_data.glint_randomness = gui.debug.glint_randomness;
+
             material_uniform_buffers[size_t( mat_idx )].set_data( mat_data );
             material_uniform_buffers[size_t( mat_idx )].update(
                 ctx.vulkan, engine.get_frame_index() );

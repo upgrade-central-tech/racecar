@@ -24,6 +24,11 @@ struct Gui {
         float clearcoat_roughness = 0.30f;
         float clearcoat_weight = 1.0f;
 
+        float glintiness = 1.0f;
+        float glint_log_density = 18.0f;
+        float glint_roughness = 0.25f;
+        float glint_randomness = 2.0f;
+
         bool enable_albedo_map = false;
         bool enable_normal_map = false;
         bool enable_roughness_metal_map = false;
