@@ -21,6 +21,7 @@ struct TerrainLightingInfo {
 
     engine::RWImage* GBuffer_Position;
     engine::RWImage* GBuffer_Normal;
+    engine::RWImage* GBuffer_Albedo;
     engine::RWImage* color_attachment;
 
     vk::mem::AllocatedImage* lut_brdf;
@@ -32,6 +33,9 @@ struct Terrain {
     geometry::GPUMeshBuffers mesh_buffers;
 
     engine::DescriptorSet prepass_uniform_desc_set;
+    engine::DescriptorSet prepass_texture_desc_set;
+    engine::DescriptorSet prepass_sampler_desc_set;
+
     engine::DescriptorSet uniform_desc_set;
     engine::DescriptorSet texture_desc_set;
     engine::DescriptorSet lut_desc_set;
@@ -64,8 +68,9 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     const engine::RWImage& GBuffer_Position, const engine::RWImage& GBuffer_Normal,
-    const engine::RWImage& depth_image, UniformBuffer<ub_data::Camera>& camera_buffer,
-    engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
+    const engine::RWImage& GBuffer_Albedo, const engine::RWImage& depth_image,
+    UniformBuffer<ub_data::Camera>& camera_buffer,
+    [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
 
 void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     engine::TaskList& task_list, TerrainLightingInfo& info );

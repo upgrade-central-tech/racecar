@@ -109,10 +109,12 @@ VkSamplerCreateInfo sampler_info( VkFilter filter_type, VkSamplerAddressMode add
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = filter_type,
         .minFilter = filter_type,
+        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
         .addressModeU = address_mode,
         .addressModeV = address_mode,
         .addressModeW = address_mode,
-        .maxLod = 100,
+        .minLod = 0.0f,
+        .maxLod = 100.0f,
     };
 }
 

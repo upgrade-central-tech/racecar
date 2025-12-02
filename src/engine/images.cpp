@@ -8,6 +8,82 @@
 
 namespace racecar::engine {
 
+void generate_mipmaps(
+    VkImage image, VkExtent3D extent, uint32_t mip_levels, VkCommandBuffer cmd_buffer )
+{
+    VkImageMemoryBarrier barrier = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image,
+
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        } };
+
+    int32_t width = static_cast<int32_t>( extent.width );
+    int32_t height = static_cast<int32_t>( extent.height );
+
+    for ( uint32_t mip = 1; mip < mip_levels; mip++ ) {
+        barrier.subresourceRange.baseMipLevel = mip - 1;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+
+        vkCmdPipelineBarrier( cmd_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+
+        VkImageBlit blit = { .srcSubresource = {
+                                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                 .mipLevel = mip - 1,
+                                 .baseArrayLayer = 0,
+                                 .layerCount = 1,
+                             },
+                            .dstSubresource = {
+                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                .mipLevel = mip,
+                                .baseArrayLayer = 0,
+                                .layerCount = 1,
+                            } };
+
+        blit.srcOffsets[0] = { 0, 0, 0 };
+        blit.srcOffsets[1] = { width, height, 1 };
+
+        blit.dstOffsets[0] = { 0, 0, 0 };
+        blit.dstOffsets[1] = { width > 1 ? width / 2 : 1, height > 1 ? height / 2 : 1, 1 };
+
+        vkCmdBlitImage( cmd_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR );
+
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+
+        vkCmdPipelineBarrier( cmd_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+
+        if ( width > 1 ) {
+            width /= 2;
+        }
+        if ( height > 1 ) {
+            height /= 2;
+        }
+    }
+
+    barrier.subresourceRange.baseMipLevel = mip_levels - 1;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier( cmd_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+}
+
 vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine, void* data,
     VkExtent3D extent, VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags,
     bool mipmapped )
@@ -17,13 +93,22 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
 
     vk::mem::AllocatedImage new_image;
 
+    uint32_t mip_levels = 1;
+    if ( mipmapped ) {
+        // Auto generate the miplevels
+        mip_levels = static_cast<uint32_t>(
+                         std::floor( std::log2( std::max( extent.width, extent.height ) ) ) )
+            + 1;
+    }
+
     try {
         vk::mem::AllocatedBuffer upload_buffer = vk::mem::create_buffer(
             vulkan, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
 
         std::memcpy( upload_buffer.info.pMappedData, data, data_size );
 
-        new_image = allocate_image( vulkan, extent, format, image_type, 1, 1, VK_SAMPLE_COUNT_1_BIT,
+        new_image = allocate_image( vulkan, extent, format, image_type, mip_levels, 1,
+            VK_SAMPLE_COUNT_1_BIT,
             usage_flags | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
             mipmapped );
 
@@ -33,10 +118,10 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
                     ? VK_IMAGE_ASPECT_DEPTH_BIT
                     : VK_IMAGE_ASPECT_COLOR_BIT;
 
-                vk::utility::transition_image( command_buffer, new_image.image,
+                vk::utility::transition_image_mips( command_buffer, new_image.image,
                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
                     VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, aspect_flags );
+                    VK_PIPELINE_STAGE_TRANSFER_BIT, aspect_flags, mip_levels );
 
                 VkBufferImageCopy copy_region = {
                     .bufferOffset = 0,
@@ -47,17 +132,22 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
                 copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                 copy_region.imageSubresource.mipLevel = 0;
                 copy_region.imageSubresource.baseArrayLayer = 0;
-                copy_region.imageSubresource.layerCount = 1;
+                copy_region.imageSubresource.layerCount = mip_levels;
                 copy_region.imageExtent = extent;
 
                 vkCmdCopyBufferToImage( command_buffer, upload_buffer.handle, new_image.image,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region );
 
-                vk::utility::transition_image( command_buffer, new_image.image,
+                vk::utility::transition_image_mips( command_buffer, new_image.image,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    aspect_flags );
+                    aspect_flags, mip_levels );
+
+                if ( mipmapped ) {
+                    generate_mipmaps(
+                        new_image.image, new_image.image_extent, mip_levels, command_buffer );
+                }
             } );
     } catch ( const Exception& ex ) {
         log::error( "[AllocatedImage] Error occurred: {}", ex.what() );
@@ -191,7 +281,7 @@ std::vector<uint16_t> load_image_to_float16( const std::string& global_path )
 }
 
 vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common& vulkan,
-    engine::State& engine, size_t desired_channels, VkFormat image_format )
+    engine::State& engine, size_t desired_channels, VkFormat image_format, bool is_mipmapped )
 {
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
 
@@ -213,6 +303,7 @@ vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common&
     case VK_FORMAT_R8G8B8A8_UNORM:
         type = FormatType::UNORM8;
         break;
+    case VK_FORMAT_R16G16B16A16_SFLOAT:
     case VK_FORMAT_R16G16_SFLOAT:
         type = FormatType::FLOAT16;
         break;
@@ -221,8 +312,6 @@ vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common&
     }
 
     size_t total_pixels = static_cast<size_t>( width * height );
-
-    bool is_mipmapped = false;
 
     if ( type == FormatType::UNORM8 ) {
         std::vector<uint8_t> byte_data( total_pixels * desired_channels );

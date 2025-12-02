@@ -50,7 +50,7 @@ void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffe
 void initialize_atmosphere_baker(
     AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::State& engine )
 {
-    uint32_t octahedral_sky_size = 1024;
+    uint32_t octahedral_sky_size = 512;
     uint32_t irradiance_size = 32;
 
     atms_baker.octahedral_sky

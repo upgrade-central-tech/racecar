@@ -213,8 +213,8 @@ void run( bool use_fullscreen )
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
                 | VK_SHADER_STAGE_COMPUTE_BIT );
 
-        lut_brdf
-            = engine::load_image( BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT );
+        lut_brdf = engine::load_image(
+            BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT, false );
 
         vk::mem::AllocatedImage glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
 
@@ -692,7 +692,7 @@ void run( bool use_fullscreen )
     geometry::Terrain test_terrain;
     geometry::initialize_terrain( ctx.vulkan, engine, test_terrain );
     geometry::draw_terrain_prepass( test_terrain, ctx.vulkan, engine, GBuffer_Position,
-        GBuffer_Normal, GBuffer_Depth, camera_buffer, depth_prepass_ms, task_list );
+        GBuffer_Normal, GBuffer_Albedo, GBuffer_Depth, camera_buffer, depth_prepass_ms, task_list );
     test_terrain.accel_structure_desc_set = &as_desc_set;
 #endif
 
@@ -774,6 +774,7 @@ void run( bool use_fullscreen )
         &atms_baker,
         &GBuffer_Position,
         &GBuffer_Normal,
+        &GBuffer_Albedo,
         &screen_color,
         &lut_brdf,
     };

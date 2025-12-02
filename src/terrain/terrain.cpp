@@ -25,7 +25,7 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     // Generate enough information for just one planar quad. Expand it later on arbitrarily
     [[maybe_unused]] int32_t size = 1;
 
-    float scale = 10.0f;
+    float scale = 80.0f;
     float offset_y = 0.0f;
 
     // Arbitrarily populate this with size later on
@@ -51,21 +51,22 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     // Build descriptors
     terrain.prepass_uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
 
-    terrain.test_layer_mask
-        = engine::load_image( TEST_LAYER_MASK_PATH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM );
+    terrain.test_layer_mask = engine::load_image(
+        TEST_LAYER_MASK_PATH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM, false );
 
     terrain.grass_albedo_roughness = engine::load_image(
-        TEST_GRASS_ALBEDO_ROUGHNESS_PATH, vulkan, engine, 4, VK_FORMAT_R8G8B8A8_UNORM );
+        TEST_GRASS_ALBEDO_ROUGHNESS_PATH, vulkan, engine, 4, VK_FORMAT_R8G8B8A8_UNORM, true );
 
     terrain.grass_normal_ao = engine::load_image(
-        TEST_GRASS_NORMAL_AO_PATH, vulkan, engine, 4, VK_FORMAT_R8G8B8A8_UNORM );
+        TEST_GRASS_NORMAL_AO_PATH, vulkan, engine, 4, VK_FORMAT_R16G16B16A16_SFLOAT, true );
 }
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     const engine::RWImage& GBuffer_Position, const engine::RWImage& GBuffer_Normal,
-    const engine::RWImage& depth_image, UniformBuffer<ub_data::Camera>& camera_buffer,
+    const engine::RWImage& GBuffer_Albedo, const engine::RWImage& depth_image,
+    UniformBuffer<ub_data::Camera>& camera_buffer,
     [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list )
 {
     // The deferred set-up makes this really complicated, because this means that
@@ -86,19 +87,47 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
 
     terrain.terrain_prepass_task = {
         .render_target_is_swapchain = false,
-        .color_attachments = { GBuffer_Position, GBuffer_Normal },
+        .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Albedo },
         .depth_image = { depth_image },
         .extent = engine.swapchain.extent,
     };
+
+    terrain.prepass_texture_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // LAYER MASK
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GRASS ALBEDO + ROUGHNESS
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GRASS NORMAL + AO
+        },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+    terrain.prepass_sampler_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLER,
+        },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.prepass_texture_desc_set, terrain.test_layer_mask, 0 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.prepass_texture_desc_set, terrain.grass_albedo_roughness, 1 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.prepass_texture_desc_set, terrain.grass_normal_ao, 2 );
+    engine::update_descriptor_set_sampler( vulkan, engine, terrain.prepass_sampler_desc_set,
+        vulkan.global_samplers.linear_sampler, 0 );
 
     engine::Pipeline terrain_prepass_pipeline;
     try {
         terrain_prepass_pipeline = engine::create_gfx_pipeline( engine, vulkan,
             engine::get_vertex_input_state_create_info( terrain ),
-            { terrain.prepass_uniform_desc_set.layouts[0] },
             {
-                VK_FORMAT_R16G16B16A16_SFLOAT,
-                VK_FORMAT_R16G16B16A16_SFLOAT,
+                terrain.prepass_uniform_desc_set.layouts[0],
+                terrain.prepass_texture_desc_set.layouts[0],
+                terrain.prepass_sampler_desc_set.layouts[0],
+            },
+            {
+                VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
+                VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
+                VK_FORMAT_R16G16B16A16_SFLOAT, // ALBEDO
             },
             VK_SAMPLE_COUNT_1_BIT, false, true,
             vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ) );
@@ -120,6 +149,8 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
         .draw_resource_descriptor = draw_descriptor,
         .descriptor_sets = {
             &terrain.prepass_uniform_desc_set,
+            &terrain.prepass_texture_desc_set,
+            &terrain.prepass_sampler_desc_set,
         },
         .pipeline = terrain_prepass_pipeline,
     } );
@@ -143,10 +174,8 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     terrain.texture_desc_set = engine::generate_descriptor_set( vulkan, engine,
         {
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Position
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Normal
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Test layer mask (our fake OMPV solution)
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Grass albedo
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Grass normal + AO packed
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Normal + AO
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Albedo + Roughness
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
         },
         VK_SHADER_STAGE_COMPUTE_BIT );
@@ -177,14 +206,10 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
         *info.GBuffer_Position, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
         *info.GBuffer_Normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
-    engine::update_descriptor_set_image(
-        vulkan, engine, terrain.texture_desc_set, terrain.test_layer_mask, 2 );
-    engine::update_descriptor_set_image(
-        vulkan, engine, terrain.texture_desc_set, terrain.grass_albedo_roughness, 3 );
-    engine::update_descriptor_set_image(
-        vulkan, engine, terrain.texture_desc_set, terrain.grass_normal_ao, 4 );
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
-        *info.color_attachment, VK_IMAGE_LAYOUT_GENERAL, 5 );
+        *info.GBuffer_Albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 2 );
+    engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
+        *info.color_attachment, VK_IMAGE_LAYOUT_GENERAL, 3 );
 
     // LUT desc assignments
     engine::update_descriptor_set_image(
