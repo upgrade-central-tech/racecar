@@ -7,7 +7,7 @@
 #include "../vk/create.hpp"
 
 const std::filesystem::path TERRAIN_SHADER_PREPASS_MODULE_PATH
-    = "../shaders/deferred/terrain_prepass.spv";
+    = "../shaders/terrain/terrain_prepass.spv";
 const std::filesystem::path TERRAIN_SHADER_LIGHTING_MODULE_PATH
     = "../shaders/terrain/cs_terrain_draw.spv";
 
@@ -17,6 +17,10 @@ const std::filesystem::path TEST_GRASS_ALBEDO_ROUGHNESS_PATH
     = "../assets/terrain/better_grass/grass_albedo_roughness.png";
 const std::filesystem::path TEST_GRASS_NORMAL_AO_PATH
     = "../assets/terrain/better_grass/grass_normal_ao.png";
+
+const std::filesystem::path TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH
+    = "../assets/terrain/asphalt_albedo_roughness.png";
+const std::filesystem::path TEST_ASPHALT_NORMAL_AO_PATH = "../assets/terrain/asphalt_normal_ao.png";
 
 namespace racecar::geometry {
 
@@ -50,8 +54,14 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
 
     // Build descriptors
     terrain.prepass_uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+        {
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Camera data
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Debug data
+        },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+
+    terrain.terrain_uniform
+        = create_uniform_buffer<ub_data::TerrainData>( vulkan, {}, engine.frame_overlap );
 
     terrain.test_layer_mask = engine::load_image(
         TEST_LAYER_MASK_PATH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM, false );
@@ -61,12 +71,16 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
 
     terrain.grass_normal_ao = engine::load_image(
         TEST_GRASS_NORMAL_AO_PATH, vulkan, engine, 4, VK_FORMAT_R16G16B16A16_SFLOAT, true );
+
+    terrain.asphalt_albedo_roughness = engine::load_image(
+        TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH, vulkan, engine, 4, VK_FORMAT_R8G8B8A8_UNORM, true );
+
+    terrain.asphalt_normal_ao = engine::load_image(
+        TEST_ASPHALT_NORMAL_AO_PATH, vulkan, engine, 4, VK_FORMAT_R16G16B16A16_SFLOAT, true );
 }
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    const engine::RWImage& GBuffer_Position, const engine::RWImage& GBuffer_Normal,
-    const engine::RWImage& GBuffer_Albedo, const engine::RWImage& depth_image,
-    UniformBuffer<ub_data::Camera>& camera_buffer,
+    const TerrainPrepassInfo& prepass_info,
     [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list )
 {
     // The deferred set-up makes this really complicated, because this means that
@@ -83,12 +97,17 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
     // Writes to the GBuffer depth and GBuffer normals for now
 
     engine::update_descriptor_set_uniform(
-        vulkan, engine, terrain.prepass_uniform_desc_set, camera_buffer, 0 );
+        vulkan, engine, terrain.prepass_uniform_desc_set, *prepass_info.camera_buffer, 0 );
 
     terrain.terrain_prepass_task = {
         .render_target_is_swapchain = false,
-        .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Albedo },
-        .depth_image = { depth_image },
+        .color_attachments = { 
+            *prepass_info.GBuffer_Position, 
+            *prepass_info.GBuffer_Normal, 
+            *prepass_info.GBuffer_Albedo, 
+            *prepass_info.GBuffer_Packed_Data,
+        },
+        .depth_image = { *prepass_info.GBuffer_Depth },
         .extent = engine.swapchain.extent,
     };
 
@@ -97,6 +116,8 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // LAYER MASK
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GRASS ALBEDO + ROUGHNESS
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GRASS NORMAL + AO
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // ASPHALT ALBEDO + ROUGHNESS
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // ASPHALT NOMRAL + AO
         },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
@@ -112,6 +133,11 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
         vulkan, engine, terrain.prepass_texture_desc_set, terrain.grass_albedo_roughness, 1 );
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.prepass_texture_desc_set, terrain.grass_normal_ao, 2 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.prepass_texture_desc_set, terrain.asphalt_albedo_roughness, 3 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.prepass_texture_desc_set, terrain.asphalt_normal_ao, 4 );
+
     engine::update_descriptor_set_sampler( vulkan, engine, terrain.prepass_sampler_desc_set,
         vulkan.global_samplers.linear_sampler, 0 );
 
@@ -128,6 +154,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
                 VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
                 VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
                 VK_FORMAT_R16G16B16A16_SFLOAT, // ALBEDO
+                VK_FORMAT_R16G16B16A16_SFLOAT, // PACKED DATA
             },
             VK_SAMPLE_COUNT_1_BIT, false, true,
             vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ) );
@@ -166,8 +193,9 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
 
     terrain.uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
         {
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Camera data
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Debug data
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Terrain data
         },
         VK_SHADER_STAGE_COMPUTE_BIT );
 
@@ -176,6 +204,7 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Position
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Normal + AO
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Albedo + Roughness
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // GBuffer Packed data
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
         },
         VK_SHADER_STAGE_COMPUTE_BIT );
@@ -200,6 +229,8 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
         vulkan, engine, terrain.uniform_desc_set, *info.camera_buffer, 0 );
     engine::update_descriptor_set_uniform(
         vulkan, engine, terrain.uniform_desc_set, *info.debug_buffer, 1 );
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, terrain.uniform_desc_set, terrain.terrain_uniform, 2 );
 
     // Material image assignments
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
@@ -209,7 +240,9 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
         *info.GBuffer_Albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 2 );
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
-        *info.color_attachment, VK_IMAGE_LAYOUT_GENERAL, 3 );
+        *info.GBuffer_Packed_Data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 3 );
+    engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
+        *info.color_attachment, VK_IMAGE_LAYOUT_GENERAL, 4 );
 
     // LUT desc assignments
     engine::update_descriptor_set_image(

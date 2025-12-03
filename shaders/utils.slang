@@ -71,6 +71,7 @@ float2 oct_encode( float3 n )
 //=======================================================================================
 // NDF functions
 //=======================================================================================
+// TODO: keep consistent case in this shader code
 float DistributionGGX( float n_dot_h, float alpha )
 {
     float alpha2 = max( alpha * alpha, 0.001f );
@@ -114,7 +115,9 @@ float3 FresnelSchlick( float cos_theta, float3 F0 )
 //=======================================================================================
 float3 FresnelSchlickRoughness( float cos_theta, float3 F0, float roughness )
 {
-    return F0 + ( max( float3(1.0f - roughness), F0) - F0 ) * pow( clamp(1.0f - cos_theta, 0.0f, 1.0f), 5.0f );
+    return F0
+        + ( max( float3( 1.0f - roughness ), F0 ) - F0 )
+        * pow( clamp( 1.0f - cos_theta, 0.0f, 1.0f ), 5.0f );
 }
 
 //=======================================================================================
@@ -186,6 +189,14 @@ float LinearDepth01( float perspective_depth, float near, float far )
 {
     float linear_depth = LinearDepth( perspective_depth, near, far );
     return ( linear_depth - near ) / ( far - near );
+}
+
+//=======================================================================================
+// Misc. math
+//=======================================================================================
+float clamp_range( float input, float min, float max )
+{
+    return saturate( ( input - min ) / ( max - min ) );
 }
 
 

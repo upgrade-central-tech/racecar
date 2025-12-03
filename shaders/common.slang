@@ -38,6 +38,16 @@ struct DebugData {
     bool ray_traced_shadows;
 }
 
+struct TerrainData {
+    float gt7_local_shadow_strength;
+    float wetness;
+
+    // debug info
+    bool enable_gt7_ao;
+    bool shadowing_only;
+    bool roughness_only;
+}
+
 struct MaterialData {
     int has_base_color_texture;
     int has_metallic_roughness_texture;
@@ -67,7 +77,7 @@ struct MaterialData {
     int unlit = false;
 
     // glint params
-    // Glint: 
+    // Glint:
     float glintiness; // 1.0f
     float glint_log_density; // 18.0f
     float glint_roughness; // 0.28f

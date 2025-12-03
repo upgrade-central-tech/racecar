@@ -60,6 +60,15 @@ struct Gui {
         bool enable_ao = false;
     } ao = {};
 
+    struct TerrainData {
+        bool enable_gt7_ao = true;
+        bool shadowing_only;
+        bool roughness_only;
+
+        float gt7_local_shadow_strength = 1.0f;
+        float wetness = 0.355f; // temporary param
+    } terrain = {};
+
     struct TonemappingData {
         enum class Mode : int {
             NONE,

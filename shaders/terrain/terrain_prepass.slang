@@ -22,6 +22,9 @@ layout( binding = 0, set = 1 ) Texture2D<float2> layer_test_mask;
 layout( binding = 1, set = 1 ) Texture2D<float4> grass_albedo_roughness;
 layout( binding = 2, set = 1 ) Texture2D<float4> grass_normal_ao;
 
+layout( binding = 3, set = 1 ) Texture2D<float4> asphalt_albedo_roughnes;
+layout( binding = 4, set = 1 ) Texture2D<float4> asphalt_normal_ao;
+
 layout( binding = 0, set = 2 ) SamplerState linear_sampler;
 
 [shader( "vertex" )]
@@ -43,6 +46,7 @@ struct FragmentOutput {
     float4 position : SV_Target0;
     float4 normal : SV_Target1;
     float4 albedo : SV_Target2;
+    float4 packed_data : SV_Target3;
 }
 
 [shader( "fragment" )]
@@ -77,7 +81,7 @@ FragmentOutput fs_main( VertexOutput in )
         * layer_map_scale );
     float2 world_uv_unwrapped = world_position.xz * world_scale;
     float2 world_uv = world_uv_unwrapped - floor( world_uv_unwrapped );
-    
+
     // = frac( float2( world_position.x, world_position.z ) * world_scale );
     // uv = select( uv < 0.0f, uv + 1.0f, uv );
 
@@ -86,9 +90,8 @@ FragmentOutput fs_main( VertexOutput in )
 
     // Naive-sample
     // So far:
-    // R - Snow
-    // G - Grass
-    // B - Asphalt?
+    // R - Asphalt
+    // G - Grass/Terrain mask
     float2 layers = layer_test_mask.Sample( linear_sampler, uv );
 
     //=======================================================================================
@@ -97,19 +100,22 @@ FragmentOutput fs_main( VertexOutput in )
     float4 grass_color_roughness = grass_albedo_roughness.Sample( linear_sampler, world_uv );
     float4 grass_normal_map_ao = grass_normal_ao.Sample( linear_sampler, world_uv );
     float3 grass_normal_map = grass_normal_map_ao.rgb;
-    float3 grass_normal = normalize(map_normals( grass_normal_map, float4( 0, 0, 1, -1 ), normal ));
     float3 grass_color = grass_color_roughness.rgb;
-
-    // Bias towards the top.
-    grass_normal = normalize( grass_normal + float3( 0.0f, 0.1f, 0.0f ) );
-
-    float grass_roughness = grass_color_roughness.a;
+    float3 grass_normal
+        = normalize( map_normals( grass_normal_map, float4( 0, 0, 1, -1 ), normal ) );
     float grass_ao = grass_normal_map_ao.a;
 
-    float3 snow_color = float3( 1.0f, 1.0f, 1.0f );
-    float3 snow_normal = float3( 0.0f, 1.0f, 0.0f );
-    float snow_roughness = 0.1f;
-    float snow_ao = 1.0f;
+    float4 asphalt_color_roughness = asphalt_albedo_roughnes.Sample( linear_sampler, world_uv );
+    float4 asphalt_normal_map_ao = asphalt_normal_ao.Sample( linear_sampler, world_uv );
+    float3 asphalt_normal_map = asphalt_normal_map_ao.rgb;
+    float3 asphalt_color = asphalt_color_roughness.rgb;
+    float3 asphalt_normal
+        = normalize( map_normals( asphalt_normal_map, float4( 1, 0, 0, -1 ), normal ) );
+    float asphalt_ao = asphalt_normal_map_ao.a;
+
+    // CORRECTION: The current texture stores "glossiness". Need to minus1 to convert to roughness.
+    float asphalt_roughness = 1.0f - asphalt_color_roughness.a;
+    float grass_roughness = 1.0f - grass_color_roughness.a;
 
     //=======================================================================================
     // Final material gather. These params get passed into the respective lighting
@@ -117,23 +123,35 @@ FragmentOutput fs_main( VertexOutput in )
     //=======================================================================================
 
     // Naive lerping??? What's a better solution?
-    float3 mixed_albedo = lerp( float3( 0.0f ), snow_color, layers.x );
+    float3 mixed_albedo = lerp( float3( 1.0f, 0.0f, 0.0f ), asphalt_color, layers.x );
     mixed_albedo = lerp( mixed_albedo, grass_color, layers.y );
 
     // This is so obviously wrong, but we're going to try this out for now.
-    float3 mixed_normal = lerp( float3( 0.0f, 1.0f, 0.0f ), snow_normal, layers.x );
+    float3 mixed_normal = lerp( float3( 0.0f, 1.0f, 0.0f ), asphalt_normal, layers.x );
     mixed_normal = lerp( mixed_normal, grass_normal, layers.y );
 
     // This is also so wrong.
-    float mixed_ao = lerp( 1.0f, snow_ao, layers.x );
+    float mixed_ao = lerp( 1.0f, asphalt_ao, layers.x );
     mixed_ao = lerp( mixed_ao, grass_ao, layers.y );
 
     // ?? You know the drill
-    float mixed_roughness = lerp( 1.0f, snow_roughness, layers.x );
+    float mixed_roughness = lerp( 1.0f, asphalt_roughness, layers.x );
     mixed_roughness = lerp( mixed_roughness, grass_roughness, layers.y );
+
+    float ndf_glint = 0.0f;
+    float wetness = 1.0f;
+
+    // Distribute the wetness around da world...
+    float puddle_scale = 0.5f;
+    float small_puddle_map = perlin_noise3D( puddle_scale * world_position ) + 0.25f;
+    float big_puddle_map = perlin_noise3D( 0.125f * puddle_scale * world_position ) + 0.50f;
+
+    wetness *= clamp_range( big_puddle_map, 0.35f, 0.75f )
+        + clamp_range( small_puddle_map, 0.1f, 0.95f );
 
     output.normal = float4( mixed_normal, mixed_ao );
     output.albedo = float4( mixed_albedo, mixed_roughness );
+    output.packed_data = float4( wetness, ndf_glint, 0.0f, 0.0f );
 
     return output;
 }

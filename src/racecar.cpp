@@ -695,10 +695,19 @@ void run( bool use_fullscreen )
 
 #if ENABLE_TERRAIN
     // TODO: INSERT TERRAIN PRE-PASS DRAW HERE
+    geometry::TerrainPrepassInfo prepass_terrain_info = {
+        &camera_buffer,
+        &GBuffer_Position,
+        &GBuffer_Normal,
+        &GBuffer_Albedo,
+        &GBuffer_Depth,
+        &GBuffer_Packed_Data,
+    };
+
     geometry::Terrain test_terrain;
     geometry::initialize_terrain( ctx.vulkan, engine, test_terrain );
-    geometry::draw_terrain_prepass( test_terrain, ctx.vulkan, engine, GBuffer_Position,
-        GBuffer_Normal, GBuffer_Albedo, GBuffer_Depth, camera_buffer, depth_prepass_ms, task_list );
+    geometry::draw_terrain_prepass(
+        test_terrain, ctx.vulkan, engine, prepass_terrain_info, depth_prepass_ms, task_list );
     test_terrain.accel_structure_desc_set = &as_desc_set;
 #endif
 
@@ -781,6 +790,7 @@ void run( bool use_fullscreen )
         &GBuffer_Position,
         &GBuffer_Normal,
         &GBuffer_Albedo,
+        &GBuffer_Packed_Data,
         &screen_color,
         &lut_brdf,
     };
@@ -1150,6 +1160,20 @@ void run( bool use_fullscreen )
             material_uniform_buffers[size_t( mat_idx )].set_data( mat_data );
             material_uniform_buffers[size_t( mat_idx )].update(
                 ctx.vulkan, engine.get_frame_index() );
+        }
+
+        // Update terrain
+        {
+            ub_data::TerrainData terrain_ub = test_terrain.terrain_uniform.get_data();
+
+            terrain_ub.enable_gt7_ao = gui.terrain.enable_gt7_ao;
+            terrain_ub.shadowing_only = gui.terrain.shadowing_only;
+            terrain_ub.roughness_only = gui.terrain.roughness_only;
+            terrain_ub.gt7_local_shadow_strength = gui.terrain.gt7_local_shadow_strength;
+            terrain_ub.wetness = gui.terrain.wetness;
+
+            test_terrain.terrain_uniform.set_data( terrain_ub );
+            test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
         }
 
         // {

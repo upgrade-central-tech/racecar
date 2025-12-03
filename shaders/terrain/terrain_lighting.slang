@@ -4,11 +4,13 @@
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> scene_data;
+layout( binding = 2, set = 0 ) ConstantBuffer<TerrainData> terrain_data;
 
 layout( binding = 0, set = 1 ) Texture2D<float4> gbuffer_position;
 layout( binding = 1, set = 1 ) Texture2D<float4> gbuffer_normal_ao;
 layout( binding = 2, set = 1 ) Texture2D<float4> gbuffer_albedo_roughness;
-layout( binding = 3, set = 1 ) RWTexture2D<float4> out_color;
+layout( binding = 3, set = 1 ) Texture2D<float4> gbuffer_packed_data;
+layout( binding = 4, set = 1 ) RWTexture2D<float4> out_color;
 
 layout( binding = 0, set = 2 ) Texture2D<float4> sky;
 layout( binding = 1, set = 2 ) Texture2D<float4> sky_irradiance;
@@ -20,9 +22,9 @@ layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 layout( binding = 0, set = 4 ) RaytracingAccelerationStructure sceneBVH;
 
 // Misc.
-float3 direct_lighting( float3 albedo, float3 normal, float roughness, float ao, float3 view )
+float3 direct_lighting(
+    float3 albedo, float3 normal, float3 light, float roughness, float ao, float3 view )
 {
-    float3 light = normalize( scene_data.sun_direction.rgb );
     float3 half = normalize( view + light );
 
     BSDF_Dots dots = get_dots( normal, view, half, light );
@@ -40,14 +42,47 @@ float3 direct_lighting( float3 albedo, float3 normal, float roughness, float ao,
     float3 specular
         = ( NDF * G * F ) / ( 4.0f * dots.clamped_n_dot_v * dots.clamped_n_dot_l + 0.001f );
 
-    // CEDEC 22 GT7 Presentation
     float shadow_strength = 1.0f;
     float local_shadows
         = clamp( dot( normal, light ) - shadow_strength * ( 1.0f - ao ) + 0.5f, 0.0f, 1.0f );
 
     float clamped_lambert = clamp( dot( normal, light ), 0.0f, 1.0f );
 
-    return ( ( 1.0f - F ) * diffuse_albedo + specular ) * clamped_lambert * local_shadows;
+    float shadowing = dot( normal, light );
+
+    if ( terrain_data.enable_gt7_ao ) {
+        // CEDEC 22 GT7 Presentation
+        float shadow_strength = terrain_data.gt7_local_shadow_strength;
+        float local_shadows
+            = clamp( dot( normal, light ) - shadow_strength * ( 1.0f - ao ) + 0.5f, 0.0f, 1.0f );
+        shadowing *= local_shadows;
+    } else {
+        shadowing *= ao;
+    }
+
+    // Clamp shadows
+    shadowing = clamp( shadowing, 0.0f, 1.0f );
+
+    if ( terrain_data.shadowing_only ) {
+        return shadowing;
+    }
+
+    return ( ( 1.0f - F ) * diffuse_albedo + specular ) * shadowing;
+}
+
+void evaluate_wetness( float wetness, float porosity, inout float3 color, inout float roughness,
+    inout float ao, inout float3 world_normal )
+{
+    // https://advances.realtimerendering.com/other/2016/naughty_dog/NaughtyDog_TechArt_Final.pdf
+    float3 color_sq = color * color;
+    color = lerp( color, color_sq, clamp_range( wetness, 0.0f, 0.35f ) * porosity );
+    roughness = lerp( roughness, 0.1f, clamp_range( wetness, 0.2f, 1.0f ) );
+    ao = lerp( ao, 1.0f, clamp_range( wetness, 0.45f, 0.95f ) );
+
+    // GBuffer doesn't store the vertex normal, so we'll treat 0.45 case and 0.98 case identically.
+    // Uncharted 4, however, uses frag normal for 0.45 and vert for 0.98.
+    world_normal = normalize(
+        lerp( world_normal, float3( 0.0f, 1.0f, 0.0f ), clamp_range( wetness, 0.45f, 1.0f ) ) );
 }
 
 float3 sample_glossy_ibl( float roughness, float2 direction )
@@ -103,6 +138,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     }
 
     float3 world_position = gbuffer_position[pixel].rgb;
+    float3 light = normalize( scene_data.sun_direction.rgb );
 
     float4 packed_gbuffer_albedo = gbuffer_albedo_roughness[pixel];
     float3 mixed_albedo = packed_gbuffer_albedo.rgb;
@@ -111,6 +147,15 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float4 packed_gbuffer_normal = gbuffer_normal_ao[pixel];
     float3 mixed_normal = packed_gbuffer_normal.rgb;
     float mixed_ao = packed_gbuffer_normal.a;
+
+    float4 packed_gbuffer_data = gbuffer_packed_data[pixel];
+
+    // THE WORLD IS ALL WET.
+    // mixed_porosity - The more porous a surface, the darker it gets.
+    float mixed_wetness = lerp( 0.0f, packed_gbuffer_data.x, terrain_data.wetness );
+    float mixed_porosity = 0.0f;
+    evaluate_wetness(
+        mixed_wetness, mixed_porosity, mixed_albedo, mixed_roughness, mixed_ao, mixed_normal );
 
     // Misc. vectors
     float3 view = normalize( camera_data.camera_pos.rgb - world_position );
@@ -156,24 +201,28 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     //=======================================================================================
 
     bool hit = false;
-    float3 light = normalize( scene_data.sun_direction.rgb );
     if ( scene_data.ray_traced_shadows ) {
         float t;
         int primitive_index;
-        hit = traceRayFirstHit(
-            sceneBVH, world_position + 0.01 * normalize( mixed_normal ), light, t, primitive_index );
+        hit = traceRayFirstHit( sceneBVH, world_position + 0.01 * normalize( mixed_normal ), light,
+            t, primitive_index );
     }
 
-    float3 final_color;
+    float3 final_color = float3( 1.0f );
     if ( !hit ) {
         final_color
-            = direct_lighting( mixed_albedo, mixed_normal, mixed_roughness, mixed_ao, view );
+            = direct_lighting( mixed_albedo, mixed_normal, light, mixed_roughness, mixed_ao, view );
     } else {
         final_color = float3( 0.0, 0.0, 0.0 );
     }
 
     final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
     final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) );
+
+    // Debug returns
+    if ( terrain_data.roughness_only ) {
+        final_color = float3( mixed_roughness );
+    }
 
     out_color[pixel] = float4( final_color, 1.0f );
 }

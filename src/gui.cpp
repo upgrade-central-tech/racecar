@@ -156,6 +156,19 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::EndTabItem();
             }
 
+            if ( ImGui::BeginTabItem( "Terrain" ) ) {
+                ImGui::SeparatorText( "Debug" );
+                ImGui::Checkbox( "Enable GT7 AO/local shadows", &gui.terrain.enable_gt7_ao );
+                ImGui::Checkbox( "Shadowing only", &gui.terrain.shadowing_only );
+                ImGui::Checkbox( "Roughness only", &gui.terrain.roughness_only );
+
+                ImGui::SeparatorText( "Toggles" );
+                ImGui::SliderFloat(
+                    "Local shadow strength", &gui.terrain.gt7_local_shadow_strength, 0.0f, 1.0f );
+                ImGui::SliderFloat( "Debug wetness", &gui.terrain.wetness, 0.0f, 1.0f );
+                ImGui::EndTabItem();
+            }
+
             if ( ImGui::BeginTabItem( "Atmosphere" ) ) {
                 ImGui::Checkbox( "Ping-pong zenith", &gui.atms.animate_zenith );
                 ImGui::SliderFloat( "Sun azimuth", &atms.sun_azimuth, 0.f, glm::two_pi<float>() );

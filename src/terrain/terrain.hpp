@@ -4,6 +4,7 @@
 #include "../engine/prepass.hpp"
 #include "../engine/task_list.hpp"
 #include "../engine/ub_data.hpp"
+#include "../engine/uniform_buffer.hpp"
 
 namespace racecar::geometry {
 
@@ -22,9 +23,20 @@ struct TerrainLightingInfo {
     engine::RWImage* GBuffer_Position;
     engine::RWImage* GBuffer_Normal;
     engine::RWImage* GBuffer_Albedo;
+    engine::RWImage* GBuffer_Packed_Data;
     engine::RWImage* color_attachment;
 
     vk::mem::AllocatedImage* lut_brdf;
+};
+
+struct TerrainPrepassInfo {
+    UniformBuffer<ub_data::Camera>* camera_buffer;
+
+    engine::RWImage* GBuffer_Position;
+    engine::RWImage* GBuffer_Normal;
+    engine::RWImage* GBuffer_Albedo;
+    engine::RWImage* GBuffer_Depth;
+    engine::RWImage* GBuffer_Packed_Data;
 };
 
 struct Terrain {
@@ -44,11 +56,15 @@ struct Terrain {
 
     engine::GfxTask terrain_prepass_task;
 
+    UniformBuffer<ub_data::TerrainData> terrain_uniform;
+
     // Crap-ton of images. We need a bindless-texture solution or something.
     // Maybe one giant atlas will work, actually.
     vk::mem::AllocatedImage test_layer_mask;
     vk::mem::AllocatedImage grass_albedo_roughness;
     vk::mem::AllocatedImage grass_normal_ao;
+    vk::mem::AllocatedImage asphalt_albedo_roughness;
+    vk::mem::AllocatedImage asphalt_normal_ao;
 
     VkVertexInputBindingDescription vertex_binding_description = {
         .binding = vk::binding::VERTEX_BUFFER,
@@ -67,9 +83,7 @@ struct Terrain {
 void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain );
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    const engine::RWImage& GBuffer_Position, const engine::RWImage& GBuffer_Normal,
-    const engine::RWImage& GBuffer_Albedo, const engine::RWImage& depth_image,
-    UniformBuffer<ub_data::Camera>& camera_buffer,
+    const TerrainPrepassInfo& prepass_info,
     [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
 
 void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
