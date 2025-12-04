@@ -36,18 +36,18 @@ float3 direct_lighting( float3 position, float3 albedo, float3 normal, float3 li
 
     let atms_world_position = float3( position.x, position.y, position.z );
     let sun_sky = get_sun_and_sky_irradiance( irradiance_lut, transmittance_lut, sampler,
-        atms_world_position - EARTH_CENTER, float3( 0.f, 1.f, 0.f ), light );
+        atms_world_position - EARTH_CENTER, normal, light );
 
     // Diffuse properties
-    // var diffuse = albedo * INV_PI;
-    var diffuse = albedo * INV_PI * ( sun_sky._0 + sun_sky._1 );
+    var diffuse = albedo * INV_PI;
+    // var diffuse = albedo * INV_PI * ( sun_sky._0 + sun_sky._1 );
 
     let atms_camera_pos
         = float3( camera_data.camera_pos.x, camera_data.camera_pos.y, camera_data.camera_pos.z );
     let scatter = get_sky_radiance_to_point( transmittance_lut, scattering_lut, sampler,
         atms_camera_pos - EARTH_CENTER, atms_world_position - EARTH_CENTER, light, true );
 
-    diffuse = diffuse * scatter._1 + scatter._0;
+    // diffuse = diffuse * scatter._1 + scatter._0;
 
     // Specular properties
     float alpha = roughness * roughness;
@@ -228,7 +228,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
         // let atms_world_position = float3(
         //     world_position.x * 0.01f, world_position.y * 0.01f, world_position.z * 0.01f );
         // let sun_sky = get_sun_and_sky_irradiance( irradiance_lut, transmittance_lut, sampler,
-        //     atms_world_position - EARTH_CENTER, float3( 0.f, 1.f, 0.f ), light );
+        //     atms_world_position - EARTH_CENTER, mixed_normal, light );
 
         final_color = direct_lighting(
             world_position, mixed_albedo, mixed_normal, light, mixed_roughness, mixed_ao, view );
@@ -237,12 +237,18 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
         // let atms_camera_pos = float3( camera_data.camera_pos.x * 0.1f,
         //     camera_data.camera_pos.y * 0.01f, camera_data.camera_pos.z * 0.1f );
         // let scatter = get_sky_radiance_to_point( transmittance_lut, scattering_lut, sampler,
-        //     atms_camera_pos - EARTH_CENTER, atms_world_position - EARTH_CENTER, light, false );
+        //     atms_camera_pos - EARTH_CENTER, atms_world_position - EARTH_CENTER, light, true );
 
         // final_color = final_color * scatter._1 + scatter._0;
     } else {
         final_color = float3( 0.0, 0.0, 0.0 );
     }
+
+    let atms_world_position = float3( world_position.x, world_position.y, world_position.z );
+    let sun_sky = get_sun_and_sky_irradiance( irradiance_lut, transmittance_lut, sampler,
+        atms_world_position - EARTH_CENTER, mixed_normal, light );
+    final_color += ( mixed_albedo * INV_PI )
+        * clamp( sun_sky._0 + sun_sky._1, float3( 0.f ), float( 1.f ) );
 
     // final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
     // final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) );
@@ -252,7 +258,16 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
         final_color = float3( mixed_roughness );
     }
 
-    out_color[pixel] = float4( final_color, 1.f );
+    var ground = ( sun_sky._0 + sun_sky._1 );
+
+    let atms_camera_pos
+        = float3( camera_data.camera_pos.x, camera_data.camera_pos.y, camera_data.camera_pos.z );
+    let scatter = get_sky_radiance_to_point( transmittance_lut, scattering_lut, sampler,
+        atms_camera_pos - EARTH_CENTER, atms_world_position - EARTH_CENTER, light, true );
+
+    ground = ground * scatter._1 + scatter._0;
+
+    out_color[pixel] = float4( ground, 1.f );
 }
 
 

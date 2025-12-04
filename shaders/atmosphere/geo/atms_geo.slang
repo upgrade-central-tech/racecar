@@ -1,5 +1,3 @@
-#language slang 2026
-
 import constants;
 import helpers;
 
@@ -42,7 +40,7 @@ func get_sun_and_sky_irradiance( Texture2D<float4> irradiance_lut,
         * get_transmittance_to_sun( transmittance_lut, sampler, r, mu_s )
         * max( dot( surface_normal, sun_dir ), 0.f );
 
-    return ( sun, sky );
+    return makeTuple( sun, sky );
 }
 
 func get_transmittance( Texture2D<float4> transmittance_lut, SamplerState sampler, r: float,
@@ -101,7 +99,7 @@ func get_sky_radiance_to_point( Texture2D<float4> transmittance_lut,
     let radiance = scattering * rayleigh_phase_function( nu )
         + single_mie * mie_phase_function( EARTH.mie_phase_function_g, nu );
 
-    return ( radiance, transmittance );
+    return makeTuple( radiance, transmittance );
 }
 
 
