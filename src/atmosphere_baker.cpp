@@ -5,7 +5,16 @@
 #include "vk/create.hpp"
 #include "vk/utility.hpp"
 
+#include <string_view>
+
 namespace racecar::atmosphere {
+
+static constexpr std::string_view BAKE_ATMS_SHADER_PATH
+    = "../shaders/atmosphere/sky/bake_atmosphere.spv";
+static constexpr std::string_view BAKE_ATMS_IRR_SHADER_PATH
+    = "../shaders/atmosphere/sky/bake_atmosphere_irradiance.spv";
+static constexpr std::string_view BAKE_ATMS_MIPS_SHADER_PATH
+    = "../shaders/atmosphere/sky/bake_atmosphere_mips.spv";
 
 void prebake_octahedral_sky(
     const AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::State& engine )
@@ -88,8 +97,7 @@ void initialize_atmosphere_baker(
             atms.sampler_desc_set.layouts[0],
             atms_baker.octahedral_write.layouts[0],
         },
-        vk::create::shader_module( vulkan, "../shaders/atmosphere/bake_atmosphere.spv" ),
-        "cs_bake_atmosphere" );
+        vk::create::shader_module( vulkan, BAKE_ATMS_SHADER_PATH ), "cs_bake_atmosphere" );
 
     prebake_octahedral_sky( atms_baker, vulkan, engine );
 }
@@ -106,7 +114,7 @@ void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, vk::Common&
             atms.sampler_desc_set.layouts[0],
             atms_baker.octahedral_write.layouts[0],
         },
-        vk::create::shader_module( vulkan, "../shaders/atmosphere/bake_atmosphere_irradiance.spv" ),
+        vk::create::shader_module( vulkan, BAKE_ATMS_IRR_SHADER_PATH ),
         "cs_bake_atmosphere_irradiance" );
 
     uint32_t x_groups = ( static_cast<uint32_t>(
@@ -207,7 +215,7 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, vk::Common& vulka
             atms.sampler_desc_set.layouts[0],
             atms_baker.octahedral_write.layouts[0],
         },
-        vk::create::shader_module( vulkan, "../shaders/atmosphere/bake_atmosphere_mips.spv" ),
+        vk::create::shader_module( vulkan, BAKE_ATMS_MIPS_SHADER_PATH ),
         "cs_bake_atmosphere_mips" );
 
     engine::add_pipeline_barrier( task_list,
