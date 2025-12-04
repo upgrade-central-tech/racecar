@@ -8,6 +8,7 @@ struct OctahedralData {
 }
 
 import atmosphere;
+import constants;
 
 // In atmosphere, the bindings are already there and used for other things.
 layout( binding = 0, set = 3 ) RWTexture2D<float4> octahedral_sky;

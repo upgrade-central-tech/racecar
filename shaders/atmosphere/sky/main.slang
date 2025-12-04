@@ -10,18 +10,6 @@ struct VertexOutput {
     float3 view_ray;
 };
 
-static const float3 GAMMA_FACTOR = float3( 1.f / 2.2f );
-static const float3 GROUND_ALBEDO = { 0.f, 0.f, 0.04f };
-static const float RADIANCE_EXPOSURE = 10.f;
-
-/// Expressed in radians.
-static const float SUN_ANGULAR_RADIUS = 0.04f;
-static const float SUN_SIZE = cos( SUN_ANGULAR_RADIUS );
-
-/// Earth radius is 6360 km, which we represent as height. This is a negative value because
-/// everything is relative to the Earth's surface.
-static const float3 EARTH_CENTER = { 0.f, -6360.f, 0.f };
-
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
 {
