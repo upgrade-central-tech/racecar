@@ -226,8 +226,8 @@ float4 raymarch( float3 view, float3 origin )
 
     float throughput = 1.f;
     // jitter
-    float jitter
-        = ( rand_float( dot( local_origin.xyz, float3( 12.9898, 78.233, 45.164 ) ) ) - 0.5 )
+    float jitter = 0.3f
+        * ( rand_float( dot( local_origin.xyz, float3( 12.9898, 78.233, 45.164 ) ) ) - 0.5 )
         * step_size;
     for ( int i = 0; i < steps; ++i ) {
         float t = t_min + ( i + 0.5 ) * step_size + jitter;
@@ -280,9 +280,12 @@ float4 raymarch( float3 view, float3 origin )
     return float4( color, max( 0, throughput ) );
 }
 
+struct FragmentOutput {
+    float4 cloud_buffer : SV_Target0;
+}
+
 [shader( "fragment" )]
-float4 fs_main( VertexOutput in )
-    : SV_Target
+FragmentOutput fs_main( VertexOutput in )
 {
     float3 world_pos = in.position;
     float3 camera_pos = clouds_buffer_data.camera_position.rgb;
@@ -291,7 +294,11 @@ float4 fs_main( VertexOutput in )
 
     float4 output_color = raymarch( view, world_pos );
 
-    return float4( output_color.rgb * output_color.a, output_color.a );
+    FragmentOutput output;
+
+    output.cloud_buffer = float4( output_color.rgb * output_color.a, output_color.a );
+
+    return output;
 }
 
 

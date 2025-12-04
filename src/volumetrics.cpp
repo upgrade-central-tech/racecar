@@ -11,9 +11,9 @@
 
 namespace racecar::volumetric {
 
-// constexpr std::string_view VOLUMETRIC_FILE_PATH = "../assets/cube.glb";
-[[maybe_unused]] constexpr std::string_view VOLUMETRIC_SHADER_MODULE_PATH
-    = "../shaders/clouds/clouds.spv";
+constexpr std::string_view VOLUMETRIC_SHADER_MODULE_PATH = "../shaders/clouds/clouds.spv";
+constexpr std::string_view VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH
+    = "../shaders/clouds/cloud_composite.spv";
 
 Volumetric initialize( vk::Common& vulkan, engine::State& engine )
 {
@@ -49,6 +49,9 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
     volumetric.sampler_desc_set = engine::generate_descriptor_set( vulkan, engine,
         { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+
+    volumetric.texture_composite_desc_set = engine::generate_descriptor_set(
+        vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE }, VK_SHADER_STAGE_FRAGMENT_BIT );
 
     engine::update_descriptor_set_uniform(
         vulkan, engine, volumetric.uniform_desc_set, volumetric.uniform_buffer, 0 );
@@ -237,14 +240,48 @@ void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulka
     engine::State& engine, [[maybe_unused]] engine::TaskList& task_list,
     engine::RWImage& color_attachment )
 {
+    // Build the low-res render image
+    VkExtent2D color_dim = {
+        color_attachment.images[0].image_extent.width,
+        color_attachment.images[0].image_extent.height,
+    };
+
+    VkExtent2D low_res_dim = {
+        color_dim.width >> 1, // Half resolution
+        color_dim.height >> 1, // Half resolution
+    };
+
+    volumetric.cloud_buffer = engine::create_rwimage( vulkan, engine,
+        {
+            low_res_dim.width,
+            low_res_dim.height,
+            1,
+        },
+        color_attachment.images[0].image_format, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT );
+
+    // Transition newly created cloud buffer to a color attachment
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers
+            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .src_access = VK_ACCESS_2_NONE,
+                .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                .image = volumetric.cloud_buffer,
+                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } } );
+
     const geometry::quad::Mesh& volumetric_mesh = volumetric.scene_mesh;
 
     // We ideally don't want to render this at all resolution. That would take too much time!
-    engine::GfxTask volumetric_gfx_task = {
-        .render_target_is_swapchain = false,
-        .color_attachments = { color_attachment },
-        .extent = engine.swapchain.extent,
-    };
+    engine::GfxTask volumetric_gfx_task = { .render_target_is_swapchain = false,
+        .color_attachments = { volumetric.cloud_buffer },
+        .extent = {
+            low_res_dim.width,
+            low_res_dim.height,
+        } };
 
     engine::Pipeline volumetric_pipeline;
 
@@ -263,7 +300,7 @@ void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulka
                 volumetric.lut_desc_set.layouts[0],
                 volumetric.sampler_desc_set.layouts[0],
             },
-            { color_attachment.images[0].image_format }, VK_SAMPLE_COUNT_1_BIT, true, true,
+            { volumetric.cloud_buffer.images[0].image_format }, VK_SAMPLE_COUNT_1_BIT, false, true,
             vk::create::shader_module( vulkan, VOLUMETRIC_SHADER_MODULE_PATH ) );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create volumetrics graphics pipeline: {}", ex.what() );
@@ -286,6 +323,65 @@ void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulka
         } );
 
     engine::add_gfx_task( task_list, volumetric_gfx_task );
+
+    // Transition the cloud_buffer to a read-only
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers
+            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                .image = volumetric.cloud_buffer,
+                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } } );
+
+    // Prepare composite stage
+    engine::GfxTask volumetric_composite_task = {
+        .render_target_is_swapchain = false,
+        .color_attachments = { color_attachment },
+        .extent = engine.swapchain.extent,
+    };
+
+    engine::Pipeline volumetric_composite_pipeline;
+    try {
+        volumetric_composite_pipeline = engine::create_gfx_pipeline( engine, vulkan,
+            engine::get_vertex_input_state_create_info( volumetric_mesh ),
+            {
+                volumetric.uniform_desc_set.layouts[0],
+                volumetric.texture_composite_desc_set.layouts[0],
+                volumetric.sampler_desc_set.layouts[0],
+            },
+            {
+                volumetric.cloud_buffer.images[0].image_format,
+            },
+            VK_SAMPLE_COUNT_1_BIT, true, true,
+            vk::create::shader_module( vulkan, VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH ) );
+    } catch ( const Exception& ex ) {
+        log::error( "Failed to create volumetrics graphics pipeline: {}", ex.what() );
+        throw;
+    }
+
+    engine::update_descriptor_set_rwimage( vulkan, engine, volumetric.texture_composite_desc_set,
+        volumetric.cloud_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+
+    volumetric_composite_task.draw_tasks.push_back( {
+            .draw_resource_descriptor = {
+                    .vertex_buffers = { volumetric_mesh.mesh_buffers.vertex_buffer.handle },
+                    .index_buffer = volumetric_mesh.mesh_buffers.index_buffer.handle,
+                    .vertex_buffer_offsets = { 0 },
+                    .index_count = static_cast<uint32_t>( volumetric_mesh.indices.size() ),
+            },
+            .descriptor_sets = {
+                &volumetric.uniform_desc_set,
+                &volumetric.texture_composite_desc_set,
+                &volumetric.sampler_desc_set,
+            },
+            .pipeline = volumetric_composite_pipeline,
+        } );
+
+    engine::add_gfx_task( task_list, volumetric_composite_task );
 
     log::info( "[VOLUMETRIC] Volumetric gfx task added" );
 }
