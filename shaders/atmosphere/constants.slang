@@ -1,4 +1,4 @@
-implementing atmosphere;
+module constants;
 
 public struct DensityProfileLayer {
     public float width;
@@ -32,7 +32,7 @@ public struct Parameters {
 
     public float3 ground_albedo;
     public float mu_s_min;
-}
+};
 
 /// Compile-time constant. Values are calibrated to match Earth's atmosphere.
 ///
@@ -68,29 +68,26 @@ public static const Parameters EARTH = {
     -0.207912f,
 };
 
-static const int IRRADIANCE_LUT_W = 64;
-static const int IRRADIANCE_LUT_H = 16;
+public static const int IRRADIANCE_LUT_W = 64;
+public static const int IRRADIANCE_LUT_H = 16;
 
-static const int SCATTERING_LUT_R_SIZE = 32;
-static const int SCATTERING_LUT_MU_SIZE = 128;
-static const int SCATTERING_LUT_MU_S_SIZE = 32;
-static const int SCATTERING_LUT_NU_SIZE = 8;
+public static const int SCATTERING_LUT_R_SIZE = 32;
+public static const int SCATTERING_LUT_MU_SIZE = 128;
+public static const int SCATTERING_LUT_MU_S_SIZE = 32;
+public static const int SCATTERING_LUT_NU_SIZE = 8;
 
-static const int TRANSMITTANCE_LUT_W = 256;
-static const int TRANSMITTANCE_LUT_H = 64;
+public static const int TRANSMITTANCE_LUT_W = 256;
+public static const int TRANSMITTANCE_LUT_H = 64;
 
 public static const float PI = 3.14159265358979323846f;
 public static const float INV_PI = 0.3183098861837906715377f;
 
-static const float3 GAMMA_FACTOR = float3( 1.f / 2.2f );
-static const float3 GROUND_ALBEDO = { 0.f, 0.f, 0.04f };
-
 /// Expressed in radians.
-static const float SUN_ANGULAR_RADIUS = 0.04f;
-static const float SUN_SIZE = cos( SUN_ANGULAR_RADIUS );
+public static const float SUN_ANGULAR_RADIUS = 0.04f;
+public static const float SUN_SIZE = cos( SUN_ANGULAR_RADIUS );
 
 /// Earth radius is 6360 km, which we represent as height. This is a negative value because
 /// everything is relative to the Earth's surface.
-static const float3 EARTH_CENTER = { 0.f, -6360.f, 0.f };
+public static const float3 EARTH_CENTER = { 0.f, -6360.f, 0.f };
 
 

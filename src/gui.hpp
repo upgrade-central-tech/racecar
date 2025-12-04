@@ -49,7 +49,7 @@ struct Gui {
 
     struct AtmosphereData {
         bool animate_zenith = false;
-        float radiance_exposure = 6.00f;
+        float radiance_exposure = 3.00f;
     } atms = {};
 
     struct AoData {
@@ -66,7 +66,7 @@ struct Gui {
         bool roughness_only;
 
         float gt7_local_shadow_strength = 1.0f;
-        float wetness = 0.355f; // temporary param
+        float wetness = 0.8f; // temporary param
     } terrain = {};
 
     struct TonemappingData {
@@ -75,7 +75,7 @@ struct Gui {
             SDR,
             HDR,
         } mode
-            = Mode::HDR;
+            = Mode::NONE;
 
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};

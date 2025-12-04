@@ -2,6 +2,8 @@
 #include "../utils.slang"
 #include "../clouds/cloud_utils.slang"
 
+import constants;
+
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> scene_data;
 layout( binding = 2, set = 0 ) ConstantBuffer<TerrainData> terrain_data;
@@ -17,7 +19,7 @@ layout( binding = 1, set = 2 ) Texture2D<float4> sky_irradiance;
 layout( binding = 2, set = 2 ) Texture2D<float4> sky_mips;
 layout( binding = 3, set = 2 ) Texture2D<float2> BRDF_LUT;
 
-layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
+layout( binding = 0, set = 3 ) SamplerState sampler;
 
 layout( binding = 0, set = 4 ) RaytracingAccelerationStructure sceneBVH;
 
@@ -25,12 +27,11 @@ layout( binding = 0, set = 4 ) RaytracingAccelerationStructure sceneBVH;
 float3 direct_lighting(
     float3 albedo, float3 normal, float3 light, float roughness, float ao, float3 view )
 {
-    float3 half = normalize( view + light );
-
-    BSDF_Dots dots = get_dots( normal, view, half, light );
+    float3 half_vector = normalize( view + light );
+    BSDF_Dots dots = get_dots( normal, view, half_vector, light );
 
     // Diffuse properties
-    float3 diffuse_albedo = albedo / PI;
+    var diffuse = albedo * INV_PI;
 
     // Specular properties
     float alpha = roughness * roughness;
@@ -45,8 +46,6 @@ float3 direct_lighting(
     float shadow_strength = 1.0f;
     float local_shadows
         = clamp( dot( normal, light ) - shadow_strength * ( 1.0f - ao ) + 0.5f, 0.0f, 1.0f );
-
-    float clamped_lambert = clamp( dot( normal, light ), 0.0f, 1.0f );
 
     float shadowing = dot( normal, light );
 
@@ -67,7 +66,7 @@ float3 direct_lighting(
         return shadowing;
     }
 
-    return ( ( 1.0f - F ) * diffuse_albedo + specular ) * shadowing;
+    return ( ( 1.0f - F ) * diffuse + specular ) * shadowing;
 }
 
 void evaluate_wetness( float wetness, float porosity, inout float3 color, inout float roughness,
@@ -92,8 +91,8 @@ float3 sample_glossy_ibl( float roughness, float2 direction )
     uint lod1 = min( lod0 + 1, 5 );
     float lod_t = lod - lod0;
 
-    float3 glossy_lod0 = sky_mips.SampleLevel( nearest_sampler, direction, lod0 ).rgb;
-    float3 glossy_lod1 = sky_mips.SampleLevel( nearest_sampler, direction, lod1 ).rgb;
+    float3 glossy_lod0 = sky_mips.SampleLevel( sampler, direction, lod0 ).rgb;
+    float3 glossy_lod1 = sky_mips.SampleLevel( sampler, direction, lod1 ).rgb;
     return lerp( glossy_lod0, glossy_lod1, lod_t );
 }
 
@@ -177,7 +176,6 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     float irradiance_strength = 1.0f;
     float3 diffuse_irradiance = filter_float4( sky_irradiance, oct_uv ).rgb;
-    // sky_irradiance[irradiance_px].rgb;
 
     uint specular_width, specular_height;
     sky.GetDimensions( specular_width, specular_height );
@@ -191,10 +189,8 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float n_dot_v = max( dot( mixed_normal, view ), 0.0f );
 
     float3 F0 = lerp( float3( 0.04f ), mixed_albedo, 0.04f );
-    float2 BRDF = BRDF_LUT.SampleLevel( nearest_sampler, float2( n_dot_v, mixed_roughness ), 0.0f );
+    float2 BRDF = BRDF_LUT.SampleLevel( sampler, float2( n_dot_v, mixed_roughness ), 0.0f );
     specular_irradiance *= ( F0 * BRDF.x + BRDF.y );
-
-    // sky[sky_px].rgb; // ]filter_float4( sky, oct_refl_uv ).rgb; // [sky_px].rgb;
 
     //=======================================================================================
     // Final lighting evaluation
@@ -204,27 +200,29 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     if ( scene_data.ray_traced_shadows ) {
         float t;
         int primitive_index;
-        hit = traceRayFirstHit( sceneBVH, world_position + 0.01 * normalize( mixed_normal ), light,
+        hit = traceRayFirstHit( sceneBVH, world_position + 0.01f * normalize( mixed_normal ), light,
             t, primitive_index );
     }
 
-    float3 final_color = float3( 1.0f );
+    float3 final_color = float3( 1.f );
     if ( !hit ) {
         final_color
             = direct_lighting( mixed_albedo, mixed_normal, light, mixed_roughness, mixed_ao, view );
+
     } else {
-        final_color = float3( 0.0, 0.0, 0.0 );
+        final_color = float3( 0.f );
     }
 
-    final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
-    final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) );
+    // // Irradiance run
+    final_color += ( mixed_albedo * INV_PI ) * diffuse_irradiance * irradiance_strength;
+    final_color += clamp( specular_irradiance, float3( 0.f ), float3( 1.f ) );
 
     // Debug returns
     if ( terrain_data.roughness_only ) {
         final_color = float3( mixed_roughness );
     }
 
-    out_color[pixel] = float4( final_color, 1.0f );
+    out_color[pixel] = float4( final_color, 1.f );
 }
 
 

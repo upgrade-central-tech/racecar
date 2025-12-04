@@ -1,25 +1,14 @@
 module atmosphere;
 
-__include common;
-__include helpers;
+import helpers;
+import bindings;
+import constants;
 
 /// Stores the result of atmospheric scattering.
 public struct SkySample {
     public float3 radiance; ///< In-scattered light, i.e. the sky glow
     public float3 transmittance; ///< Ratio of light transmitted through the atmosphere
 };
-
-func rayleigh_phase_function( nu: float )->float
-{
-    let k = 3.f / ( 16.f * PI );
-    return k * ( 1.f + nu * nu );
-}
-
-func mie_phase_function( g: float, nu: float )->float
-{
-    let k = 3.f / ( 8.f * PI ) * ( 1.f - g * g ) / ( 2.f + g * g );
-    return k * ( 1.f + nu * nu ) / pow( 1.f + g * g - 2.f * g * nu, 1.5f );
-}
 
 /// Computes sky color along a view ray.
 public func get_sky_radiance(
@@ -43,34 +32,16 @@ public func get_sky_radiance(
     let mu = rmu / r;
     let mu_s = dot( local_camera, sun_dir ) / r;
     let nu = dot( view_ray, sun_dir );
-    let scatter_result = sample_scattering_lut( atms, r, mu, mu_s, nu );
-    let radiance = scatter_result.scattering * rayleigh_phase_function( nu )
-        + scatter_result.single_mie * mie_phase_function( atms.mie_phase_function_g, nu );
+    let scatter_result = sample_scattering_lut( scattering_lut, sampler, r, mu, mu_s, nu, false );
+    let radiance = scatter_result._0 * rayleigh_phase_function( nu )
+        + scatter_result._1 * mie_phase_function( atms.mie_phase_function_g, nu );
 
-    let transmittance = sample_transmittance_lut( atms, r, mu );
+    let transmittance = sample_transmittance_lut( transmittance_lut, sampler, r, mu );
 
     return { radiance, transmittance };
 }
 
-public func get_sky_color( float3 view_dir )->float3
-{
-    let camera_pos = uniforms.camera_position;
-    let sun_dir = normalize( uniforms.sun_direction );
-
-    let sky = get_sky_radiance( EARTH, camera_pos - EARTH_CENTER, view_dir, sun_dir );
-    var radiance = sky.radiance;
-
-    // Add sun disk if looking toward the sun
-    if ( dot( view_dir, sun_dir ) > SUN_SIZE ) {
-        let solar_radiance
-            = EARTH.solar_irradiance / ( PI * EARTH.sun_angular_radius * EARTH.sun_angular_radius );
-        radiance += sky.transmittance * solar_radiance;
-    }
-
-    return radiance * uniforms.radiance_exposure;
-}
-
-public func get_rough_sky_color( float3 view_dir )->float3
+public func get_sky_color( float3 view_dir, float roughness = 1.f )->float3
 {
     let camera_pos = uniforms.camera_position;
     let sun_dir = normalize( uniforms.sun_direction );
@@ -81,7 +52,7 @@ public func get_rough_sky_color( float3 view_dir )->float3
     // Add sun disk if looking toward the sun
     if ( dot( view_dir, sun_dir ) > SUN_SIZE ) {
         let solar_radiance = EARTH.solar_irradiance
-            / ( PI * EARTH.sun_angular_radius * EARTH.sun_angular_radius ) * 0.0001f;
+            / ( PI * EARTH.sun_angular_radius * EARTH.sun_angular_radius ) * roughness;
         radiance += sky.transmittance * solar_radiance;
     }
 

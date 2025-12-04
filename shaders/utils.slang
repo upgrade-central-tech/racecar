@@ -1,4 +1,9 @@
-static const float PI = 3.14159265359;
+/// Has to be namespaced because we're defining `PI` somewhere else
+namespace math {
+
+public static const float PI = 3.14159265358979323846f;
+
+}
 
 //=======================================================================================
 // BSDF Stuff
@@ -79,14 +84,14 @@ float DistributionGGX( float n_dot_h, float alpha )
     float n_dot_h_2 = n_dot_h * n_dot_h;
     float denom = ( n_dot_h_2 ) * ( alpha2 - 1.0f ) + 1.0f;
 
-    return alpha2 / ( PI * denom * denom );
+    return alpha2 / ( math::PI * denom * denom );
 }
 
 float DistributionGTR( float alpha, float h_dot_l )
 {
     float alpha_2 = alpha * alpha;
     return ( alpha_2 - 1.0f )
-        / ( PI * log( alpha_2 ) * ( 1.0f + ( alpha_2 - 1.0f ) * ( h_dot_l * h_dot_l ) ) );
+        / ( math::PI * log( alpha_2 ) * ( 1.0f + ( alpha_2 - 1.0f ) * ( h_dot_l * h_dot_l ) ) );
 }
 
 //=======================================================================================

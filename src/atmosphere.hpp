@@ -11,7 +11,7 @@
 
 namespace racecar::atmosphere {
 
-constexpr std::string_view SHADER_PATH = "../shaders/atmosphere/atmosphere.spv";
+constexpr std::string_view SHADER_PATH = "../shaders/atmosphere/sky/atmosphere.spv";
 
 struct Atmosphere {
     vk::mem::AllocatedImage irradiance;
