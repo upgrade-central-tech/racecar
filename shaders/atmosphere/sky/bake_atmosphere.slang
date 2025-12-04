@@ -96,7 +96,7 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
     float3 view_direction = oct_decode( float2( u, v ) );
 
     // Insert the work to actually derive a 3D global direction from pixel and face
-    float3 sky_color = get_rough_sky_color( view_direction ); // get_sky_color( view_direction );
+    float3 sky_color = get_sky_color( view_direction, 0.0001f );
 
     octahedral_sky[pixel] = float4( sky_color, 1.0f );
 }
@@ -137,7 +137,7 @@ void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
             float3 sample_dir = normalize(
                 tangent_sample.x * right + tangent_sample.y * up + tangent_sample.z * normal );
 
-            irradiance += get_rough_sky_color( sample_dir ) * cos( theta ) * sin( theta );
+            irradiance += get_sky_color( sample_dir, 0.0001f ) * cos( theta ) * sin( theta );
         }
     }
 

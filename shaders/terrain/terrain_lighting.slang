@@ -3,6 +3,8 @@
 #include "../clouds/cloud_utils.slang"
 #include "../atmosphere/geo/atms_geo.slang"
 
+import constants;
+
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> scene_data;
 layout( binding = 2, set = 0 ) ConstantBuffer<TerrainData> terrain_data;
@@ -18,21 +20,34 @@ layout( binding = 1, set = 2 ) Texture2D<float4> sky_irradiance;
 layout( binding = 2, set = 2 ) Texture2D<float4> sky_mips;
 layout( binding = 3, set = 2 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 4, set = 2 ) Texture2D<float4> irradiance_lut;
-layout( binding = 5, set = 2 ) Texture2D<float4> transmittance_lut;
+layout( binding = 5, set = 2 ) Texture3D<float4> scattering_lut;
+layout( binding = 6, set = 2 ) Texture2D<float4> transmittance_lut;
 
 layout( binding = 0, set = 3 ) SamplerState sampler;
 
 layout( binding = 0, set = 4 ) RaytracingAccelerationStructure sceneBVH;
 
 // Misc.
-float3 direct_lighting(
-    float3 albedo, float3 normal, float3 light, float roughness, float ao, float3 view )
+float3 direct_lighting( float3 position, float3 albedo, float3 normal, float3 light,
+    float roughness, float ao, float3 view )
 {
     float3 half_vector = normalize( view + light );
     BSDF_Dots dots = get_dots( normal, view, half_vector, light );
 
+    let atms_world_position = float3( position.x, position.y, position.z );
+    let sun_sky = get_sun_and_sky_irradiance( irradiance_lut, transmittance_lut, sampler,
+        atms_world_position - EARTH_CENTER, float3( 0.f, 1.f, 0.f ), light );
+
     // Diffuse properties
-    float3 diffuse_albedo = albedo / PI;
+    // var diffuse = albedo * INV_PI;
+    var diffuse = albedo * INV_PI * ( sun_sky._0 + sun_sky._1 );
+
+    let atms_camera_pos
+        = float3( camera_data.camera_pos.x, camera_data.camera_pos.y, camera_data.camera_pos.z );
+    let scatter = get_sky_radiance_to_point( transmittance_lut, scattering_lut, sampler,
+        atms_camera_pos - EARTH_CENTER, atms_world_position - EARTH_CENTER, light, true );
+
+    diffuse = diffuse * scatter._1 + scatter._0;
 
     // Specular properties
     float alpha = roughness * roughness;
@@ -47,8 +62,6 @@ float3 direct_lighting(
     float shadow_strength = 1.0f;
     float local_shadows
         = clamp( dot( normal, light ) - shadow_strength * ( 1.0f - ao ) + 0.5f, 0.0f, 1.0f );
-
-    float clamped_lambert = clamp( dot( normal, light ), 0.0f, 1.0f );
 
     float shadowing = dot( normal, light );
 
@@ -69,7 +82,7 @@ float3 direct_lighting(
         return shadowing;
     }
 
-    return ( ( 1.0f - F ) * diffuse_albedo + specular ) * shadowing;
+    return ( ( 1.0f - F ) * diffuse + specular ) * shadowing;
 }
 
 void evaluate_wetness( float wetness, float porosity, inout float3 color, inout float roughness,
@@ -212,29 +225,34 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     float3 final_color = float3( 1.0f );
     if ( !hit ) {
-        final_color
-            = direct_lighting( mixed_albedo, mixed_normal, light, mixed_roughness, mixed_ao, view );
+        // let atms_world_position = float3(
+        //     world_position.x * 0.01f, world_position.y * 0.01f, world_position.z * 0.01f );
+        // let sun_sky = get_sun_and_sky_irradiance( irradiance_lut, transmittance_lut, sampler,
+        //     atms_world_position - EARTH_CENTER, float3( 0.f, 1.f, 0.f ), light );
+
+        final_color = direct_lighting(
+            world_position, mixed_albedo, mixed_normal, light, mixed_roughness, mixed_ao, view );
+        // * ( sun_sky._0 + sun_sky._1 );
+
+        // let atms_camera_pos = float3( camera_data.camera_pos.x * 0.1f,
+        //     camera_data.camera_pos.y * 0.01f, camera_data.camera_pos.z * 0.1f );
+        // let scatter = get_sky_radiance_to_point( transmittance_lut, scattering_lut, sampler,
+        //     atms_camera_pos - EARTH_CENTER, atms_world_position - EARTH_CENTER, light, false );
+
+        // final_color = final_color * scatter._1 + scatter._0;
     } else {
         final_color = float3( 0.0, 0.0, 0.0 );
     }
 
-    final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
-    final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) );
+    // final_color += ( mixed_albedo / PI ) * diffuse_irradiance * irradiance_strength;
+    // final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) );
 
     // Debug returns
     if ( terrain_data.roughness_only ) {
         final_color = float3( mixed_roughness );
     }
 
-    // Lower bounds ground height to zero (negative y-values are below Earth's surface) and adjusts
-    // position for atmosphere calculations
-    let atms_world_position
-        = float3( world_position.x, min( world_position.y, 0.f ), world_position.z ) * 0.01f;
-    let sun_sky = get_sun_and_sky_irradiance( irradiance_lut, transmittance_lut, sampler,
-        atms_world_position, float3( 0.f, 1.f, 0.f ), light );
-    let c = sun_sky._1;
-
-    out_color[pixel] = float4( c, 1.0f );
+    out_color[pixel] = float4( final_color, 1.f );
 }
 
 

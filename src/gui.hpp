@@ -75,7 +75,7 @@ struct Gui {
             SDR,
             HDR,
         } mode
-            = Mode::HDR;
+            = Mode::NONE;
 
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};

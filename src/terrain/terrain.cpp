@@ -216,6 +216,7 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky mips
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF_LUT
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Atmosphere irradiance LUT
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Scattering irradiance LUT
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Atmosphere transmittance LUT
         },
         VK_SHADER_STAGE_COMPUTE_BIT );
@@ -256,8 +257,9 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
         info.atmosphere_baker->octahedral_sky_test, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 2 );
     engine::update_descriptor_set_image( vulkan, engine, terrain.lut_desc_set, *info.lut_brdf, 3 );
     engine::update_descriptor_set_image( vulkan, engine, terrain.lut_desc_set, atms.irradiance, 4 );
+    engine::update_descriptor_set_image( vulkan, engine, terrain.lut_desc_set, atms.scattering, 5 );
     engine::update_descriptor_set_image(
-        vulkan, engine, terrain.lut_desc_set, atms.transmittance, 5 );
+        vulkan, engine, terrain.lut_desc_set, atms.transmittance, 6 );
 
     // Sampler assignments
     engine::update_descriptor_set_sampler(

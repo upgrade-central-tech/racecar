@@ -232,7 +232,7 @@ State initialize( Context& ctx )
             .fov_y = float( glm::radians( 60.0 ) ),
             .aspect_ratio = static_cast<float>( constant::SCREEN_W ) / constant::SCREEN_H,
             .near_plane = 0.1f,
-            .far_plane = 100.f,
+            .far_plane = 1000.f,
         };
 
         create_immediate_commands( engine.immediate_submit, vulkan );
