@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../atmosphere.hpp"
 #include "../atmosphere_baker.hpp"
 #include "../engine/prepass.hpp"
 #include "../engine/task_list.hpp"
@@ -87,6 +88,6 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
     [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
 
 void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    engine::TaskList& task_list, TerrainLightingInfo& info );
+    engine::TaskList& task_list, TerrainLightingInfo& info, const atmosphere::Atmosphere& atms );
 
 }

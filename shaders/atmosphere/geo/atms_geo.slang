@@ -3,7 +3,7 @@
 import constants;
 import helpers;
 
-typealias SunSkyIrradiance = Tuple<float, float>;
+typealias SunSkyIrradiance = Tuple<float3, float3>;
 
 func get_transmittance_to_sun(
     Texture2D<float4> transmittance_lut, SamplerState sampler, r: float, mu_s: float )
@@ -19,7 +19,7 @@ func get_transmittance_to_sun(
             sin_theta_h * EARTH.sun_angular_radius, mu_s - cos_theta_h );
 }
 
-[shader( "vertex" )]
+// [shader( "vertex" )]
 func get_sun_and_sky_irradiance( Texture2D<float4> irradiance_lut,
     Texture2D<float4> transmittance_lut, SamplerState sampler, surface_point: float3,
     surface_normal: float3, sun_dir: float3 )
@@ -41,7 +41,7 @@ func get_sun_and_sky_irradiance( Texture2D<float4> irradiance_lut,
         * get_transmittance_to_sun( transmittance_lut, sampler, r, mu_s )
         * max( dot( surface_normal, sun_dir ), 0.f );
 
-    return ( 0.f, 0.f );
+    return ( sun, sky );
 }
 
 
