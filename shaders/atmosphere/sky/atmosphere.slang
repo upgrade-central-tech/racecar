@@ -9,14 +9,6 @@ struct ScatteringResult {
     float3 single_mie;
 };
 
-func safe_sqrt( value: float )->float { return sqrt( max( value, 0.f ) ); }
-
-func ray_distance_to_atmosphere_top( in atms: Parameters, r: float, mu: float )->float
-{
-    let discriminant = r * r * ( mu * mu - 1.f ) + atms.top_radius * atms.top_radius;
-    return max( 0.f, -r * mu + safe_sqrt( discriminant ) );
-}
-
 func extrapolate_single_mie( in atms: Parameters, scattering: float4 )->float3
 {
     if ( scattering.x <= 0.f ) {
@@ -26,21 +18,6 @@ func extrapolate_single_mie( in atms: Parameters, scattering: float4 )->float3
     return scattering.xyz * scattering.w / scattering.x
         * ( atms.rayleigh_scattering.x / atms.mie_scattering.x )
         * ( atms.mie_scattering / atms.rayleigh_scattering );
-}
-
-func sample_transmittance_lut( in atms: Parameters, r: float, mu: float )->float3
-{
-    // Map (r, mu) to texture UV coordinates
-    let H = sqrt( atms.top_radius * atms.top_radius - atms.bottom_radius * atms.bottom_radius );
-    let rho = safe_sqrt( r * r - atms.bottom_radius * atms.bottom_radius );
-    let d_min = atms.top_radius - r;
-    let d_max = rho + H;
-    let x_mu = ( ray_distance_to_atmosphere_top( atms, r, mu ) - d_min ) / ( d_max - d_min );
-    let x_r = rho / H;
-    let uv = float2(
-        normalize_to_uv( x_mu, TRANSMITTANCE_LUT_H ), normalize_to_uv( x_r, TRANSMITTANCE_LUT_H ) );
-
-    return transmittance_lut.Sample( sampler, uv ).rgb;
 }
 
 func sample_scattering_lut( in atms: Parameters, r: float, mu: float, mu_s: float, nu: float )
@@ -81,11 +58,11 @@ func map_to_scattering_texture( in atms: Parameters, r: float, mu: float, mu_s: 
     u_mu = 0.5f
         + 0.5f * normalize_to_uv( ( d - d_min ) / ( d_max - d_min ), SCATTERING_LUT_MU_SIZE / 2 );
 
-    d = ray_distance_to_atmosphere_top( atms, atms.bottom_radius, mu_s );
+    d = ray_distance_to_atmosphere_top( atms.bottom_radius, mu_s );
     d_min = atms.top_radius - atms.bottom_radius;
     d_max = H;
     let a = ( d - d_min ) / ( d_max - d_min );
-    let D = ray_distance_to_atmosphere_top( atms, atms.bottom_radius, atms.mu_s_min );
+    let D = ray_distance_to_atmosphere_top( atms.bottom_radius, atms.mu_s_min );
     let A = ( D - d_min ) / ( d_max - d_min );
     let u_mu_s = normalize_to_uv( max( 1.f - a / A, 0.f ) / ( 1.f + a ), SCATTERING_LUT_MU_S_SIZE );
     let u_nu = ( nu + 1.f ) * 0.5f;
@@ -137,7 +114,7 @@ public func get_sky_radiance(
     let radiance = scatter_result.scattering * rayleigh_phase_function( nu )
         + scatter_result.single_mie * mie_phase_function( atms.mie_phase_function_g, nu );
 
-    let transmittance = sample_transmittance_lut( atms, r, mu );
+    let transmittance = sample_transmittance_lut( transmittance_lut, sampler, r, mu );
 
     return { radiance, transmittance };
 }

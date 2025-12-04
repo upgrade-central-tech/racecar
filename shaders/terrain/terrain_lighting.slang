@@ -1,6 +1,7 @@
 #include "../common.slang"
 #include "../utils.slang"
 #include "../clouds/cloud_utils.slang"
+#include "../atmosphere/geo/atms_geo.slang"
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> scene_data;
