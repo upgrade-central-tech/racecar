@@ -795,8 +795,7 @@ void run( bool use_fullscreen )
         &lut_brdf,
     };
 
-    geometry::draw_terrain(
-        test_terrain, ctx.vulkan, engine, task_list, terrain_lighting_info, atms );
+    geometry::draw_terrain( test_terrain, ctx.vulkan, engine, task_list, terrain_lighting_info );
 
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},

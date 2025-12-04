@@ -1,7 +1,6 @@
 #include "../common.slang"
 #include "../utils.slang"
 #include "../clouds/cloud_utils.slang"
-#include "../atmosphere/geo/atms_geo.slang"
 
 import constants;
 
@@ -19,9 +18,6 @@ layout( binding = 0, set = 2 ) Texture2D<float4> sky;
 layout( binding = 1, set = 2 ) Texture2D<float4> sky_irradiance;
 layout( binding = 2, set = 2 ) Texture2D<float4> sky_mips;
 layout( binding = 3, set = 2 ) Texture2D<float2> BRDF_LUT;
-layout( binding = 4, set = 2 ) Texture2D<float4> irradiance_lut;
-layout( binding = 5, set = 2 ) Texture3D<float4> scattering_lut;
-layout( binding = 6, set = 2 ) Texture2D<float4> transmittance_lut;
 
 layout( binding = 0, set = 3 ) SamplerState sampler;
 
@@ -204,22 +200,22 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     if ( scene_data.ray_traced_shadows ) {
         float t;
         int primitive_index;
-        hit = traceRayFirstHit( sceneBVH, world_position + 0.01 * normalize( mixed_normal ), light,
+        hit = traceRayFirstHit( sceneBVH, world_position + 0.01f * normalize( mixed_normal ), light,
             t, primitive_index );
     }
 
-    float3 final_color = float3( 1.0f );
+    float3 final_color = float3( 1.f );
     if ( !hit ) {
         final_color
             = direct_lighting( mixed_albedo, mixed_normal, light, mixed_roughness, mixed_ao, view );
 
     } else {
-        final_color = float3( 0.0, 0.0, 0.0 );
+        final_color = float3( 0.f );
     }
 
     // // Irradiance run
     final_color += ( mixed_albedo * INV_PI ) * diffuse_irradiance * irradiance_strength;
-    final_color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) );
+    final_color += clamp( specular_irradiance, float3( 0.f ), float3( 1.f ) );
 
     // Debug returns
     if ( terrain_data.roughness_only ) {
