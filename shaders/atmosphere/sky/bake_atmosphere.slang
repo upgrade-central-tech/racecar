@@ -8,7 +8,10 @@ struct OctahedralData {
 }
 
 import atmosphere;
+import bindings;
 import constants;
+
+#include "../atmosphere/geo/atms_geo.slang"
 
 // In atmosphere, the bindings are already there and used for other things.
 layout( binding = 0, set = 3 ) RWTexture2D<float4> octahedral_sky;
@@ -119,29 +122,19 @@ void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
     float3 right = normalize( cross( up, normal ) );
     up = normalize( cross( normal, right ) );
 
-    float3 irradiance = float3( 0.0f );
-    float sample_delta = 0.1f;
-    float number_samples = 0.0f;
+    float3 light = normalize( uniforms.sun_direction );
 
-    int phi_samples = 8;
-    int theta_samples = 8;
+    let atms_world_position = float3( 0.0f );
+    let sun_sky = get_sun_and_sky_irradiance( irradiance_lut, transmittance_lut, sampler,
+        atms_world_position - EARTH_CENTER, normal, light );
 
-    for ( int phi_sample = 0; phi_sample < phi_samples; phi_sample++ ) {
-        float phi = ( phi_sample + 0.5f ) * ( 2.0f * PI / phi_samples );
+    var ground = ( sun_sky._0 + sun_sky._1 );
 
-        for ( int theta_sample = 0; theta_sample < theta_samples; theta_sample++ ) {
-            float theta = ( theta_sample + 0.5f ) * ( 0.5f * PI / theta_samples );
+    let atms_camera_pos = float3( 0.0f );
+    let scatter = get_sky_radiance_to_point( transmittance_lut, scattering_lut, sampler,
+        atms_camera_pos - EARTH_CENTER, atms_world_position - EARTH_CENTER, light, true );
 
-            float3 tangent_sample
-                = float3( sin( theta ) * cos( phi ), sin( theta ) * sin( phi ), cos( theta ) );
-            float3 sample_dir = normalize(
-                tangent_sample.x * right + tangent_sample.y * up + tangent_sample.z * normal );
-
-            irradiance += get_sky_color( sample_dir, 0.0001f ) * cos( theta ) * sin( theta );
-        }
-    }
-
-    irradiance = PI * irradiance * ( 1.0f / ( phi_samples * theta_samples ) );
+    float3 irradiance = ground * scatter._1 + scatter._0;
 
     octahedral_sky_irradiance[pixel] = float4( irradiance, 1.0f );
 }
