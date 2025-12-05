@@ -132,6 +132,7 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     };
 
     VkPhysicalDeviceFeatures required_features = {
+        .tessellationShader = VK_TRUE,
         .shaderInt16 = VK_TRUE,
     };
 
@@ -287,7 +288,6 @@ Common initialize( SDL_Window* window )
                 vulkan.global_samplers.linear_mirrored_repeat_sampler, vkDestroySampler );
         }
         vulkan.ray_tracing_properties = rt::query_rt_properties(vulkan.device.physical_device);
-
     } catch ( const Exception& ex ) {
         log::error( "[vk] {}", ex.what() );
         throw Exception( "[Vulkan] Failed to initialize" );

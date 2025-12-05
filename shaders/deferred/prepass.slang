@@ -33,8 +33,6 @@ layout( binding = 4, set = 2 ) Texture2D<float4> octahedral_sky_mips;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
-static const float PI = 3.14159265359;
-
 #include "../glint/glint.hlsl"
 
 float3 map_normals( float3 normal_map, float4 in_tangent, float3 in_normal )
