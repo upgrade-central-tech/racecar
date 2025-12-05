@@ -38,12 +38,17 @@ void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffe
     vkCmdBindPipeline( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.handle );
 
     const Atmosphere& atms = *atms_baker.atmosphere;
-    std::vector<VkDescriptorSet> bind_descs = { atms.uniform_desc_set.descriptor_sets[0],
-        atms.lut_desc_set.descriptor_sets[0], atms.sampler_desc_set.descriptor_sets[0],
-        atms_baker.octahedral_write.descriptor_sets[0] };
+    std::vector<VkDescriptorSet> bind_descs = {
+        atms.uniform_desc_set.descriptor_sets[0],
+        atms.lut_desc_set.descriptor_sets[0],
+        atms.sampler_desc_set.descriptor_sets[0],
+        atms_baker.octahedral_write_desc_set.descriptor_sets[0],
+        atms_baker.volumetrics_desc_set.descriptor_sets[0],
+    };
 
     vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-        compute_pipeline.layout, 0, 4, bind_descs.data(), 0, nullptr );
+        compute_pipeline.layout, 0, static_cast<uint32_t>( bind_descs.size() ), bind_descs.data(),
+        0, nullptr );
 
     uint32_t x_groups = ( static_cast<uint32_t>( octahedral_sky.image_extent.width ) + 7 ) / 8;
     uint32_t y_groups = ( static_cast<uint32_t>( octahedral_sky.image_extent.width ) + 7 ) / 8;
@@ -56,8 +61,8 @@ void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffe
     //     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
 }
 
-void initialize_atmosphere_baker(
-    AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::State& engine )
+void initialize_atmosphere_baker( AtmosphereBaker& atms_baker, volumetric::Volumetric& volumetric,
+    vk::Common& vulkan, engine::State& engine )
 {
     uint32_t octahedral_sky_size = 512;
     uint32_t irradiance_size = 32;
@@ -71,20 +76,35 @@ void initialize_atmosphere_baker(
         { irradiance_size, irradiance_size, 1 }, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D,
         VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT );
 
-    atms_baker.octahedral_write = engine::generate_descriptor_set( vulkan, engine,
+    atms_baker.octahedral_write_desc_set = engine::generate_descriptor_set( vulkan, engine,
         {
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         },
-        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT ),
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+
+    atms_baker.volumetrics_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_SAMPLER,
+        },
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
 
     engine::update_descriptor_set_write_image(
-        vulkan, engine, atms_baker.octahedral_write, atms_baker.octahedral_sky, 0 );
+        vulkan, engine, atms_baker.octahedral_write_desc_set, atms_baker.octahedral_sky, 0 );
 
-    engine::update_descriptor_set_rwimage( vulkan, engine, atms_baker.octahedral_write,
+    engine::update_descriptor_set_rwimage( vulkan, engine, atms_baker.octahedral_write_desc_set,
         atms_baker.octahedral_sky_irradiance, VK_IMAGE_LAYOUT_GENERAL, 1 );
+
+    engine::update_descriptor_set_image(
+        vulkan, engine, atms_baker.volumetrics_desc_set, volumetric.cumulus_map, 0 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, atms_baker.volumetrics_desc_set, volumetric.low_freq_noise, 1 );
+    engine::update_descriptor_set_sampler( vulkan, engine, atms_baker.volumetrics_desc_set,
+        vulkan.global_samplers.linear_mirrored_repeat_sampler, 2 );
 
     // Everything down here should be abstracted away.
 
@@ -95,7 +115,8 @@ void initialize_atmosphere_baker(
             atms.uniform_desc_set.layouts[0],
             atms.lut_desc_set.layouts[0],
             atms.sampler_desc_set.layouts[0],
-            atms_baker.octahedral_write.layouts[0],
+            atms_baker.octahedral_write_desc_set.layouts[0],
+            atms_baker.volumetrics_desc_set.layouts[0],
         },
         vk::create::shader_module( vulkan, BAKE_ATMS_SHADER_PATH ), "cs_bake_atmosphere" );
 
@@ -112,7 +133,8 @@ void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, vk::Common&
             atms.uniform_desc_set.layouts[0],
             atms.lut_desc_set.layouts[0],
             atms.sampler_desc_set.layouts[0],
-            atms_baker.octahedral_write.layouts[0],
+            atms_baker.octahedral_write_desc_set.layouts[0],
+            atms_baker.volumetrics_desc_set.layouts[0],
         },
         vk::create::shader_module( vulkan, BAKE_ATMS_IRR_SHADER_PATH ),
         "cs_bake_atmosphere_irradiance" );
@@ -132,7 +154,8 @@ void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, vk::Common&
             &atms.uniform_desc_set,
             &atms.lut_desc_set,
             &atms.sampler_desc_set,
-            &atms_baker.octahedral_write,
+            &atms_baker.octahedral_write_desc_set,
+            &atms_baker.volumetrics_desc_set,
         },
         glm::ivec3( x_groups, y_groups, 1 ),
     };
@@ -210,10 +233,12 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, vk::Common& vulka
 
     engine::Pipeline cs_octahedral_mip_pipeline = engine::create_compute_pipeline( vulkan,
         {
+            // Repeated code everywhere, is there a way to cache this vector?
             atms.uniform_desc_set.layouts[0],
             atms.lut_desc_set.layouts[0],
             atms.sampler_desc_set.layouts[0],
-            atms_baker.octahedral_write.layouts[0],
+            atms_baker.octahedral_write_desc_set.layouts[0],
+            atms_baker.volumetrics_desc_set.layouts[0],
         },
         vk::create::shader_module( vulkan, BAKE_ATMS_MIPS_SHADER_PATH ),
         "cs_bake_atmosphere_mips" );
@@ -252,6 +277,7 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, vk::Common& vulka
                 &atms.lut_desc_set,
                 &atms.sampler_desc_set,
                 &atms_baker.octahedral_mip_writes[mip],
+                &atms_baker.volumetrics_desc_set,
             },
             glm::ivec3( dims, 1 ) };
 

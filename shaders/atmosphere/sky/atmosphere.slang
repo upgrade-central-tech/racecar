@@ -59,4 +59,6 @@ public func get_sky_color( float3 view_dir, float roughness = 1.f )->float3
     return radiance * uniforms.radiance_exposure;
 }
 
+public func get_sun_direction()->float3 { return normalize( uniforms.sun_direction ); }
+
 
