@@ -14,6 +14,8 @@
 namespace racecar::engine::post {
 
 struct BloomPass {
+    std::array<RWImage, 5> images;
+
     RWImage brightness_threshold;
     RWImage horz_blur;
 

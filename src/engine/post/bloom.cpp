@@ -32,6 +32,21 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                 | VK_IMAGE_USAGE_TRANSFER_SRC_BIT ),
     };
 
+    VkExtent3D current_extent
+        = { engine.swapchain.extent.width / 2, engine.swapchain.extent.height / 2, 1 };
+
+    for ( size_t i = 0; i < pass.images.size(); ++i ) {
+        pass.images[i] = engine::create_rwimage( vulkan, engine, current_extent,
+            VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
+                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
+
+        // Each progressive image has half resolution
+        log::info( "[Pass] [Bloom] Created intermediate image of size {}×{}", current_extent.width,
+            current_extent.height );
+        current_extent = { current_extent.width / 2, current_extent.height / 2, 1 };
+    }
+
     engine::add_pipeline_barrier( task_list,
         { .image_barriers = {
               {
