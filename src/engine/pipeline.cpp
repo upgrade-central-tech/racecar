@@ -2,29 +2,43 @@
 
 #include "../vk/create.hpp"
 #include "state.hpp"
+#include "../log.hpp"
 
 #include <array>
 
 namespace racecar::engine {
 
 constexpr std::string_view VERTEX_ENTRY_NAME = "vs_main";
+constexpr std::string_view TESS_CONTROL_ENTRY_NAME = "ts_control_main";
+constexpr std::string_view TESS_EVAL_ENTRY_NAME = "ts_eval_main";
 constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
 Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
     const std::vector<VkDescriptorSetLayout>& layouts,
     const std::vector<VkFormat> color_attachment_formats, VkSampleCountFlagBits samples, bool blend,
-    bool depth_test, VkShaderModule shader_module )
+    bool depth_test, VkShaderModule shader_module, bool enable_tessellation_shaders )
 {
+    if ( enable_tessellation_shaders ) {
+        log::info("[TESSELLATION] Creating pipeline with tessellation shaders enabled");
+    } else {
+        log::info("[GRAPHICS] Creating pipeline WITHOUT tessellation shaders enabled");
+    }
+
     VkPipelineVertexInputStateCreateInfo vertex_input_info
         = vertex_input_state_create_info.value_or( VkPipelineVertexInputStateCreateInfo {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .topology = enable_tessellation_shaders ? VK_PRIMITIVE_TOPOLOGY_PATCH_LIST : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         .primitiveRestartEnable = VK_FALSE,
     };
+
+    // hardcoding this for now
+    VkPipelineTessellationStateCreateInfo tessellationInfo{};
+    tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+    tessellationInfo.patchControlPoints = 4;  // this should be dynamic, but for now we're only using it for quads
 
     std::array<VkDynamicState, 2> dynamic_states = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -110,28 +124,45 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
         vulkan.destructor_stack.push( vulkan.device, gfx_pipeline.layout, vkDestroyPipelineLayout );
     }
 
-    std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages = {
-        vk::create::pipeline_shader_stage_info(
-            VK_SHADER_STAGE_VERTEX_BIT, shader_module, VERTEX_ENTRY_NAME ),
-        vk::create::pipeline_shader_stage_info(
-            VK_SHADER_STAGE_FRAGMENT_BIT, shader_module, FRAGMENT_ENTRY_NAME ),
-    };
+    std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
+
+    if (!enable_tessellation_shaders) {   
+        shader_stages = {
+            vk::create::pipeline_shader_stage_info(
+                VK_SHADER_STAGE_VERTEX_BIT, shader_module, VERTEX_ENTRY_NAME ),
+            vk::create::pipeline_shader_stage_info(
+                VK_SHADER_STAGE_FRAGMENT_BIT, shader_module, FRAGMENT_ENTRY_NAME ),
+        };
+    }
+    else {
+        shader_stages = {
+            vk::create::pipeline_shader_stage_info(
+                VK_SHADER_STAGE_VERTEX_BIT, shader_module, VERTEX_ENTRY_NAME ),
+            vk::create::pipeline_shader_stage_info(
+                VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, shader_module, TESS_CONTROL_ENTRY_NAME ),
+            vk::create::pipeline_shader_stage_info(
+                VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, shader_module, TESS_EVAL_ENTRY_NAME ),
+            vk::create::pipeline_shader_stage_info(
+                VK_SHADER_STAGE_FRAGMENT_BIT, shader_module, FRAGMENT_ENTRY_NAME ),
+        };
+    }
 
     // Use dynamic rendering instead of manually creating render passes
     VkPipelineRenderingCreateInfo pipeline_rendering_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = uint32_t( color_attachment_formats.size() ),
         .pColorAttachmentFormats = color_attachment_formats.data(),
-        .depthAttachmentFormat = engine.depth_images[0].image_format,
+        .depthAttachmentFormat = depth_test ? engine.depth_images[0].image_format : VK_FORMAT_UNDEFINED,
     };
 
     VkGraphicsPipelineCreateInfo gfx_pipeline_info = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext = &pipeline_rendering_info,
-        .stageCount = 2,
+        .stageCount = enable_tessellation_shaders ? uint32_t(4) : 2,
         .pStages = shader_stages.data(),
         .pVertexInputState = &vertex_input_info,
         .pInputAssemblyState = &input_assembly_info,
+        .pTessellationState = enable_tessellation_shaders ? &tessellationInfo : VK_NULL_HANDLE,
         .pViewportState = &viewport_state_info,
         .pRasterizationState = &rasterization_info,
         .pMultisampleState = &multisample_info,

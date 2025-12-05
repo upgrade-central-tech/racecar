@@ -13,8 +13,10 @@ namespace racecar::gui {
 
 static constexpr std::array TONEMAPPING_OPTIONS = std::to_array<std::string_view>( {
     "None",
-    "SDR output",
-    "HDR output",
+    "GT7 SDR",
+    "GT7 HDR",
+    "Reinhard",
+    "ACES",
 } );
 
 Gui initialize( Context& ctx, const engine::State& engine )
@@ -129,7 +131,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::SeparatorText( "Glint Params" );
                 ImGui::SliderFloat( "Glintiness", &gui.debug.glintiness, 0, 1.0f );
                 ImGui::SliderFloat( "Glint log density", &gui.debug.glint_log_density, 0, 26.0f );
-                ImGui::SliderFloat( "Glint rouhgness", &gui.debug.glint_roughness, 0, 1.0f );
+                ImGui::SliderFloat( "Glint roughness", &gui.debug.glint_roughness, 0, 1.0f );
                 ImGui::SliderFloat( "Glint randomness", &gui.debug.glint_randomness, 0, 10.0f );
 
                 ImGui::EndTabItem();
@@ -213,13 +215,13 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                     ImGui::EndCombo();
                 }
 
-                bool is_not_hdr = gui.tonemapping.mode != Gui::TonemappingData::Mode::HDR;
-                if ( is_not_hdr ) {
+                bool is_not_gt7_hdr = gui.tonemapping.mode != Gui::TonemappingData::Mode::GT7_HDR;
+                if ( is_not_gt7_hdr ) {
                     ImGui::BeginDisabled();
                 }
                 ImGui::SliderFloat(
                     "HDR luminance target", &gui.tonemapping.hdr_target_luminance, 0.f, 10'000.f );
-                if ( is_not_hdr ) {
+                if ( is_not_gt7_hdr ) {
                     ImGui::EndDisabled();
                 }
 

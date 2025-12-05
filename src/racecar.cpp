@@ -50,7 +50,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -87,7 +87,7 @@ void run( bool use_fullscreen )
 
     engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
 
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, camera_buffer, 0 );
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, debug_buffer, 1 );
@@ -277,7 +277,7 @@ void run( bool use_fullscreen )
         depth_ms_pipeline = create_gfx_pipeline( engine, ctx.vulkan,
             engine::get_vertex_input_state_create_info( scene_mesh ),
             { depth_uniform_desc_set.layouts[frame_index] }, {}, VK_SAMPLE_COUNT_4_BIT, false, true,
-            vk::create::shader_module( ctx.vulkan, DEPTH_PREPASS_SHADER_MODULE_PATH ) );
+            vk::create::shader_module( ctx.vulkan, DEPTH_PREPASS_SHADER_MODULE_PATH ), false );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create depth-MS-prepass pipeline: {}", ex.what() );
         throw;
@@ -321,7 +321,7 @@ void run( bool use_fullscreen )
                                                         // weight)
             },
             VK_SAMPLE_COUNT_1_BIT, false, true,
-            vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ) );
+            vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ), false );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create graphics pipeline: {}", ex.what() );
         throw;
@@ -500,7 +500,7 @@ void run( bool use_fullscreen )
 #endif
                 },
                 VK_SAMPLE_COUNT_1_BIT, false, true,
-                vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ) );
+                vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ), false );
         } catch ( const Exception& ex ) {
             log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
             throw;
@@ -857,7 +857,7 @@ void run( bool use_fullscreen )
 #endif
             },
             VK_SAMPLE_COUNT_1_BIT, true, false,
-            vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ) );
+            vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ), false );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create lighting pass graphics pipeline: {}", ex.what() );
         throw;

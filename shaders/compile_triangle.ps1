@@ -1,2 +1,2 @@
 # Assumes compiler is on your PATH (which it should be)
-slangc.exe "$PSScriptRoot\triangle.slang" -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name -entry vertex_main -entry fragment_main -o "$PSScriptRoot\triangle.spv"
+../../slang/bin/slangc.exe  "$PSScriptRoot\triangle.slang" -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name -entry vertex_main -entry fragment_main -o "$PSScriptRoot\triangle.spv"

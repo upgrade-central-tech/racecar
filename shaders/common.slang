@@ -3,6 +3,8 @@
 static const int CAR_ID = 1;
 static const int TERRAIN_ID = 2;
 
+static const float PI = 3.14159265359;
+
 struct CameraBufferData {
     float4x4 mvp;
     float4x4 model;
