@@ -27,10 +27,6 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
 
     float extra_freq = 4 * low_freq_noise + high_freq_noise;
 
-#if CHEAP_THING
-    extra_freq = low_freq_noise;
-#endif
-
     cumulus_map = lerp( cumulus_map, cumulus_map + extra_freq, low_freq_modulation );
     cumulus_map = smoothstep( 0.3, 0.6, cumulus_map ) * 2 - 1;
 
@@ -63,11 +59,6 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     }
 
     uint steps = 16;
-
-#if CHEAP_THING
-    steps >>= 2;
-#endif
-
     float t0 = 1e-3;
     float step_size = t_max / (float)steps;
 
@@ -151,10 +142,6 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float t_max = ( higher_plane_altitude - origin.y ) / local_dir.y;
 
     int steps = 40;
-#if CHEAP_THING
-    steps >>= 4;
-    return float4( 0.0f );
-#endif
 
     float t = 0.0f;
     float step_size = ( t_max - t_min ) / (float)steps;
