@@ -153,8 +153,6 @@ DomainOutput ts_eval_main( PatchConstantOutput pc, const OutputPatch<HullOutput,
         patch[3].uv * ( uv.x ) * ( uv.y ) +
         patch[2].uv * ( 1 - uv.x ) * ( uv.y );
 
-    p.y = perlin_noise3D( p ) * 0.4;
-
     outVal.sv_position = mul( camera_buffer_data.mvp, float4( p, 1.0 ) );
     outVal.position = p;
     outVal.normal = n;
