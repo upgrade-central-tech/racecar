@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -1081,9 +1081,9 @@ void run( bool use_fullscreen )
             glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
 
             jittered_projection[2][0]
-                += offset.x / static_cast<float>( engine.swapchain.extent.width );
+                += offset.x / static_cast<float>( engine.swapchain.extent.width ) * 2.0f;
             jittered_projection[2][1]
-                += offset.y / static_cast<float>( engine.swapchain.extent.height );
+                += offset.y / static_cast<float>( engine.swapchain.extent.height ) * 2.0f;
 
             camera_ub.mvp = jittered_projection * view * model;
             camera_ub.model = model;
