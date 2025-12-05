@@ -20,7 +20,7 @@ struct AOData {
     float4 packed_floats1;
 }
 
-struct DebugData {
+public struct DebugData {
     float4 color;
 
     // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively

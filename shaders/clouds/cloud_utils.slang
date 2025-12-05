@@ -1,4 +1,6 @@
-uint32_t wang32( uint32_t x )
+module cloud_utils;
+
+public uint32_t wang32( uint32_t x )
 {
     x = ( x ^ 61u ) ^ ( x >> 16 );
     x *= 9u;
@@ -9,26 +11,26 @@ uint32_t wang32( uint32_t x )
 }
 
 // Returns in range [0...1)
-float rand_float( float seed )
+public float rand_float( float seed )
 {
     // Mask bottom 24-bits
     return ( wang32( asuint( seed ) ) & 0x00FFFFFFu ) / 16777216.0;
 }
 
-float rand_float2( float2 p )
+public float rand_float2( float2 p )
 {
     uint32_t seed = ( asuint( p.x ) ) * 73856093u ^ ( asuint( p.y ) ) * 19349663u;
     return rand_float( seed );
 }
 
-float rand_float3( float3 p )
+public float rand_float3( float3 p )
 {
     uint32_t seed = ( asuint( p.x ) ) * 73856093u ^ ( asuint( p.y ) ) * 19349663u
         ^ ( asuint( p.z ) ) * 83492791u;
     return rand_float( seed );
 }
 
-float3 rand_float3_float3( float3 p )
+public float3 rand_float3_float3( float3 p )
 {
     uint32_t seed = ( asuint( p.x ) ) * 73856093u ^ ( asuint( p.y ) ) * 19349663u
         ^ ( asuint( p.z ) ) * 83492791u;
@@ -38,7 +40,7 @@ float3 rand_float3_float3( float3 p )
     return normalize( 2.f * float3( x, y, z ) - float3( 1.f ) );
 }
 
-float perlin_noise3D( float3 p )
+public float perlin_noise3D( float3 p )
 {
     float3 grid_cell = floor( p );
     float3 fractional = p - grid_cell;
@@ -75,7 +77,7 @@ float perlin_noise3D( float3 p )
 }
 
 // fractal perlin noise
-float noise_sum3D( float3 p )
+public float noise_sum3D( float3 p )
 {
     p *= 1.; // Cell size
     // amplitude, noise_sum, total_sum
@@ -91,7 +93,7 @@ float noise_sum3D( float3 p )
     return r / s;
 }
 
-float worley3D( float3 p )
+public float worley3D( float3 p )
 {
     float r = 3.0;
     float3 f = floor( p );
@@ -113,7 +115,7 @@ float worley3D( float3 p )
 }
 
 // fractal worley noise
-float noise_sum3D_Worley( float3 p )
+public float noise_sum3D_Worley( float3 p )
 {
     p *= 4.; // Cell size
     // amplitude, noise_sum, total_sum
@@ -128,3 +130,5 @@ float noise_sum3D_Worley( float3 p )
 
     return r / s;
 }
+
+
