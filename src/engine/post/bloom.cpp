@@ -13,12 +13,20 @@ constexpr std::string_view HORZ_BLUR_PATH = "../shaders/post/bloom/horz_blur.spv
 constexpr std::string_view VERT_BLUR_PATH = "../shaders/post/bloom/vert_blur.spv";
 constexpr std::string_view GATHER_BLUR_PATH = "../shaders/post/bloom/gather.spv";
 
+constexpr std::string_view DOWNSAMPLE_SHADER_PATH = "../shaders/post/bloom/downsample.spv";
+
 }
 
 BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_list,
     const RWImage& input, const RWImage& output,
     const UniformBuffer<ub_data::Debug>& uniform_debug_buffer )
 {
+    glm::ivec3 swapchain_dims = {
+        ( engine.swapchain.extent.width + 7 ) / 8,
+        ( engine.swapchain.extent.height + 7 ) / 8,
+        1,
+    };
+
     BloomPass pass = {
         .brightness_threshold = engine::create_rwimage( vulkan, engine,
             { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
@@ -32,19 +40,82 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                 | VK_IMAGE_USAGE_TRANSFER_SRC_BIT ),
     };
 
-    VkExtent3D current_extent
-        = { engine.swapchain.extent.width / 2, engine.swapchain.extent.height / 2, 1 };
+    {
+        VkExtent3D current_extent
+            = { engine.swapchain.extent.width / 2, engine.swapchain.extent.height / 2, 1 };
 
-    for ( size_t i = 0; i < pass.images.size(); ++i ) {
-        pass.images[i] = engine::create_rwimage( vulkan, engine, current_extent,
-            VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
-            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
-                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
+        for ( size_t i = 0; i < BloomPass::NUM_PASSES; ++i ) {
+            pass.images[i] = engine::create_rwimage( vulkan, engine, current_extent,
+                VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+                VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
+                    | VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
 
-        // Each progressive image has half resolution
-        log::info( "[Pass] [Bloom] Created intermediate image of size {}×{}", current_extent.width,
-            current_extent.height );
-        current_extent = { current_extent.width / 2, current_extent.height / 2, 1 };
+            engine::add_pipeline_barrier( task_list,
+                { .image_barriers = { {
+                      .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                      .src_access = VK_ACCESS_2_NONE,
+                      .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                      .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                      .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                      .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                      .image = pass.images[i],
+                      .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                  } } } );
+
+            // Each progressive image has half resolution
+            log::info( "[Pass] [Bloom] Created intermediate image of size {}×{}",
+                current_extent.width, current_extent.height );
+            current_extent = { current_extent.width / 2, current_extent.height / 2, 1 };
+        }
+    }
+
+    {
+        engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set(
+            vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_COMPUTE_BIT );
+        engine::update_descriptor_set_sampler(
+            vulkan, engine, sampler_desc_set, vulkan.global_samplers.linear_sampler, 0 );
+
+        pass.sampler_desc_set
+            = std::make_unique<engine::DescriptorSet>( std::move( sampler_desc_set ) );
+    }
+
+    VkShaderModule downsample_shader = vk::create::shader_module( vulkan, DOWNSAMPLE_SHADER_PATH );
+
+    for ( size_t i = 0; i < BloomPass::NUM_PASSES; ++i ) {
+        if ( i == 0 ) {
+            // We'll be reading from the full resolution input texture
+            engine::transition_cs_read_to_write( task_list, pass.images[0] );
+        } else {
+            engine::transition_cs_write_to_read( task_list, pass.images[i - 1] );
+            engine::transition_cs_read_to_write( task_list, pass.images[i] );
+        }
+
+        const RWImage& input_image = i == 0 ? input : pass.images[i - 1];
+        VkExtent3D output_extent = pass.images[i].images[0].image_extent;
+
+        engine::DescriptorSet downsample_desc_set = engine::generate_descriptor_set( vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            VK_SHADER_STAGE_COMPUTE_BIT );
+        engine::update_descriptor_set_rwimage( vulkan, engine, downsample_desc_set, input_image,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+        engine::update_descriptor_set_rwimage(
+            vulkan, engine, downsample_desc_set, pass.images[i], VK_IMAGE_LAYOUT_GENERAL, 1 );
+
+        engine::Pipeline downsample_pipeline = engine::create_compute_pipeline( vulkan,
+            { downsample_desc_set.layouts[0], pass.sampler_desc_set->layouts[0] },
+            downsample_shader, "downsample" );
+
+        pass.downsample_desc_sets[i]
+            = std::make_unique<engine::DescriptorSet>( std::move( downsample_desc_set ) );
+
+        engine::add_cs_task( task_list,
+            {
+                .pipeline = downsample_pipeline,
+                .descriptor_sets
+                = { pass.downsample_desc_sets[i].get(), pass.sampler_desc_set.get() },
+                .group_size
+                = { ( output_extent.width + 7 ) / 8, ( output_extent.height + 7 ) / 8, 1 },
+            } );
     }
 
     engine::add_pipeline_barrier( task_list,
@@ -82,22 +153,6 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
     }
 
     {
-        engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set(
-            vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_COMPUTE_BIT );
-        engine::update_descriptor_set_sampler(
-            vulkan, engine, sampler_desc_set, vulkan.global_samplers.nearest_sampler, 0 );
-
-        pass.sampler_desc_set
-            = std::make_unique<engine::DescriptorSet>( std::move( sampler_desc_set ) );
-    }
-
-    glm::ivec3 dims = {
-        ( engine.swapchain.extent.width + 7 ) / 8,
-        ( engine.swapchain.extent.height + 7 ) / 8,
-        1,
-    };
-
-    {
         engine::DescriptorSet brightness_threshold_desc_set = engine::generate_descriptor_set(
             vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT );
@@ -118,7 +173,7 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                 .pipeline = brightness_threshold_pipeline,
                 .descriptor_sets
                 = { pass.brightness_threshold_desc_set.get(), pass.uniform_desc_set.get() },
-                .group_size = dims,
+                .group_size = swapchain_dims,
             } );
     }
 
@@ -154,7 +209,7 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                     .pipeline = horz_blur_pipeline,
                     .descriptor_sets = { pass.horz_blur_desc_sets[i].get(),
                         pass.uniform_desc_set.get(), pass.sampler_desc_set.get() },
-                    .group_size = dims,
+                    .group_size = swapchain_dims,
                 } );
         }
 
@@ -186,7 +241,7 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                     .pipeline = vert_blur_pipeline,
                     .descriptor_sets = { pass.vert_blur_desc_sets[i].get(),
                         pass.uniform_desc_set.get(), pass.sampler_desc_set.get() },
-                    .group_size = dims,
+                    .group_size = swapchain_dims,
                 } );
         }
     }
@@ -217,7 +272,7 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             {
                 .pipeline = gather_pipeline,
                 .descriptor_sets = { pass.gather_desc_set.get(), pass.uniform_desc_set.get() },
-                .group_size = dims,
+                .group_size = swapchain_dims,
             } );
     }
 

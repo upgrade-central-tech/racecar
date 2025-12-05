@@ -20,7 +20,8 @@ void run_pipeline_barrier(
         std::back_inserter( vk_image_barriers ),
         [=]( ImageBarrier b ) { return b.get_vk( idx ); } );
 
-    VkDependencyInfo info { .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+    VkDependencyInfo info = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
         .pNext = VK_NULL_HANDLE,
         .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
         .memoryBarrierCount = 0,
@@ -28,7 +29,8 @@ void run_pipeline_barrier(
         .bufferMemoryBarrierCount = uint32_t( vk_buffer_barriers.size() ),
         .pBufferMemoryBarriers = vk_buffer_barriers.data(),
         .imageMemoryBarrierCount = uint32_t( vk_image_barriers.size() ),
-        .pImageMemoryBarriers = vk_image_barriers.data() };
+        .pImageMemoryBarriers = vk_image_barriers.data(),
+    };
 
     vkCmdPipelineBarrier2( cmd_buf, &info );
 }
