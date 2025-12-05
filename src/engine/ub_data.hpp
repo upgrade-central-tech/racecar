@@ -14,6 +14,7 @@ struct Camera {
     glm::mat4 view_mat = {};
     glm::vec4 camera_pos = {};
     glm::vec4 camera_constants = {};
+    glm::vec4 camera_constants1 = {};
 };
 
 struct Debug {

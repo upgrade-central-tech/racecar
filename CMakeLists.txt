@@ -47,6 +47,7 @@ add_executable(racecar
     ${POST_DIR}/bloom.cpp
     ${POST_DIR}/ao.cpp
     ${POST_DIR}/tonemapping.cpp
+    ${POST_DIR}/anti_aliasing.cpp
 
     ${GEOMETRY_DIR}/scene_mesh.cpp
     ${GEOMETRY_DIR}/procedural.cpp

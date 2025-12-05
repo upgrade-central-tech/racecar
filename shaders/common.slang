@@ -13,6 +13,9 @@ struct CameraBufferData {
     float4 camera_pos;
     // Pack: near plane, far plane, aspect ratio, fov_Y
     float4 camera_constants;
+
+    // Pack: modded frame index [0, 15], null, null, null
+    float4 camera_constants1;
 };
 
 struct AOData {
