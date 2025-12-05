@@ -19,6 +19,8 @@ static constexpr std::array TONEMAPPING_OPTIONS = std::to_array<std::string_view
     "ACES",
 } );
 
+static constexpr std::array AA_OPTIONS = std::to_array<std::string_view>( { "None", "TAA" } );
+
 Gui initialize( Context& ctx, const engine::State& engine )
 {
     Gui gui;
@@ -194,10 +196,30 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::SeparatorText( "Bloom" );
                 ImGui::Checkbox( "Enable", &gui.debug.enable_bloom );
 
+                ImGui::SeparatorText( "Anti-Aliasing" );
+                size_t aa_selected_index = static_cast<size_t>( gui.aa.mode );
+                std::string_view aa_preview_value = AA_OPTIONS[aa_selected_index];
+                if ( ImGui::BeginCombo( "AA Mode", aa_preview_value.data() ) ) {
+                    for ( size_t i = 0; i < AA_OPTIONS.size(); ++i ) {
+                        bool is_selected = ( aa_selected_index == i );
+
+                        if ( ImGui::Selectable( AA_OPTIONS[i].data(), is_selected ) ) {
+                            aa_selected_index = i;
+                        }
+
+                        if ( is_selected ) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+
+                    gui.aa.mode = static_cast<Gui::AAData::Mode>( aa_selected_index );
+                    ImGui::EndCombo();
+                }
+
                 ImGui::SeparatorText( "Tonemapping" );
                 size_t selected_index = static_cast<size_t>( gui.tonemapping.mode );
                 std::string_view preview_value = TONEMAPPING_OPTIONS[selected_index];
-                if ( ImGui::BeginCombo( "Mode", preview_value.data() ) ) {
+                if ( ImGui::BeginCombo( "Tonemapping Mode", preview_value.data() ) ) {
                     for ( size_t i = 0; i < TONEMAPPING_OPTIONS.size(); ++i ) {
                         bool is_selected = ( selected_index == i );
 

@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -367,6 +367,11 @@ void run( bool use_fullscreen )
         VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
     engine::RWImage GBuffer_Depth = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
+
+    engine::RWImage GBuffer_Velocity = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
@@ -972,8 +977,8 @@ void run( bool use_fullscreen )
     // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
     engine::transition_cs_read_to_write( task_list, screen_color );
     engine::transition_cs_write_to_read( task_list, screen_buffer );
-    engine::post::AAPass aa_pass = engine::post::add_aa(
-        ctx.vulkan, engine, screen_buffer, screen_color, screen_history, task_list );
+    engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_buffer,
+        GBuffer_Depth, screen_color, screen_history, task_list, camera_buffer );
 
     // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
     // screen.
@@ -1078,17 +1083,22 @@ void run( bool use_fullscreen )
             glm::mat4 model = glm::identity<glm::mat4>();
 
             glm::mat4 jittered_projection = projection;
-            glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
 
-            jittered_projection[2][0]
-                += offset.x / static_cast<float>( engine.swapchain.extent.width ) * 2.0f;
-            jittered_projection[2][1]
-                += offset.y / static_cast<float>( engine.swapchain.extent.height ) * 2.0f;
+            if ( gui.aa.mode == gui::Gui::AAData::Mode::TAA ) {
+                glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
 
+                jittered_projection[2][0]
+                    += offset.x / static_cast<float>( engine.swapchain.extent.width );
+                jittered_projection[2][1]
+                    += offset.y / static_cast<float>( engine.swapchain.extent.height );
+            }
+
+            camera_ub.prev_mvp = camera_ub.mvp;
             camera_ub.mvp = jittered_projection * view * model;
             camera_ub.model = model;
             camera_ub.view_mat = view;
             camera_ub.inv_model = glm::inverse( model );
+            camera_ub.inv_vp = glm::inverse( jittered_projection * view );
             camera_ub.camera_pos = glm::vec4( camera_position, 1.0f );
             camera_ub.camera_constants = glm::vec4(
                 camera.near_plane, camera.far_plane, camera.aspect_ratio, camera.fov_y );
@@ -1121,6 +1131,14 @@ void run( bool use_fullscreen )
 
             tm_pass.buffer.set_data( tm_ub );
             tm_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
+        // AA update
+        {
+            ub_data::AA aa_ub = aa_pass.buffer.get_data();
+            aa_ub.mode = static_cast<int>( gui.aa.mode );
+            aa_pass.buffer.set_data( aa_ub );
+            aa_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
 #if ENABLE_VOLUMETRICS
