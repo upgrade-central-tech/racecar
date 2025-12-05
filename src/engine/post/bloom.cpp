@@ -66,6 +66,16 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             = std::make_unique<engine::DescriptorSet>( std::move( uniform_desc_set ) );
     }
 
+    {
+        engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set(
+            vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_COMPUTE_BIT );
+        engine::update_descriptor_set_sampler(
+            vulkan, engine, sampler_desc_set, vulkan.global_samplers.nearest_sampler, 0 );
+
+        pass.sampler_desc_set
+            = std::make_unique<engine::DescriptorSet>( std::move( sampler_desc_set ) );
+    }
+
     glm::ivec3 dims = {
         ( engine.swapchain.extent.width + 7 ) / 8,
         ( engine.swapchain.extent.height + 7 ) / 8,
@@ -114,7 +124,11 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                 vulkan, engine, horz_blur_desc_set, pass.horz_blur, VK_IMAGE_LAYOUT_GENERAL, 1 );
 
             engine::Pipeline horz_blur_pipeline = engine::create_compute_pipeline( vulkan,
-                { horz_blur_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
+                {
+                    horz_blur_desc_set.layouts[0],
+                    pass.uniform_desc_set->layouts[0],
+                    pass.sampler_desc_set->layouts[0],
+                },
                 horz_blur_shader, "cs_main" );
 
             pass.horz_blur_desc_sets[i]
@@ -123,8 +137,8 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             engine::add_cs_task( task_list,
                 {
                     .pipeline = horz_blur_pipeline,
-                    .descriptor_sets
-                    = { pass.horz_blur_desc_sets[i].get(), pass.uniform_desc_set.get() },
+                    .descriptor_sets = { pass.horz_blur_desc_sets[i].get(),
+                        pass.uniform_desc_set.get(), pass.sampler_desc_set.get() },
                     .group_size = dims,
                 } );
         }
@@ -142,7 +156,11 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                 pass.brightness_threshold, VK_IMAGE_LAYOUT_GENERAL, 1 );
 
             engine::Pipeline vert_blur_pipeline = engine::create_compute_pipeline( vulkan,
-                { vert_blur_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
+                {
+                    vert_blur_desc_set.layouts[0],
+                    pass.uniform_desc_set->layouts[0],
+                    pass.sampler_desc_set->layouts[0],
+                },
                 vert_blur_shader, "cs_main" );
 
             pass.vert_blur_desc_sets[i]
@@ -151,8 +169,8 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             engine::add_cs_task( task_list,
                 {
                     .pipeline = vert_blur_pipeline,
-                    .descriptor_sets
-                    = { pass.vert_blur_desc_sets[i].get(), pass.uniform_desc_set.get() },
+                    .descriptor_sets = { pass.vert_blur_desc_sets[i].get(),
+                        pass.uniform_desc_set.get(), pass.sampler_desc_set.get() },
                     .group_size = dims,
                 } );
         }
