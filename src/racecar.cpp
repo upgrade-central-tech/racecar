@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -390,8 +390,7 @@ void run( bool use_fullscreen )
     engine::RWImage screen_history = engine::create_rwimage( ctx.vulkan, engine,
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
-            | VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT );
 #endif
 
     // deferred transition tasks
@@ -989,34 +988,6 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                     .image = screen_color,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                },
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                    .dst_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    .image = screen_history,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                },
-            } } );
-
-    // Write to the screen history
-    engine::add_blit_task( task_list, { screen_color, screen_history } );
-
-    engine::add_pipeline_barrier( task_list,
-        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
-            .image_barriers = {
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                    .src_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    .image = screen_history,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
             } } );
