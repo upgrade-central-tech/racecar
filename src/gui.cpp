@@ -131,7 +131,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::SeparatorText( "Glint Params" );
                 ImGui::SliderFloat( "Glintiness", &gui.debug.glintiness, 0, 1.0f );
                 ImGui::SliderFloat( "Glint log density", &gui.debug.glint_log_density, 0, 26.0f );
-                ImGui::SliderFloat( "Glint rouhgness", &gui.debug.glint_roughness, 0, 1.0f );
+                ImGui::SliderFloat( "Glint roughness", &gui.debug.glint_roughness, 0, 1.0f );
                 ImGui::SliderFloat( "Glint randomness", &gui.debug.glint_randomness, 0, 10.0f );
 
                 ImGui::EndTabItem();
