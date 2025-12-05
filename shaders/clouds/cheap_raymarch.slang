@@ -1,4 +1,4 @@
-module cloud_raymarch;
+module cheap_raymarch;
 
 // import cloud_bindings;
 import cloud_utils;
@@ -20,18 +20,9 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
         = ( smoothstep( 3000, 3100, march_pos.y ) + smoothstep( 3500, 3100, march_pos.y ) ) - 1;
 
     float low_freq_noise = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 4 );
-
     float low_freq_modulation = 1.f - height_modulation;
 
-    float high_freq_noise = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 12 );
-
-    float extra_freq = 4 * low_freq_noise + high_freq_noise;
-
-#if CHEAP_THING
-    extra_freq = low_freq_noise;
-#endif
-
-    cumulus_map = lerp( cumulus_map, cumulus_map + extra_freq, low_freq_modulation );
+    cumulus_map = lerp( cumulus_map, cumulus_map + low_freq_noise, low_freq_modulation );
     cumulus_map = smoothstep( 0.3, 0.6, cumulus_map ) * 2 - 1;
 
     return 0.5f * ( max( cumulus_map * height_modulation, 0 ) );
@@ -62,11 +53,7 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         t_max = ( lower_plane_altitude - march_pos.y ) / local_dir.y;
     }
 
-    uint steps = 16;
-
-#if CHEAP_THING
-    steps >>= 2;
-#endif
+    uint steps = 16 >> 3;
 
     float t0 = 1e-3;
     float step_size = t_max / (float)steps;
@@ -150,11 +137,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float t_min = ( lower_plane_altitude - origin.y ) / local_dir.y;
     float t_max = ( higher_plane_altitude - origin.y ) / local_dir.y;
 
-    int steps = 40;
-#if CHEAP_THING
-    steps >>= 4;
-    return float4( 0.0f );
-#endif
+    int steps = 40 >> 2;
 
     float t = 0.0f;
     float step_size = ( t_max - t_min ) / (float)steps;

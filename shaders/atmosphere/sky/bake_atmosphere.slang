@@ -10,7 +10,7 @@ struct OctahedralData {
 import atmosphere;
 import bindings;
 import constants;
-import "../../clouds/cloud_raymarch.slang";
+import "../../clouds/cheap_raymarch.slang";
 
 #include "../atmosphere/geo/atms_geo.slang"
 
@@ -109,7 +109,7 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
     float3 origin = float3( 0.0f, 10.0f, 0.0f );
 
     float4 clouds = raymarch( cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler,
-        view_direction, origin, get_sun_direction(), true );
+        view_direction, origin, get_sun_direction() );
 
     sky_color = lerp( sky_color, clouds.rgb, clouds.a );
 

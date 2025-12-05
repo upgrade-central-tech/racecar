@@ -41,7 +41,7 @@ FragmentOutput fs_main( VertexOutput in )
     float3 view = normalize( world_pos - camera_pos );
 
     float4 output_color = raymarch( cumulus_map_LUT, low_freq_noise_LUT,
-        linear_mirrored_repeat_sampler, view, world_pos, clouds_buffer_data.sun_direction, false );
+        linear_mirrored_repeat_sampler, view, world_pos, clouds_buffer_data.sun_direction );
 
     FragmentOutput output;
 
