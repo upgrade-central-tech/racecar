@@ -65,27 +65,38 @@ VertexOutput vs_main( VertexInput input )
     return output;
 }
 
+float edge_tess_factor( float3 v0, float3 v1 )
+{
+    float3 mid = 0.5 * ( v0 + v1 );
+    float dist = distance( mid, camera_buffer_data.camera_pos.xyz );
+    float f = lerp( 16.0, 2.0, saturate( dist / 60.0 ) );
+    return f;
+}
+
 [patchconstantfunc( "constants" )]
 PatchConstantOutput constants( InputPatch<VertexOutput, 4> patch )
 {
     PatchConstantOutput pc;
 
-    float3 patch_center = ( patch[0].position + patch[1].position + patch[2].position + patch[3].position ) * 0.25;
-    float dist = distance( patch_center, camera_buffer_data.camera_pos.rgb );
+    pc.edges[0] = 1.0;
+    pc.edges[1] = 1.0;
+    pc.edges[2] = 1.0;
+    pc.edges[3] = 1.0;
+    pc.inside[0] = 1.0;
+    pc.inside[1] = 1.0;
 
-    float tess_factor = lerp( 16.0, 2.0, dist / 50.0 );
-    tess_factor = clamp( tess_factor, 2.0, 16.0 );
+    pc.edges[0] = edge_tess_factor( patch[0].position, patch[2].position ); // top
+    pc.edges[1] = edge_tess_factor( patch[0].position, patch[1].position ); // top
+    pc.edges[2] = edge_tess_factor( patch[1].position, patch[3].position ); // top
+    pc.edges[3] = edge_tess_factor( patch[3].position, patch[2].position ); // top
 
-    pc.edges[0] = tess_factor;
-    pc.edges[1] = tess_factor;
-    pc.edges[2] = tess_factor;
-    pc.edges[3] = tess_factor;
-    pc.inside[0] = tess_factor;
-    pc.inside[1] = tess_factor;
+    float3 center = 0.25 * ( patch[0].position + patch[1].position + patch[2].position + patch[3].position );
+
+    pc.inside[0] = edge_tess_factor( center, center );
+    pc.inside[1] = edge_tess_factor( center, center );
 
     return pc;
 }
-
 
 [shader( "hull" )]
 [domain( "quad" )]
@@ -141,6 +152,8 @@ DomainOutput ts_eval_main( PatchConstantOutput pc, const OutputPatch<HullOutput,
         patch[1].uv * ( uv.x ) * ( 1 - uv.y ) +
         patch[3].uv * ( uv.x ) * ( uv.y ) +
         patch[2].uv * ( 1 - uv.x ) * ( uv.y );
+
+    p.y = perlin_noise3D( p ) * 0.4;
 
     outVal.sv_position = mul( camera_buffer_data.mvp, float4( p, 1.0 ) );
     outVal.position = p;
