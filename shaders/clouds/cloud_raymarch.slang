@@ -1,9 +1,10 @@
 module cloud_raymarch;
 
-import cloud_bindings;
+// import cloud_bindings;
 import cloud_utils;
 
-public float sample_density( float3 march_pos )
+public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
+    SamplerState linear_mirrored_repeat_sampler, float3 march_pos, bool is_cheap )
 {
     float3 p = march_pos * 0.00005f;
 
@@ -33,9 +34,11 @@ public float sample_density( float3 march_pos )
 
 static const float absorption_coeff = 0.002f;
 
-public float estimate_transmittance( float3 march_pos )
+public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
+    Texture3D<float> low_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
+    float3 march_pos, float3 sun_direction )
 {
-    float3 local_dir = normalize( clouds_buffer_data.sun_direction );
+    float3 local_dir = normalize( sun_direction );
 
     if ( local_dir.y < 0.1 && local_dir.y > -0.1 ) {
         return 0.f;
@@ -62,7 +65,8 @@ public float estimate_transmittance( float3 march_pos )
         float t = t0 + ( i + 0.5 ) * step_size; // midpoint sample
         float3 pos = march_pos + local_dir * t;
         // if outside the AABB you can break early, but caller will pass proper t_max
-        float d = sample_density( pos );
+        float d = sample_density(
+            cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler, pos, false );
         // Beer–Lambert per-step
         T *= exp( -SIGMA_T * d * step_size );
 
@@ -86,6 +90,7 @@ static const float AMBIENT_INTENSITY = 0.2; // ambient skylight
 static const float ALBEDO = 0.9; // single-scattering albedo
 static const float SIGMA_T = 4.0; // extinction coefficient (tune for opacity)
 static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forward scattering
+static const float PI = 3.141592654f;
 
 public float hash11( float n ) { return frac( sin( n ) * 43758.5453 ); }
 
@@ -109,10 +114,9 @@ public float offset_sphere_intersection(
     return t;
 }
 
-public float4 raymarch( float3 view, float3 origin )
+public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
+    SamplerState linear_mirrored_repeat_sampler, float3 view, float3 origin, float3 sun_direction )
 {
-    float PI = 3.141592654f;
-
     float theta = acos( saturate( view.y ) );
     // theta = clamp( theta, 0.0, radians( 80 ) );
 
@@ -157,12 +161,14 @@ public float4 raymarch( float3 view, float3 origin )
             break;
         }
         float3 marched_pos = local_origin + local_dir * t;
-        float density = sample_density( marched_pos );
+        float density = sample_density( cumulus_map_LUT, low_freq_noise_LUT,
+            linear_mirrored_repeat_sampler, marched_pos, false );
         if ( density > 0.01 ) {
 
-            float transmittance = estimate_transmittance( marched_pos );
+            float transmittance = estimate_transmittance( cumulus_map_LUT, low_freq_noise_LUT,
+                linear_mirrored_repeat_sampler, marched_pos, sun_direction );
 
-            float cosTheta = dot( local_dir, clouds_buffer_data.sun_direction );
+            float cosTheta = dot( local_dir, sun_direction );
             float phase
                 = 0.95 * PhaseHG( cosTheta, 0.75 ) + 0.05 * PhaseHG( cosTheta, -0.2 ); // TTHG
 
@@ -185,7 +191,7 @@ public float4 raymarch( float3 view, float3 origin )
     color = pow( saturate( color ), float3( 1.0 / 2.2 ) ); // gamma
 
     // make clouds opaque at the sun.
-    if ( dot( view, clouds_buffer_data.sun_direction ) > 0.9985 ) {
+    if ( dot( view, sun_direction ) > 0.9985 ) {
         return float4( color, 1.0 );
     }
 

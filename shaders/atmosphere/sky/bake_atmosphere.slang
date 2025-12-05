@@ -10,6 +10,7 @@ struct OctahedralData {
 import atmosphere;
 import bindings;
 import constants;
+import "../../clouds/cloud_raymarch.slang";
 
 #include "../atmosphere/geo/atms_geo.slang"
 
@@ -19,6 +20,10 @@ layout( binding = 0, set = 3 ) RWTexture2D<float4> octahedral_sky;
 layout( binding = 1, set = 3 ) RWTexture2D<float4> octahedral_sky_irradiance;
 layout( binding = 2, set = 3 ) RWTexture2D<float4> octahedral_sky_mip;
 layout( binding = 3, set = 3 ) ConstantBuffer<OctahedralData> octahedral_data;
+
+layout( binding = 0, set = 4 ) Texture2D<float> cumulus_map_LUT;
+layout( binding = 1, set = 4 ) Texture3D<float> low_freq_noise_LUT;
+layout( binding = 2, set = 4 ) SamplerState linear_mirrored_repeat_sampler;
 
 float3 oct_decode( float2 f )
 {
@@ -100,6 +105,13 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
 
     // Insert the work to actually derive a 3D global direction from pixel and face
     float3 sky_color = get_sky_color( view_direction, 0.0001f );
+
+    float3 origin = float3( 0.0f, 10.0f, 0.0f );
+
+    float4 clouds = raymarch( cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler,
+        view_direction, origin, get_sun_direction() );
+
+    sky_color = lerp( sky_color, clouds.rgb, clouds.a );
 
     octahedral_sky[pixel] = float4( sky_color, 1.0f );
 }

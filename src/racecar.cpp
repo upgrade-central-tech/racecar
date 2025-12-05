@@ -462,9 +462,14 @@ void run( bool use_fullscreen )
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
             } } );
 
-    // ATMOSPHERE STUFF
+    // ATMOSPHERE/SKY DRAW STUFF
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
     atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
+
+#if ENABLE_VOLUMETRICS
+    // Volumetrics stuff
+    volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
+#endif
 
     {
         geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
@@ -518,7 +523,7 @@ void run( bool use_fullscreen )
 
         engine::add_gfx_task( task_list, atmosphere_gfx_task );
 
-        atmosphere::initialize_atmosphere_baker( atms_baker, ctx.vulkan, engine );
+        atmosphere::initialize_atmosphere_baker( atms_baker, volumetric, ctx.vulkan, engine );
 
         // funny business
         atmosphere::compute_octahedral_sky_irradiance( atms_baker, ctx.vulkan, engine, task_list );
@@ -533,14 +538,12 @@ void run( bool use_fullscreen )
             atms_baker.octahedral_sky_irradiance, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 3 );
         engine::update_descriptor_set_rwimage( ctx.vulkan, engine, lut_sets,
             atms_baker.octahedral_sky_test, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 4 );
-    }
-    // END ATMOSPHERE STUFF
 
 #if ENABLE_VOLUMETRICS
-    // Volumetrics stuff
-    volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
-    volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list, screen_color );
+        volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list, screen_color );
 #endif
+    }
+    // END ATMOSPHERE/SKY DRAW STUFF
 
     // GBUFFER PRE-PASS
     engine::GfxTask prepass_gfx_task = {
