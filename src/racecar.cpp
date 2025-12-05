@@ -53,6 +53,8 @@ namespace {
 constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
+constexpr std::string_view REFLECTION_PASS_SHADER_MODULE_PATH
+    = "../shaders/reflections/reflections.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
 
 constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
@@ -464,6 +466,20 @@ void run( bool use_fullscreen )
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
             } } );
 
+    engine::DescriptorSet gbuffer_descriptor_set
+        = engine::generate_descriptor_set( ctx.vulkan, engine,
+            {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            },
+            VK_SHADER_STAGE_FRAGMENT_BIT );
+
     // ATMOSPHERE/SKY DRAW STUFF
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
     atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
@@ -718,11 +734,16 @@ void run( bool use_fullscreen )
 
     engine::add_gfx_task( task_list, depth_ms_gfx_task );
 
-    // Lighting pass
+    // reflection data pass
+    engine::RWImage reflection_data = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D,
+        VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
+
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
-            .image_barriers
-            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .image_barriers = {
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                     .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
@@ -738,7 +759,55 @@ void run( bool use_fullscreen )
                     .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
                     .image = GBuffer_Normal,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = reflection_data,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+            } } );
+
+    engine::GfxTask reflection_gfx_task { .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
+        .color_attachments = { reflection_data },
+        .extent = engine.swapchain.extent };
+
+    engine::Pipeline reflection_pipeline = engine::create_gfx_pipeline( engine, ctx.vulkan,
+        engine::get_vertex_input_state_create_info( quad_mesh ),
+        { uniform_desc_set.layouts[0], sampler_desc_set.layouts[0],
+            gbuffer_descriptor_set.layouts[0], as_desc_set.layouts[0] },
+        { reflection_data.images[0].image_format }, VK_SAMPLE_COUNT_1_BIT, true, false,
+        vk::create::shader_module( ctx.vulkan, REFLECTION_PASS_SHADER_MODULE_PATH ), false );
+
+    engine::DrawResourceDescriptor reflection_prepass_desc {
+        .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
+        .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
+        .vertex_buffer_offsets = { 0 },
+        .index_count = uint32_t( quad_mesh.indices.size() ),
+    };
+
+    engine::DrawTask reflection_prepass_task { .draw_resource_descriptor = reflection_prepass_desc,
+        .descriptor_sets
+        = { &uniform_desc_set, &sampler_desc_set, &gbuffer_descriptor_set, &as_desc_set },
+        .pipeline = reflection_pipeline };
+
+    reflection_gfx_task.draw_tasks.push_back( reflection_prepass_task );
+
+    engine::add_gfx_task( task_list, reflection_gfx_task );
+
+    engine::DescriptorSet reflection_buffer_desc_set
+        = engine::generate_descriptor_set( ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, reflection_buffer_desc_set,
+        reflection_data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    // end reflection data pass
+
+    // Lighting pass
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers
+            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                     .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
@@ -785,6 +854,14 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
                     .image = GBuffer_DepthMS,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                    .image = reflection_data,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH } } } );
 
 #if ENABLE_TERRAIN
@@ -828,20 +905,6 @@ void run( bool use_fullscreen )
     lighting_pass_gfx_task.render_target_is_swapchain = false;
     lighting_pass_gfx_task.color_attachments = { screen_color };
 #endif
-
-    engine::DescriptorSet gbuffer_descriptor_set
-        = engine::generate_descriptor_set( ctx.vulkan, engine,
-            {
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            },
-            VK_SHADER_STAGE_FRAGMENT_BIT );
 
     size_t frame_index = engine.get_frame_index();
     engine::Pipeline lighting_pass_gfx_pipeline;
