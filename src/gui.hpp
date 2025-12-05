@@ -71,11 +71,13 @@ struct Gui {
 
     struct TonemappingData {
         enum class Mode : int {
-            NONE,
-            SDR,
-            HDR,
+            NONE = 0,
+            GT7_SDR,
+            GT7_HDR,
+            REINHARD,
+            ACES,
         } mode
-            = Mode::NONE;
+            = Mode::GT7_HDR;
 
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};

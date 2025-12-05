@@ -132,7 +132,7 @@ func physical_value_to_framebuffer_value( physical: float )->float
     return physical / REFERENCE_LUMINANCE;
 }
 
-func chroma_curve( x: float, a: float, b: float )->float { return 1.f - smoothstep( x, a, b ); }
+func chroma_curve( x: float, a: float, b: float )->float { return 1.f - smoothstep( a, b, x ); }
 
 struct GTTonemappingCurveV2 {
     float peak_intensity_;
@@ -167,7 +167,7 @@ struct GTTonemappingCurveV2 {
         }
 
         if ( x < linear_section_ * peak_intensity_ ) {
-            let weight_linear = smoothstep( x, 0.f, midpoint_ );
+            let weight_linear = smoothstep( 0.f, midpoint_, x );
             let weight_toe = 1.f - weight_linear;
             let toe_mapped = midpoint_ * pow( x / midpoint_, toe_strength_ );
 
@@ -216,6 +216,21 @@ func apply_tonemapping( rgb: float3, in GTTonemappingCurveV2 curve,
     return output;
 }
 
+// Stolen from: https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+static const float3x3 ACESInputMat = { { 0.59719, 0.35458, 0.04823 }, { 0.07600, 0.90834, 0.01566 },
+    { 0.02840, 0.13383, 0.83777 } };
+
+// ODT_SAT => XYZ => D60_2_D65 => sRGB
+static const float3x3 ACESOutputMat = { { 1.60475, -0.53108, -0.07367 },
+    { -0.10208, 1.10813, -0.00605 }, { -0.00327, -0.07276, 1.07602 } };
+
+float3 RRTAndODTFit( float3 v )
+{
+    float3 a = v * ( v + 0.0245786f ) - 0.000090537f;
+    float3 b = v * ( 0.983729f * v + 0.4329510f ) + 0.238081f;
+    return a / b;
+}
+
 [shader( "compute" )]
 [numthreads( 8, 8, 1 )]
 func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
@@ -225,6 +240,23 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
 
     if ( settings.mode == 0 ) {
         output[pixel] = float4( scene, 1.f );
+        return;
+    }
+
+    // Reinhard
+    if ( settings.mode == 3 ) {
+        let result = scene / ( scene + 1.f );
+        output[pixel] = float4( result, 1.f );
+        return;
+    }
+
+    // ACES
+    if ( settings.mode == 4 ) {
+        float3 aces_color = mul( ACESInputMat, scene );
+        aces_color = RRTAndODTFit( aces_color );
+        aces_color = mul( ACESOutputMat, aces_color );
+        aces_color = saturate( aces_color );
+        output[pixel] = float4( aces_color, 1.f );
         return;
     }
 
