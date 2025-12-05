@@ -1,5 +1,7 @@
 #define USE_SH_IRRADIANCE 1
 
+static const float PI = 3.14159265359;
+
 struct VertexInput {
     float3 position : POSITION;
     float3 normal : NORMAL;
