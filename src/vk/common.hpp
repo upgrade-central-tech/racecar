@@ -46,9 +46,9 @@ constexpr int TERRAIN_ID = 2;
 }
 
 struct GlobalSamplers {
-    VkSampler linear_sampler;
-    VkSampler nearest_sampler;
-    VkSampler linear_mirrored_repeat_sampler;
+    VkSampler linear_sampler = VK_NULL_HANDLE;
+    VkSampler nearest_sampler = VK_NULL_HANDLE;
+    VkSampler linear_mirrored_repeat_sampler = VK_NULL_HANDLE;
 };
 
 /// Stores common Vulkan-related objects.

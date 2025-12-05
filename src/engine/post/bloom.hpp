@@ -23,6 +23,7 @@ struct BloomPass {
     std::unique_ptr<engine::DescriptorSet> gather_desc_set;
 
     std::unique_ptr<engine::DescriptorSet> uniform_desc_set;
+    // std::unique_ptr<engine::DescriptorSet> sampler_desc_set;
 };
 
 /// Assumes that `input` is already in `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL` and `output` is

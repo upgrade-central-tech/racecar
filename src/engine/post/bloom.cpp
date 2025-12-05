@@ -66,9 +66,10 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             = std::make_unique<engine::DescriptorSet>( std::move( uniform_desc_set ) );
     }
 
-    glm::ivec2 dims = {
+    glm::ivec3 dims = {
         ( engine.swapchain.extent.width + 7 ) / 8,
         ( engine.swapchain.extent.height + 7 ) / 8,
+        1,
     };
 
     {
@@ -92,7 +93,7 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                 .pipeline = brightness_threshold_pipeline,
                 .descriptor_sets
                 = { pass.brightness_threshold_desc_set.get(), pass.uniform_desc_set.get() },
-                .group_size = glm::ivec3( dims, 1 ),
+                .group_size = dims,
             } );
     }
 
@@ -100,29 +101,8 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
     VkShaderModule vert_blur_shader = vk::create::shader_module( vulkan, VERT_BLUR_PATH );
 
     for ( size_t i = 0; i < 5; ++i ) {
-        engine::add_pipeline_barrier( task_list,
-            { .image_barriers = {
-                  {
-                      .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                      .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                      .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                      .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                      .image = pass.horz_blur,
-                      .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                  },
-                  {
-                      .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                      .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                      .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                      .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                      .image = pass.brightness_threshold,
-                      .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                  },
-              } } );
+        engine::transition_cs_read_to_write( task_list, pass.horz_blur );
+        engine::transition_cs_write_to_read( task_list, pass.brightness_threshold );
 
         {
             engine::DescriptorSet horz_blur_desc_set = engine::generate_descriptor_set( vulkan,
@@ -145,33 +125,12 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                     .pipeline = horz_blur_pipeline,
                     .descriptor_sets
                     = { pass.horz_blur_desc_sets[i].get(), pass.uniform_desc_set.get() },
-                    .group_size = glm::ivec3( dims, 1 ),
+                    .group_size = dims,
                 } );
         }
 
-        engine::add_pipeline_barrier( task_list,
-            { .image_barriers = {
-                  {
-                      .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                      .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                      .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                      .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                      .image = pass.horz_blur,
-                      .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                  },
-                  {
-                      .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                      .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                      .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                      .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                      .image = pass.brightness_threshold,
-                      .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                  },
-              } } );
+        engine::transition_cs_write_to_read( task_list, pass.horz_blur );
+        engine::transition_cs_read_to_write( task_list, pass.brightness_threshold );
 
         {
             engine::DescriptorSet vert_blur_desc_set = engine::generate_descriptor_set( vulkan,
@@ -194,25 +153,13 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                     .pipeline = vert_blur_pipeline,
                     .descriptor_sets
                     = { pass.vert_blur_desc_sets[i].get(), pass.uniform_desc_set.get() },
-                    .group_size = glm::ivec3( dims, 1 ),
+                    .group_size = dims,
                 } );
         }
     }
 
     // Brightness threshold texture holds the final blurred texture
-    engine::add_pipeline_barrier( task_list,
-        { .image_barriers = {
-              {
-                  .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                  .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                  .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                  .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                  .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                  .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                  .image = pass.brightness_threshold,
-                  .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-              },
-          } } );
+    engine::transition_cs_write_to_read( task_list, pass.brightness_threshold );
 
     {
         engine::DescriptorSet gather_desc_set = engine::generate_descriptor_set( vulkan, engine,
@@ -237,7 +184,7 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             {
                 .pipeline = gather_pipeline,
                 .descriptor_sets = { pass.gather_desc_set.get(), pass.uniform_desc_set.get() },
-                .group_size = glm::ivec3( dims, 1 ),
+                .group_size = dims,
             } );
     }
 
