@@ -25,8 +25,13 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
 
     float high_freq_noise = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 12 );
 
-    cumulus_map = lerp(
-        cumulus_map, cumulus_map + 4 * low_freq_noise + 1 * high_freq_noise, low_freq_modulation );
+    float extra_freq = 4 * low_freq_noise + high_freq_noise;
+
+    if ( is_cheap ) {
+        extra_freq = low_freq_noise;
+    }
+
+    cumulus_map = lerp( cumulus_map, cumulus_map + extra_freq, low_freq_modulation );
     cumulus_map = smoothstep( 0.3, 0.6, cumulus_map ) * 2 - 1;
 
     return 0.5f * ( max( cumulus_map * height_modulation, 0 ) );
@@ -36,7 +41,7 @@ static const float absorption_coeff = 0.002f;
 
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     Texture3D<float> low_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
-    float3 march_pos, float3 sun_direction )
+    float3 march_pos, float3 sun_direction, bool is_cheap )
 {
     float3 local_dir = normalize( sun_direction );
 
@@ -66,7 +71,7 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         float3 pos = march_pos + local_dir * t;
         // if outside the AABB you can break early, but caller will pass proper t_max
         float d = sample_density(
-            cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler, pos, false );
+            cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler, pos, is_cheap );
         // Beer–Lambert per-step
         T *= exp( -SIGMA_T * d * step_size );
 
@@ -115,7 +120,8 @@ public float offset_sphere_intersection(
 }
 
 public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
-    SamplerState linear_mirrored_repeat_sampler, float3 view, float3 origin, float3 sun_direction )
+    SamplerState linear_mirrored_repeat_sampler, float3 view, float3 origin, float3 sun_direction,
+    bool is_cheap )
 {
     float theta = acos( saturate( view.y ) );
     // theta = clamp( theta, 0.0, radians( 80 ) );
@@ -162,11 +168,11 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
         }
         float3 marched_pos = local_origin + local_dir * t;
         float density = sample_density( cumulus_map_LUT, low_freq_noise_LUT,
-            linear_mirrored_repeat_sampler, marched_pos, false );
+            linear_mirrored_repeat_sampler, marched_pos, is_cheap );
         if ( density > 0.01 ) {
 
             float transmittance = estimate_transmittance( cumulus_map_LUT, low_freq_noise_LUT,
-                linear_mirrored_repeat_sampler, marched_pos, sun_direction );
+                linear_mirrored_repeat_sampler, marched_pos, sun_direction, is_cheap );
 
             float cosTheta = dot( local_dir, sun_direction );
             float phase
