@@ -73,7 +73,7 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     // Build descriptors
     terrain.prepass_uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
 
     terrain.test_layer_mask
         = engine::load_image( TEST_LAYER_MASK_PATH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM );
@@ -119,7 +119,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
             engine::get_vertex_input_state_create_info( terrain ),
             { terrain.prepass_uniform_desc_set.layouts[0] },
             { VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT }, VK_SAMPLE_COUNT_1_BIT,
-            false, true, vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ), true );
+            false, true, vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ), true);
     } catch ( const Exception& ex ) {
         log::error( "Failed to create terrain prepass graphics pipeline: {}", ex.what() );
         throw;

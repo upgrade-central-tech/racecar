@@ -58,18 +58,23 @@ VertexOutput vs_main( VertexInput input )
     return output;
 }
 
-
+[patchconstantfunc( "constants" )]
 PatchConstantOutput constants( InputPatch<VertexOutput, 4> patch )
 {
     PatchConstantOutput pc;
 
-    pc.edges[0] = 4.0;
-    pc.edges[1] = 4.0;
-    pc.edges[2] = 4.0;
-    pc.edges[3] = 4.0;
+    float3 patch_center = ( patch[0].position + patch[1].position + patch[2].position + patch[3].position ) * 0.25;
+    float dist = distance( patch_center, camera_buffer_data.camera_pos.rgb );
 
-    pc.inside[0] = 4.0;
-    pc.inside[1] = 4.0;
+    float tess_factor = lerp( 16.0, 2.0, dist / 50.0 );
+    tess_factor = clamp( tess_factor, 2.0, 16.0 );
+
+    pc.edges[0] = tess_factor;
+    pc.edges[1] = tess_factor;
+    pc.edges[2] = tess_factor;
+    pc.edges[3] = tess_factor;
+    pc.inside[0] = tess_factor;
+    pc.inside[1] = tess_factor;
 
     return pc;
 }
@@ -124,6 +129,7 @@ DomainOutput ts_eval_main( PatchConstantOutput pc, const OutputPatch<HullOutput,
         patch[2].uv * ( 1 - uv.x ) * ( uv.y );
 
     outVal.sv_position = mul( camera_buffer_data.mvp, float4( p, 1.0 ) );
+    // outVal.position = mul( camera_buffer_data.mvp, float4( p, 1.0 ) ).rgb;
     outVal.position = p;
     outVal.normal = n;
     outVal.tangent = tan;
