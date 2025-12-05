@@ -1,19 +1,21 @@
 # RACECAR: (Raceca)r (R)enderer
 
-- Team 6: Charles Wang, Anthony Ge, Saahil Gupta, Aaron Jiang
-- Pitch document: [docs.google.com/document/d/1j6_ybNivTQ-5yWpir-YyTrfw25QPabRPDMYnZbbpDFE](https://docs.google.com/document/d/1j6_ybNivTQ-5yWpir-YyTrfw25QPabRPDMYnZbbpDFE)
-- Milestone 1 presentation: [docs.google.com/presentation/d/12kjNLzn8d41ME9kHvzYVEgyTugg4P2bqzO_xdeyU1to](https://docs.google.com/presentation/d/12kjNLzn8d41ME9kHvzYVEgyTugg4P2bqzO_xdeyU1to)
-- Milestone 2 presentation: [docs.google.com/presentation/d/1SAvpTj8gU0uzmK-C_Fmakty60CFiGGIhXUBPoFP1-iw](https://docs.google.com/presentation/d/1SAvpTj8gU0uzmK-C_Fmakty60CFiGGIhXUBPoFP1-iw)
+Team 6
+- Charles Wang, Anthony Ge, Saahil Gupta, Aaron Jiang
+- [Original pitch document](https://docs.google.com/document/d/1j6_ybNivTQ-5yWpir-YyTrfw25QPabRPDMYnZbbpDFE)
+- [Milestone 1 presentation](https://docs.google.com/presentation/d/12kjNLzn8d41ME9kHvzYVEgyTugg4P2bqzO_xdeyU1to)
+- [Milestone 2 presentation](https://docs.google.com/presentation/d/1SAvpTj8gU0uzmK-C_Fmakty60CFiGGIhXUBPoFP1-iw)
+- [Milestone 3 presentation](https://docs.google.com/presentation/d/15Yk6nuF8lukJmDto_tTPZz7DENXsyRABhGUGP3UAO0Y)
 
 RACECAR is a Vulkan renderer written in C++. It's inspired by racing games like the _Forza_ and _Gran Turismo_ series. We aim to implement state-of-the-art material, environment, and sky rendering based on recent papers and graphics techniques.
 
-<img width="1353" height="817" src="https://github.com/user-attachments/assets/17a10137-1ce5-40c6-ba60-82f3bb7c9187" />
+<img width="1894" height="1052" alt="image" src="https://github.com/user-attachments/assets/d09c2a09-9438-4afa-a3e1-b0ffbdd8f05e" />
 
 ## Material Rendering
 
-![](images/materials.png)
+![](images/materials2.png)
 
-Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. Skies are encoded as an octahedral map for reflections.
+Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. Skies, irradiance, and rough glossy mips are encoded as an octahedral map for reflections.
 
 ### Glints
 
@@ -43,11 +45,24 @@ The sample code in the 2017 codebase could not be used directly for a number of 
   - Also interferes with our sky-to-cubemap conversion, which is used for IBL
 - Removed hardcoded shadows and lightshafts
 
+## Raytracing
+Our renderer features fully raytraced shadows, enabling self-shadowing and realistic lighting.
+
+|![](images/rt_off.png)|![](images/rt_on.png)|
+|:-:|:-:|
+|Raytracing off|Raytracing on|
+|![](images/rt_off1.png)|![](images/rt_off2.png)|
+|Raytracing off|Raytracing on|
 ## Clouds
 
 The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC. It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts.
 
-<img width="682" height="605" src="https://github.com/user-attachments/assets/02cdb3d1-1205-4548-956e-780a79466671" />
+<img width="682" src="images/clouds.png" />
+
+## Terrain
+The terrain is rendered via a separate deferred pass, using an artist-authored material-mask to determine which types of materials (snow, grass, etc.) exist at a given world position. We blend materials together seamelessly and use UV distortion to break-up harsh transitions.
+
+![Terrain breakdown](images/terrain_breakdown.png)
 
 ## Post-processing
 
@@ -68,6 +83,15 @@ These steps can also be seen in the screenshots below.
 |5-step blur pass|Additive blending|
 
 Performance is currently 0.4 ms on a RTX 5060 Ti, and 1.3 ms on a RTX 4070 Laptop GPU.
+
+### Tonemapping
+We implement [Gran Turismo 7's tonemapping solution](https://blog.selfshadow.com/publications/s2025-shading-course/pdi/s2025_pbs_pdi_slides_v1.1.pdf) presented at SIGGRAPH 2025.
+
+|![](images/pretonemap.png)|![](images/posttonemap.png)|![](images/posttonemap2.png)
+|:-:|:-:|:-:|
+|Original|Post-tonemapped|Post-tonemapped
+
+
 
 ## Development
 
