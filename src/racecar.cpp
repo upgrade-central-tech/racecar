@@ -1,5 +1,6 @@
 #include "racecar.hpp"
 
+#include "engine/post/anti_aliasing.hpp"
 #include "engine/post/tonemapping.hpp"
 
 #define ENABLE_VOLUMETRICS 1
@@ -371,6 +372,11 @@ void run( bool use_fullscreen )
         VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
+    engine::RWImage GBuffer_Velocity = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
+
 #if ENABLE_DEFERRED_AA
     // Render to an offscreen image, this is what we'll present to the swapchain.
     engine::RWImage screen_color = engine::create_rwimage( ctx.vulkan, engine,
@@ -385,6 +391,12 @@ void run( bool use_fullscreen )
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
+
+    // Store the last-rendered image here!
+    engine::RWImage screen_history = engine::create_rwimage( ctx.vulkan, engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT );
 #endif
 
     // deferred transition tasks
@@ -965,22 +977,30 @@ void run( bool use_fullscreen )
     engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
         ctx.vulkan, engine, screen_color, screen_buffer, task_list );
 
+    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
+    engine::transition_cs_read_to_write( task_list, screen_color );
+    engine::transition_cs_write_to_read( task_list, screen_buffer );
+    engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_buffer,
+        GBuffer_Depth, screen_color, screen_history, task_list, camera_buffer );
+
     // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
     // screen.
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
             .image_barriers = {
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
                     .src_layout = VK_IMAGE_LAYOUT_GENERAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = screen_buffer,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    .image = screen_color,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
             } } );
 
-    engine::add_blit_task( task_list, { screen_buffer } );
+    engine::add_blit_task( task_list, { screen_color } );
 #endif
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
@@ -1065,13 +1085,30 @@ void run( bool use_fullscreen )
             // : camera_ub.model;
             glm::mat4 model = glm::identity<glm::mat4>();
 
-            camera_ub.mvp = projection * view * model;
+            glm::mat4 jittered_projection = projection;
+
+            if ( gui.aa.mode == gui::Gui::AAData::Mode::TAA ) {
+                glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
+
+                jittered_projection[2][0]
+                    += offset.x / static_cast<float>( engine.swapchain.extent.width );
+                jittered_projection[2][1]
+                    += offset.y / static_cast<float>( engine.swapchain.extent.height );
+            }
+
+            camera_ub.prev_mvp = camera_ub.mvp;
+            camera_ub.mvp = jittered_projection * view * model;
             camera_ub.model = model;
             camera_ub.view_mat = view;
             camera_ub.inv_model = glm::inverse( model );
+            camera_ub.inv_vp = glm::inverse( jittered_projection * view );
             camera_ub.camera_pos = glm::vec4( camera_position, 1.0f );
             camera_ub.camera_constants = glm::vec4(
                 camera.near_plane, camera.far_plane, camera.aspect_ratio, camera.fov_y );
+
+            // Store modded frame index, used for the jitter
+            camera_ub.camera_constants1
+                = glm::vec4( engine.get_frame_index() % 16, 0.0f, 0.0f, 0.0f );
 
             camera_buffer.set_data( camera_ub );
             camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
@@ -1097,6 +1134,14 @@ void run( bool use_fullscreen )
 
             tm_pass.buffer.set_data( tm_ub );
             tm_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
+        // AA update
+        {
+            ub_data::AA aa_ub = aa_pass.buffer.get_data();
+            aa_ub.mode = static_cast<int>( gui.aa.mode );
+            aa_pass.buffer.set_data( aa_ub );
+            aa_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
 #if ENABLE_VOLUMETRICS

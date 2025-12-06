@@ -2,10 +2,13 @@
 
 #include "rwimage.hpp"
 
+#include <optional>
+
 namespace racecar::engine {
 
 struct BlitTask {
-    engine::RWImage screen_color;
+    engine::RWImage in_color;
+    std::optional<engine::RWImage> out_color = {};
 };
 
 void execute_blit_task( const engine::State& engine, const VkCommandBuffer& cmd_buf,

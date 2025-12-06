@@ -82,6 +82,10 @@ struct Gui {
 
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};
+
+    struct AAData {
+        enum class Mode : int { NONE = 0, TAA } mode = Mode::NONE;
+    } aa = {};
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );

@@ -9,11 +9,14 @@ namespace racecar::ub_data {
 /// Camera data
 struct Camera {
     glm::mat4 mvp = {};
+    glm::mat4 prev_mvp = {};
     glm::mat4 model = glm::mat4( 1.f );
     glm::mat4 inv_model = {};
+    glm::mat4 inv_vp = {};
     glm::mat4 view_mat = {};
     glm::vec4 camera_pos = {};
     glm::vec4 camera_constants = {};
+    glm::vec4 camera_constants1 = {};
 };
 
 struct Debug {
@@ -129,6 +132,10 @@ struct TerrainData {
 struct Tonemapping {
     int mode = 0;
     float hdr_target_luminance = 0.f;
+};
+
+struct AA {
+    int mode = 0;
 };
 
 } // namespace racecar::uniform_buffer
