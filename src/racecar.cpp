@@ -197,6 +197,34 @@ void run( bool use_fullscreen )
         material_uniform_buffers[i] = std::move( material_buffer );
     }
 
+    size_t num_nodes = scene.nodes.size();
+    std::vector<engine::DescriptorSet> model_mat_desc_sets( num_nodes );
+    std::vector<UniformBuffer<ub_data::ModelMat>> model_mat_uniform_buffers( num_nodes );
+
+    for ( size_t i = 0; i < num_nodes; i++ ) {
+        model_mat_desc_sets[i] = engine::generate_descriptor_set(
+            ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_VERTEX_BIT );
+
+        scene::Node* node = scene.nodes[i].get();
+        glm::mat4 transform = node->transform;
+        while ( node->parent != nullptr ) {
+            node = node->parent;
+            transform = node->transform * transform;
+        }
+
+        UniformBuffer model_mat_buffer = create_uniform_buffer<ub_data::ModelMat>(
+            ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+
+        ub_data::ModelMat model_mat_ub
+            = { .model_mat = transform, .inv_model_mat = glm::inverse( transform ) };
+        model_mat_buffer.set_data( model_mat_ub );
+        model_mat_buffer.update( ctx.vulkan, engine.get_frame_index() );
+
+        engine::update_descriptor_set_uniform(
+            ctx.vulkan, engine, model_mat_desc_sets[i], model_mat_buffer, 0 );
+        model_mat_uniform_buffers[i] = std::move( model_mat_buffer );
+    }
+
     engine::DescriptorSet raymarch_tex_sets;
     {
         raymarch_tex_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
@@ -311,6 +339,7 @@ void run( bool use_fullscreen )
             {
                 uniform_desc_set.layouts[frame_index],
                 material_desc_sets[0].layouts[frame_index],
+                model_mat_desc_sets[0].layouts[frame_index],
                 lut_sets.layouts[frame_index],
                 sampler_desc_set.layouts[frame_index],
             },
@@ -652,6 +681,7 @@ void run( bool use_fullscreen )
                         .descriptor_sets = {
                             &uniform_desc_set,
                             &material_desc_sets[static_cast<size_t>( prim.material_id )],
+                            &model_mat_desc_sets[static_cast<size_t>(prim.node_id)],
                             &lut_sets,
                             &sampler_desc_set,
                         },
@@ -1153,9 +1183,9 @@ void run( bool use_fullscreen )
             cloud_ub.inverse_proj = glm::inverse( projection );
             cloud_ub.inverse_view = glm::inverse( view );
             cloud_ub.camera_position = camera::calculate_eye_position( camera );
-            cloud_ub.cloud_offset_x = 0.f;
+            cloud_ub.cloud_offset_x += 0.0001f;
             cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
-            cloud_ub.cloud_offset_y = 0.f;
+            cloud_ub.cloud_offset_y += 0.0001f;
 
             volumetric.uniform_buffer.set_data( cloud_ub );
             volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
