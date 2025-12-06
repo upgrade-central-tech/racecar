@@ -138,9 +138,4 @@ struct AA {
     int mode = 0;
 };
 
-struct ModelMat {
-    glm::mat4 model_mat = {};
-    glm::mat4 inv_model_mat = {};
-};
-
 } // namespace racecar::uniform_buffer

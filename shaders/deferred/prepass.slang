@@ -24,16 +24,14 @@ layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
 layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 layout( binding = 3, set = 1 ) ConstantBuffer<MaterialData> material_data;
 
-layout( binding = 0, set = 2 ) ConstantBuffer<ModelMatData> model_mat_data;
-
 // Cubemaps + LUTs
-layout( binding = 0, set = 3 ) Texture2D<float2> BRDF_LUT;
-layout( binding = 1, set = 3 ) Texture2D<float4> glint_noise;
-layout( binding = 2, set = 3 ) Texture2D<float4> octahedral_sky;
-layout( binding = 3, set = 3 ) Texture2D<float4> octahedral_sky_irradiance;
-layout( binding = 4, set = 3 ) Texture2D<float4> octahedral_sky_mips;
+layout( binding = 0, set = 2 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 1, set = 2 ) Texture2D<float4> glint_noise;
+layout( binding = 2, set = 2 ) Texture2D<float4> octahedral_sky;
+layout( binding = 3, set = 2 ) Texture2D<float4> octahedral_sky_irradiance;
+layout( binding = 4, set = 2 ) Texture2D<float4> octahedral_sky_mips;
 
-layout( binding = 0, set = 4 ) SamplerState nearest_sampler;
+layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
 #include "../glint/glint.hlsl"
 
@@ -76,12 +74,9 @@ VertexOutput vs_main( VertexInput input )
 {
     VertexOutput output;
     output.sv_position = mul( camera_buffer_data.mvp, float4( input.position, 1.0 ) );
-    output.position = mul(
-        mul( camera_buffer_data.model, model_mat_data.model_mat ), float4( input.position, 1.0 ) )
-                          .xyz;
+    output.position = mul( camera_buffer_data.model, float4( input.position, 1.0 ) ).xyz;
 
-    float3x3 normal_matrix
-        = (float3x3)transpose( mul( model_mat_data.inv_model_mat, camera_buffer_data.inv_model ) );
+    float3x3 normal_matrix = (float3x3)transpose( camera_buffer_data.inv_model );
     float3 normal = normalize( mul( normal_matrix, input.normal ) );
     float3 tangent = normalize( mul( normal_matrix, input.tangent.xyz ) );
     tangent = normalize( tangent - normal * dot( normal, tangent ) );

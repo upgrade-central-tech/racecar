@@ -237,8 +237,7 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
     std::vector<std::vector<int>> children_lists;
 
     // Load Nodes
-    for ( size_t node_idx = 0; node_idx < model.nodes.size(); node_idx++ ) {
-        tinygltf::Node& loaded_node = model.nodes[node_idx];
+    for ( tinygltf::Node& loaded_node : model.nodes ) {
         std::unique_ptr<Node> new_node = std::make_unique<Node>();
 
         // Get node transform
@@ -291,7 +290,6 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
             // Load primitives
             for ( tinygltf::Primitive& loaded_prim : loaded_mesh.primitives ) {
                 Primitive new_prim;
-                new_prim.node_id = static_cast<int>( node_idx );
                 new_prim.material_id = loaded_prim.material;
                 if ( new_prim.material_id == -1 ) {
                     // Creates a default, white material if a prim is not assigned a material in the

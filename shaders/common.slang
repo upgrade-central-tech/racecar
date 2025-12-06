@@ -96,9 +96,4 @@ struct MaterialData {
     float glint_randomness; // 2.0f
 };
 
-struct ModelMatData {
-    float4x4 model_mat;
-    float4x4 inv_model_mat;
-};
-
 
