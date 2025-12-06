@@ -38,6 +38,8 @@ struct TerrainPrepassInfo {
     engine::RWImage* GBuffer_Albedo;
     engine::RWImage* GBuffer_Depth;
     engine::RWImage* GBuffer_Packed_Data;
+
+    vk::mem::AllocatedImage* glint_noise;
 };
 
 struct Terrain {
@@ -48,6 +50,7 @@ struct Terrain {
     engine::DescriptorSet prepass_uniform_desc_set;
     engine::DescriptorSet prepass_texture_desc_set;
     engine::DescriptorSet prepass_sampler_desc_set;
+    engine::DescriptorSet prepass_lut_desc_set;
 
     engine::DescriptorSet uniform_desc_set;
     engine::DescriptorSet texture_desc_set;

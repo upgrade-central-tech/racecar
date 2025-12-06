@@ -1,5 +1,6 @@
 #include "../common.slang"
 #include "../utils.slang"
+#include "../glint/glint.hlsl"
 #include "../clouds/cloud_utils.slang"
 
 struct VertexInput {
@@ -48,6 +49,9 @@ layout( binding = 3, set = 1 ) Texture2D<float4> asphalt_albedo_roughnes;
 layout( binding = 4, set = 1 ) Texture2D<float4> asphalt_normal_ao;
 
 layout( binding = 0, set = 2 ) SamplerState linear_sampler;
+
+// LUT descs
+layout( binding = 0, set = 3 ) Texture2D<float4> glint_noise;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -247,6 +251,16 @@ FragmentOutput fs_main( DomainOutput in )
 
     // Naive lerping??? What's a better solution?
     float3 mixed_albedo = lerp( float3( 1.0f, 0.0f, 0.0f ), asphalt_color, layers.x );
+
+    // snow + glint evaluation
+    float snowness = terrain_data.snow;
+    float snow_map = perlin_noise3D( 0.075f * world_position + 0.23f ) + 0.50f;
+    snow_map = lerp( clamp_range( snow_map, 0.50f, 0.80f ), 1.0f, snowness );
+    float snow_lerp = snow_map * snowness * ( 1.0f - layers.x );
+
+    grass_color = lerp( grass_color, float3( 1.0f ), snow_lerp );
+    grass_ao = lerp( grass_ao, 1.0f, snow_lerp );
+
     mixed_albedo = lerp( mixed_albedo, grass_color, layers.y );
 
     // This is so obviously wrong, but we're going to try this out for now.
@@ -259,7 +273,10 @@ FragmentOutput fs_main( DomainOutput in )
 
     // ?? You know the drill
     float mixed_roughness = lerp( 1.0f, asphalt_roughness, layers.x );
-    mixed_roughness = lerp( mixed_roughness, grass_roughness, layers.y );
+    float ground_roughness
+        = saturate( lerp( grass_roughness, 1.35f * grass_roughness, snow_lerp ) );
+
+    mixed_roughness = lerp( mixed_roughness, ground_roughness, layers.y );
 
     // Distribute the wetness around da world...
     float puddle_scale = 0.5f;
@@ -284,9 +301,28 @@ FragmentOutput fs_main( DomainOutput in )
     float n_dot_h_sq = get_NoH_squared( dots.n_dot_l, dots.n_dot_v, dots.v_dot_l, 0.035f );
     float density = get_GGX_from_n_dot_h_sq( n_dot_h_sq, mixed_roughness * mixed_roughness );
 
+    if ( snow_lerp > 0.2f ) {
+        float2 duvdx = ddx( world_uv_unwrapped );
+        float2 duvdy = ddy( world_uv_unwrapped );
+        float3 local_half = world_to_local( half_vector, normal );
+
+        const float glint_log_density = 24.0f;
+        const float glint_roughness = 0.20f;
+        const float glint_randomness = 3.0f;
+
+        float maxNDF = 10000.0f;
+        float targetNDF = density;
+        density = lerp( density,
+            SampleGlints2023NDF( local_half, targetNDF, maxNDF, world_uv_unwrapped, duvdx, duvdy,
+                glint_log_density, glint_roughness, glint_randomness )
+                .x,
+            snow_lerp );
+    }
+
+    output.packed_data = float4( wetness, density, 0.0f, 0.0f );
+
     output.normal = float4( mixed_normal, mixed_ao );
     output.albedo = float4( mixed_albedo, mixed_roughness );
-    output.packed_data = float4( wetness, density, 0.0f, 0.0f );
 
     return output;
 }

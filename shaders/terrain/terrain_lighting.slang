@@ -152,7 +152,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     irradiance_px
         = clamp( irradiance_px, int2( 0, 0 ), int2( irradiance_width - 1, irradiance_height - 1 ) );
 
-    float irradiance_strength = 1.0f;
+    float irradiance_strength = 0.5f;
     float3 diffuse_irradiance = filter_float4( sky_irradiance, oct_uv ).rgb;
 
     uint specular_width, specular_height;

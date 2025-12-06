@@ -116,7 +116,8 @@ struct Clouds {
 struct TerrainData {
     float gt7_local_shadow_strength;
     float wetness = 0.0f;
-    uint8_t padding0[2];
+    float snow = 0.0f;
+    uint8_t padding0[1];
 
     // debug info
     bool enable_gt7_ao;

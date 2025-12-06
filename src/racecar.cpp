@@ -50,7 +50,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/porsche.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -209,6 +209,7 @@ void run( bool use_fullscreen )
 
     engine::DescriptorSet lut_sets;
     vk::mem::AllocatedImage lut_brdf;
+    vk::mem::AllocatedImage glint_noise;
     {
         lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
             {
@@ -224,7 +225,7 @@ void run( bool use_fullscreen )
         lut_brdf = engine::load_image(
             BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT, false );
 
-        vk::mem::AllocatedImage glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
+        glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
 
         engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 0 );
         engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, glint_noise, 1 );
@@ -708,6 +709,7 @@ void run( bool use_fullscreen )
         &GBuffer_Albedo,
         &GBuffer_Depth,
         &GBuffer_Packed_Data,
+        &glint_noise,
     };
 
     geometry::Terrain test_terrain;
@@ -1177,6 +1179,7 @@ void run( bool use_fullscreen )
             terrain_ub.roughness_only = gui.terrain.roughness_only;
             terrain_ub.gt7_local_shadow_strength = gui.terrain.gt7_local_shadow_strength;
             terrain_ub.wetness = gui.terrain.wetness;
+            terrain_ub.snow = gui.terrain.snow;
 
             test_terrain.terrain_uniform.set_data( terrain_ub );
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );

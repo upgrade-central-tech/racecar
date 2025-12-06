@@ -170,6 +170,15 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
     engine::update_descriptor_set_sampler( vulkan, engine, terrain.prepass_sampler_desc_set,
         vulkan.global_samplers.linear_sampler, 0 );
 
+    terrain.prepass_lut_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Glint noise texture
+        },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.prepass_lut_desc_set, *prepass_info.glint_noise, 0 );
+
     engine::Pipeline terrain_prepass_pipeline;
     try {
         terrain_prepass_pipeline = engine::create_gfx_pipeline( engine, vulkan,
@@ -178,6 +187,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
                 terrain.prepass_uniform_desc_set.layouts[0],
                 terrain.prepass_texture_desc_set.layouts[0],
                 terrain.prepass_sampler_desc_set.layouts[0],
+                terrain.prepass_lut_desc_set.layouts[0],
             },
             {
                 VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
@@ -207,6 +217,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
             &terrain.prepass_uniform_desc_set,
             &terrain.prepass_texture_desc_set,
             &terrain.prepass_sampler_desc_set,
+            &terrain.prepass_lut_desc_set,
         },
         .pipeline = terrain_prepass_pipeline,
     } );

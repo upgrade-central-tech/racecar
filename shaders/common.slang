@@ -43,6 +43,7 @@ public struct DebugData {
 struct TerrainData {
     float gt7_local_shadow_strength;
     float wetness;
+    float snow;
 
     // debug info
     bool enable_gt7_ao;

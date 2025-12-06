@@ -168,6 +168,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::SliderFloat(
                     "Local shadow strength", &gui.terrain.gt7_local_shadow_strength, 0.0f, 1.0f );
                 ImGui::SliderFloat( "Debug wetness", &gui.terrain.wetness, 0.0f, 1.0f );
+                ImGui::SliderFloat( "Debug snow", &gui.terrain.snow, 0.0f, 1.0f );
                 ImGui::EndTabItem();
             }
 
