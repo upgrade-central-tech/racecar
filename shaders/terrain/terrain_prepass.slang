@@ -36,6 +36,7 @@ struct DomainOutput {
 };
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
+layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
 layout( binding = 0, set = 1 ) Texture2D<float2> layer_test_mask;
 // Specific material stuff
@@ -51,7 +52,7 @@ layout( binding = 0, set = 2 ) SamplerState linear_sampler;
 VertexOutput vs_main( VertexInput input )
 {
     VertexOutput output;
-    
+
     output.position = mul( camera_buffer_data.model, float4( input.position, 1.0 ) ).xyz;
 
     float3x3 normal_matrix = (float3x3)transpose( camera_buffer_data.inv_model );
@@ -90,7 +91,8 @@ PatchConstantOutput constants( InputPatch<VertexOutput, 4> patch )
     pc.edges[2] = edge_tess_factor( patch[1].position, patch[3].position ); // top
     pc.edges[3] = edge_tess_factor( patch[3].position, patch[2].position ); // top
 
-    float3 center = 0.25 * ( patch[0].position + patch[1].position + patch[2].position + patch[3].position );
+    float3 center
+        = 0.25 * ( patch[0].position + patch[1].position + patch[2].position + patch[3].position );
 
     pc.inside[0] = edge_tess_factor( center, center );
     pc.inside[1] = edge_tess_factor( center, center );
@@ -104,7 +106,7 @@ PatchConstantOutput constants( InputPatch<VertexOutput, 4> patch )
 [partitioning( "integer" )]
 [outputtopology( "triangleccw" )]
 [outputcontrolpoints( 4 )]
-HullOutput ts_control_main(InputPatch<VertexOutput, 4> patch, uint i : SV_OutputControlPointID)
+HullOutput ts_control_main( InputPatch<VertexOutput, 4> patch, uint i: SV_OutputControlPointID )
 {
     HullOutput output;
 
@@ -125,33 +127,25 @@ struct FragmentOutput {
 
 [shader( "domain" )]
 [domain( "quad" )]
-DomainOutput ts_eval_main( PatchConstantOutput pc, const OutputPatch<HullOutput, 4> patch, float2 uv : SV_DomainLocation )
+DomainOutput ts_eval_main(
+    PatchConstantOutput pc, const OutputPatch<HullOutput, 4> patch, float2 uv: SV_DomainLocation )
 {
     DomainOutput outVal;
 
-    float3 p =
-        patch[0].position * ( 1 - uv.x ) * ( 1 - uv.y ) +
-        patch[1].position * ( uv.x ) * ( 1 - uv.y ) +
-        patch[3].position * ( uv.x ) * ( uv.y ) +
-        patch[2].position * ( 1 - uv.x ) * ( uv.y );
+    float3 p = patch[0].position * ( 1 - uv.x ) * ( 1 - uv.y )
+        + patch[1].position * ( uv.x ) * ( 1 - uv.y ) + patch[3].position * ( uv.x ) * ( uv.y )
+        + patch[2].position * ( 1 - uv.x ) * ( uv.y );
 
-    float3 n =
-        patch[0].normal * ( 1 - uv.x ) * ( 1 - uv.y ) +
-        patch[1].normal * ( uv.x ) * ( 1 - uv.y ) +
-        patch[3].normal * ( uv.x ) * ( uv.y ) +
-        patch[2].normal * ( 1 - uv.x ) * ( uv.y );
+    float3 n = patch[0].normal * ( 1 - uv.x ) * ( 1 - uv.y )
+        + patch[1].normal * ( uv.x ) * ( 1 - uv.y ) + patch[3].normal * ( uv.x ) * ( uv.y )
+        + patch[2].normal * ( 1 - uv.x ) * ( uv.y );
 
-    float4 tan =
-        patch[0].tangent * ( 1 - uv.x ) * ( 1 - uv.y ) +
-        patch[1].tangent * ( uv.x ) * ( 1 - uv.y ) +
-        patch[3].tangent * ( uv.x ) * ( uv.y ) +
-        patch[2].tangent * ( 1 - uv.x ) * ( uv.y );
+    float4 tan = patch[0].tangent * ( 1 - uv.x ) * ( 1 - uv.y )
+        + patch[1].tangent * ( uv.x ) * ( 1 - uv.y ) + patch[3].tangent * ( uv.x ) * ( uv.y )
+        + patch[2].tangent * ( 1 - uv.x ) * ( uv.y );
 
-    float2 t =
-        patch[0].uv * ( 1 - uv.x ) * ( 1 - uv.y ) +
-        patch[1].uv * ( uv.x ) * ( 1 - uv.y ) +
-        patch[3].uv * ( uv.x ) * ( uv.y ) +
-        patch[2].uv * ( 1 - uv.x ) * ( uv.y );
+    float2 t = patch[0].uv * ( 1 - uv.x ) * ( 1 - uv.y ) + patch[1].uv * ( uv.x ) * ( 1 - uv.y )
+        + patch[3].uv * ( uv.x ) * ( uv.y ) + patch[2].uv * ( 1 - uv.x ) * ( uv.y );
 
     outVal.sv_position = mul( camera_buffer_data.mvp, float4( p, 1.0 ) );
     outVal.position = p;
@@ -160,6 +154,21 @@ DomainOutput ts_eval_main( PatchConstantOutput pc, const OutputPatch<HullOutput,
     outVal.uv = t;
 
     return outVal;
+}
+
+void evaluate_wetness( float wetness, float porosity, inout float3 color, inout float roughness,
+    inout float ao, inout float3 world_normal )
+{
+    // https://advances.realtimerendering.com/other/2016/naughty_dog/NaughtyDog_TechArt_Final.pdf
+    float3 color_sq = color * color;
+    color = lerp( color, color_sq, clamp_range( wetness, 0.0f, 0.35f ) * porosity );
+    roughness = lerp( roughness, 0.1f, clamp_range( wetness, 0.2f, 1.0f ) );
+    ao = lerp( ao, 1.0f, clamp_range( wetness, 0.45f, 0.95f ) );
+
+    // GBuffer doesn't store the vertex normal, so we'll treat 0.45 case and 0.98 case identically.
+    // Uncharted 4, however, uses frag normal for 0.45 and vert for 0.98.
+    world_normal = normalize(
+        lerp( world_normal, float3( 0.0f, 1.0f, 0.0f ), clamp_range( wetness, 0.45f, 1.0f ) ) );
 }
 
 [shader( "fragment" )]
@@ -251,20 +260,32 @@ FragmentOutput fs_main( DomainOutput in )
     float mixed_roughness = lerp( 1.0f, asphalt_roughness, layers.x );
     mixed_roughness = lerp( mixed_roughness, grass_roughness, layers.y );
 
-    float ndf_glint = 0.0f;
-    float wetness = 1.0f;
-
     // Distribute the wetness around da world...
     float puddle_scale = 0.5f;
     float small_puddle_map = perlin_noise3D( puddle_scale * world_position ) + 0.25f;
     float big_puddle_map = perlin_noise3D( 0.125f * puddle_scale * world_position ) + 0.50f;
 
-    wetness *= clamp_range( big_puddle_map, 0.35f, 0.75f )
+    float wetness = clamp_range( big_puddle_map, 0.35f, 0.75f )
         + clamp_range( small_puddle_map, 0.1f, 0.95f );
+
+    // THE WORLD IS ALL WET.
+    float wetness_toggle = 1.0f;
+    float mixed_wetness = lerp( 0.0f, wetness, wetness_toggle );
+    float mixed_porosity = 0.0f;
+    evaluate_wetness(
+        mixed_wetness, mixed_porosity, mixed_albedo, mixed_roughness, mixed_ao, mixed_normal );
+
+    float3 light = normalize( debug_data.sun_direction.rgb );
+    float3 view = normalize( camera_buffer_data.camera_pos.rgb - world_position );
+    float3 half_vector = normalize( view + light );
+    BSDF_Dots dots = get_dots( mixed_normal, view, half_vector, light );
+
+    float n_dot_h_sq = get_NoH_squared( dots.n_dot_l, dots.n_dot_v, dots.v_dot_l, 0.035f );
+    float density = get_GGX_from_n_dot_h_sq( n_dot_h_sq, mixed_roughness * mixed_roughness );
 
     output.normal = float4( mixed_normal, mixed_ao );
     output.albedo = float4( mixed_albedo, mixed_roughness );
-    output.packed_data = float4( wetness, ndf_glint, 0.0f, 0.0f );
+    output.packed_data = float4( wetness, density, 0.0f, 0.0f );
 
     return output;
 }

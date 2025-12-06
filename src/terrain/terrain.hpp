@@ -31,6 +31,7 @@ struct TerrainLightingInfo {
 
 struct TerrainPrepassInfo {
     UniformBuffer<ub_data::Camera>* camera_buffer;
+    UniformBuffer<ub_data::Debug>* debug_buffer;
 
     engine::RWImage* GBuffer_Position;
     engine::RWImage* GBuffer_Normal;
