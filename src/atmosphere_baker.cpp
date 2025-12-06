@@ -90,6 +90,7 @@ void initialize_atmosphere_baker( AtmosphereBaker& atms_baker, volumetric::Volum
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             VK_DESCRIPTOR_TYPE_SAMPLER,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
 
@@ -105,6 +106,8 @@ void initialize_atmosphere_baker( AtmosphereBaker& atms_baker, volumetric::Volum
         vulkan, engine, atms_baker.volumetrics_desc_set, volumetric.low_freq_noise, 1 );
     engine::update_descriptor_set_sampler( vulkan, engine, atms_baker.volumetrics_desc_set,
         vulkan.global_samplers.linear_mirrored_repeat_sampler, 2 );
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, atms_baker.volumetrics_desc_set, volumetric.uniform_buffer, 3 );
 
     // Everything down here should be abstracted away.
 

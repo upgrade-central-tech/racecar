@@ -7,12 +7,17 @@ static const float PI = 3.14159265359;
 
 struct CameraBufferData {
     float4x4 mvp;
+    float4x4 prev_mvp;
     float4x4 model;
     float4x4 inv_model;
+    float4x4 inv_vp;
     float4x4 view_mat;
     float4 camera_pos;
     // Pack: near plane, far plane, aspect ratio, fov_Y
     float4 camera_constants;
+
+    // Pack: modded frame index [0, 15], null, null, null
+    float4 camera_constants1;
 };
 
 struct AOData {
@@ -21,6 +26,10 @@ struct AOData {
     // Pack: enable ao, or don't
     float4 packed_floats1;
 }
+
+struct AASettings {
+    int mode;
+};
 
 public struct DebugData {
     float4 color;
@@ -43,6 +52,7 @@ public struct DebugData {
 struct TerrainData {
     float gt7_local_shadow_strength;
     float wetness;
+    float snow;
 
     // debug info
     bool enable_gt7_ao;
@@ -84,6 +94,11 @@ struct MaterialData {
     float glint_log_density; // 18.0f
     float glint_roughness; // 0.28f
     float glint_randomness; // 2.0f
+};
+
+struct ModelMatData {
+    float4x4 model_mat;
+    float4x4 inv_model_mat;
 };
 
 

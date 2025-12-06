@@ -1,5 +1,6 @@
 #include "racecar.hpp"
 
+#include "engine/post/anti_aliasing.hpp"
 #include "engine/post/tonemapping.hpp"
 
 #define ENABLE_VOLUMETRICS 1
@@ -50,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/porsche.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -196,6 +197,34 @@ void run( bool use_fullscreen )
         material_uniform_buffers[i] = std::move( material_buffer );
     }
 
+    size_t num_nodes = scene.nodes.size();
+    std::vector<engine::DescriptorSet> model_mat_desc_sets( num_nodes );
+    std::vector<UniformBuffer<ub_data::ModelMat>> model_mat_uniform_buffers( num_nodes );
+
+    for ( size_t i = 0; i < num_nodes; i++ ) {
+        model_mat_desc_sets[i] = engine::generate_descriptor_set(
+            ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_VERTEX_BIT );
+
+        scene::Node* node = scene.nodes[i].get();
+        glm::mat4 transform = node->transform;
+        while ( node->parent != nullptr ) {
+            node = node->parent;
+            transform = node->transform * transform;
+        }
+
+        UniformBuffer model_mat_buffer = create_uniform_buffer<ub_data::ModelMat>(
+            ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+
+        ub_data::ModelMat model_mat_ub
+            = { .model_mat = transform, .inv_model_mat = glm::inverse( transform ) };
+        model_mat_buffer.set_data( model_mat_ub );
+        model_mat_buffer.update( ctx.vulkan, engine.get_frame_index() );
+
+        engine::update_descriptor_set_uniform(
+            ctx.vulkan, engine, model_mat_desc_sets[i], model_mat_buffer, 0 );
+        model_mat_uniform_buffers[i] = std::move( model_mat_buffer );
+    }
+
     engine::DescriptorSet raymarch_tex_sets;
     {
         raymarch_tex_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
@@ -209,6 +238,7 @@ void run( bool use_fullscreen )
 
     engine::DescriptorSet lut_sets;
     vk::mem::AllocatedImage lut_brdf;
+    vk::mem::AllocatedImage glint_noise;
     {
         lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
             {
@@ -224,7 +254,7 @@ void run( bool use_fullscreen )
         lut_brdf = engine::load_image(
             BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT, false );
 
-        vk::mem::AllocatedImage glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
+        glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
 
         engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 0 );
         engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, glint_noise, 1 );
@@ -309,6 +339,7 @@ void run( bool use_fullscreen )
             {
                 uniform_desc_set.layouts[frame_index],
                 material_desc_sets[0].layouts[frame_index],
+                model_mat_desc_sets[0].layouts[frame_index],
                 lut_sets.layouts[frame_index],
                 sampler_desc_set.layouts[frame_index],
             },
@@ -370,6 +401,11 @@ void run( bool use_fullscreen )
         VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
+    engine::RWImage GBuffer_Velocity = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
+
 #if ENABLE_DEFERRED_AA
     // Render to an offscreen image, this is what we'll present to the swapchain.
     engine::RWImage screen_color = engine::create_rwimage( ctx.vulkan, engine,
@@ -384,6 +420,12 @@ void run( bool use_fullscreen )
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
+
+    // Store the last-rendered image here!
+    engine::RWImage screen_history = engine::create_rwimage( ctx.vulkan, engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT );
 #endif
 
     // deferred transition tasks
@@ -639,6 +681,7 @@ void run( bool use_fullscreen )
                         .descriptor_sets = {
                             &uniform_desc_set,
                             &material_desc_sets[static_cast<size_t>( prim.material_id )],
+                            &model_mat_desc_sets[static_cast<size_t>(prim.node_id)],
                             &lut_sets,
                             &sampler_desc_set,
                         },
@@ -702,11 +745,13 @@ void run( bool use_fullscreen )
     // TODO: INSERT TERRAIN PRE-PASS DRAW HERE
     geometry::TerrainPrepassInfo prepass_terrain_info = {
         &camera_buffer,
+        &debug_buffer,
         &GBuffer_Position,
         &GBuffer_Normal,
         &GBuffer_Albedo,
         &GBuffer_Depth,
         &GBuffer_Packed_Data,
+        &glint_noise,
     };
 
     geometry::Terrain test_terrain;
@@ -962,22 +1007,30 @@ void run( bool use_fullscreen )
     engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
         ctx.vulkan, engine, screen_color, screen_buffer, task_list );
 
+    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
+    engine::transition_cs_read_to_write( task_list, screen_color );
+    engine::transition_cs_write_to_read( task_list, screen_buffer );
+    engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_buffer,
+        GBuffer_Depth, screen_color, screen_history, task_list, camera_buffer );
+
     // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
     // screen.
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
             .image_barriers = {
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
                     .src_layout = VK_IMAGE_LAYOUT_GENERAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = screen_buffer,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    .image = screen_color,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
             } } );
 
-    engine::add_blit_task( task_list, { screen_buffer } );
+    engine::add_blit_task( task_list, { screen_color } );
 #endif
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
@@ -1062,13 +1115,30 @@ void run( bool use_fullscreen )
             // : camera_ub.model;
             glm::mat4 model = glm::identity<glm::mat4>();
 
-            camera_ub.mvp = projection * view * model;
+            glm::mat4 jittered_projection = projection;
+
+            if ( gui.aa.mode == gui::Gui::AAData::Mode::TAA ) {
+                glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
+
+                jittered_projection[2][0]
+                    += offset.x / static_cast<float>( engine.swapchain.extent.width );
+                jittered_projection[2][1]
+                    += offset.y / static_cast<float>( engine.swapchain.extent.height );
+            }
+
+            camera_ub.prev_mvp = camera_ub.mvp;
+            camera_ub.mvp = jittered_projection * view * model;
             camera_ub.model = model;
             camera_ub.view_mat = view;
             camera_ub.inv_model = glm::inverse( model );
+            camera_ub.inv_vp = glm::inverse( jittered_projection * view );
             camera_ub.camera_pos = glm::vec4( camera_position, 1.0f );
             camera_ub.camera_constants = glm::vec4(
                 camera.near_plane, camera.far_plane, camera.aspect_ratio, camera.fov_y );
+
+            // Store modded frame index, used for the jitter
+            camera_ub.camera_constants1
+                = glm::vec4( engine.get_frame_index() % 16, 0.0f, 0.0f, 0.0f );
 
             camera_buffer.set_data( camera_ub );
             camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
@@ -1096,6 +1166,14 @@ void run( bool use_fullscreen )
             tm_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
+        // AA update
+        {
+            ub_data::AA aa_ub = aa_pass.buffer.get_data();
+            aa_ub.mode = static_cast<int>( gui.aa.mode );
+            aa_pass.buffer.set_data( aa_ub );
+            aa_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
 #if ENABLE_VOLUMETRICS
         // Update volumetric camera buffer
         {
@@ -1105,9 +1183,9 @@ void run( bool use_fullscreen )
             cloud_ub.inverse_proj = glm::inverse( projection );
             cloud_ub.inverse_view = glm::inverse( view );
             cloud_ub.camera_position = camera::calculate_eye_position( camera );
-            cloud_ub.cloud_offset_x = 0.f;
+            cloud_ub.cloud_offset_x += 0.0001f;
             cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
-            cloud_ub.cloud_offset_y = 0.f;
+            cloud_ub.cloud_offset_y += 0.0001f;
 
             volumetric.uniform_buffer.set_data( cloud_ub );
             volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
@@ -1176,6 +1254,7 @@ void run( bool use_fullscreen )
             terrain_ub.roughness_only = gui.terrain.roughness_only;
             terrain_ub.gt7_local_shadow_strength = gui.terrain.gt7_local_shadow_strength;
             terrain_ub.wetness = gui.terrain.wetness;
+            terrain_ub.snow = gui.terrain.snow;
 
             test_terrain.terrain_uniform.set_data( terrain_ub );
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
