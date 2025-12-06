@@ -37,6 +37,7 @@ struct DomainOutput {
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
+layout( binding = 2, set = 0 ) ConstantBuffer<TerrainData> terrain_data;
 
 layout( binding = 0, set = 1 ) Texture2D<float2> layer_test_mask;
 // Specific material stuff
@@ -269,7 +270,7 @@ FragmentOutput fs_main( DomainOutput in )
         + clamp_range( small_puddle_map, 0.1f, 0.95f );
 
     // THE WORLD IS ALL WET.
-    float wetness_toggle = 1.0f;
+    float wetness_toggle = terrain_data.wetness;
     float mixed_wetness = lerp( 0.0f, wetness, wetness_toggle );
     float mixed_porosity = 0.0f;
     evaluate_wetness(

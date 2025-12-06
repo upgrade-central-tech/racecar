@@ -79,6 +79,7 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
         {
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Camera data
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Debug data
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Terrain data
         },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
             | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT
@@ -124,6 +125,8 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
         vulkan, engine, terrain.prepass_uniform_desc_set, *prepass_info.camera_buffer, 0 );
     engine::update_descriptor_set_uniform(
         vulkan, engine, terrain.prepass_uniform_desc_set, *prepass_info.debug_buffer, 1 );
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, terrain.prepass_uniform_desc_set, terrain.terrain_uniform, 2 );
 
     terrain.terrain_prepass_task = {
         .render_target_is_swapchain = false,
