@@ -5,6 +5,7 @@ struct VertexInput {
     float3 normal : NORMAL;
     float4 tangent : TANGENT0;
     float2 uv : TEXCOORD0;
+    float2 id : IDS;
 };
 
 struct VertexOutput {
