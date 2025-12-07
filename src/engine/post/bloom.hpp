@@ -15,8 +15,11 @@ namespace racecar::engine::post {
 
 struct BloomPass {
     static constexpr size_t NUM_PASSES = 5;
+    static constexpr size_t NUM_SAMPLES = ( 2 * NUM_PASSES ) - 1;
 
-    std::array<RWImage, NUM_PASSES> images;
+    /// A separate image is allocated for each downsample and upsample, except for the last
+    /// downsample and the first upsample: these share the same image.
+    std::array<RWImage, NUM_SAMPLES> samples;
 
     std::array<std::unique_ptr<engine::DescriptorSet>, NUM_PASSES> downsample_desc_sets;
     std::array<std::unique_ptr<engine::DescriptorSet>, NUM_PASSES> upsample_desc_sets;

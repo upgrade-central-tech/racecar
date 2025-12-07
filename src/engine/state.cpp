@@ -229,7 +229,7 @@ State initialize( Context& ctx )
             .azimuth = 0.f,
             .zenith = 0.f,
             .up = glm::vec3( 0.f, 1.f, 0.f ),
-            .fov_y = float( glm::radians( 60.0 ) ),
+            .fov_y = glm::radians( 60.f ),
             .aspect_ratio = static_cast<float>( constant::SCREEN_W ) / constant::SCREEN_H,
             .near_plane = 0.1f,
             .far_plane = 1000.f,

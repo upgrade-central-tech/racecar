@@ -23,11 +23,14 @@ constexpr std::string_view UPSAMPLE_SHADER_PATH = "../shaders/post/bloom/upsampl
 BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_list,
     const RWImage& input, const RWImage& output, const UniformBuffer<ub_data::Debug>& )
 {
-    glm::ivec3 swapchain_dims = {
-        ( engine.swapchain.extent.width + 7 ) / 8,
-        ( engine.swapchain.extent.height + 7 ) / 8,
-        1,
-    };
+    VkImageUsageFlags image_usage_flags
+        = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+    // glm::ivec3 swapchain_dims = {
+    //     ( engine.swapchain.extent.width + 7 ) / 8,
+    //     ( engine.swapchain.extent.height + 7 ) / 8,
+    //     1,
+    // };
 
     BloomPass pass = {
         .brightness_threshold = engine::create_rwimage( vulkan, engine,
@@ -47,12 +50,14 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
     {
         VkExtent3D current_extent
             = { engine.swapchain.extent.width / 2, engine.swapchain.extent.height / 2, 1 };
+        size_t sample_idx = 0;
 
-        for ( size_t i = 0; i < BloomPass::NUM_PASSES; ++i ) {
-            pass.images[i] = engine::create_rwimage( vulkan, engine, current_extent,
+        for ( ; sample_idx < BloomPass::NUM_PASSES; ++sample_idx ) {
+            log::info( "sample_idx: {}", sample_idx );
+
+            pass.samples[sample_idx] = engine::create_rwimage( vulkan, engine, current_extent,
                 VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
-                VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
-                    | VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
+                image_usage_flags );
 
             engine::add_pipeline_barrier( task_list,
                 { .image_barriers = { {
@@ -62,14 +67,25 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                       .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                       .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                      .image = pass.images[i],
+                      .image = pass.samples[sample_idx],
                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                   } } } );
 
             // Each progressive image has half resolution
-            log::info( "[Post] [Bloom] Created intermediate image of size {}×{}",
-                current_extent.width, current_extent.height );
+            log::info( "[Post] [Bloom] Created image of size {}×{}", current_extent.width,
+                current_extent.height );
             current_extent = { current_extent.width / 2, current_extent.height / 2, 1 };
+        }
+
+        // The first upsample image to be written to is the second to last smallest
+        current_extent = { current_extent.width * 2, current_extent.height * 2, 1 };
+
+        for ( ; sample_idx < BloomPass::NUM_SAMPLES + 1; ++sample_idx ) {
+            log::info( "sample_idx: {}", sample_idx );
+
+            pass.samples[sample_idx] = engine::create_rwimage( vulkan, engine, current_extent,
+                VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+                image_usage_flags );
         }
     }
 
@@ -88,14 +104,14 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
     for ( size_t i = 0; i < BloomPass::NUM_PASSES; ++i ) {
         if ( i == 0 ) {
             // We'll be reading from the full resolution input texture
-            engine::transition_cs_read_to_write( task_list, pass.images[0] );
+            engine::transition_cs_read_to_write( task_list, pass.downsamples[0] );
         } else {
-            engine::transition_cs_write_to_read( task_list, pass.images[i - 1] );
-            engine::transition_cs_read_to_write( task_list, pass.images[i] );
+            engine::transition_cs_write_to_read( task_list, pass.downsamples[i - 1] );
+            engine::transition_cs_read_to_write( task_list, pass.downsamples[i] );
         }
 
-        const RWImage& input_image = i == 0 ? input : pass.images[i - 1];
-        VkExtent3D output_extent = pass.images[i].images[0].image_extent;
+        const RWImage& input_image = i == 0 ? input : pass.downsamples[i - 1];
+        VkExtent3D output_extent = pass.downsamples[i].images[0].image_extent;
 
         engine::DescriptorSet downsample_desc_set = engine::generate_descriptor_set( vulkan, engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
@@ -103,7 +119,7 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
         engine::update_descriptor_set_rwimage( vulkan, engine, downsample_desc_set, input_image,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
         engine::update_descriptor_set_rwimage(
-            vulkan, engine, downsample_desc_set, pass.images[i], VK_IMAGE_LAYOUT_GENERAL, 1 );
+            vulkan, engine, downsample_desc_set, pass.downsamples[i], VK_IMAGE_LAYOUT_GENERAL, 1 );
 
         engine::Pipeline downsample_pipeline = engine::create_compute_pipeline( vulkan,
             { downsample_desc_set.layouts[0], pass.sampler_desc_set->layouts[0] },
@@ -129,20 +145,20 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
 
         if ( i == 0 ) {
             // We'll be writing to the full resolution output texture
-            engine::transition_cs_write_to_read( task_list, pass.images[0] );
+            engine::transition_cs_write_to_read( task_list, pass.downsamples[0] );
         } else {
-            engine::transition_cs_write_to_read( task_list, pass.images[i] );
-            engine::transition_cs_read_to_write( task_list, pass.images[i - 1] );
+            engine::transition_cs_write_to_read( task_list, pass.downsamples[i] );
+            engine::transition_cs_read_to_write( task_list, pass.downsamples[i - 1] );
         }
 
-        const RWImage& output_image = i == 0 ? output : pass.images[i - 1];
+        const RWImage& output_image = i == 0 ? output : pass.downsamples[i - 1];
         VkExtent3D output_extent = output_image.images[0].image_extent;
 
         engine::DescriptorSet upsample_desc_set = engine::generate_descriptor_set( vulkan, engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT );
-        engine::update_descriptor_set_rwimage( vulkan, engine, upsample_desc_set, pass.images[i],
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+        engine::update_descriptor_set_rwimage( vulkan, engine, upsample_desc_set,
+            pass.downsamples[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
         engine::update_descriptor_set_rwimage(
             vulkan, engine, upsample_desc_set, output_image, VK_IMAGE_LAYOUT_GENERAL, 1 );
 

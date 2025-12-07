@@ -48,7 +48,9 @@ func upsample( uint2 thread_id: SV_DispatchThreadID )->void
     result += ( a + c + g + i );
     result *= ONE_SIXTEENTH;
 
-    output[pixel] = float4( result, 1.f );
+    let original = output[pixel].rgb;
+
+    output[pixel] = float4( original + result, 1.f );
 }
 
 
