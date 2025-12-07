@@ -217,7 +217,7 @@ void update_descriptor_set_const_storage_buffer( vk::Common& vulkan, const State
         VkDescriptorBufferInfo buffer_info = {
             .buffer = buffer,
             .offset = 0,
-            .range = storage_buffer.info.size,
+            .range = VK_WHOLE_SIZE,
         };
 
         VkWriteDescriptorSet write = {

@@ -98,11 +98,16 @@ float4 fs_main( VertexOutput in )
     float3 in_nor = GBuffer_Normals.Sample( nearest_sampler, in.uv ).rgb;
     float4 in_tangent = GBuffer_Position.Sample( nearest_sampler, in.uv );
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
-    float4 refl_data = ReflectionData.Sample( nearest_sampler, in.uv );
-
-    return refl_data;
+    float4 in_refl = ReflectionData.Sample( nearest_sampler, in.uv );
 
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
+
+    if ( stencil == CAR_ID ) {
+        return float4( in_pos, 1.0 );
+    }
+    return float4( normalize(in_refl.rgb), 1.0 );
+
+
     float2 ddx_uv = float2( GBuffer_Position.Sample( nearest_sampler, in.uv ).a,
         GBuffer_Normals.Sample( nearest_sampler, in.uv ).a );
 

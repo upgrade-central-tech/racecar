@@ -697,22 +697,6 @@ void run( bool use_fullscreen )
         }
     }
 
-    engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
-
-    engine::update_descriptor_set_const_storage_buffer(
-        ctx.vulkan, engine, car_descriptor_set, scene_mesh.mesh_buffers.vertex_buffer, 0 );
-
-    engine::update_descriptor_set_const_storage_buffer(
-        ctx.vulkan, engine, car_descriptor_set, scene_mesh.mesh_buffers.index_buffer, 1 );
-
-    UniformBuffer<ub_data::BLASOffsets> offset_data = create_uniform_buffer(
-        ctx.vulkan, blas_offsets, static_cast<size_t>( engine.frame_overlap ) );
-
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, car_descriptor_set, offset_data, 2 );
-
     std::vector<vk::rt::Object> objects;
     for ( auto& blas : engine.blas ) {
         objects.push_back(
@@ -783,8 +767,79 @@ void run( bool use_fullscreen )
     vkDestroyFence( ctx.vulkan.device, precompute_fence, VK_NULL_HANDLE );
     vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
 
+    log::info( "Creating Car Desc Set" );
+
+    engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set( ctx.vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+    std::vector<ub_data::PaddedVertex> padded_vertex_data {};
+    for ( geometry::scene::Vertex& v : scene_mesh.vertices ) {
+        padded_vertex_data.push_back(
+            { .position = v.position, .normal = v.normal, .tangent = v.tangent, .uv = v.uv } );
+    }
+
+    vk::mem::AllocatedBuffer padded_vertex_data_buffer = vk::mem::create_buffer( ctx.vulkan,
+        padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VMA_MEMORY_USAGE_CPU_TO_GPU );
+
+    {
+        vk::mem::AllocatedBuffer staging = vk::mem::create_buffer( ctx.vulkan,
+            padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ),
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY );
+
+        void* data = staging.info.pMappedData;
+        std::memcpy( data, padded_vertex_data.data(), padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ) );
+
+        engine::immediate_submit( ctx.vulkan, engine.immediate_submit, [&]( VkCommandBuffer cmd_buf ) {
+            VkBufferCopy vertex_buf_copy = {
+                .srcOffset = 0,
+                .dstOffset = 0,
+                .size = padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ),
+            };
+
+            vkCmdCopyBuffer(
+                cmd_buf, staging.handle, padded_vertex_data_buffer.handle, 1, &vertex_buf_copy );
+        } );
+    }
+
+    engine::update_descriptor_set_const_storage_buffer(
+        ctx.vulkan, engine, car_descriptor_set, padded_vertex_data_buffer, 0 );
+
+    engine::update_descriptor_set_const_storage_buffer(
+        ctx.vulkan, engine, car_descriptor_set, scene_mesh.mesh_buffers.index_buffer, 1 );
+
+    UniformBuffer<ub_data::BLASOffsets> offset_data = create_uniform_buffer(
+        ctx.vulkan, blas_offsets, static_cast<size_t>( engine.frame_overlap ) );
+    offset_data.set_data( blas_offsets );
+
+    log::info( "STRUCT SIZE: {}", sizeof( ub_data::BLASOffsets ) / sizeof( uint32_t ) );
+    log::info( "BUFFER SIZE: {}", offset_data.buffer( 0 ).info.size / sizeof( uint32_t ) );
+
+    for ( int i = 0; i < 100; i++ ) {
+        log::info( "{}: Vertex offset: {},      Index Offset: {}", i,
+            blas_offsets.vertex_buffer_offset[i], blas_offsets.index_buffer_offset[i] );
+    }
+
+    for ( size_t i = 0; i < 100; i++ ) {
+        log::info( "{}: Position: {}, {}, {}", i, scene_mesh.vertices[i].position.x,
+            scene_mesh.vertices[i].position.y, scene_mesh.vertices[i].position.z );
+        log::info( "{}: Normal: {}, {}, {}", i, scene_mesh.vertices[i].normal.x,
+            scene_mesh.vertices[i].normal.y, scene_mesh.vertices[i].normal.z );
+        log::info( "{}: Tangent: {}, {}, {}, {}", i, scene_mesh.vertices[i].tangent.x,
+            scene_mesh.vertices[i].tangent.y, scene_mesh.vertices[i].tangent.z,
+            scene_mesh.vertices[i].tangent.w );
+        log::info( "{}: UV: {}, {}", i, scene_mesh.vertices[i].uv.x, scene_mesh.vertices[i].uv.y );
+    }
+
+    engine::update_descriptor_set_uniform( ctx.vulkan, engine, car_descriptor_set, offset_data, 2 );
+
+    log::info( "Ending Car Desc Set" );
+
     engine::add_gfx_task( task_list, depth_ms_gfx_task );
 
+    log::info( "init reflection data" );
     // reflection data pass
     engine::RWImage reflection_data = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
@@ -851,15 +906,13 @@ void run( bool use_fullscreen )
     engine::DescriptorSet reflection_buffer_desc_set
         = engine::generate_descriptor_set( ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
             VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
-    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, reflection_buffer_desc_set,
-        reflection_data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
     // end reflection data pass
 
     // Lighting pass
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
-            .image_barriers
-            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .image_barriers = {
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                     .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
@@ -914,7 +967,10 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
                     .image = reflection_data,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR }, } } );
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+            } } );
+
+    log::info( "end reflection data" );
 
 #if ENABLE_TERRAIN
     geometry::TerrainLightingInfo terrain_lighting_info = {
@@ -997,6 +1053,8 @@ void run( bool use_fullscreen )
         ctx.vulkan, engine, gbuffer_descriptor_set, GBuffer_DepthMS, 6 );
     engine::update_descriptor_set_rwimage( ctx.vulkan, engine, gbuffer_descriptor_set,
         GBuffer_Packed_Data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 7 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, reflection_buffer_desc_set,
+        reflection_data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
 
     engine::update_descriptor_set_acceleration_structure(
         ctx.vulkan, engine, as_desc_set, engine.tlas.handle, 0 );
@@ -1282,6 +1340,10 @@ void run( bool use_fullscreen )
             material_uniform_buffers[size_t( mat_idx )].set_data( mat_data );
             material_uniform_buffers[size_t( mat_idx )].update(
                 ctx.vulkan, engine.get_frame_index() );
+        }
+
+        {
+            offset_data.update( ctx.vulkan, engine.get_frame_index() );
         }
 
         // Update terrain

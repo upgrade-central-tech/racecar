@@ -131,8 +131,19 @@ struct Tonemapping {
 };
 
 struct BLASOffsets {
-    uint32_t vertex_buffer_offset[100];
-    uint32_t index_buffer_offset[100];
+    uint32_t vertex_buffer_offset[104];
+    uint32_t index_buffer_offset[104];
 };
+
+struct PaddedVertex {
+    glm::vec3 position;
+    float _pad1;
+    glm::vec3 normal;
+    float _pad2;
+    glm::vec4 tangent;
+    glm::vec2 uv;
+    float _pad3[2];
+};
+
 
 } // namespace racecar::uniform_buffer
