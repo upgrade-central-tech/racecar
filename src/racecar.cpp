@@ -50,7 +50,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -993,7 +993,7 @@ void run( bool use_fullscreen )
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
             gui::process_event( &event );
-            camera::process_event( ctx, &event, engine.camera );
+            camera::process_event( ctx, &event, engine.camera, gui.show_window );
 
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;
@@ -1181,18 +1181,9 @@ void run( bool use_fullscreen )
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        // {
-        //     ub_data::RaymarchBufferData raymarch_ub = {
-        //         .step_size = 1,
-        //     };
-
-        //     raymarch_buffer.set_data( raymarch_ub );
-        //     raymarch_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        // }
-
         gui::update( gui, camera, atms );
 
-        engine::execute( engine, ctx, task_list );
+        engine::execute( engine, ctx, task_list, gui );
         engine.rendered_frames = engine.rendered_frames + 1;
         engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
 

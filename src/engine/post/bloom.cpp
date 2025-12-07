@@ -7,19 +7,21 @@ namespace racecar::engine::post {
 
 namespace {
 
+/*
 constexpr std::string_view BRIGHTNESS_THRESHOLD_PATH
-    = "../shaders/post/bloom/brightness_threshold.spv";
+= "../shaders/post/bloom/brightness_threshold.spv";
 constexpr std::string_view HORZ_BLUR_PATH = "../shaders/post/bloom/horz_blur.spv";
 constexpr std::string_view VERT_BLUR_PATH = "../shaders/post/bloom/vert_blur.spv";
 constexpr std::string_view GATHER_BLUR_PATH = "../shaders/post/bloom/gather.spv";
+*/
 
 constexpr std::string_view DOWNSAMPLE_SHADER_PATH = "../shaders/post/bloom/downsample.spv";
+constexpr std::string_view UPSAMPLE_SHADER_PATH = "../shaders/post/bloom/upsample.spv";
 
 }
 
 BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_list,
-    const RWImage& input, const RWImage& output,
-    const UniformBuffer<ub_data::Debug>& uniform_debug_buffer )
+    const RWImage& input, const RWImage& output, const UniformBuffer<ub_data::Debug>& )
 {
     glm::ivec3 swapchain_dims = {
         ( engine.swapchain.extent.width + 7 ) / 8,
@@ -39,6 +41,8 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
                 | VK_IMAGE_USAGE_TRANSFER_SRC_BIT ),
     };
+
+    log::info( "[Post] [Bloom] Number of passes: {}", BloomPass::NUM_PASSES );
 
     {
         VkExtent3D current_extent
@@ -63,7 +67,7 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                   } } } );
 
             // Each progressive image has half resolution
-            log::info( "[Pass] [Bloom] Created intermediate image of size {}×{}",
+            log::info( "[Post] [Bloom] Created intermediate image of size {}×{}",
                 current_extent.width, current_extent.height );
             current_extent = { current_extent.width / 2, current_extent.height / 2, 1 };
         }
@@ -118,163 +122,208 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             } );
     }
 
-    engine::add_pipeline_barrier( task_list,
-        { .image_barriers = {
-              {
-                  .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                  .src_access = VK_ACCESS_2_NONE,
-                  .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                  .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                  .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                  .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                  .image = pass.brightness_threshold,
-                  .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-              },
-              {
-                  .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                  .src_access = VK_ACCESS_2_NONE,
-                  .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                  .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                  .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                  .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                  .image = pass.horz_blur,
-                  .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-              },
-          } } );
+    VkShaderModule upsample_shader = vk::create::shader_module( vulkan, UPSAMPLE_SHADER_PATH );
 
-    {
-        engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set(
-            vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_COMPUTE_BIT );
-        engine::update_descriptor_set_uniform(
-            vulkan, engine, uniform_desc_set, uniform_debug_buffer, 0 );
+    for ( int signed_i = BloomPass::NUM_PASSES - 1; signed_i >= 0; --signed_i ) {
+        size_t i = static_cast<size_t>( signed_i );
 
-        pass.uniform_desc_set
-            = std::make_unique<engine::DescriptorSet>( std::move( uniform_desc_set ) );
-    }
+        if ( i == 0 ) {
+            // We'll be writing to the full resolution output texture
+            engine::transition_cs_write_to_read( task_list, pass.images[0] );
+        } else {
+            engine::transition_cs_write_to_read( task_list, pass.images[i] );
+            engine::transition_cs_read_to_write( task_list, pass.images[i - 1] );
+        }
 
-    {
-        engine::DescriptorSet brightness_threshold_desc_set = engine::generate_descriptor_set(
-            vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+        const RWImage& output_image = i == 0 ? output : pass.images[i - 1];
+        VkExtent3D output_extent = output_image.images[0].image_extent;
+
+        engine::DescriptorSet upsample_desc_set = engine::generate_descriptor_set( vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT );
-        engine::update_descriptor_set_rwimage( vulkan, engine, brightness_threshold_desc_set, input,
+        engine::update_descriptor_set_rwimage( vulkan, engine, upsample_desc_set, pass.images[i],
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
-        engine::update_descriptor_set_rwimage( vulkan, engine, brightness_threshold_desc_set,
-            pass.brightness_threshold, VK_IMAGE_LAYOUT_GENERAL, 1 );
+        engine::update_descriptor_set_rwimage(
+            vulkan, engine, upsample_desc_set, output_image, VK_IMAGE_LAYOUT_GENERAL, 1 );
 
-        engine::Pipeline brightness_threshold_pipeline = engine::create_compute_pipeline( vulkan,
-            { brightness_threshold_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
-            vk::create::shader_module( vulkan, BRIGHTNESS_THRESHOLD_PATH ), "cs_main" );
+        engine::Pipeline upsample_pipeline = engine::create_compute_pipeline( vulkan,
+            { upsample_desc_set.layouts[0], pass.sampler_desc_set->layouts[0] }, upsample_shader,
+            "upsample" );
 
-        pass.brightness_threshold_desc_set
-            = std::make_unique<engine::DescriptorSet>( std::move( brightness_threshold_desc_set ) );
+        size_t desc_set_idx = BloomPass::NUM_PASSES - 1 - i;
+        pass.upsample_desc_sets[desc_set_idx]
+            = std::make_unique<engine::DescriptorSet>( std::move( upsample_desc_set ) );
 
         engine::add_cs_task( task_list,
             {
-                .pipeline = brightness_threshold_pipeline,
+                .pipeline = upsample_pipeline,
                 .descriptor_sets
-                = { pass.brightness_threshold_desc_set.get(), pass.uniform_desc_set.get() },
-                .group_size = swapchain_dims,
+                = { pass.upsample_desc_sets[desc_set_idx].get(), pass.sampler_desc_set.get() },
+                .group_size
+                = { ( output_extent.width + 7 ) / 8, ( output_extent.height + 7 ) / 8, 1 },
             } );
     }
 
-    VkShaderModule horz_blur_shader = vk::create::shader_module( vulkan, HORZ_BLUR_PATH );
-    VkShaderModule vert_blur_shader = vk::create::shader_module( vulkan, VERT_BLUR_PATH );
+    // engine::add_pipeline_barrier( task_list,
+    //     { .image_barriers = {
+    //           {
+    //               .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+    //               .src_access = VK_ACCESS_2_NONE,
+    //               .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+    //               .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+    //               .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+    //               .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+    //               .image = pass.brightness_threshold,
+    //               .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+    //           },
+    //           {
+    //               .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+    //               .src_access = VK_ACCESS_2_NONE,
+    //               .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+    //               .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+    //               .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+    //               .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+    //               .image = pass.horz_blur,
+    //               .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+    //           },
+    //       } } );
 
-    for ( size_t i = 0; i < 5; ++i ) {
-        engine::transition_cs_read_to_write( task_list, pass.horz_blur );
-        engine::transition_cs_write_to_read( task_list, pass.brightness_threshold );
+    // {
+    //     engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set(
+    //         vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_COMPUTE_BIT );
+    //     engine::update_descriptor_set_uniform(
+    //         vulkan, engine, uniform_desc_set, uniform_debug_buffer, 0 );
 
-        {
-            engine::DescriptorSet horz_blur_desc_set = engine::generate_descriptor_set( vulkan,
-                engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
-                VK_SHADER_STAGE_COMPUTE_BIT );
-            engine::update_descriptor_set_rwimage( vulkan, engine, horz_blur_desc_set,
-                pass.brightness_threshold, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
-            engine::update_descriptor_set_rwimage(
-                vulkan, engine, horz_blur_desc_set, pass.horz_blur, VK_IMAGE_LAYOUT_GENERAL, 1 );
+    //     pass.uniform_desc_set
+    //         = std::make_unique<engine::DescriptorSet>( std::move( uniform_desc_set ) );
+    // }
 
-            engine::Pipeline horz_blur_pipeline = engine::create_compute_pipeline( vulkan,
-                {
-                    horz_blur_desc_set.layouts[0],
-                    pass.uniform_desc_set->layouts[0],
-                    pass.sampler_desc_set->layouts[0],
-                },
-                horz_blur_shader, "cs_main" );
+    // {
+    //     engine::DescriptorSet brightness_threshold_desc_set = engine::generate_descriptor_set(
+    //         vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+    //         }, VK_SHADER_STAGE_COMPUTE_BIT );
+    //     engine::update_descriptor_set_rwimage( vulkan, engine, brightness_threshold_desc_set,
+    //     input,
+    //         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    //     engine::update_descriptor_set_rwimage( vulkan, engine, brightness_threshold_desc_set,
+    //         pass.brightness_threshold, VK_IMAGE_LAYOUT_GENERAL, 1 );
 
-            pass.horz_blur_desc_sets[i]
-                = std::make_unique<engine::DescriptorSet>( std::move( horz_blur_desc_set ) );
+    //     engine::Pipeline brightness_threshold_pipeline = engine::create_compute_pipeline( vulkan,
+    //         { brightness_threshold_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
+    //         vk::create::shader_module( vulkan, BRIGHTNESS_THRESHOLD_PATH ), "cs_main" );
 
-            engine::add_cs_task( task_list,
-                {
-                    .pipeline = horz_blur_pipeline,
-                    .descriptor_sets = { pass.horz_blur_desc_sets[i].get(),
-                        pass.uniform_desc_set.get(), pass.sampler_desc_set.get() },
-                    .group_size = swapchain_dims,
-                } );
-        }
+    //     pass.brightness_threshold_desc_set
+    //         = std::make_unique<engine::DescriptorSet>( std::move( brightness_threshold_desc_set )
+    //         );
 
-        engine::transition_cs_write_to_read( task_list, pass.horz_blur );
-        engine::transition_cs_read_to_write( task_list, pass.brightness_threshold );
+    //     engine::add_cs_task( task_list,
+    //         {
+    //             .pipeline = brightness_threshold_pipeline,
+    //             .descriptor_sets
+    //             = { pass.brightness_threshold_desc_set.get(), pass.uniform_desc_set.get() },
+    //             .group_size = swapchain_dims,
+    //         } );
+    // }
 
-        {
-            engine::DescriptorSet vert_blur_desc_set = engine::generate_descriptor_set( vulkan,
-                engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
-                VK_SHADER_STAGE_COMPUTE_BIT );
-            engine::update_descriptor_set_rwimage( vulkan, engine, vert_blur_desc_set,
-                pass.horz_blur, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
-            engine::update_descriptor_set_rwimage( vulkan, engine, vert_blur_desc_set,
-                pass.brightness_threshold, VK_IMAGE_LAYOUT_GENERAL, 1 );
+    // VkShaderModule horz_blur_shader = vk::create::shader_module( vulkan, HORZ_BLUR_PATH );
+    // VkShaderModule vert_blur_shader = vk::create::shader_module( vulkan, VERT_BLUR_PATH );
 
-            engine::Pipeline vert_blur_pipeline = engine::create_compute_pipeline( vulkan,
-                {
-                    vert_blur_desc_set.layouts[0],
-                    pass.uniform_desc_set->layouts[0],
-                    pass.sampler_desc_set->layouts[0],
-                },
-                vert_blur_shader, "cs_main" );
+    // for ( size_t i = 0; i < 5; ++i ) {
+    //     engine::transition_cs_read_to_write( task_list, pass.horz_blur );
+    //     engine::transition_cs_write_to_read( task_list, pass.brightness_threshold );
 
-            pass.vert_blur_desc_sets[i]
-                = std::make_unique<engine::DescriptorSet>( std::move( vert_blur_desc_set ) );
+    //     {
+    //         engine::DescriptorSet horz_blur_desc_set = engine::generate_descriptor_set( vulkan,
+    //             engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+    //             VK_SHADER_STAGE_COMPUTE_BIT );
+    //         engine::update_descriptor_set_rwimage( vulkan, engine, horz_blur_desc_set,
+    //             pass.brightness_threshold, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    //         engine::update_descriptor_set_rwimage(
+    //             vulkan, engine, horz_blur_desc_set, pass.horz_blur, VK_IMAGE_LAYOUT_GENERAL, 1 );
 
-            engine::add_cs_task( task_list,
-                {
-                    .pipeline = vert_blur_pipeline,
-                    .descriptor_sets = { pass.vert_blur_desc_sets[i].get(),
-                        pass.uniform_desc_set.get(), pass.sampler_desc_set.get() },
-                    .group_size = swapchain_dims,
-                } );
-        }
-    }
+    //         engine::Pipeline horz_blur_pipeline = engine::create_compute_pipeline( vulkan,
+    //             {
+    //                 horz_blur_desc_set.layouts[0],
+    //                 pass.uniform_desc_set->layouts[0],
+    //                 pass.sampler_desc_set->layouts[0],
+    //             },
+    //             horz_blur_shader, "cs_main" );
+
+    //         pass.horz_blur_desc_sets[i]
+    //             = std::make_unique<engine::DescriptorSet>( std::move( horz_blur_desc_set ) );
+
+    //         engine::add_cs_task( task_list,
+    //             {
+    //                 .pipeline = horz_blur_pipeline,
+    //                 .descriptor_sets = { pass.horz_blur_desc_sets[i].get(),
+    //                     pass.uniform_desc_set.get(), pass.sampler_desc_set.get() },
+    //                 .group_size = swapchain_dims,
+    //             } );
+    //     }
+
+    //     engine::transition_cs_write_to_read( task_list, pass.horz_blur );
+    //     engine::transition_cs_read_to_write( task_list, pass.brightness_threshold );
+
+    //     {
+    //         engine::DescriptorSet vert_blur_desc_set = engine::generate_descriptor_set( vulkan,
+    //             engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+    //             VK_SHADER_STAGE_COMPUTE_BIT );
+    //         engine::update_descriptor_set_rwimage( vulkan, engine, vert_blur_desc_set,
+    //             pass.horz_blur, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    //         engine::update_descriptor_set_rwimage( vulkan, engine, vert_blur_desc_set,
+    //             pass.brightness_threshold, VK_IMAGE_LAYOUT_GENERAL, 1 );
+
+    //         engine::Pipeline vert_blur_pipeline = engine::create_compute_pipeline( vulkan,
+    //             {
+    //                 vert_blur_desc_set.layouts[0],
+    //                 pass.uniform_desc_set->layouts[0],
+    //                 pass.sampler_desc_set->layouts[0],
+    //             },
+    //             vert_blur_shader, "cs_main" );
+
+    //         pass.vert_blur_desc_sets[i]
+    //             = std::make_unique<engine::DescriptorSet>( std::move( vert_blur_desc_set ) );
+
+    //         engine::add_cs_task( task_list,
+    //             {
+    //                 .pipeline = vert_blur_pipeline,
+    //                 .descriptor_sets = { pass.vert_blur_desc_sets[i].get(),
+    //                     pass.uniform_desc_set.get(), pass.sampler_desc_set.get() },
+    //                 .group_size = swapchain_dims,
+    //             } );
+    //     }
+    // }
 
     // Brightness threshold texture holds the final blurred texture
-    engine::transition_cs_write_to_read( task_list, pass.brightness_threshold );
+    // engine::transition_cs_write_to_read( task_list, pass.brightness_threshold );
 
-    {
-        engine::DescriptorSet gather_desc_set = engine::generate_descriptor_set( vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
-            VK_SHADER_STAGE_COMPUTE_BIT );
-        engine::update_descriptor_set_rwimage( vulkan, engine, gather_desc_set,
-            pass.brightness_threshold, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
-        engine::update_descriptor_set_rwimage(
-            vulkan, engine, gather_desc_set, input, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
-        engine::update_descriptor_set_rwimage(
-            vulkan, engine, gather_desc_set, output, VK_IMAGE_LAYOUT_GENERAL, 2 );
+    // {
+    //     engine::DescriptorSet gather_desc_set = engine::generate_descriptor_set( vulkan, engine,
+    //         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+    //             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+    //         VK_SHADER_STAGE_COMPUTE_BIT );
+    //     engine::update_descriptor_set_rwimage( vulkan, engine, gather_desc_set,
+    //         pass.brightness_threshold, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    //     engine::update_descriptor_set_rwimage(
+    //         vulkan, engine, gather_desc_set, input, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1
+    //         );
+    //     engine::update_descriptor_set_rwimage(
+    //         vulkan, engine, gather_desc_set, output, VK_IMAGE_LAYOUT_GENERAL, 2 );
 
-        engine::Pipeline gather_pipeline = engine::create_compute_pipeline( vulkan,
-            { gather_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
-            vk::create::shader_module( vulkan, GATHER_BLUR_PATH ), "cs_main" );
+    //     engine::Pipeline gather_pipeline = engine::create_compute_pipeline( vulkan,
+    //         { gather_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
+    //         vk::create::shader_module( vulkan, GATHER_BLUR_PATH ), "cs_main" );
 
-        pass.gather_desc_set
-            = std::make_unique<engine::DescriptorSet>( std::move( gather_desc_set ) );
+    //     pass.gather_desc_set
+    //         = std::make_unique<engine::DescriptorSet>( std::move( gather_desc_set ) );
 
-        engine::add_cs_task( task_list,
-            {
-                .pipeline = gather_pipeline,
-                .descriptor_sets = { pass.gather_desc_set.get(), pass.uniform_desc_set.get() },
-                .group_size = swapchain_dims,
-            } );
-    }
+    //     engine::add_cs_task( task_list,
+    //         {
+    //             .pipeline = gather_pipeline,
+    //             .descriptor_sets = { pass.gather_desc_set.get(), pass.uniform_desc_set.get() },
+    //             .group_size = swapchain_dims,
+    //         } );
+    // }
 
     log::info( "[Post] Added bloom pass!" );
 

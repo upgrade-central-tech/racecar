@@ -105,11 +105,15 @@ void process_event( const SDL_Event* event )
 
 void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere& atms )
 {
+    if ( !gui.show_window ) {
+        return;
+    }
+
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    if ( ImGui::Begin( "Configuration" ) ) {
+    if ( ImGui::Begin( "Configuration", &gui.show_window ) ) {
         const ImGuiIO& io = ImGui::GetIO();
         float average_fps = io.Framerate;
         ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );

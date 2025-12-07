@@ -17,6 +17,8 @@ struct Gui {
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
     ImGuiContext* ctx = nullptr;
 
+    bool show_window = true;
+
     struct DebugData {
         glm::vec4 color = glm::vec4( 0.85f, 0.0f, 0.0f, 1.0f );
         float roughness;
