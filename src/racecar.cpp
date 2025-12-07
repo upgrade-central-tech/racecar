@@ -1,5 +1,6 @@
 #include "racecar.hpp"
 
+#include "engine/post/anti_aliasing.hpp"
 #include "engine/post/tonemapping.hpp"
 
 #define ENABLE_VOLUMETRICS 1
@@ -50,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view REFLECTION_PASS_SHADER_MODULE_PATH
@@ -198,6 +199,35 @@ void run( bool use_fullscreen )
         material_uniform_buffers[i] = std::move( material_buffer );
     }
 
+    size_t num_nodes = scene.nodes.size();
+    std::vector<engine::DescriptorSet> model_mat_desc_sets( num_nodes );
+    std::vector<UniformBuffer<ub_data::ModelMat>> model_mat_uniform_buffers( num_nodes );
+
+    for ( size_t i = 0; i < num_nodes; i++ ) {
+        model_mat_desc_sets[i] = engine::generate_descriptor_set(
+            ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_VERTEX_BIT );
+
+        scene::Node* node = scene.nodes[i].get();
+        glm::mat4 transform = node->transform;
+        while ( node->parent != nullptr ) {
+            node = node->parent;
+            transform = node->transform * transform;
+        }
+
+        UniformBuffer model_mat_buffer = create_uniform_buffer<ub_data::ModelMat>(
+            ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+
+        ub_data::ModelMat model_mat_ub = { .model_mat = transform,
+            .inv_model_mat = glm::inverse( transform ),
+            .prev_model_mat = transform };
+        model_mat_buffer.set_data( model_mat_ub );
+        model_mat_buffer.update( ctx.vulkan, engine.get_frame_index() );
+
+        engine::update_descriptor_set_uniform(
+            ctx.vulkan, engine, model_mat_desc_sets[i], model_mat_buffer, 0 );
+        model_mat_uniform_buffers[i] = std::move( model_mat_buffer );
+    }
+
     engine::DescriptorSet raymarch_tex_sets;
     {
         raymarch_tex_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
@@ -211,6 +241,7 @@ void run( bool use_fullscreen )
 
     engine::DescriptorSet lut_sets;
     vk::mem::AllocatedImage lut_brdf;
+    vk::mem::AllocatedImage glint_noise;
     {
         lut_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
             {
@@ -226,7 +257,7 @@ void run( bool use_fullscreen )
         lut_brdf = engine::load_image(
             BRDF_LUT_PATH, ctx.vulkan, engine, 2, VK_FORMAT_R16G16_SFLOAT, false );
 
-        vk::mem::AllocatedImage glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
+        glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
 
         engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 0 );
         engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, glint_noise, 1 );
@@ -311,6 +342,7 @@ void run( bool use_fullscreen )
             {
                 uniform_desc_set.layouts[frame_index],
                 material_desc_sets[0].layouts[frame_index],
+                model_mat_desc_sets[0].layouts[frame_index],
                 lut_sets.layouts[frame_index],
                 sampler_desc_set.layouts[frame_index],
             },
@@ -320,9 +352,10 @@ void run( bool use_fullscreen )
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // UV
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // ALBEDO
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT // PACKED DATA (metallic, roughness,
-                                                        // clearcoat roughness, clearcoat
-                                                        // weight)
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // PACKED DATA (metallic, roughness,
+                                                         // clearcoat roughness, clearcoat
+                                                         // weight)
+                VkFormat::VK_FORMAT_R16G16_SFLOAT, // VELOCITY
             },
             VK_SAMPLE_COUNT_1_BIT, false, true,
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ), false );
@@ -372,6 +405,11 @@ void run( bool use_fullscreen )
         VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
+    engine::RWImage GBuffer_Velocity = engine::create_rwimage( ctx.vulkan, engine,
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
+
 #if ENABLE_DEFERRED_AA
     // Render to an offscreen image, this is what we'll present to the swapchain.
     engine::RWImage screen_color = engine::create_rwimage( ctx.vulkan, engine,
@@ -386,6 +424,12 @@ void run( bool use_fullscreen )
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
+
+    // Store the last-rendered image here!
+    engine::RWImage screen_history = engine::create_rwimage( ctx.vulkan, engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT );
 #endif
 
     // deferred transition tasks
@@ -407,6 +451,14 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Velocity,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
                     .src_access = VK_ACCESS_2_NONE,
@@ -569,7 +621,7 @@ void run( bool use_fullscreen )
         .clear_depth = 1.f,
         .render_target_is_swapchain = false,
         .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Tangent, GBuffer_UV,
-            GBuffer_Albedo, GBuffer_Packed_Data },
+            GBuffer_Albedo, GBuffer_Packed_Data, GBuffer_Velocity },
         .depth_image = GBuffer_Depth,
         .extent = engine.swapchain.extent,
     };
@@ -590,8 +642,10 @@ void run( bool use_fullscreen )
 
     std::vector<vk::mem::AllocatedImage> albedo_textures;
     std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
-    
+
     ub_data::RTTextureUniform rt_texture_uniform;
+
+    std::vector<glm::mat4> transforms;
 
     for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
         if ( node->mesh.has_value() ) {
@@ -622,20 +676,25 @@ void run( bool use_fullscreen )
                                   metallic_roughness_index.value() )] ) }
                             : std::nullopt );
 
-                    if (albedo_index) {
-                        albedo_textures.push_back( scene.textures[static_cast<size_t>( albedo_index.value() )].data.value() );
-                        rt_texture_uniform.albedo_texture_index[num_blas] = int(albedo_textures.size() - 1);
-                    }
-                    else {
+                    if ( albedo_index ) {
+                        albedo_textures.push_back(
+                            scene.textures[static_cast<size_t>( albedo_index.value() )]
+                                .data.value() );
+                        rt_texture_uniform.albedo_texture_index[num_blas]
+                            = int( albedo_textures.size() - 1 );
+                    } else {
                         rt_texture_uniform.albedo_texture_index[num_blas] = -1;
-                        rt_texture_uniform.base_color[num_blas] = glm::vec4(current_material.base_color, 1.0);
+                        rt_texture_uniform.base_color[num_blas]
+                            = glm::vec4( current_material.base_color, 1.0 );
                     }
 
-                    if (metallic_roughness_index) {
-                        metallic_roughness_textures.push_back( scene.textures[static_cast<size_t>( metallic_roughness_index.value() )].data.value() );
-                        rt_texture_uniform.metallic_roughness_texture_index[num_blas] = int(metallic_roughness_textures.size() - 1);
-                    }
-                    else {
+                    if ( metallic_roughness_index ) {
+                        metallic_roughness_textures.push_back(
+                            scene.textures[static_cast<size_t>( metallic_roughness_index.value() )]
+                                .data.value() );
+                        rt_texture_uniform.metallic_roughness_texture_index[num_blas]
+                            = int( metallic_roughness_textures.size() - 1 );
+                    } else {
                         rt_texture_uniform.metallic_roughness_texture_index[num_blas] = -1;
                         rt_texture_uniform.metallic[num_blas] = current_material.metallic;
                         rt_texture_uniform.roughness[num_blas] = current_material.roughness;
@@ -682,6 +741,7 @@ void run( bool use_fullscreen )
                         .descriptor_sets = {
                             &uniform_desc_set,
                             &material_desc_sets[static_cast<size_t>( prim.material_id )],
+                            &model_mat_desc_sets[static_cast<size_t>(prim.node_id)],
                             &lut_sets,
                             &sampler_desc_set,
                         },
@@ -699,7 +759,9 @@ void run( bool use_fullscreen )
                     uint32_t idx = scene_mesh.indices[offset_x];
                     max_idx = glm::max( max_idx, idx );
                 }
-
+                transforms.push_back( model_mat_uniform_buffers[static_cast<size_t>( prim.node_id )]
+                        .get_data()
+                        .model_mat );
                 engine.blas.push_back( vk::rt::build_blas( ctx.vulkan.device, ctx.vulkan.allocator,
                     ctx.vulkan.ray_tracing_properties,
                     { .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
@@ -722,9 +784,9 @@ void run( bool use_fullscreen )
     }
 
     std::vector<vk::rt::Object> objects;
-    for ( auto& blas : engine.blas ) {
-        objects.push_back(
-            vk::rt::Object { .blas = &blas, .transform = glm::identity<glm::mat4>() } );
+    for ( size_t i = 0; i < engine.blas.size(); i++ ) {
+        auto& blas = engine.blas[i];
+        objects.push_back( vk::rt::Object { .blas = &blas, .transform = transforms[i] } );
     }
 
     engine.tlas = vk::rt::build_tlas( ctx.vulkan.device, ctx.vulkan.allocator,
@@ -742,11 +804,14 @@ void run( bool use_fullscreen )
     // TODO: INSERT TERRAIN PRE-PASS DRAW HERE
     geometry::TerrainPrepassInfo prepass_terrain_info = {
         &camera_buffer,
+        &debug_buffer,
         &GBuffer_Position,
         &GBuffer_Normal,
         &GBuffer_Albedo,
         &GBuffer_Depth,
         &GBuffer_Packed_Data,
+        &GBuffer_Velocity,
+        &glint_noise,
     };
 
     geometry::Terrain test_terrain;
@@ -803,7 +868,8 @@ void run( bool use_fullscreen )
     }
 
     vk::mem::AllocatedBuffer padded_vertex_data_buffer = vk::mem::create_buffer( ctx.vulkan,
-        padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ),
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VMA_MEMORY_USAGE_CPU_TO_GPU );
 
     {
@@ -812,18 +878,20 @@ void run( bool use_fullscreen )
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY );
 
         void* data = staging.info.pMappedData;
-        std::memcpy( data, padded_vertex_data.data(), padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ) );
+        std::memcpy( data, padded_vertex_data.data(),
+            padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ) );
 
-        engine::immediate_submit( ctx.vulkan, engine.immediate_submit, [&]( VkCommandBuffer cmd_buf ) {
-            VkBufferCopy vertex_buf_copy = {
-                .srcOffset = 0,
-                .dstOffset = 0,
-                .size = padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ),
-            };
+        engine::immediate_submit(
+            ctx.vulkan, engine.immediate_submit, [&]( VkCommandBuffer cmd_buf ) {
+                VkBufferCopy vertex_buf_copy = {
+                    .srcOffset = 0,
+                    .dstOffset = 0,
+                    .size = padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ),
+                };
 
-            vkCmdCopyBuffer(
-                cmd_buf, staging.handle, padded_vertex_data_buffer.handle, 1, &vertex_buf_copy );
-        } );
+                vkCmdCopyBuffer( cmd_buf, staging.handle, padded_vertex_data_buffer.handle, 1,
+                    &vertex_buf_copy );
+            } );
     }
 
     engine::update_descriptor_set_const_storage_buffer(
@@ -839,19 +907,22 @@ void run( bool use_fullscreen )
 
     engine::add_gfx_task( task_list, depth_ms_gfx_task );
 
-
     // number of albedo textures to bind
-    engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(ctx.vulkan, engine, {
-        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
-    }, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, uint32_t(albedo_textures.size()));
+    engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(
+        ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        uint32_t( albedo_textures.size() ) );
 
-    engine::update_descriptor_set_image_array(ctx.vulkan, engine, combined_textures_desc_set, albedo_textures, 0);
-    engine::update_descriptor_set_image_array(ctx.vulkan, engine, combined_textures_desc_set, metallic_roughness_textures, 1);
+    engine::update_descriptor_set_image_array(
+        ctx.vulkan, engine, combined_textures_desc_set, albedo_textures, 0 );
+    engine::update_descriptor_set_image_array(
+        ctx.vulkan, engine, combined_textures_desc_set, metallic_roughness_textures, 1 );
 
-    UniformBuffer<ub_data::RTTextureUniform> rt_texture_uniform_data = create_uniform_buffer(ctx.vulkan, rt_texture_uniform, engine.frame_overlap);
-    rt_texture_uniform_data.set_data(rt_texture_uniform);
-    engine::update_descriptor_set_uniform(ctx.vulkan, engine, car_descriptor_set, rt_texture_uniform_data, 3);
-
+    UniformBuffer<ub_data::RTTextureUniform> rt_texture_uniform_data
+        = create_uniform_buffer( ctx.vulkan, rt_texture_uniform, engine.frame_overlap );
+    rt_texture_uniform_data.set_data( rt_texture_uniform );
+    engine::update_descriptor_set_uniform(
+        ctx.vulkan, engine, car_descriptor_set, rt_texture_uniform_data, 3 );
 
     // reflection data pass
     engine::RWImage reflection_data = engine::create_rwimage( ctx.vulkan, engine,
@@ -869,6 +940,14 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
                     .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Velocity,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -896,7 +975,8 @@ void run( bool use_fullscreen )
         engine::get_vertex_input_state_create_info( quad_mesh ),
         { uniform_desc_set.layouts[0], sampler_desc_set.layouts[0],
             gbuffer_descriptor_set.layouts[0], as_desc_set.layouts[0],
-            terrain_as_desc_set.layouts[0], car_descriptor_set.layouts[0], combined_textures_desc_set.layouts[0] },
+            terrain_as_desc_set.layouts[0], car_descriptor_set.layouts[0],
+            combined_textures_desc_set.layouts[0] },
         { VK_FORMAT_R16G16B16A16_SFLOAT }, VK_SAMPLE_COUNT_1_BIT, false, false,
         vk::create::shader_module( ctx.vulkan, REFLECTION_PASS_SHADER_MODULE_PATH ), false );
 
@@ -1130,41 +1210,44 @@ void run( bool use_fullscreen )
                 },
             } } );
 
-    engine::post::BloomPass bloom_pass = engine::post::add_bloom(
-        ctx.vulkan, engine, task_list, screen_color, screen_buffer, debug_buffer );
+    engine::post::BloomPass bloom_pass
+        = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
 
     engine::post::AoPass ao_pass = {
-        &camera_buffer,
-        &GBuffer_Normal,
-        &GBuffer_Depth,
-        &screen_buffer,
-        &screen_color,
+        .camera_buffer = &camera_buffer,
+        .GBuffer_Normal = &GBuffer_Normal,
+        .GBuffer_Depth = &GBuffer_Depth,
+        .in_color = &screen_color,
+        .out_color = &screen_buffer,
     };
-    {
-        engine::transition_cs_read_to_write( task_list, screen_color );
-        engine::transition_cs_write_to_read( task_list, screen_buffer );
+    add_ao( ao_pass, ctx.vulkan, engine, task_list );
 
-        add_ao( ao_pass, ctx.vulkan, engine, task_list );
-    }
+    engine::transition_cs_read_to_write( task_list, screen_color );
+    engine::transition_cs_write_to_read( task_list, screen_buffer );
+    engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
+        ctx.vulkan, engine, screen_buffer, screen_color, task_list );
 
+    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
     engine::transition_cs_read_to_write( task_list, screen_buffer );
     engine::transition_cs_write_to_read( task_list, screen_color );
-    engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
-        ctx.vulkan, engine, screen_color, screen_buffer, task_list );
+    engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_color,
+        GBuffer_Depth, GBuffer_Velocity, screen_buffer, screen_history, task_list, camera_buffer );
 
     // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
     // screen.
     engine::add_pipeline_barrier( task_list,
         engine::PipelineBarrierDescriptor { .buffer_barriers = {},
             .image_barriers = {
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
                     .src_layout = VK_IMAGE_LAYOUT_GENERAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                     .image = screen_buffer,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
             } } );
 
     engine::add_blit_task( task_list, { screen_buffer } );
@@ -1183,7 +1266,7 @@ void run( bool use_fullscreen )
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
             gui::process_event( &event );
-            camera::process_event( ctx, &event, engine.camera );
+            camera::process_event( ctx, &event, engine.camera, gui.show_window );
 
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;
@@ -1205,6 +1288,14 @@ void run( bool use_fullscreen )
         }
 
         camera::OrbitCamera& camera = engine.camera;
+
+        if ( scene.demo_scene_nodes.car_parent_id.has_value()
+            && gui.demo.enable_camera_lock_on_car ) {
+            camera.center
+                = model_mat_uniform_buffers.at( scene.demo_scene_nodes.car_parent_id.value() )
+                      .get_data()
+                      .model_mat[3];
+        }
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
             camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
@@ -1247,18 +1338,36 @@ void run( bool use_fullscreen )
         {
             ub_data::Camera camera_ub = camera_buffer.get_data();
 
-            // glm::mat4 model = gui.demo.rotate_on
-            // ? glm::rotate( camera_ub.model, gui.demo.rotate_speed, glm::vec3( 0, 1, 0 ) )
-            // : camera_ub.model;
             glm::mat4 model = glm::identity<glm::mat4>();
 
-            camera_ub.mvp = projection * view * model;
+            glm::mat4 jittered_projection = projection;
+
+            if ( gui.aa.mode == gui::Gui::AAData::Mode::TAA ) {
+                glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
+
+                jittered_projection[2][0]
+                    += offset.x / static_cast<float>( engine.swapchain.extent.width );
+                jittered_projection[2][1]
+                    += offset.y / static_cast<float>( engine.swapchain.extent.height );
+            }
+
+            camera_ub.prev_mvp = camera_ub.mvp;
+            camera_ub.mvp = jittered_projection * view * model;
             camera_ub.model = model;
             camera_ub.view_mat = view;
             camera_ub.inv_model = glm::inverse( model );
+            camera_ub.inv_vp = glm::inverse( jittered_projection * view );
+
+            camera_ub.proj_mat = jittered_projection;
+            camera_ub.inv_proj = glm::inverse( jittered_projection );
+
             camera_ub.camera_pos = glm::vec4( camera_position, 1.0f );
             camera_ub.camera_constants = glm::vec4(
                 camera.near_plane, camera.far_plane, camera.aspect_ratio, camera.fov_y );
+
+            // Store modded frame index, used for the jitter
+            camera_ub.camera_constants1
+                = glm::vec4( engine.get_frame_index() % 16, 0.0f, 0.0f, 0.0f );
 
             camera_buffer.set_data( camera_ub );
             camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
@@ -1286,6 +1395,14 @@ void run( bool use_fullscreen )
             tm_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
         }
 
+        // AA update
+        {
+            ub_data::AA aa_ub = aa_pass.buffer.get_data();
+            aa_ub.mode = static_cast<int>( gui.aa.mode );
+            aa_pass.buffer.set_data( aa_ub );
+            aa_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
 #if ENABLE_VOLUMETRICS
         // Update volumetric camera buffer
         {
@@ -1295,9 +1412,9 @@ void run( bool use_fullscreen )
             cloud_ub.inverse_proj = glm::inverse( projection );
             cloud_ub.inverse_view = glm::inverse( view );
             cloud_ub.camera_position = camera::calculate_eye_position( camera );
-            cloud_ub.cloud_offset_x = 0.f;
+            cloud_ub.cloud_offset_x += 0.0001f;
             cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
-            cloud_ub.cloud_offset_y = 0.f;
+            cloud_ub.cloud_offset_y += 0.0001f;
 
             volumetric.uniform_buffer.set_data( cloud_ub );
             volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
@@ -1320,7 +1437,6 @@ void run( bool use_fullscreen )
                 .albedo_only = gui.debug.albedo_only,
                 .roughness_metal_only = gui.debug.roughness_metal_only,
 
-                .enable_bloom = gui.debug.enable_bloom,
                 .ray_traced_shadows = gui.debug.ray_traced_shadows };
 
             debug_buffer.set_data( debug_ub );
@@ -1366,28 +1482,61 @@ void run( bool use_fullscreen )
         {
             ub_data::TerrainData terrain_ub = test_terrain.terrain_uniform.get_data();
 
-            terrain_ub.enable_gt7_ao = gui.terrain.enable_gt7_ao;
-            terrain_ub.shadowing_only = gui.terrain.shadowing_only;
-            terrain_ub.roughness_only = gui.terrain.roughness_only;
-            terrain_ub.gt7_local_shadow_strength = gui.terrain.gt7_local_shadow_strength;
-            terrain_ub.wetness = gui.terrain.wetness;
+            // Final param packs the offset
+
+            terrain_ub.packed_data0 = glm::vec4( gui.terrain.enable_gt7_ao ? 1.0f : 0.0f,
+                gui.terrain.shadowing_only ? 1.0f : 0.0f, gui.terrain.roughness_only ? 1.0f : 0.0f,
+                0.0f );
+
+            terrain_ub.terrain_data0 = glm::vec4( gui.terrain.gt7_local_shadow_strength,
+                gui.terrain.wetness, gui.terrain.snow, 0.0f );
+
+            // TODO: Add time-delta here to ensure consistent visuals across-frames
+            glm::vec2 scroll_direction = glm::normalize(
+                glm::vec2( terrain_ub.terrain_data1.z, terrain_ub.terrain_data1.w ) );
+
+            //  for now, temp hard-code the UV scrolling direction
+            scroll_direction.x = 0.0f;
+            scroll_direction.y = 1.0f;
+
+            glm::vec2 offset_XY = gui.terrain.scrolling_speed * scroll_direction
+                + glm::vec2( terrain_ub.terrain_data1.x, terrain_ub.terrain_data1.y );
+
+            terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );
 
             test_terrain.terrain_uniform.set_data( terrain_ub );
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        // {
-        //     ub_data::RaymarchBufferData raymarch_ub = {
-        //         .step_size = 1,
-        //     };
+        if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
+            glm::vec3 velocity = glm::vec3(
+                0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 1000.0 ), 0,
+                0.025 );
+            glm::mat4 transform = glm::translate( glm::identity<glm::mat4>(), velocity );
 
-        //     raymarch_buffer.set_data( raymarch_ub );
-        //     raymarch_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        // }
+            std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
+
+            if ( gui.demo.enable_translation ) {
+                scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
+                    scene.demo_scene_nodes.car_parent_id.value(), transform, discovered );
+            }
+        }
+
+        // Update bloom settings
+        {
+            ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();
+
+            bloom_ub.enable = gui.bloom.enable ? 1 : 0;
+            bloom_ub.threshold = gui.bloom.threshold;
+            bloom_ub.filter_radius = gui.bloom.filter_radius;
+
+            bloom_pass.bloom_ub.set_data( bloom_ub );
+            bloom_pass.bloom_ub.update( ctx.vulkan, engine.get_frame_index() );
+        }
 
         gui::update( gui, camera, atms );
 
-        engine::execute( engine, ctx, task_list );
+        engine::execute( engine, ctx, task_list, gui );
         engine.rendered_frames = engine.rendered_frames + 1;
         engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
 

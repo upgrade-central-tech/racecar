@@ -9,11 +9,16 @@ namespace racecar::ub_data {
 /// Camera data
 struct Camera {
     glm::mat4 mvp = {};
+    glm::mat4 prev_mvp = {};
     glm::mat4 model = glm::mat4( 1.f );
     glm::mat4 inv_model = {};
+    glm::mat4 inv_vp = {};
     glm::mat4 view_mat = {};
+    glm::mat4 proj_mat = {};
+    glm::mat4 inv_proj = {};
     glm::vec4 camera_pos = {};
     glm::vec4 camera_constants = {};
+    glm::vec4 camera_constants1 = {};
 };
 
 struct Debug {
@@ -27,7 +32,6 @@ struct Debug {
     uint32_t normals_only = 0;
     uint32_t albedo_only = 0;
     uint32_t roughness_metal_only = 0;
-    uint32_t enable_bloom = 0;
     uint32_t ray_traced_shadows = 0;
 };
 
@@ -114,20 +118,42 @@ struct Clouds {
 };
 
 struct TerrainData {
-    float gt7_local_shadow_strength;
-    float wetness = 0.0f;
-    uint8_t padding0[2];
+    // Store:
+    // float gt7_local_shadow_strength;
+    // float wetness = 0.0f;
+    // float snow = 0.0f;
+    // null
+    glm::vec4 terrain_data0;
+
+    // Store: vec2 offsetXY
+    glm::vec4 terrain_data1;
 
     // debug info
-    bool enable_gt7_ao;
-    bool shadowing_only;
-    bool roughness_only;
-    uint8_t padding1;
+    // bool enable_gt7_ao;
+    // bool shadowing_only;
+    // bool roughness_only;
+    glm::vec4 packed_data0;
 };
 
 struct Tonemapping {
     int mode = 0;
     float hdr_target_luminance = 0.f;
+};
+
+struct Bloom {
+    uint32_t enable = 0;
+    float threshold = 0.f;
+    float filter_radius = 0.f;
+};
+
+struct AA {
+    int mode = 0;
+};
+
+struct ModelMat {
+    glm::mat4 model_mat = {};
+    glm::mat4 inv_model_mat = {};
+    glm::mat4 prev_model_mat = {};
 };
 
 struct BLASOffsets {
@@ -155,6 +181,5 @@ struct RTTextureUniform {
 
     int32_t normal_texture_index[104];
 };
-
 
 } // namespace racecar::uniform_buffer

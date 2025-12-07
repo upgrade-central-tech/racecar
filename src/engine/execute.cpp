@@ -11,7 +11,7 @@
 
 namespace racecar::engine {
 
-void execute( State& engine, Context& ctx, TaskList& task_list )
+void execute( State& engine, Context& ctx, TaskList& task_list, const gui::Gui& gui )
 {
     vk::Common& vulkan = ctx.vulkan;
 
@@ -169,7 +169,11 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
                     break;
                 }
 
-                execute_blit_task( engine, frame.render_cmdbuf, blit_task, output_image );
+                const VkImage& dst_image = blit_task.out_color.has_value()
+                    ? blit_task.out_color.value().images[output_swapchain_index].image
+                    : output_image;
+
+                execute_blit_task( engine, frame.render_cmdbuf, blit_task, dst_image );
                 break;
             }
 
@@ -191,7 +195,7 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
         }
 
         // GUI render pass
-        {
+        if ( gui.show_window ) {
             VkRenderingAttachmentInfo gui_color_attachment_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
                 .imageView = output_image_view,

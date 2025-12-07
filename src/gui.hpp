@@ -17,6 +17,8 @@ struct Gui {
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
     ImGuiContext* ctx = nullptr;
 
+    bool show_window = true;
+
     struct DebugData {
         glm::vec4 color = glm::vec4( 0.85f, 0.0f, 0.0f, 1.0f );
         float roughness;
@@ -36,37 +38,40 @@ struct Gui {
         bool normals_only = false;
         bool albedo_only = false;
         bool roughness_metal_only = false;
-        bool enable_bloom = true;
         bool ray_traced_shadows = true;
         int current_editing_material = 0;
         bool load_material_into_gui = true;
     } debug = {};
 
     struct DemoData {
+        bool enable_translation = false;
+        bool enable_camera_lock_on_car = false;
         bool rotate_on = false;
         float rotate_speed = 0.005f;
     } demo = {};
 
     struct AtmosphereData {
         bool animate_zenith = false;
-        float radiance_exposure = 3.00f;
+        float radiance_exposure = 2.5f;
     } atms = {};
 
     struct AoData {
         float thickness = 1.0f;
-        float radius = 0.20f;
-        float offset = 0.20f;
+        float radius = 0.324f;
+        float offset = 0.0f;
         bool enable_debug = false;
-        bool enable_ao = false;
+        bool enable_ao = true;
     } ao = {};
 
     struct TerrainData {
-        bool enable_gt7_ao = true;
-        bool shadowing_only;
-        bool roughness_only;
-
         float gt7_local_shadow_strength = 1.0f;
         float wetness = 0.8f; // temporary param
+        float snow = 0.3f;
+        float scrolling_speed = 0.0f;
+
+        bool enable_gt7_ao = true;
+        bool shadowing_only = false;
+        bool roughness_only = false;
     } terrain = {};
 
     struct TonemappingData {
@@ -81,6 +86,16 @@ struct Gui {
 
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};
+
+    struct BloomData {
+        bool enable = true;
+        float threshold = 1.2f;
+        float filter_radius = 0.003f;
+    } bloom = {};
+
+    struct AAData {
+        enum class Mode : int { NONE = 0, TAA } mode = Mode::TAA;
+    } aa = {};
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );

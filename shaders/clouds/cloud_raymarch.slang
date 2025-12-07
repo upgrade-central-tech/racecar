@@ -1,12 +1,13 @@
 module cloud_raymarch;
 
-// import cloud_bindings;
+import cloud_bindings;
 import cloud_utils;
 
 public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
     SamplerState linear_mirrored_repeat_sampler, float3 march_pos )
 {
-    float3 p = march_pos * 0.00005f;
+    float3 p = march_pos * 0.00005f
+        + float3( clouds_buffer_data.cloud_offset_x, 0, clouds_buffer_data.cloud_offset_y );
 
     float cumulus_map = cumulus_map_LUT.Sample( linear_mirrored_repeat_sampler, p.xz );
     float3 uvw = fract( p );
@@ -52,13 +53,13 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     }
 
     float t_max;
-    if ( march_pos.y > 0 ) {
+    if ( local_dir.y > 0 ) {
         t_max = ( higher_plane_altitude - march_pos.y ) / local_dir.y;
     } else {
         t_max = ( lower_plane_altitude - march_pos.y ) / local_dir.y;
     }
 
-    uint steps = 16;
+    uint steps = 32;
     float t0 = 1e-3;
     float step_size = t_max / (float)steps;
 
@@ -70,7 +71,7 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         float d = sample_density(
             cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler, pos );
         // Beer–Lambert per-step
-        T *= exp( -SIGMA_T * d * step_size );
+        T *= exp( -4.0 * d * step_size );
 
         if ( T <= 1e-4 ) {
             return 0.0;
@@ -90,31 +91,11 @@ static const float3 SUN_COLOR = float3( 1.0, 0.95, 0.85 );
 static const float SUN_INTENSITY = 30.0; // brightness multiplier for direct light
 static const float AMBIENT_INTENSITY = 0.2; // ambient skylight
 static const float ALBEDO = 0.9; // single-scattering albedo
-static const float SIGMA_T = 4.0; // extinction coefficient (tune for opacity)
+static const float SIGMA_T = 200.0; // extinction coefficient (tune for opacity)
 static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forward scattering
 static const float PI = 3.141592654f;
 
 public float hash11( float n ) { return frac( sin( n ) * 43758.5453 ); }
-
-public float offset_sphere_intersection(
-    float3 view, float3 origin, float surface_level, float rad )
-{
-    // a Triangle forms between the earth's core, the current position, and the intersection point
-    float PI = 3.141592654;
-    float obtuse_angle = PI;
-    if ( length( float3( view.x, 0, view.z ) ) > 0.01 ) {
-        float3 ground_vector = normalize( float3( view.x, 0, view.z ) );
-        float angle_to_ground = acos( dot( view, ground_vector ) );
-        obtuse_angle = angle_to_ground + PI / 2;
-    }
-
-    // use law of sines to find t
-    float atmo_angle = asin( surface_level * sin( obtuse_angle ) / rad );
-    float core_angle = PI - atmo_angle - obtuse_angle;
-    float t = rad * sin( core_angle ) / sin( obtuse_angle );
-
-    return t;
-}
 
 public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
     SamplerState linear_mirrored_repeat_sampler, float3 view, float3 origin, float3 sun_direction )
@@ -141,7 +122,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float t_min = ( lower_plane_altitude - origin.y ) / local_dir.y;
     float t_max = ( higher_plane_altitude - origin.y ) / local_dir.y;
 
-    int steps = 40;
+    int steps = 128;
 
     float t = 0.0f;
     float step_size = ( t_max - t_min ) / (float)steps;
@@ -168,8 +149,10 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler, marched_pos );
         if ( density > 0.01 ) {
 
-            float transmittance = estimate_transmittance( cumulus_map_LUT, low_freq_noise_LUT,
-                linear_mirrored_repeat_sampler, marched_pos, sun_direction );
+            float transmittance
+                = max( estimate_transmittance( cumulus_map_LUT, low_freq_noise_LUT,
+                           linear_mirrored_repeat_sampler, marched_pos, sun_direction ),
+                    0.01 );
 
             float cosTheta = dot( local_dir, sun_direction );
             float phase
@@ -185,7 +168,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float3 sky = float3( 0.6, 0.75, 0.95 ) * AMBIENT_INTENSITY;
     float3 color = accumulated + throughput * sky;
 
-    if ( length( accumulated ) < 0.001 ) {
+    if ( length( accumulated ) < 1e-6 ) {
         return float4( 0.f );
     }
 

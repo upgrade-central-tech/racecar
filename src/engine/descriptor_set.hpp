@@ -71,11 +71,10 @@ void update_descriptor_set_rwimage_mip( vk::Common& vulkan, const State& engine,
     DescriptorSet& desc_set, const RWImage& rw_img, VkImageLayout img_layout, int binding_idx,
     size_t mip );
 
-void update_descriptor_set_sampler( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
-    VkSampler sampler, int binding_idx );
+void update_descriptor_set_sampler( vk::Common& vulkan, const State& engine,
+    DescriptorSet& desc_set, VkSampler sampler, int binding_idx );
 
-void update_descriptor_set_acceleration_structure( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
-    VkAccelerationStructureKHR tlas, int binding_idx );
-
+void update_descriptor_set_acceleration_structure( vk::Common& vulkan, State& engine,
+    DescriptorSet& desc_set, VkAccelerationStructureKHR tlas, int binding_idx );
 
 } // namespace racecar::engine

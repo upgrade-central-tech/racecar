@@ -61,7 +61,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
 
     float3 F0 = float3( 0.04f );
     F0 = lerp( F0, base_albedo, pbr.metallic );
-    float3 F_indirect = FresnelSchlickRoughness( clamped_n_dot_v, F0, pbr.roughness);
+    float3 F_indirect = FresnelSchlickRoughness( clamped_n_dot_v, F0, pbr.roughness );
 
     // Base specular
     float alpha = pbr.roughness * pbr.roughness;
@@ -93,7 +93,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
 
     // brdf_cc needs to be prefiltered using the GTR1 (Generalized Trowbridge Reitz) NDF
     float3 F0_cc = float3( 0.04f );
-    float3 F_cc = FresnelSchlickRoughness( clamped_n_dot_v, F0_cc, clearcoat_roughness);
+    float3 F_cc = FresnelSchlickRoughness( clamped_n_dot_v, F0_cc, clearcoat_roughness );
     float3 precomputed_specular_cc = sample_glossy_ibl( clearcoat_roughness, encoded_direction );
     precomputed_specular_cc *= ( F_cc * brdf_cc.x + brdf_cc.y );
 
@@ -130,12 +130,12 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
         = octahedral_sky_irradiance.Sample( nearest_sampler, encoded_direction ).rgb;
     diffuse_irradiance *= albedo / PI;
 #endif
-    float3 kD_direct = float3(1.0f) - F;
+    float3 kD_direct = float3( 1.0f ) - F;
     kD_direct *= 1.0f - metallic;
 
     float3 diffuse_direct = diffuse_final;
 
-    float3 specular_direct = glint_specular;
+    float3 specular_direct = min( glint_specular, float3( 55.f ) );
     float3 specular_indirect = precomputed_lo_specular * ( F_indirect * brdf.x + brdf.y );
 
     float3 clearcoat_indirect = clearcoat_specular;
@@ -146,7 +146,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 kD = 1.0f - kS;
     kD *= 1.0f - metallic;
 
-    float3 out_color = float3( 0.0f );
+    float3 out_color = float3( 0.f );
 
     // Direct lighting
     out_color += ( kD_direct * diffuse_direct + specular_direct ) * sun_V * clamped_n_dot_l;

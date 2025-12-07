@@ -19,6 +19,8 @@ static constexpr std::array TONEMAPPING_OPTIONS = std::to_array<std::string_view
     "ACES",
 } );
 
+static constexpr std::array AA_OPTIONS = std::to_array<std::string_view>( { "None", "TAA" } );
+
 Gui initialize( Context& ctx, const engine::State& engine )
 {
     Gui gui;
@@ -105,11 +107,15 @@ void process_event( const SDL_Event* event )
 
 void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere& atms )
 {
+    if ( !gui.show_window ) {
+        return;
+    }
+
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    if ( ImGui::Begin( "Configuration" ) ) {
+    if ( ImGui::Begin( "Configuration", &gui.show_window ) ) {
         const ImGuiIO& io = ImGui::GetIO();
         float average_fps = io.Framerate;
         ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );
@@ -151,6 +157,8 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::Checkbox( "Ray Traced Shadows", &gui.debug.ray_traced_shadows );
 
                 ImGui::SeparatorText( "Demo Settings" );
+                ImGui::Checkbox( "Enable car translation", &gui.demo.enable_translation );
+                ImGui::Checkbox( "Enable camera lock on car", &gui.demo.enable_camera_lock_on_car );
                 ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );
                 ImGui::Text( "Spin speed:" );
                 ImGui::SliderFloat( "Min", &gui.demo.rotate_speed, 0, 0.05f );
@@ -168,6 +176,8 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::SliderFloat(
                     "Local shadow strength", &gui.terrain.gt7_local_shadow_strength, 0.0f, 1.0f );
                 ImGui::SliderFloat( "Debug wetness", &gui.terrain.wetness, 0.0f, 1.0f );
+                ImGui::SliderFloat( "Debug snow", &gui.terrain.snow, 0.0f, 1.0f );
+                ImGui::SliderFloat( "Scrolling speed", &gui.terrain.scrolling_speed, 0.0f, 0.1f );
                 ImGui::EndTabItem();
             }
 
@@ -192,12 +202,34 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
 
             if ( ImGui::BeginTabItem( "Post" ) ) {
                 ImGui::SeparatorText( "Bloom" );
-                ImGui::Checkbox( "Enable", &gui.debug.enable_bloom );
+                ImGui::Checkbox( "Enable", &gui.bloom.enable );
+                ImGui::SliderFloat( "Threshold", &gui.bloom.threshold, 0.f, 5.f );
+                ImGui::SliderFloat( "Filter radius", &gui.bloom.filter_radius, 0.f, 0.025f );
+
+                ImGui::SeparatorText( "Anti-Aliasing" );
+                size_t aa_selected_index = static_cast<size_t>( gui.aa.mode );
+                std::string_view aa_preview_value = AA_OPTIONS[aa_selected_index];
+                if ( ImGui::BeginCombo( "AA Mode", aa_preview_value.data() ) ) {
+                    for ( size_t i = 0; i < AA_OPTIONS.size(); ++i ) {
+                        bool is_selected = ( aa_selected_index == i );
+
+                        if ( ImGui::Selectable( AA_OPTIONS[i].data(), is_selected ) ) {
+                            aa_selected_index = i;
+                        }
+
+                        if ( is_selected ) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+
+                    gui.aa.mode = static_cast<Gui::AAData::Mode>( aa_selected_index );
+                    ImGui::EndCombo();
+                }
 
                 ImGui::SeparatorText( "Tonemapping" );
                 size_t selected_index = static_cast<size_t>( gui.tonemapping.mode );
                 std::string_view preview_value = TONEMAPPING_OPTIONS[selected_index];
-                if ( ImGui::BeginCombo( "Mode", preview_value.data() ) ) {
+                if ( ImGui::BeginCombo( "Tonemapping Mode", preview_value.data() ) ) {
                     for ( size_t i = 0; i < TONEMAPPING_OPTIONS.size(); ++i ) {
                         bool is_selected = ( selected_index == i );
 
