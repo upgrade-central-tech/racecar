@@ -9,11 +9,16 @@ namespace racecar::ub_data {
 /// Camera data
 struct Camera {
     glm::mat4 mvp = {};
+    glm::mat4 prev_mvp = {};
     glm::mat4 model = glm::mat4( 1.f );
     glm::mat4 inv_model = {};
+    glm::mat4 inv_vp = {};
     glm::mat4 view_mat = {};
+    glm::mat4 proj_mat = {};
+    glm::mat4 inv_proj = {};
     glm::vec4 camera_pos = {};
     glm::vec4 camera_constants = {};
+    glm::vec4 camera_constants1 = {};
 };
 
 struct Debug {
@@ -115,7 +120,8 @@ struct Clouds {
 struct TerrainData {
     float gt7_local_shadow_strength;
     float wetness = 0.0f;
-    uint8_t padding0[2];
+    float snow = 0.0f;
+    uint8_t padding0[1];
 
     // debug info
     bool enable_gt7_ao;
@@ -133,6 +139,10 @@ struct Bloom {
     uint32_t enable = 0.f;
     float threshold = 0.f;
     float filter_radius = 0.f;
+};
+
+struct AA {
+    int mode = 0;
 };
 
 } // namespace racecar::uniform_buffer

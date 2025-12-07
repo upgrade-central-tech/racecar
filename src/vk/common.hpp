@@ -51,6 +51,26 @@ struct GlobalSamplers {
     VkSampler linear_mirrored_repeat_sampler = VK_NULL_HANDLE;
 };
 
+// These are for temporal jittering
+const static glm::vec2 Jitter16[16] = {
+    glm::vec2( -0.25, -0.1666667 ),
+    glm::vec2( 0.25, 0.1666667 ),
+    glm::vec2( -0.375, 0.3888889 ),
+    glm::vec2( 0.125, -0.0555556 ),
+    glm::vec2( -0.125, -0.2777778 ),
+    glm::vec2( 0.375, 0.2777778 ),
+    glm::vec2( -0.4375, 0.0555556 ),
+    glm::vec2( 0.0625, 0.4444444 ),
+    glm::vec2( -0.3125, -0.3888889 ),
+    glm::vec2( 0.1875, -0.2777778 ),
+    glm::vec2( -0.1875, 0.0555556 ),
+    glm::vec2( 0.3125, 0.1666667 ),
+    glm::vec2( -0.46875, 0.3888889 ),
+    glm::vec2( 0.03125, -0.1666667 ),
+    glm::vec2( -0.21875, 0.2777778 ),
+    glm::vec2( 0.28125, 0.0555556 ),
+};
+
 /// Stores common Vulkan-related objects.
 struct Common {
     vkb::Instance instance;

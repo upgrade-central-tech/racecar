@@ -22,7 +22,6 @@ const std::filesystem::path TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH
     = "../assets/terrain/asphalt_albedo_roughness.png";
 const std::filesystem::path TEST_ASPHALT_NORMAL_AO_PATH = "../assets/terrain/asphalt_normal_ao.png";
 
-
 const float TERRAIN_TILE_WIDTH = 10.0f;
 const size_t TERRAIN_NUM_TILES = 50;
 
@@ -39,29 +38,30 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     terrain.vertices.clear();
     terrain.indices.clear();
 
-    const float half_width = (TERRAIN_NUM_TILES * TERRAIN_TILE_WIDTH) / 2.0f;
+    const float half_width = ( TERRAIN_NUM_TILES * TERRAIN_TILE_WIDTH ) / 2.0f;
 
     // Generate vertices
-    for (size_t z = 0; z <= TERRAIN_NUM_TILES; ++z) {
-        for (size_t x = 0; x <= TERRAIN_NUM_TILES; ++x) {
-            float xpos = float(x) * TERRAIN_TILE_WIDTH - half_width;
-            float zpos = float(z) * TERRAIN_TILE_WIDTH - half_width;
-            terrain.vertices.push_back({ glm::vec3(xpos, offset_y, zpos), glm::vec3(0,1,0) });
+    for ( size_t z = 0; z <= TERRAIN_NUM_TILES; ++z ) {
+        for ( size_t x = 0; x <= TERRAIN_NUM_TILES; ++x ) {
+            float xpos = float( x ) * TERRAIN_TILE_WIDTH - half_width;
+            float zpos = float( z ) * TERRAIN_TILE_WIDTH - half_width;
+            terrain.vertices.push_back(
+                { glm::vec3( xpos, offset_y, zpos ), glm::vec3( 0, 1, 0 ) } );
         }
     }
 
     // Generate indices
-    for (size_t z = 0; z < TERRAIN_NUM_TILES; ++z) {
-        for (size_t x = 0; x < TERRAIN_NUM_TILES; ++x) {
-            unsigned int top_left = (unsigned int)(z * (TERRAIN_NUM_TILES + 1) + x);
-            unsigned int top_right = (unsigned int)(top_left + 1);
-            unsigned int bottom_left = (unsigned int)((z + 1) * (TERRAIN_NUM_TILES + 1) + x);
-            unsigned int bottom_right = (unsigned int)(bottom_left + 1);
+    for ( size_t z = 0; z < TERRAIN_NUM_TILES; ++z ) {
+        for ( size_t x = 0; x < TERRAIN_NUM_TILES; ++x ) {
+            unsigned int top_left = (unsigned int)( z * ( TERRAIN_NUM_TILES + 1 ) + x );
+            unsigned int top_right = (unsigned int)( top_left + 1 );
+            unsigned int bottom_left = (unsigned int)( ( z + 1 ) * ( TERRAIN_NUM_TILES + 1 ) + x );
+            unsigned int bottom_right = (unsigned int)( bottom_left + 1 );
 
-            terrain.indices.push_back(top_left);     // [0] TL
-            terrain.indices.push_back(top_right);    // [1] TR
-            terrain.indices.push_back(bottom_left);  // [2] BL
-            terrain.indices.push_back(bottom_right); // [3] BR
+            terrain.indices.push_back( top_left ); // [0] TL
+            terrain.indices.push_back( top_right ); // [1] TR
+            terrain.indices.push_back( bottom_left ); // [2] BL
+            terrain.indices.push_back( bottom_right ); // [3] BR
         }
     }
 
@@ -79,8 +79,11 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
         {
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Camera data
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Debug data
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // Terrain data
         },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
+            | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT
+            | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
 
     terrain.terrain_uniform
         = create_uniform_buffer<ub_data::TerrainData>( vulkan, {}, engine.frame_overlap );
@@ -120,6 +123,10 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
 
     engine::update_descriptor_set_uniform(
         vulkan, engine, terrain.prepass_uniform_desc_set, *prepass_info.camera_buffer, 0 );
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, terrain.prepass_uniform_desc_set, *prepass_info.debug_buffer, 1 );
+    engine::update_descriptor_set_uniform(
+        vulkan, engine, terrain.prepass_uniform_desc_set, terrain.terrain_uniform, 2 );
 
     terrain.terrain_prepass_task = {
         .render_target_is_swapchain = false,
@@ -163,6 +170,15 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
     engine::update_descriptor_set_sampler( vulkan, engine, terrain.prepass_sampler_desc_set,
         vulkan.global_samplers.linear_sampler, 0 );
 
+    terrain.prepass_lut_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Glint noise texture
+        },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.prepass_lut_desc_set, *prepass_info.glint_noise, 0 );
+
     engine::Pipeline terrain_prepass_pipeline;
     try {
         terrain_prepass_pipeline = engine::create_gfx_pipeline( engine, vulkan,
@@ -171,6 +187,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
                 terrain.prepass_uniform_desc_set.layouts[0],
                 terrain.prepass_texture_desc_set.layouts[0],
                 terrain.prepass_sampler_desc_set.layouts[0],
+                terrain.prepass_lut_desc_set.layouts[0],
             },
             {
                 VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
@@ -179,7 +196,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
                 VK_FORMAT_R16G16B16A16_SFLOAT, // PACKED DATA
             },
             VK_SAMPLE_COUNT_1_BIT, false, true,
-            vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ), true);
+            vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ), true );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create terrain prepass graphics pipeline: {}", ex.what() );
         throw;
@@ -200,6 +217,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
             &terrain.prepass_uniform_desc_set,
             &terrain.prepass_texture_desc_set,
             &terrain.prepass_sampler_desc_set,
+            &terrain.prepass_lut_desc_set,
         },
         .pipeline = terrain_prepass_pipeline,
     } );

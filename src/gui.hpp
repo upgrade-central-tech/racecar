@@ -50,13 +50,13 @@ struct Gui {
 
     struct AtmosphereData {
         bool animate_zenith = false;
-        float radiance_exposure = 3.00f;
+        float radiance_exposure = 7.00f;
     } atms = {};
 
     struct AoData {
         float thickness = 1.0f;
-        float radius = 0.20f;
-        float offset = 0.20f;
+        float radius = 0.062f;
+        float offset = 0.0f;
         bool enable_debug = false;
         bool enable_ao = false;
     } ao = {};
@@ -68,6 +68,7 @@ struct Gui {
 
         float gt7_local_shadow_strength = 1.0f;
         float wetness = 0.8f; // temporary param
+        float snow = 0.3f;
     } terrain = {};
 
     struct TonemappingData {
@@ -78,7 +79,7 @@ struct Gui {
             REINHARD,
             ACES,
         } mode
-            = Mode::GT7_HDR;
+            = Mode::NONE;
 
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};
@@ -88,6 +89,10 @@ struct Gui {
         float threshold = 1.2f;
         float filter_radius = 0.005f;
     } bloom = {};
+
+    struct AAData {
+        enum class Mode : int { NONE = 0, TAA } mode = Mode::NONE;
+    } aa = {};
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );

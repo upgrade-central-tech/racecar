@@ -25,7 +25,7 @@ layout( binding = 0, set = 4 ) RaytracingAccelerationStructure sceneBVH;
 
 // Misc.
 float3 direct_lighting(
-    float3 albedo, float3 normal, float3 light, float roughness, float ao, float3 view )
+    float3 albedo, float3 normal, float3 light, float NDF, float roughness, float ao, float3 view )
 {
     float3 half_vector = normalize( view + light );
     BSDF_Dots dots = get_dots( normal, view, half_vector, light );
@@ -35,7 +35,7 @@ float3 direct_lighting(
 
     // Specular properties
     float alpha = roughness * roughness;
-    float NDF = DistributionGGX( dots.clamped_n_dot_h, alpha );
+
     float G = GeometrySmith( dots.clamped_n_dot_v, dots.clamped_n_dot_l, alpha );
     float3 F0 = float3( 0.04f );
     float3 F = FresnelSchlick( dots.clamped_n_dot_h, F0 );
@@ -67,21 +67,6 @@ float3 direct_lighting(
     }
 
     return ( ( 1.0f - F ) * diffuse + specular ) * shadowing;
-}
-
-void evaluate_wetness( float wetness, float porosity, inout float3 color, inout float roughness,
-    inout float ao, inout float3 world_normal )
-{
-    // https://advances.realtimerendering.com/other/2016/naughty_dog/NaughtyDog_TechArt_Final.pdf
-    float3 color_sq = color * color;
-    color = lerp( color, color_sq, clamp_range( wetness, 0.0f, 0.35f ) * porosity );
-    roughness = lerp( roughness, 0.1f, clamp_range( wetness, 0.2f, 1.0f ) );
-    ao = lerp( ao, 1.0f, clamp_range( wetness, 0.45f, 0.95f ) );
-
-    // GBuffer doesn't store the vertex normal, so we'll treat 0.45 case and 0.98 case identically.
-    // Uncharted 4, however, uses frag normal for 0.45 and vert for 0.98.
-    world_normal = normalize(
-        lerp( world_normal, float3( 0.0f, 1.0f, 0.0f ), clamp_range( wetness, 0.45f, 1.0f ) ) );
 }
 
 float3 sample_glossy_ibl( float roughness, float2 direction )
@@ -149,13 +134,6 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     float4 packed_gbuffer_data = gbuffer_packed_data[pixel];
 
-    // THE WORLD IS ALL WET.
-    // mixed_porosity - The more porous a surface, the darker it gets.
-    float mixed_wetness = lerp( 0.0f, packed_gbuffer_data.x, terrain_data.wetness );
-    float mixed_porosity = 0.0f;
-    evaluate_wetness(
-        mixed_wetness, mixed_porosity, mixed_albedo, mixed_roughness, mixed_ao, mixed_normal );
-
     // Misc. vectors
     float3 view = normalize( camera_data.camera_pos.rgb - world_position );
 
@@ -174,7 +152,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     irradiance_px
         = clamp( irradiance_px, int2( 0, 0 ), int2( irradiance_width - 1, irradiance_height - 1 ) );
 
-    float irradiance_strength = 1.0f;
+    float irradiance_strength = 0.5f;
     float3 diffuse_irradiance = filter_float4( sky_irradiance, oct_uv ).rgb;
 
     uint specular_width, specular_height;
@@ -205,9 +183,11 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     }
 
     float3 final_color = float3( 1.f );
+    float NDF = packed_gbuffer_data.y;
+
     if ( !hit ) {
-        final_color
-            = direct_lighting( mixed_albedo, mixed_normal, light, mixed_roughness, mixed_ao, view );
+        final_color = direct_lighting(
+            mixed_albedo, mixed_normal, light, NDF, mixed_roughness, mixed_ao, view );
 
     } else {
         final_color = float3( 0.f );
