@@ -17,6 +17,8 @@ struct Gui {
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
     ImGuiContext* ctx = nullptr;
 
+    bool show_window = true;
+
     struct DebugData {
         glm::vec4 color = glm::vec4( 0.85f, 0.0f, 0.0f, 1.0f );
         float roughness;
@@ -36,7 +38,6 @@ struct Gui {
         bool normals_only = false;
         bool albedo_only = false;
         bool roughness_metal_only = false;
-        bool enable_bloom = true;
         bool ray_traced_shadows = true;
         int current_editing_material = 0;
         bool load_material_into_gui = true;
@@ -49,7 +50,7 @@ struct Gui {
 
     struct AtmosphereData {
         bool animate_zenith = false;
-        float radiance_exposure = 7.00f;
+        float radiance_exposure = 2.5f;
     } atms = {};
 
     struct AoData {
@@ -82,6 +83,12 @@ struct Gui {
 
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};
+
+    struct BloomData {
+        bool enable = true;
+        float threshold = 1.2f;
+        float filter_radius = 0.005f;
+    } bloom = {};
 
     struct AAData {
         enum class Mode : int { NONE = 0, TAA } mode = Mode::NONE;

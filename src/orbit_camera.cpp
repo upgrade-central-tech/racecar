@@ -80,9 +80,10 @@ glm::mat4 calculate_view_proj_matrix( const OrbitCamera& cam )
     return calculate_view_matrix( cam ) * calculate_proj_matrix( cam );
 }
 
-void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam )
+void process_event(
+    const Context& ctx, const SDL_Event* event, OrbitCamera& cam, bool& show_window )
 {
-    if ( ImGui::GetIO().WantCaptureMouse ) {
+    if ( show_window && ImGui::GetIO().WantCaptureMouse ) {
         return;
     }
 
@@ -118,6 +119,17 @@ void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam
 
         if ( event->wheel.y < 0.f ) {
             camera::zoom( cam, SCROLL_SCALE );
+        }
+
+        break;
+    }
+
+    case SDL_EVENT_KEY_DOWN: {
+        const SDL_KeyboardEvent& key_event = event->key;
+
+        // Ctrl+, pressed (toggle GUI)
+        if ( key_event.key == SDLK_COMMA && key_event.mod & SDL_KMOD_CTRL ) {
+            show_window = !show_window;
         }
 
         break;

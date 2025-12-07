@@ -20,7 +20,10 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     }
 
     // Hardcoded screen dimensions
-    float2 uv = ( float2( pixel ) + 0.5f ) / float2( 1920.0f, 1080.0f );
+    uint width;
+    uint height;
+    scene_color.GetDimensions( width, height );
+    float2 uv = ( float2( pixel ) + 0.5f ) / float2( width, height );
 
     // Reconstruct world-pos
     float depth = gbuffer_depth[pixel].r;

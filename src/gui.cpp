@@ -107,11 +107,15 @@ void process_event( const SDL_Event* event )
 
 void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere& atms )
 {
+    if ( !gui.show_window ) {
+        return;
+    }
+
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    if ( ImGui::Begin( "Configuration" ) ) {
+    if ( ImGui::Begin( "Configuration", &gui.show_window ) ) {
         const ImGuiIO& io = ImGui::GetIO();
         float average_fps = io.Framerate;
         ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );
@@ -195,7 +199,9 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
 
             if ( ImGui::BeginTabItem( "Post" ) ) {
                 ImGui::SeparatorText( "Bloom" );
-                ImGui::Checkbox( "Enable", &gui.debug.enable_bloom );
+                ImGui::Checkbox( "Enable", &gui.bloom.enable );
+                ImGui::SliderFloat( "Threshold", &gui.bloom.threshold, 0.f, 5.f );
+                ImGui::SliderFloat( "Filter radius", &gui.bloom.filter_radius, 0.f, 0.025f );
 
                 ImGui::SeparatorText( "Anti-Aliasing" );
                 size_t aa_selected_index = static_cast<size_t>( gui.aa.mode );

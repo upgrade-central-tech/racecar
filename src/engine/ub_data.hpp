@@ -32,7 +32,6 @@ struct Debug {
     uint32_t normals_only = 0;
     uint32_t albedo_only = 0;
     uint32_t roughness_metal_only = 0;
-    uint32_t enable_bloom = 0;
     uint32_t ray_traced_shadows = 0;
 };
 
@@ -122,18 +121,22 @@ struct TerrainData {
     float gt7_local_shadow_strength;
     float wetness = 0.0f;
     float snow = 0.0f;
-    uint8_t padding0[1];
 
     // debug info
     bool enable_gt7_ao;
     bool shadowing_only;
     bool roughness_only;
-    uint8_t padding1;
 };
 
 struct Tonemapping {
     int mode = 0;
     float hdr_target_luminance = 0.f;
+};
+
+struct Bloom {
+    uint32_t enable = 0.f;
+    float threshold = 0.f;
+    float filter_radius = 0.f;
 };
 
 struct AA {

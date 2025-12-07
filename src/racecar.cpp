@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/porsche.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -955,33 +955,28 @@ void run( bool use_fullscreen )
                 },
             } } );
 
-    engine::post::BloomPass bloom_pass = engine::post::add_bloom(
-        ctx.vulkan, engine, task_list, screen_color, screen_buffer, debug_buffer );
+    engine::post::BloomPass bloom_pass
+        = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
 
     engine::post::AoPass ao_pass = {
-        &camera_buffer,
-        &GBuffer_Normal,
-        &GBuffer_Depth,
-        &screen_buffer,
-        &screen_color,
+        .camera_buffer = &camera_buffer,
+        .GBuffer_Normal = &GBuffer_Normal,
+        .GBuffer_Depth = &GBuffer_Depth,
+        .in_color = &screen_color,
+        .out_color = &screen_buffer,
     };
-    {
-        engine::transition_cs_read_to_write( task_list, screen_color );
-        engine::transition_cs_write_to_read( task_list, screen_buffer );
+    add_ao( ao_pass, ctx.vulkan, engine, task_list );
 
-        add_ao( ao_pass, ctx.vulkan, engine, task_list );
-    }
-
-    engine::transition_cs_read_to_write( task_list, screen_buffer );
-    engine::transition_cs_write_to_read( task_list, screen_color );
-    engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
-        ctx.vulkan, engine, screen_color, screen_buffer, task_list );
-
-    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
     engine::transition_cs_read_to_write( task_list, screen_color );
     engine::transition_cs_write_to_read( task_list, screen_buffer );
-    engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_buffer,
-        GBuffer_Depth, screen_color, screen_history, task_list, camera_buffer );
+    engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
+        ctx.vulkan, engine, screen_buffer, screen_color, task_list );
+
+    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
+    engine::transition_cs_read_to_write( task_list, screen_buffer );
+    engine::transition_cs_write_to_read( task_list, screen_color );
+    engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_color,
+        GBuffer_Depth, screen_buffer, screen_history, task_list, camera_buffer );
 
     // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
     // screen.
@@ -995,12 +990,12 @@ void run( bool use_fullscreen )
                     .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = screen_color,
+                    .image = screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
             } } );
 
-    engine::add_blit_task( task_list, { screen_color } );
+    engine::add_blit_task( task_list, { screen_buffer } );
 #endif
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
@@ -1016,7 +1011,7 @@ void run( bool use_fullscreen )
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
             gui::process_event( &event );
-            camera::process_event( ctx, &event, engine.camera );
+            camera::process_event( ctx, &event, engine.camera, gui.show_window );
 
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;
@@ -1182,7 +1177,6 @@ void run( bool use_fullscreen )
                 .albedo_only = gui.debug.albedo_only,
                 .roughness_metal_only = gui.debug.roughness_metal_only,
 
-                .enable_bloom = gui.debug.enable_bloom,
                 .ray_traced_shadows = gui.debug.ray_traced_shadows };
 
             debug_buffer.set_data( debug_ub );
@@ -1234,18 +1228,21 @@ void run( bool use_fullscreen )
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        // {
-        //     ub_data::RaymarchBufferData raymarch_ub = {
-        //         .step_size = 1,
-        //     };
+        // Update bloom settings
+        {
+            ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();
 
-        //     raymarch_buffer.set_data( raymarch_ub );
-        //     raymarch_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        // }
+            bloom_ub.enable = gui.bloom.enable ? 1 : 0;
+            bloom_ub.threshold = gui.bloom.threshold;
+            bloom_ub.filter_radius = gui.bloom.filter_radius;
+
+            bloom_pass.bloom_ub.set_data( bloom_ub );
+            bloom_pass.bloom_ub.update( ctx.vulkan, engine.get_frame_index() );
+        }
 
         gui::update( gui, camera, atms );
 
-        engine::execute( engine, ctx, task_list );
+        engine::execute( engine, ctx, task_list, gui );
         engine.rendered_frames = engine.rendered_frames + 1;
         engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
 

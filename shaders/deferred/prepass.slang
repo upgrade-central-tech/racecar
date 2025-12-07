@@ -124,7 +124,6 @@ FragmentOutput fs_main( VertexOutput in )
             material_data.clearcoat_roughness, material_data.clearcoat );
     }
 
-#if 1
     float3 normal = normalize( in.normal );
     float3 light = normalize( debug_data.sun_direction.rgb );
     float3 view = normalize( camera_buffer_data.camera_pos.rgb - in.position );
@@ -140,9 +139,12 @@ FragmentOutput fs_main( VertexOutput in )
 
     float maxNDF = 10000.0f;
     float targetNDF = NDF;
-    NDF = lerp( targetNDF, SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy, 
-        material_data.glint_log_density, material_data.glint_roughness, material_data.glint_randomness ).x, material_data.glintiness);
-#endif
+    NDF = lerp( targetNDF,
+        SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy,
+            material_data.glint_log_density, material_data.glint_roughness,
+            material_data.glint_randomness )
+            .x,
+        material_data.glintiness );
 
     output.position = float4( in.position, stencil );
     output.normal = float4( in.normal, 1.0f );

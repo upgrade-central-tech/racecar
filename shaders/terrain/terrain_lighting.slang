@@ -188,7 +188,6 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     if ( !hit ) {
         final_color = direct_lighting(
             mixed_albedo, mixed_normal, light, NDF, mixed_roughness, mixed_ao, view );
-
     } else {
         final_color = float3( 0.f );
     }

@@ -178,8 +178,6 @@ vk::mem::AllocatedImage allocate_vma_image( vk::Common& vulkan, VkExtent3D exten
                        &allocated_image.image, &allocated_image.allocation, nullptr ),
             "[VMA] Failed to create image" );
         vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, allocated_image );
-
-        log::info( "Allocated image {}", static_cast<void*>( allocated_image.image ) );
     }
 
     {

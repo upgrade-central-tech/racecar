@@ -1,6 +1,5 @@
 #include "destructor_stack.hpp"
 
-#include "../log.hpp"
 #include "../vk/mem.hpp"
 
 void DestructorStack::execute_cleanup()
@@ -36,7 +35,6 @@ void DestructorStack::push_free_vmaimage(
     const VmaAllocator allocator, racecar::vk::mem::AllocatedImage allocated_image )
 {
     destructors.push( [=]() -> void {
-        racecar::log::info( "Destroyed image {}", static_cast<void*>( allocated_image.image ) );
         vmaDestroyImage( allocator, allocated_image.image, allocated_image.allocation );
     } );
 }
