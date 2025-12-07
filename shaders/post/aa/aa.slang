@@ -28,31 +28,6 @@ float3 YCoCg_to_RGB( float3 c )
     return float3( R, G, B );
 }
 
-layout( binding = 3, set = 0 ) Texture2D<float2> gbuffer_velocity;
-layout( binding = 4, set = 0 ) RWTexture2D<float4> out_color;
-layout( binding = 5, set = 0 ) SamplerState linear_sampler;
-layout( binding = 6, set = 0 ) ConstantBuffer<CameraBufferData> camera_data;
-layout( binding = 7, set = 0 ) ConstantBuffer<AASettings> aa_settings;
-
-float3 RGB_to_YCoCg( float3 c )
-{
-    float Y = dot( c, float3( 0.25, 0.50, 0.25 ) );
-    float Co = dot( c, float3( 0.50, 0.00, -0.50 ) );
-    float Cg = dot( c, float3( -0.25, 0.50, -0.25 ) );
-    return float3( Y, Co, Cg );
-}
-
-float3 YCoCg_to_RGB( float3 c )
-{
-    float Y = c.x;
-    float Co = c.y;
-    float Cg = c.z;
-    float R = Y + Co - Cg;
-    float G = Y + Cg;
-    float B = Y - Co - Cg;
-    return float3( R, G, B );
-}
-
 [shader( "compute" )]
 [numthreads( 8, 8, 1 )]
 func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
