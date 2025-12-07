@@ -589,8 +589,9 @@ void run( bool use_fullscreen )
     ub_data::BLASOffsets blas_offsets {};
 
     std::vector<vk::mem::AllocatedImage> albedo_textures;
+    std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
     
-    ub_data::RTAlbedoUniform albedo_uniform;
+    ub_data::RTTextureUniform rt_texture_uniform;
 
     for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
         if ( node->mesh.has_value() ) {
@@ -623,11 +624,21 @@ void run( bool use_fullscreen )
 
                     if (albedo_index) {
                         albedo_textures.push_back( scene.textures[static_cast<size_t>( albedo_index.value() )].data.value() );
-                        albedo_uniform.albedo_texture_index[num_blas] = int(albedo_textures.size() - 1);
+                        rt_texture_uniform.albedo_texture_index[num_blas] = int(albedo_textures.size() - 1);
                     }
                     else {
-                        albedo_uniform.albedo_texture_index[num_blas] = -1;
-                        albedo_uniform.base_color[num_blas] = glm::vec4(current_material.base_color, 1.0);
+                        rt_texture_uniform.albedo_texture_index[num_blas] = -1;
+                        rt_texture_uniform.base_color[num_blas] = glm::vec4(current_material.base_color, 1.0);
+                    }
+
+                    if (metallic_roughness_index) {
+                        metallic_roughness_textures.push_back( scene.textures[static_cast<size_t>( metallic_roughness_index.value() )].data.value() );
+                        rt_texture_uniform.metallic_roughness_texture_index[num_blas] = int(metallic_roughness_textures.size() - 1);
+                    }
+                    else {
+                        rt_texture_uniform.metallic_roughness_texture_index[num_blas] = -1;
+                        rt_texture_uniform.metallic[num_blas] = current_material.metallic;
+                        rt_texture_uniform.roughness[num_blas] = current_material.roughness;
                     }
 
                     break;
@@ -831,14 +842,15 @@ void run( bool use_fullscreen )
 
     // number of albedo textures to bind
     engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(ctx.vulkan, engine, {
-        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
     }, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, uint32_t(albedo_textures.size()));
 
     engine::update_descriptor_set_image_array(ctx.vulkan, engine, combined_textures_desc_set, albedo_textures, 0);
+    engine::update_descriptor_set_image_array(ctx.vulkan, engine, combined_textures_desc_set, metallic_roughness_textures, 1);
 
-    UniformBuffer<ub_data::RTAlbedoUniform> albedo_uniform_data = create_uniform_buffer(ctx.vulkan, albedo_uniform, engine.frame_overlap);
-    albedo_uniform_data.set_data(albedo_uniform);
-    engine::update_descriptor_set_uniform(ctx.vulkan, engine, car_descriptor_set, albedo_uniform_data, 3);
+    UniformBuffer<ub_data::RTTextureUniform> rt_texture_uniform_data = create_uniform_buffer(ctx.vulkan, rt_texture_uniform, engine.frame_overlap);
+    rt_texture_uniform_data.set_data(rt_texture_uniform);
+    engine::update_descriptor_set_uniform(ctx.vulkan, engine, car_descriptor_set, rt_texture_uniform_data, 3);
 
 
     // reflection data pass
@@ -1345,7 +1357,7 @@ void run( bool use_fullscreen )
 
         {
             offset_data.update( ctx.vulkan, engine.get_frame_index() );
-            albedo_uniform_data.update( ctx.vulkan, engine.get_frame_index() );
+            rt_texture_uniform_data.update( ctx.vulkan, engine.get_frame_index() );
         }
 
         // Update terrain

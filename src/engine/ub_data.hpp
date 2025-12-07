@@ -145,9 +145,15 @@ struct PaddedVertex {
     float _pad3[2];
 };
 
-struct RTAlbedoUniform {
+struct RTTextureUniform {
     glm::vec4 base_color[104];
     int32_t albedo_texture_index[104];
+
+    float metallic[104];
+    float roughness[104];
+    int32_t metallic_roughness_texture_index[104];
+
+    int32_t normal_texture_index[104];
 };
 
 

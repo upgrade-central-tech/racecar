@@ -14,9 +14,15 @@ struct BLASOffsets {
     uint4 index_buffer_offset[26];
 };
 
-struct RTAlbedoUniform {
+struct RTTextureUniform {
     float4 base_color[104];
-    int32_t albedo_texture_index[104];
+    int4 albedo_texture_index[26];
+
+    float4 metallic[26];
+    float4 roughness[26];
+    int4 metallic_roughness_texture_index[26];
+
+    int4 normal_texture_index[26];
 };
 
 struct PaddedVertex {
@@ -47,9 +53,10 @@ layout( binding = 0, set = 4 ) RaytracingAccelerationStructure terrainBVH;
 layout( binding = 0, set = 5 ) StructuredBuffer<PaddedVertex> vertex_data;
 layout( binding = 1, set = 5 ) StructuredBuffer<uint32_t> index_data;
 layout( binding = 2, set = 5 ) ConstantBuffer<BLASOffsets> blas_offsets;
-layout( binding = 3, set = 5 ) ConstantBuffer<RTAlbedoUniform> rt_albedo_uniform;
+layout( binding = 3, set = 5 ) ConstantBuffer<RTTextureUniform> rt_texture_uniform;
 
 layout( binding = 0, set = 6 ) Texture2D<float4> albedo_textures[];
+layout( binding = 1, set = 6 ) Texture2D<float4> metallic_roughness_textures[];
 
 
 bool traceRayClosestHit( float stencil, float3 rayOrigin, float3 rayDir,
@@ -147,15 +154,26 @@ float4 fs_main( VertexOutput in )
             // float3 color = ( col1.position.xyz * local_barycentrics.x ) + ( col2.position.xyz * local_barycentrics.y ) + ( col3.position.xyz * local_barycentrics.z );
             float2 uv = ( col1.uv.xy * local_barycentrics.x ) + ( col2.uv.xy * local_barycentrics.y ) + ( col3.uv.xy * local_barycentrics.z);
 
-            int albedo_texture_index = rt_albedo_uniform.albedo_texture_index[instance_idx];
+            int albedo_texture_index = rt_texture_uniform.albedo_texture_index[instance_idx / 4][instance_idx % 4];
 
             if ( albedo_texture_index == -1 ) {
-                return rt_albedo_uniform.base_color[instance_idx];
+                return rt_texture_uniform.base_color[instance_idx];
             }
             else {
                 float4 sample = albedo_textures[albedo_texture_index].Sample( nearest_sampler, uv );
                 return float4( sample.rgb, 1.0 );
             }
+
+            // int roughness_metallic_index = rt_texture_uniform.metallic_roughness_texture_index[instance_idx / 4][instance_idx % 4];
+
+            // if ( roughness_metallic_index == -1 ) {
+            //     return float4( rt_texture_uniform.roughness[instance_idx / 4][instance_idx % 4], rt_texture_uniform.metallic[instance_idx / 4][instance_idx % 4], 0.0, 1.0);
+            // }
+            // else {
+            //     return float4( 0.0, 1.0, 0.0, 1.0 );
+            //     float4 sample = metallic_roughness_textures[roughness_metallic_index].Sample( nearest_sampler, uv );
+            //     return float4( sample.rgb, 1.0 );
+            // }
 
             // return float4( normalize(color), 1.0 );
         }
