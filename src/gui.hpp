@@ -55,10 +55,10 @@ struct Gui {
 
     struct AoData {
         float thickness = 1.0f;
-        float radius = 0.062f;
+        float radius = 0.324f;
         float offset = 0.0f;
         bool enable_debug = false;
-        bool enable_ao = false;
+        bool enable_ao = true;
     } ao = {};
 
     struct TerrainData {
@@ -91,7 +91,7 @@ struct Gui {
     } bloom = {};
 
     struct AAData {
-        enum class Mode : int { NONE = 0, TAA } mode = Mode::NONE;
+        enum class Mode : int { NONE = 0, TAA } mode = Mode::TAA;
     } aa = {};
 };
 

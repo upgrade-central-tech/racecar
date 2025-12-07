@@ -128,6 +128,7 @@ struct FragmentOutput {
     float4 normal : SV_Target1;
     float4 albedo : SV_Target2;
     float4 packed_data : SV_Target3;
+    float2 velocity : SV_Target4;
 }
 
 [shader( "domain" )]
@@ -323,6 +324,7 @@ FragmentOutput fs_main( DomainOutput in )
 
     output.normal = float4( mixed_normal, mixed_ao );
     output.albedo = float4( mixed_albedo, mixed_roughness );
+    output.velocity = float2( 0.0f );
 
     return output;
 }

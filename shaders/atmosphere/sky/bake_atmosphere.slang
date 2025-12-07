@@ -7,6 +7,15 @@ struct OctahedralData {
     float4 packedfloats0;
 }
 
+public struct CloudUniformData {
+    public float4x4 inverse_proj;
+    public float4x4 inverse_view;
+    public float3 camera_position;
+    public float cloud_offset_x;
+    public float3 sun_direction;
+    public float cloud_offset_y;
+};
+
 import atmosphere;
 import bindings;
 import constants;
@@ -24,6 +33,7 @@ layout( binding = 3, set = 3 ) ConstantBuffer<OctahedralData> octahedral_data;
 layout( binding = 0, set = 4 ) Texture2D<float> cumulus_map_LUT;
 layout( binding = 1, set = 4 ) Texture3D<float> low_freq_noise_LUT;
 layout( binding = 2, set = 4 ) SamplerState linear_mirrored_repeat_sampler;
+layout( binding = 3, set = 4 ) ConstantBuffer<CloudUniformData> clouds_buffer_data;
 
 float3 oct_decode( float2 f )
 {
@@ -108,8 +118,10 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
 
     float3 origin = float3( 0.0f, 10.0f, 0.0f );
 
+    float3 texture_offset
+        = float3( clouds_buffer_data.cloud_offset_x, 0, clouds_buffer_data.cloud_offset_y );
     float4 clouds = raymarch( cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler,
-        view_direction, origin, get_sun_direction() );
+        view_direction, origin, get_sun_direction(), texture_offset );
 
     sky_color = lerp( sky_color, clouds.rgb, clouds.a );
 

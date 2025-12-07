@@ -70,6 +70,7 @@ struct Texture {
 /// data and index data.
 struct Primitive {
     int material_id = -1;
+    int node_id = -1;
     int vertex_offset = -1; ///< Offsets are for the out_vertices array.
     ///< Index data can be a unsigned short uint_16t or an unsigned int uint_32t.
     int ind_offset = -1;
@@ -100,6 +101,15 @@ struct Scene {
     std::vector<Texture> textures;
 
     std::optional<size_t> hdri_index;
+};
+
+struct DemoSceneNodes {
+    // Node Ids for getting and setting model matrices
+    std::optional<size_t> car_parent_id = std::nullopt;
+    std::optional<size_t> wheel_front_right_id = std::nullopt;
+    std::optional<size_t> wheel_front_left_id = std::nullopt;
+    std::optional<size_t> wheel_back_right_id = std::nullopt;
+    std::optional<size_t> wheel_back_left_id = std::nullopt;
 };
 
 void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,

@@ -134,13 +134,19 @@ struct Tonemapping {
 };
 
 struct Bloom {
-    uint32_t enable = 0.f;
+    uint32_t enable = 0;
     float threshold = 0.f;
     float filter_radius = 0.f;
 };
 
 struct AA {
     int mode = 0;
+};
+
+struct ModelMat {
+    glm::mat4 model_mat = {};
+    glm::mat4 inv_model_mat = {};
+    glm::mat4 prev_model_mat = {};
 };
 
 } // namespace racecar::uniform_buffer
