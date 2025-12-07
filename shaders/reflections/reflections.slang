@@ -9,6 +9,18 @@ struct VertexOutput {
     float2 uv;
 };
 
+struct BLASOffsets {
+    uint32_t vertex_buffer_offset[100];
+    uint32_t index_buffer_offset[100];
+};
+
+struct Vertex {
+    float3 position;
+    float3 normal;
+    float4 tangent;
+    float2 uv;
+};
+
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
@@ -25,6 +37,12 @@ layout( binding = 6, set = 2 ) Texture2DMS<float> GBuffer_DepthMS;
 layout( binding = 7, set = 2 ) Texture2D<float4> GBuffer_Packed_Data;
 
 layout( binding = 0, set = 3 ) RaytracingAccelerationStructure sceneBVH;
+layout( binding = 0, set = 4 ) RaytracingAccelerationStructure terrainBVH;
+
+layout( binding = 0, set = 5 ) StructuredBuffer<Vertex> vertex_data;
+layout( binding = 1, set = 5 ) StructuredBuffer<uint32_t> index_data;
+layout( binding = 2, set = 5 ) ConstantBuffer<BLASOffsets> blas_offsets;
+
 
 bool traceRayClosestHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigin, float3 rayDir,
     out float t, out int primitiveIndex, out float2 barycentrics )
@@ -74,21 +92,35 @@ float4 fs_main( VertexOutput in )
 
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
 
+    RaytracingAccelerationStructure accel_structure;
+
     if ( stencil == 0 ) {
         return float4( asfloat( -1 ), 0.0, 0.0, 0.0 );
+    } 
+    else if ( stencil == TERRAIN_ID ) {
+        accel_structure = sceneBVH;
+        // return float4( 1.0, 0.0, 0.0, 1.0 );
+    }
+    else if ( stencil == CAR_ID ) {
+        accel_structure = terrainBVH;
+        // return float4( 0.0, 1.0, 0.0, 1.0 );
     }
 
     float3 world_dir = in_pos - camera_buffer_data.camera_pos.xyz;
-    float3 norm_world_dir = normalize( -world_dir );
+    float3 norm_world_dir = normalize( world_dir );
     float3 refl_dir = reflect( norm_world_dir, in_nor );
 
     float t;
     int prim_idx;
     float2 barycentrics;
-    bool hit = traceRayClosestHit( sceneBVH, in_pos, refl_dir, t, prim_idx, barycentrics );
+    bool hit = traceRayClosestHit( accel_structure, in_pos, refl_dir, t, prim_idx, barycentrics );
 
     if ( hit ) {
-        return float4( asfloat( prim_idx ), barycentrics, 1.0f );
+        if ( stencil == CAR_ID ) {
+            return float4( float( prim_idx ) / 40.0f, 1.0 - float( prim_idx ) / 40.0f, 0.0, 1.0 );
+        } else {
+            return float4( float( prim_idx ) / 40.0f, 1.0 - float( prim_idx ) / 40.0f, 0.0, 1.0 );
+        }
     } else {
         return float4( asfloat( -1 ), 1.0, 0.0, 0.0 );
     }

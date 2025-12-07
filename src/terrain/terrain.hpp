@@ -44,6 +44,9 @@ struct Terrain {
     std::vector<uint32_t> indices;
     geometry::GPUMeshBuffers mesh_buffers;
 
+    std::vector<uint32_t> tri_indices;
+    geometry::GPUMeshBuffers tri_buffers;
+
     engine::DescriptorSet prepass_uniform_desc_set;
     engine::DescriptorSet prepass_texture_desc_set;
     engine::DescriptorSet prepass_sampler_desc_set;
@@ -57,6 +60,9 @@ struct Terrain {
     engine::GfxTask terrain_prepass_task;
 
     UniformBuffer<ub_data::TerrainData> terrain_uniform;
+    
+    vk::rt::AccelerationStructure blas;
+    vk::rt::AccelerationStructure tlas;
 
     // Crap-ton of images. We need a bindless-texture solution or something.
     // Maybe one giant atlas will work, actually.

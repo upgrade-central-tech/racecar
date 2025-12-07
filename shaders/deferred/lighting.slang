@@ -44,6 +44,8 @@ layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
 layout( binding = 0, set = 5 ) RaytracingAccelerationStructure sceneBVH;
 
+layout( binding = 0, set = 6 ) Texture2D<float4> ReflectionData;
+
 // #include "../utils.slang"
 // #include "../glint/glint_noise_init.hlsl"
 // #include "../glint/glint.hlsl"
@@ -96,6 +98,9 @@ float4 fs_main( VertexOutput in )
     float3 in_nor = GBuffer_Normals.Sample( nearest_sampler, in.uv ).rgb;
     float4 in_tangent = GBuffer_Position.Sample( nearest_sampler, in.uv );
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
+    float4 refl_data = ReflectionData.Sample( nearest_sampler, in.uv );
+
+    return refl_data;
 
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
     float2 ddx_uv = float2( GBuffer_Position.Sample( nearest_sampler, in.uv ).a,

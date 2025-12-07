@@ -130,4 +130,9 @@ struct Tonemapping {
     float hdr_target_luminance = 0.f;
 };
 
+struct BLASOffsets {
+    uint32_t vertex_buffer_offset[100];
+    uint32_t index_buffer_offset[100];
+};
+
 } // namespace racecar::uniform_buffer

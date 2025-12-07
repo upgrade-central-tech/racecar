@@ -24,7 +24,7 @@ const std::filesystem::path TEST_ASPHALT_NORMAL_AO_PATH = "../assets/terrain/asp
 
 
 const float TERRAIN_TILE_WIDTH = 10.0f;
-const size_t TERRAIN_NUM_TILES = 50;
+const size_t TERRAIN_NUM_TILES = 20;
 
 namespace racecar::geometry {
 
@@ -46,7 +46,7 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
         for (size_t x = 0; x <= TERRAIN_NUM_TILES; ++x) {
             float xpos = float(x) * TERRAIN_TILE_WIDTH - half_width;
             float zpos = float(z) * TERRAIN_TILE_WIDTH - half_width;
-            terrain.vertices.push_back({ glm::vec3(xpos, offset_y, zpos), glm::vec3(0,1,0) });
+            terrain.vertices.push_back({ glm::vec3(xpos, (x == TERRAIN_NUM_TILES && z == TERRAIN_NUM_TILES) ? offset_y + 1.0 : offset_y, zpos), glm::vec3(0,1,0) });
         }
     }
 
@@ -73,6 +73,35 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     // Upload to GPU
     geometry::upload_mesh_buffers(
         vulkan, engine, terrain.mesh_buffers, terrain.vertices.data(), terrain.indices.data() );
+
+        
+    for (size_t z = 0; z < TERRAIN_NUM_TILES; ++z) {
+        for (size_t x = 0; x < TERRAIN_NUM_TILES; ++x) {
+            unsigned int top_left = (unsigned int)(z * (TERRAIN_NUM_TILES + 1) + x);
+            unsigned int top_right = (unsigned int)(top_left + 1);
+            unsigned int bottom_left = (unsigned int)((z + 1) * (TERRAIN_NUM_TILES + 1) + x);
+            unsigned int bottom_right = (unsigned int)(bottom_left + 1);
+
+            terrain.tri_indices.push_back(top_left);     // [0] TL
+            terrain.tri_indices.push_back(bottom_left);  // [2] BL
+            terrain.tri_indices.push_back(top_right);    // [1] TR
+            terrain.tri_indices.push_back(bottom_left);  // [2] BL
+            terrain.tri_indices.push_back(bottom_right); // [3] BR
+            terrain.tri_indices.push_back(top_right);    // [1] TR
+        }
+    }
+
+    // Create respective mesh buffers using CPU data
+    geometry::create_mesh_buffers( vulkan, terrain.tri_buffers,
+        sizeof( TerrainVertex ) * terrain.vertices.size(),
+        sizeof( int32_t ) * terrain.tri_indices.size() );
+
+    // Upload to GPU
+    geometry::upload_mesh_buffers(
+        vulkan, engine, terrain.tri_buffers, terrain.vertices.data(), terrain.tri_indices.data() );
+
+    log::info("Terrain: {} verts, {} indices", terrain.vertices.size(), terrain.tri_indices.size());
+
 
     // Build descriptors
     terrain.prepass_uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,

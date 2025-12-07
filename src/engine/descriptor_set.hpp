@@ -45,6 +45,9 @@ void update_descriptor_set_uniform( vk::Common& vulkan, const State& engine,
     }
 }
 
+void update_descriptor_set_const_storage_buffer( vk::Common& vulkan, const State& engine,
+    DescriptorSet& desc_set, vk::mem::AllocatedBuffer storage_buffer, int binding_idx );
+
 void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     vk::mem::AllocatedImage img, int binding_idx );
 

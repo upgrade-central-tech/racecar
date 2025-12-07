@@ -208,4 +208,29 @@ void update_descriptor_set_acceleration_structure( vk::Common& vulkan, State& en
     }
 }
 
+void update_descriptor_set_const_storage_buffer( vk::Common& vulkan, const State& engine,
+    DescriptorSet& desc_set, vk::mem::AllocatedBuffer storage_buffer, int binding_idx )
+{
+    VkBuffer buffer = storage_buffer.handle;
+
+    for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
+        VkDescriptorBufferInfo buffer_info = {
+            .buffer = buffer,
+            .offset = 0,
+            .range = storage_buffer.info.size,
+        };
+
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = desc_set.descriptor_sets[i],
+            .dstBinding = static_cast<uint32_t>( binding_idx ),
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .pBufferInfo = &buffer_info,
+        };
+
+        vkUpdateDescriptorSets( vulkan.device, 1, &write, 0, nullptr );
+    }
+}
+
 } // namespace racecar::engine
