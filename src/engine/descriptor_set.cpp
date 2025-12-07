@@ -36,6 +36,37 @@ DescriptorSet generate_descriptor_set( vk::Common& vulkan, const engine::State& 
     return desc_set;
 }
 
+DescriptorSet generate_array_descriptor_set( vk::Common& vulkan, const engine::State& engine,
+    const std::vector<VkDescriptorType>& types, VkShaderStageFlags shader_stage_flags, uint32_t count )
+{
+    const size_t num_frames = engine.swapchain_images.size();
+
+    DescriptorSet desc_set = {
+        .descriptor_sets = std::vector<VkDescriptorSet>( num_frames ),
+        .layouts = std::vector<VkDescriptorSetLayout>( num_frames ),
+    };
+
+    try {
+        engine::DescriptorLayoutBuilder builder;
+
+        for ( uint32_t i = 0; i < static_cast<uint32_t>( types.size() ); ++i ) {
+            engine::descriptor_layout_builder::add_array_binding( builder, i, types[i], count );
+        }
+
+        for ( size_t i = 0; i < num_frames; ++i ) {
+            desc_set.layouts[i]
+                = engine::descriptor_layout_builder::build( vulkan, shader_stage_flags, builder );
+            desc_set.descriptor_sets[i] = engine::descriptor_allocator::allocate(
+                vulkan, engine.descriptor_system.frame_allocators[i], desc_set.layouts[i] );
+        }
+    } catch ( const Exception& ex ) {
+        log::error( "[DescriptorSet] Failed to generate" );
+        throw;
+    }
+
+    return desc_set;
+}
+
 void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     vk::mem::AllocatedImage img, int binding_idx )
 {
@@ -58,6 +89,31 @@ void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorS
         vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
     }
 }
+
+void update_descriptor_set_image_array( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
+    std::vector<vk::mem::AllocatedImage> imgs, int binding_idx ) 
+{
+    for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
+        std::vector<VkDescriptorImageInfo> image_infos;
+        for ( size_t img = 0; img < imgs.size(); img++) {
+            image_infos.push_back({
+                .sampler = VK_NULL_HANDLE,
+                .imageView = imgs[img].image_view,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            });
+        }
+        VkWriteDescriptorSet write_desc_set = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = desc_set.descriptor_sets[i],
+            .dstBinding = static_cast<uint32_t>( binding_idx ),
+            .descriptorCount = uint32_t(imgs.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .pImageInfo = image_infos.data(),
+        };
+
+        vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
+    }
+}    
 
 void update_descriptor_set_rwimage( vk::Common& vulkan, const State& engine,
     DescriptorSet& desc_set, const RWImage& rw_img, VkImageLayout img_layout, int binding_idx )

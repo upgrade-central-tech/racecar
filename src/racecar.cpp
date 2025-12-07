@@ -588,6 +588,10 @@ void run( bool use_fullscreen )
     int num_blas = 0;
     ub_data::BLASOffsets blas_offsets {};
 
+    std::vector<vk::mem::AllocatedImage> albedo_textures;
+    
+    ub_data::RTAlbedoUniform albedo_uniform;
+
     for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
         if ( node->mesh.has_value() ) {
             const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
@@ -616,6 +620,15 @@ void run( bool use_fullscreen )
                             ? std::optional { ( scene.textures[static_cast<size_t>(
                                   metallic_roughness_index.value() )] ) }
                             : std::nullopt );
+
+                    if (albedo_index) {
+                        albedo_textures.push_back( scene.textures[static_cast<size_t>( albedo_index.value() )].data.value() );
+                        albedo_uniform.albedo_texture_index[num_blas] = int(albedo_textures.size() - 1);
+                    }
+                    else {
+                        albedo_uniform.albedo_texture_index[num_blas] = -1;
+                        albedo_uniform.base_color[num_blas] = glm::vec4(current_material.base_color, 1.0);
+                    }
 
                     break;
                 }
@@ -767,11 +780,9 @@ void run( bool use_fullscreen )
     vkDestroyFence( ctx.vulkan.device, precompute_fence, VK_NULL_HANDLE );
     vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
 
-    log::info( "Creating Car Desc Set" );
-
     engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     std::vector<ub_data::PaddedVertex> padded_vertex_data {};
@@ -813,33 +824,23 @@ void run( bool use_fullscreen )
     UniformBuffer<ub_data::BLASOffsets> offset_data = create_uniform_buffer(
         ctx.vulkan, blas_offsets, static_cast<size_t>( engine.frame_overlap ) );
     offset_data.set_data( blas_offsets );
-
-    log::info( "STRUCT SIZE: {}", sizeof( ub_data::BLASOffsets ) / sizeof( uint32_t ) );
-    log::info( "BUFFER SIZE: {}", offset_data.buffer( 0 ).info.size / sizeof( uint32_t ) );
-
-    for ( int i = 0; i < 100; i++ ) {
-        log::info( "{}: Vertex offset: {},      Index Offset: {}", i,
-            blas_offsets.vertex_buffer_offset[i], blas_offsets.index_buffer_offset[i] );
-    }
-
-    for ( size_t i = 0; i < 100; i++ ) {
-        log::info( "{}: Position: {}, {}, {}", i, scene_mesh.vertices[i].position.x,
-            scene_mesh.vertices[i].position.y, scene_mesh.vertices[i].position.z );
-        log::info( "{}: Normal: {}, {}, {}", i, scene_mesh.vertices[i].normal.x,
-            scene_mesh.vertices[i].normal.y, scene_mesh.vertices[i].normal.z );
-        log::info( "{}: Tangent: {}, {}, {}, {}", i, scene_mesh.vertices[i].tangent.x,
-            scene_mesh.vertices[i].tangent.y, scene_mesh.vertices[i].tangent.z,
-            scene_mesh.vertices[i].tangent.w );
-        log::info( "{}: UV: {}, {}", i, scene_mesh.vertices[i].uv.x, scene_mesh.vertices[i].uv.y );
-    }
-
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, car_descriptor_set, offset_data, 2 );
-
-    log::info( "Ending Car Desc Set" );
 
     engine::add_gfx_task( task_list, depth_ms_gfx_task );
 
-    log::info( "init reflection data" );
+
+    // number of albedo textures to bind
+    engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(ctx.vulkan, engine, {
+        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+    }, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, uint32_t(albedo_textures.size()));
+
+    engine::update_descriptor_set_image_array(ctx.vulkan, engine, combined_textures_desc_set, albedo_textures, 0);
+
+    UniformBuffer<ub_data::RTAlbedoUniform> albedo_uniform_data = create_uniform_buffer(ctx.vulkan, albedo_uniform, engine.frame_overlap);
+    albedo_uniform_data.set_data(albedo_uniform);
+    engine::update_descriptor_set_uniform(ctx.vulkan, engine, car_descriptor_set, albedo_uniform_data, 3);
+
+
     // reflection data pass
     engine::RWImage reflection_data = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
@@ -883,7 +884,7 @@ void run( bool use_fullscreen )
         engine::get_vertex_input_state_create_info( quad_mesh ),
         { uniform_desc_set.layouts[0], sampler_desc_set.layouts[0],
             gbuffer_descriptor_set.layouts[0], as_desc_set.layouts[0],
-            terrain_as_desc_set.layouts[0], car_descriptor_set.layouts[0] },
+            terrain_as_desc_set.layouts[0], car_descriptor_set.layouts[0], combined_textures_desc_set.layouts[0] },
         { reflection_data.images[0].image_format }, VK_SAMPLE_COUNT_1_BIT, true, false,
         vk::create::shader_module( ctx.vulkan, REFLECTION_PASS_SHADER_MODULE_PATH ), false );
 
@@ -896,7 +897,7 @@ void run( bool use_fullscreen )
 
     engine::DrawTask reflection_prepass_task { .draw_resource_descriptor = reflection_prepass_desc,
         .descriptor_sets = { &uniform_desc_set, &sampler_desc_set, &gbuffer_descriptor_set,
-            &as_desc_set, &terrain_as_desc_set, &car_descriptor_set },
+            &as_desc_set, &terrain_as_desc_set, &car_descriptor_set, &combined_textures_desc_set },
         .pipeline = reflection_pipeline };
 
     reflection_gfx_task.draw_tasks.push_back( reflection_prepass_task );
@@ -1344,6 +1345,7 @@ void run( bool use_fullscreen )
 
         {
             offset_data.update( ctx.vulkan, engine.get_frame_index() );
+            albedo_uniform_data.update( ctx.vulkan, engine.get_frame_index() );
         }
 
         // Update terrain

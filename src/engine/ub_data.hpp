@@ -145,5 +145,10 @@ struct PaddedVertex {
     float _pad3[2];
 };
 
+struct RTAlbedoUniform {
+    glm::vec4 base_color[104];
+    int32_t albedo_texture_index[104];
+};
+
 
 } // namespace racecar::uniform_buffer

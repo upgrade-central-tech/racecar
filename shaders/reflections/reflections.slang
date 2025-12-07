@@ -14,6 +14,11 @@ struct BLASOffsets {
     uint4 index_buffer_offset[26];
 };
 
+struct RTAlbedoUniform {
+    float4 base_color[104];
+    int32_t albedo_texture_index[104];
+};
+
 struct PaddedVertex {
     float4 position; // float3
     float4 normal;   // float3
@@ -42,6 +47,9 @@ layout( binding = 0, set = 4 ) RaytracingAccelerationStructure terrainBVH;
 layout( binding = 0, set = 5 ) StructuredBuffer<PaddedVertex> vertex_data;
 layout( binding = 1, set = 5 ) StructuredBuffer<uint32_t> index_data;
 layout( binding = 2, set = 5 ) ConstantBuffer<BLASOffsets> blas_offsets;
+layout( binding = 3, set = 5 ) ConstantBuffer<RTAlbedoUniform> rt_albedo_uniform;
+
+layout( binding = 0, set = 6 ) Texture2D<float4> albedo_textures[];
 
 
 bool traceRayClosestHit( float stencil, float3 rayOrigin, float3 rayDir,
@@ -136,9 +144,20 @@ float4 fs_main( VertexOutput in )
 
             float3 local_barycentrics = float3( barycentrics, 1.0 - barycentrics.x - barycentrics.y );
 
-            float3 color = ( col1.position.xyz * local_barycentrics.x ) + ( col2.position.xyz * local_barycentrics.y ) + ( col3.position.xyz * local_barycentrics.z);
+            // float3 color = ( col1.position.xyz * local_barycentrics.x ) + ( col2.position.xyz * local_barycentrics.y ) + ( col3.position.xyz * local_barycentrics.z );
+            float2 uv = ( col1.uv.xy * local_barycentrics.x ) + ( col2.uv.xy * local_barycentrics.y ) + ( col3.uv.xy * local_barycentrics.z);
 
-            return float4( normalize(color), 1.0 );
+            int albedo_texture_index = rt_albedo_uniform.albedo_texture_index[instance_idx];
+
+            if ( albedo_texture_index == -1 ) {
+                return rt_albedo_uniform.base_color[instance_idx];
+            }
+            else {
+                float4 sample = albedo_textures[albedo_texture_index].Sample( nearest_sampler, uv );
+                return float4( sample.rgb, 1.0 );
+            }
+
+            // return float4( normalize(color), 1.0 );
         }
     } else {
         return float4( asfloat( -1 ), 1.0, 0.0, 0.0 );

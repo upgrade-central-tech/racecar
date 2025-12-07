@@ -39,6 +39,19 @@ void add_binding(
     ds_layout_builder.bindings.push_back( std::move( new_binding ) );
 }
 
+void add_array_binding(
+    DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding, VkDescriptorType type, uint32_t count )
+{
+    // Stage flags are not set here, will be later in descriptor_layout_builder::build
+    VkDescriptorSetLayoutBinding new_binding = {
+        .binding = binding,
+        .descriptorType = type,
+        .descriptorCount = count,
+    };
+
+    ds_layout_builder.bindings.push_back( std::move( new_binding ) );
+}
+
 void clear( DescriptorLayoutBuilder& ds_layout_builder ) { ds_layout_builder.bindings.clear(); }
 
 VkDescriptorSetLayout build( vk::Common& vulkan, VkShaderStageFlags shader_stage_flags,

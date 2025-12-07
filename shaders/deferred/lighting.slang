@@ -102,10 +102,9 @@ float4 fs_main( VertexOutput in )
 
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
 
-    if ( stencil == CAR_ID ) {
-        return float4( in_pos, 1.0 );
+    if ( stencil != CAR_ID ) {
+        return float4( in_refl.rgb, 1.0 );
     }
-    return float4( normalize(in_refl.rgb), 1.0 );
 
 
     float2 ddx_uv = float2( GBuffer_Position.Sample( nearest_sampler, in.uv ).a,
