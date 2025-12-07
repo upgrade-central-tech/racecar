@@ -1082,7 +1082,7 @@ void run( bool use_fullscreen )
 
         camera::OrbitCamera& camera = engine.camera;
         // TEMP, remove bottom for TAA test
-        camera.center = model_mat_uniform_buffers.at( 0 ).get_data().model_mat[3];
+        // camera.center = model_mat_uniform_buffers.at( 0 ).get_data().model_mat[3];
 
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
