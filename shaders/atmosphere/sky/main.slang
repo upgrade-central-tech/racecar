@@ -28,7 +28,7 @@ VertexOutput vs_main( VertexInput input )
 float4 fs_main( VertexOutput input )
     : SV_Target
 {
-    float3 color = get_sky_color( normalize( input.view_ray ) );
+    float3 color = get_sky_color( normalize( input.view_ray ), 0.0001f );
     return float4( color, 1.f );
 }
 

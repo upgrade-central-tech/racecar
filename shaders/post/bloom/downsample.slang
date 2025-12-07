@@ -25,7 +25,7 @@ func downsample( uint2 thread_id: SV_DispatchThreadID )->void
         return;
     }
 
-    let uv = float2( pixel ) / float2( output_w, output_h );
+    let uv = ( float2( pixel ) + 0.5f ) / float2( output_w, output_h );
 
     uint input_w;
     uint input_h;

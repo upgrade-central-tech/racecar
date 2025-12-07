@@ -27,7 +27,7 @@ func upsample( uint2 thread_id: SV_DispatchThreadID )->void
         return;
     }
 
-    let uv = float2( pixel ) / float2( output_w, output_h );
+    let uv = ( float2( pixel ) + 0.5f ) / float2( output_w, output_h );
     let delta = float2( settings.filter_radius );
 
     // Take 9 samples around the current texel (represented by "e")
