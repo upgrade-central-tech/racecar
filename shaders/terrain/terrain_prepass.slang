@@ -320,7 +320,7 @@ FragmentOutput fs_main( DomainOutput in )
             snow_lerp );
     }
 
-    output.packed_data = float4( wetness, density, 0.0f, 0.0f );
+    output.packed_data = float4( wetness, min( density, 65.f ), 0.0f, 0.0f );
 
     output.normal = float4( mixed_normal, mixed_ao );
     output.albedo = float4( mixed_albedo, mixed_roughness );

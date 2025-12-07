@@ -40,8 +40,11 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     }
 
     // Hardcoded screen dimensions
-    float2 uv = ( float2( pixel ) + 0.5f ) / float2( 1920.0f, 1080.0f );
-    float2 velocity = 0.0f; // gbuffer_velocity[pixel];
+    uint width;
+    uint height;
+    scene_color.GetDimensions( width, height );
+    float2 uv = ( float2( pixel ) + 0.5f ) / float2( width, height );
+    float velocity = 0.0f; // gbuffer_velocity[pixel];
 
     // computes mag sq, check if valid.
     // If there's no velocity, do fallback method

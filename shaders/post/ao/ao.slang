@@ -14,9 +14,6 @@ const static float RADIUS = 1;
 
 const static float FOV = 60.0f;
 
-const static float SCREEN_WIDTH = 1920.0f;
-const static float SCREEN_HEIGHT = 1080.0f;
-
 float3 world_nor_to_view( float3 normal ) { return mul( (float3x3)camera_data.view_mat, normal ); }
 
 float sample_linear_depth( uint2 pixel_sample )
@@ -45,19 +42,19 @@ float2 rng_from_float( float x )
     return float2( x_rand, y_rand );
 }
 
-uint2 view_to_pixel( float3 view_pos )
+uint2 view_to_pixel( float3 view_pos, float2 size )
 {
     float4 clip_pos = mul( camera_data.proj_mat, float4( view_pos, 1.0f ) );
     clip_pos.xyz /= clip_pos.w;
 
     float2 ndc_coord = clip_pos.xy;
     float2 normalized_ss = 0.5f * ndc_coord + 0.5f;
-    float2 ss_pos = normalized_ss * float2( SCREEN_WIDTH, SCREEN_HEIGHT );
+    float2 ss_pos = normalized_ss * size;
 
     return uint2( ss_pos );
 }
 
-float3 SSAO( float3 view_position, float3 view_normal )
+float3 SSAO( float3 view_position, float3 view_normal, float2 size )
 {
     float g = 1.220744084605759;
 
@@ -86,9 +83,9 @@ float3 SSAO( float3 view_position, float3 view_normal )
         // z: [-near, -far] currently, I think
 
         // Convert to screenspace back
-        uint2 pixel_sample = view_to_pixel( sample_view_pos );
+        uint2 pixel_sample = view_to_pixel( sample_view_pos, size );
 
-        if ( pixel_sample.x >= SCREEN_WIDTH || pixel_sample.y >= SCREEN_HEIGHT ) {
+        if ( pixel_sample.x >= size.x || pixel_sample.y >= size.y ) {
             continue;
         }
 
@@ -153,7 +150,11 @@ func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
     float3 normal = gbuffer_normal[pixel].rgb;
 
     // Hardcoded screen dimensions
-    float2 uv = ( float2( pixel ) + 0.5f ) / float2( SCREEN_WIDTH, SCREEN_HEIGHT );
+    uint width;
+    uint height;
+    scene_color.GetDimensions( width, height );
+    let size = float2( width, height );
+    float2 uv = ( float2( pixel ) + 0.5f ) / size;
 
     // Reconstruct world-pos
     float depth = gbuffer_depth[pixel].r;
@@ -166,7 +167,7 @@ func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
     float3 view_pos = ( view_pos_h.xyz / view_pos_h.w );
     float3 view_normal = normalize( mul( (float3x3)camera_data.view_mat, normal ) );
 
-    float3 ao = SSAO( view_pos, view_normal );
+    float3 ao = SSAO( view_pos, view_normal, size );
 
     bool enable_debug = ao_data.packed_floats0.w > 0.5f;
     float3 result = select( enable_debug, ao, ao * scene_color[pixel].rgb );

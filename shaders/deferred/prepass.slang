@@ -150,7 +150,6 @@ FragmentOutput fs_main( VertexOutput in )
             material_data.clearcoat_roughness, material_data.clearcoat );
     }
 
-#if 1
     float3 normal = normalize( in.normal );
     float3 light = normalize( debug_data.sun_direction.rgb );
     float3 view = normalize( camera_buffer_data.camera_pos.rgb - in.position );
@@ -172,7 +171,6 @@ FragmentOutput fs_main( VertexOutput in )
             material_data.glint_randomness )
             .x,
         material_data.glintiness );
-#endif
 
     output.position = float4( in.position, stencil );
     output.normal = float4( in.normal, 1.0f );

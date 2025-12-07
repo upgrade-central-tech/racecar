@@ -161,8 +161,8 @@ void update_descriptor_set_write_image( vk::Common& vulkan, State& engine, Descr
     }
 }
 
-void update_descriptor_set_sampler(
-    vk::Common& vulkan, State& engine, DescriptorSet& desc_set, VkSampler sampler, int binding_idx )
+void update_descriptor_set_sampler( vk::Common& vulkan, const State& engine,
+    DescriptorSet& desc_set, VkSampler sampler, int binding_idx )
 {
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         VkDescriptorImageInfo desc_image_info = {
@@ -184,22 +184,21 @@ void update_descriptor_set_sampler(
     }
 }
 
-void update_descriptor_set_acceleration_structure( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
-    VkAccelerationStructureKHR tlas, int binding_idx ) 
+void update_descriptor_set_acceleration_structure( vk::Common& vulkan, State& engine,
+    DescriptorSet& desc_set, VkAccelerationStructureKHR tlas, int binding_idx )
 {
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        VkWriteDescriptorSetAccelerationStructureKHR desc_as_info = {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
-            .pNext = VK_NULL_HANDLE,
-            .accelerationStructureCount = 1,
-            .pAccelerationStructures = &tlas
-        };
+        VkWriteDescriptorSetAccelerationStructureKHR desc_as_info
+            = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
+                  .pNext = VK_NULL_HANDLE,
+                  .accelerationStructureCount = 1,
+                  .pAccelerationStructures = &tlas };
 
         VkWriteDescriptorSet write_desc_set = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .pNext = &desc_as_info,   // IMPORTANT
+            .pNext = &desc_as_info, // IMPORTANT
             .dstSet = desc_set.descriptor_sets[i],
-            .dstBinding = static_cast<uint32_t>(binding_idx),
+            .dstBinding = static_cast<uint32_t>( binding_idx ),
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
         };
