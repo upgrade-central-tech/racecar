@@ -198,6 +198,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::SeparatorText( "Bloom" );
                 ImGui::Checkbox( "Enable", &gui.bloom.enable );
                 ImGui::InputFloat( "Threshold", &gui.bloom.threshold );
+                ImGui::SliderFloat( "Filter radius", &gui.bloom.filter_radius, 0.f, 0.025f );
 
                 ImGui::SeparatorText( "Tonemapping" );
                 size_t selected_index = static_cast<size_t>( gui.tonemapping.mode );

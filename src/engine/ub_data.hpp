@@ -132,6 +132,7 @@ struct Tonemapping {
 struct Bloom {
     uint32_t enable = 0.f;
     float threshold = 0.f;
+    float filter_radius = 0.f;
 };
 
 } // namespace racecar::uniform_buffer

@@ -1181,6 +1181,7 @@ void run( bool use_fullscreen )
 
             bloom_ub.enable = gui.bloom.enable ? 1 : 0;
             bloom_ub.threshold = gui.bloom.threshold;
+            bloom_ub.filter_radius = gui.bloom.filter_radius;
 
             bloom_pass.bloom_ub.set_data( bloom_ub );
             bloom_pass.bloom_ub.update( ctx.vulkan, engine.get_frame_index() );

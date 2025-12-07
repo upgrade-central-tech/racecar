@@ -7,7 +7,6 @@ layout( binding = 0, set = 1 ) ConstantBuffer<BloomData> settings;
 
 layout( binding = 0, set = 2 ) SamplerState sampler;
 
-static const float FILTER_RADIUS = 0.005f;
 static const float ONE_SIXTEENTH = 1.f / 16.f;
 
 [shader( "compute" )]
@@ -29,7 +28,7 @@ func upsample( uint2 thread_id: SV_DispatchThreadID )->void
     }
 
     let uv = float2( pixel ) / float2( output_w, output_h );
-    let delta = float2( FILTER_RADIUS );
+    let delta = float2( settings.filter_radius );
 
     // Take 9 samples around the current texel (represented by "e")
     // a - b - c
