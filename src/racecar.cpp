@@ -955,8 +955,8 @@ void run( bool use_fullscreen )
                 },
             } } );
 
-    engine::post::BloomPass bloom_pass = engine::post::add_bloom(
-        ctx.vulkan, engine, task_list, screen_color, screen_buffer, debug_buffer );
+    engine::post::BloomPass bloom_pass
+        = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
 
     engine::post::AoPass ao_pass = {
         .camera_buffer = &camera_buffer,
@@ -967,16 +967,16 @@ void run( bool use_fullscreen )
     };
     add_ao( ao_pass, ctx.vulkan, engine, task_list );
 
-    engine::transition_cs_read_to_write( task_list, screen_buffer );
-    engine::transition_cs_write_to_read( task_list, screen_color );
-    engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
-        ctx.vulkan, engine, screen_color, screen_buffer, task_list );
-
-    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
     engine::transition_cs_read_to_write( task_list, screen_color );
     engine::transition_cs_write_to_read( task_list, screen_buffer );
-    engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_buffer,
-        GBuffer_Depth, screen_color, screen_history, task_list, camera_buffer );
+    engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
+        ctx.vulkan, engine, screen_buffer, screen_color, task_list );
+
+    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
+    engine::transition_cs_read_to_write( task_list, screen_buffer );
+    engine::transition_cs_write_to_read( task_list, screen_color );
+    engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_color,
+        GBuffer_Depth, screen_buffer, screen_history, task_list, camera_buffer );
 
     // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
     // screen.
@@ -990,12 +990,12 @@ void run( bool use_fullscreen )
                     .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = screen_color,
+                    .image = screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
             } } );
 
-    engine::add_blit_task( task_list, { screen_color } );
+    engine::add_blit_task( task_list, { screen_buffer } );
 #endif
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.

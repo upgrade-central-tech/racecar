@@ -14,7 +14,7 @@ constexpr std::string_view UPSAMPLE_SHADER_PATH = "../shaders/post/bloom/upsampl
 }
 
 BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_list, RWImage& inout,
-    RWImage& write_only, const UniformBuffer<ub_data::Debug>& )
+    RWImage& write_only )
 {
     BloomPass pass;
 
