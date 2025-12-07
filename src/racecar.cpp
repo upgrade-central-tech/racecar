@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -1068,6 +1068,7 @@ void run( bool use_fullscreen )
         }
 
         camera::OrbitCamera& camera = engine.camera;
+        camera.center = model_mat_uniform_buffers.at( 0 ).get_data().model_mat[3];
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
             camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
@@ -1258,6 +1259,19 @@ void run( bool use_fullscreen )
 
             test_terrain.terrain_uniform.set_data( terrain_ub );
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
+        {
+            ub_data::ModelMat model_mat_ub = model_mat_uniform_buffers.at( 0 ).get_data();
+
+            glm::vec3 velocity = glm::vec3(
+                0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 1000.0 ), 0,
+                0.025 );
+            model_mat_ub.model_mat = glm::translate( model_mat_ub.model_mat, velocity );
+            model_mat_ub.inv_model_mat = glm::inverse( model_mat_ub.model_mat );
+
+            model_mat_uniform_buffers.at( 0 ).set_data( model_mat_ub );
+            model_mat_uniform_buffers.at( 0 ).update( ctx.vulkan, engine.get_frame_index() );
         }
 
         // {

@@ -103,6 +103,15 @@ struct Scene {
     std::optional<size_t> hdri_index;
 };
 
+struct DemoSceneNodes {
+    // Node Ids for getting and setting model matrices
+    std::optional<size_t> car_parent_id = std::nullopt;
+    std::optional<size_t> wheel_front_right_id = std::nullopt;
+    std::optional<size_t> wheel_front_left_id = std::nullopt;
+    std::optional<size_t> wheel_back_right_id = std::nullopt;
+    std::optional<size_t> wheel_back_left_id = std::nullopt;
+};
+
 void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,
     Scene& scene, std::vector<geometry::scene::Vertex>& out_vertices,
     std::vector<uint32_t>& out_indices );

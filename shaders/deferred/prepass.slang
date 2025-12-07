@@ -75,7 +75,8 @@ float3 world_to_local( float3 world_dir, float3 normal )
 VertexOutput vs_main( VertexInput input )
 {
     VertexOutput output;
-    output.sv_position = mul( camera_buffer_data.mvp, float4( input.position, 1.0 ) );
+    output.sv_position = mul(
+        mul( camera_buffer_data.mvp, model_mat_data.model_mat ), float4( input.position, 1.0 ) );
     output.position = mul(
         mul( camera_buffer_data.model, model_mat_data.model_mat ), float4( input.position, 1.0 ) )
                           .xyz;
