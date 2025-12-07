@@ -1013,6 +1013,9 @@ void run( bool use_fullscreen )
     bool stop_drawing = false;
     SDL_Event event = {};
 
+    // Garbage
+    glm::mat4 prev_vp = {};
+
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
             gui::process_event( &event );
@@ -1096,7 +1099,7 @@ void run( bool use_fullscreen )
                     += offset.y / static_cast<float>( engine.swapchain.extent.height );
             }
 
-            camera_ub.prev_mvp = camera_ub.mvp;
+            camera_ub.prev_vp = prev_vp; // camera_ub.mvp;
             camera_ub.mvp = jittered_projection * view * model;
             camera_ub.model = model;
             camera_ub.view_mat = view;
@@ -1113,6 +1116,8 @@ void run( bool use_fullscreen )
             // Store modded frame index, used for the jitter
             camera_ub.camera_constants1
                 = glm::vec4( engine.get_frame_index() % 16, 0.0f, 0.0f, 0.0f );
+
+            prev_vp = jittered_projection * view;
 
             camera_buffer.set_data( camera_ub );
             camera_buffer.update( ctx.vulkan, engine.get_frame_index() );

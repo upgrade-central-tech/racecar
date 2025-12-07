@@ -30,7 +30,7 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     curr_world_pos.xyz /= curr_world_pos.w;
 
     // Reproject into prev-frame
-    float4 prev_clip = mul( camera_data.prev_mvp, float4( curr_world_pos.xyz, 1.0f ) );
+    float4 prev_clip = mul( camera_data.prev_vp, float4( curr_world_pos.xyz, 1.0f ) );
     float2 prev_uv = prev_clip.xy / prev_clip.w * 0.5f + 0.5f;
 
     bool invalid = any( prev_uv < 0.0f ) || any( prev_uv > 1.0f );

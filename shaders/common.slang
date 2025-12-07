@@ -7,7 +7,7 @@ static const float PI = 3.14159265359;
 
 struct CameraBufferData {
     float4x4 mvp;
-    float4x4 prev_mvp;
+    float4x4 prev_vp;
     float4x4 model;
     float4x4 inv_model;
     float4x4 inv_vp;

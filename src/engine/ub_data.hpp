@@ -9,7 +9,7 @@ namespace racecar::ub_data {
 /// Camera data
 struct Camera {
     glm::mat4 mvp = {};
-    glm::mat4 prev_mvp = {};
+    glm::mat4 prev_vp = {};
     glm::mat4 model = glm::mat4( 1.f );
     glm::mat4 inv_model = {};
     glm::mat4 inv_vp = {};
