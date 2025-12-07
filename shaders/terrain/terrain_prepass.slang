@@ -193,9 +193,15 @@ FragmentOutput fs_main( DomainOutput in )
     float3 world_position = in.position;
     float3 normal = in.normal;
 
+    //=======================================================================================
+    // GLOBAL MAP UV EVALUATIONS
+    //=======================================================================================
+    float2 uv_scrolling_offset = terrain_data.terrain_data1.xy;
+
     // UV Distortion to reduce layer-mask "blockiness" from texture sampling
     float distort_scale = 5.0f;
-    float rand_sx = perlin_noise3D( distort_scale * world_position );
+    float rand_sx = perlin_noise3D( distort_scale * world_position
+        + float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) );
     float rand_sy = rand_sx; // perlin_noise3D( distort_scale * world_position );
     float distort_amplitude = 0.1f;
     float2 distortion_offset
@@ -205,10 +211,32 @@ FragmentOutput fs_main( DomainOutput in )
     float layer_map_scale = 0.025f;
     float world_scale = 0.05f;
 
-    float2 uv = frac( ( distortion_offset + float2( world_position.x - 18.0f, world_position.z ) )
-        * layer_map_scale );
-    float2 world_uv_unwrapped = world_position.xz * world_scale;
+    // Modify the "UV world position"
+    float2 world_position_uv = world_position.xz + uv_scrolling_offset;
+    float3 world_position_uvw = float3( world_position_uv.x, 0.0f, world_position_uv.y );
+
+    float2 uv = frac( ( distortion_offset + float2( world_position.x - 18.0f, world_position.y ) )
+            * layer_map_scale
+        + uv_scrolling_offset );
+    float2 world_uv_unwrapped = (world_position_uv)*world_scale + uv_scrolling_offset;
     float2 world_uv = world_uv_unwrapped - floor( world_uv_unwrapped );
+
+    // snow + glint evaluation
+    float snowness = terrain_data.terrain_data0.z; // terrain_data.snow;
+    float snow_map = perlin_noise3D( 0.075f * world_position_uvw + 0.23f ) + 0.50f;
+    snow_map = lerp( clamp_range( snow_map, 0.50f, 0.80f ), 1.0f, snowness );
+
+    // Distribute the wetness around da world...
+    float puddle_scale = 0.5f;
+    float small_puddle_map = perlin_noise3D( puddle_scale * world_position
+                                 + float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) )
+        + 0.25f;
+    float big_puddle_map = perlin_noise3D( 0.125f * puddle_scale * world_position
+                               + float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) )
+        + 0.50f;
+
+    float wetness = clamp_range( big_puddle_map, 0.35f, 0.75f )
+        + clamp_range( small_puddle_map, 0.1f, 0.95f );
 
     // = frac( float2( world_position.x, world_position.z ) * world_scale );
     // uv = select( uv < 0.0f, uv + 1.0f, uv );
@@ -252,11 +280,6 @@ FragmentOutput fs_main( DomainOutput in )
 
     // Naive lerping??? What's a better solution?
     float3 mixed_albedo = lerp( float3( 1.0f, 0.0f, 0.0f ), asphalt_color, layers.x );
-
-    // snow + glint evaluation
-    float snowness = terrain_data.snow;
-    float snow_map = perlin_noise3D( 0.075f * world_position + 0.23f ) + 0.50f;
-    snow_map = lerp( clamp_range( snow_map, 0.50f, 0.80f ), 1.0f, snowness );
     float snow_lerp = snow_map * snowness * ( 1.0f - layers.x );
 
     grass_color = lerp( grass_color, float3( 1.0f ), snow_lerp );
@@ -279,16 +302,8 @@ FragmentOutput fs_main( DomainOutput in )
 
     mixed_roughness = lerp( mixed_roughness, ground_roughness, layers.y );
 
-    // Distribute the wetness around da world...
-    float puddle_scale = 0.5f;
-    float small_puddle_map = perlin_noise3D( puddle_scale * world_position ) + 0.25f;
-    float big_puddle_map = perlin_noise3D( 0.125f * puddle_scale * world_position ) + 0.50f;
-
-    float wetness = clamp_range( big_puddle_map, 0.35f, 0.75f )
-        + clamp_range( small_puddle_map, 0.1f, 0.95f );
-
     // THE WORLD IS ALL WET.
-    float wetness_toggle = terrain_data.wetness;
+    float wetness_toggle = terrain_data.terrain_data0.y; // terrain_data.wetness;
     float mixed_wetness = lerp( 0.0f, wetness, wetness_toggle );
     float mixed_porosity = 0.0f;
     evaluate_wetness(

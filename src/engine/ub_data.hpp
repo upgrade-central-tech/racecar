@@ -118,14 +118,21 @@ struct Clouds {
 };
 
 struct TerrainData {
-    float gt7_local_shadow_strength;
-    float wetness = 0.0f;
-    float snow = 0.0f;
+    // Store:
+    // float gt7_local_shadow_strength;
+    // float wetness = 0.0f;
+    // float snow = 0.0f;
+    // null
+    glm::vec4 terrain_data0;
+
+    // Store: vec2 offsetXY
+    glm::vec4 terrain_data1;
 
     // debug info
-    bool enable_gt7_ao;
-    bool shadowing_only;
-    bool roughness_only;
+    // bool enable_gt7_ao;
+    // bool shadowing_only;
+    // bool roughness_only;
+    glm::vec4 packed_data0;
 };
 
 struct Tonemapping {

@@ -12,7 +12,7 @@ const std::filesystem::path TERRAIN_SHADER_LIGHTING_MODULE_PATH
     = "../shaders/terrain/cs_terrain_draw.spv";
 
 // TEST FILE PATHS...
-const std::filesystem::path TEST_LAYER_MASK_PATH = "../assets/LUT/test_terrain_map.bmp";
+const std::filesystem::path TEST_LAYER_MASK_PATH = "../assets/LUT/test_terrain_map2.bmp";
 const std::filesystem::path TEST_GRASS_ALBEDO_ROUGHNESS_PATH
     = "../assets/terrain/better_grass/grass_albedo_roughness.png";
 const std::filesystem::path TEST_GRASS_NORMAL_AO_PATH

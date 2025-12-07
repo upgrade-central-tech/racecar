@@ -51,14 +51,19 @@ public struct DebugData {
 }
 
 struct TerrainData {
-    float gt7_local_shadow_strength;
-    float wetness;
-    float snow;
+    // float gt7_local_shadow_strength;
+    // float wetness;
+    // float snow;
+    // float scrolling_speed;
+    // gt7 local shadow strength, wetness, snow, null
+    float4 terrain_data0;
+
+    // scrolling offset XY, scrolling direction?
+    float4 terrain_data1;
 
     // debug info
-    bool enable_gt7_ao;
-    bool shadowing_only;
-    bool roughness_only;
+    // stores: enable_gt7_ao, shadowing_only, roughness_only, null
+    float4 packed_floats0;
 }
 
 struct MaterialData {

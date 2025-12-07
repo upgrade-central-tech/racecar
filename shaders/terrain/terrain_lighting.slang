@@ -49,9 +49,11 @@ float3 direct_lighting(
 
     float shadowing = dot( normal, light );
 
-    if ( terrain_data.enable_gt7_ao ) {
+    bool enable_gt7_ao = terrain_data.packed_floats0.x > 0.5f;
+    if ( enable_gt7_ao ) {
         // CEDEC 22 GT7 Presentation
-        float shadow_strength = terrain_data.gt7_local_shadow_strength;
+        float shadow_strength
+            = terrain_data.terrain_data0.x; // terrain_data.gt7_local_shadow_strength;
         float local_shadows
             = clamp( dot( normal, light ) - shadow_strength * ( 1.0f - ao ) + 0.5f, 0.0f, 1.0f );
         shadowing *= local_shadows;
@@ -62,7 +64,8 @@ float3 direct_lighting(
     // Clamp shadows
     shadowing = clamp( shadowing, 0.0f, 1.0f );
 
-    if ( terrain_data.shadowing_only ) {
+    bool shadowing_only = terrain_data.packed_floats0.y > 0.5f;
+    if ( shadowing_only ) {
         return shadowing;
     }
 
@@ -197,7 +200,8 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     final_color += clamp( specular_irradiance, float3( 0.f ), float3( 1.f ) );
 
     // Debug returns
-    if ( terrain_data.roughness_only ) {
+    bool roughness_only = terrain_data.packed_floats0.z > 0.5f;
+    if ( roughness_only ) {
         final_color = float3( mixed_roughness );
     }
 

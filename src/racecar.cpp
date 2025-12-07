@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -1268,12 +1268,27 @@ void run( bool use_fullscreen )
         {
             ub_data::TerrainData terrain_ub = test_terrain.terrain_uniform.get_data();
 
-            terrain_ub.enable_gt7_ao = gui.terrain.enable_gt7_ao;
-            terrain_ub.shadowing_only = gui.terrain.shadowing_only;
-            terrain_ub.roughness_only = gui.terrain.roughness_only;
-            terrain_ub.gt7_local_shadow_strength = gui.terrain.gt7_local_shadow_strength;
-            terrain_ub.wetness = gui.terrain.wetness;
-            terrain_ub.snow = gui.terrain.snow;
+            // Final param packs the offset
+
+            terrain_ub.packed_data0 = glm::vec4( gui.terrain.enable_gt7_ao ? 1.0f : 0.0f,
+                gui.terrain.shadowing_only ? 1.0f : 0.0f, gui.terrain.roughness_only ? 1.0f : 0.0f,
+                0.0f );
+
+            terrain_ub.terrain_data0 = glm::vec4( gui.terrain.gt7_local_shadow_strength,
+                gui.terrain.wetness, gui.terrain.snow, 0.0f );
+
+            // TODO: Add time-delta here to ensure consistent visuals across-frames
+            glm::vec2 scroll_direction = glm::normalize(
+                glm::vec2( terrain_ub.terrain_data1.z, terrain_ub.terrain_data1.w ) );
+
+            //  for now, temp hard-code the UV scrolling direction
+            scroll_direction.x = 0.0f;
+            scroll_direction.y = 1.0f;
+
+            glm::vec2 offset_XY = gui.terrain.scrolling_speed * scroll_direction
+                + glm::vec2( terrain_ub.terrain_data1.x, terrain_ub.terrain_data1.y );
+
+            terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );
 
             test_terrain.terrain_uniform.set_data( terrain_ub );
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
