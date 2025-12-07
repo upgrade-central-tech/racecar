@@ -134,7 +134,7 @@ struct Tonemapping {
 };
 
 struct Bloom {
-    uint32_t enable = 0.f;
+    uint32_t enable = 0;
     float threshold = 0.f;
     float filter_radius = 0.f;
 };

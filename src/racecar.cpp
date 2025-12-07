@@ -1024,7 +1024,7 @@ void run( bool use_fullscreen )
     engine::transition_cs_read_to_write( task_list, screen_buffer );
     engine::transition_cs_write_to_read( task_list, screen_color );
     engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_color,
-        GBuffer_Depth, screen_buffer, screen_history, task_list, camera_buffer );
+        GBuffer_Depth, GBuffer_Velocity, screen_buffer, screen_history, task_list, camera_buffer );
 
     // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
     // screen.
@@ -1277,29 +1277,6 @@ void run( bool use_fullscreen )
 
             test_terrain.terrain_uniform.set_data( terrain_ub );
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
-        }
-
-        {
-            ub_data::ModelMat model_mat_ub = model_mat_uniform_buffers.at( 0 ).get_data();
-
-            model_mat_ub.prev_model_mat = model_mat_ub.model_mat;
-
-            glm::vec3 velocity = glm::vec3(
-                0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 200.0 ), 0,
-                0.01f );
-
-            // temp
-            float speed = 0.0f;
-            velocity *= speed;
-
-            model_mat_ub.model_mat = glm::translate( model_mat_ub.model_mat, velocity );
-
-            // model_mat_ub.model_mat
-            //     = glm::rotate( model_mat_ub.model_mat, 0.01f, glm::vec3( 0.0f, 0.0f, 1.0f ) );
-            model_mat_ub.inv_model_mat = glm::inverse( model_mat_ub.model_mat );
-
-            model_mat_uniform_buffers.at( 0 ).set_data( model_mat_ub );
-            model_mat_uniform_buffers.at( 0 ).update( ctx.vulkan, engine.get_frame_index() );
         }
 
         {
