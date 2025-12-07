@@ -215,8 +215,9 @@ void run( bool use_fullscreen )
         UniformBuffer model_mat_buffer = create_uniform_buffer<ub_data::ModelMat>(
             ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
-        ub_data::ModelMat model_mat_ub
-            = { .model_mat = transform, .inv_model_mat = glm::inverse( transform ) };
+        ub_data::ModelMat model_mat_ub = { .model_mat = transform,
+            .inv_model_mat = glm::inverse( transform ),
+            .prev_model_mat = transform };
         model_mat_buffer.set_data( model_mat_ub );
         model_mat_buffer.update( ctx.vulkan, engine.get_frame_index() );
 
@@ -611,6 +612,7 @@ void run( bool use_fullscreen )
     vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
     vkBeginCommandBuffer( engine.frames[0].start_cmdbuf, &command_buffer_begin_info );
 
+    std::vector<glm::mat4> transforms;
     for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
         if ( node->mesh.has_value() ) {
             const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
@@ -699,7 +701,9 @@ void run( bool use_fullscreen )
                     uint32_t idx = scene_mesh.indices[offset_x];
                     max_idx = glm::max( max_idx, idx );
                 }
-
+                transforms.push_back( model_mat_uniform_buffers[static_cast<size_t>( prim.node_id )]
+                        .get_data()
+                        .model_mat );
                 engine.blas.push_back( vk::rt::build_blas( ctx.vulkan.device, ctx.vulkan.allocator,
                     ctx.vulkan.ray_tracing_properties,
                     { .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
@@ -714,9 +718,9 @@ void run( bool use_fullscreen )
     }
 
     std::vector<vk::rt::Object> objects;
-    for ( auto& blas : engine.blas ) {
-        objects.push_back(
-            vk::rt::Object { .blas = &blas, .transform = glm::identity<glm::mat4>() } );
+    for ( size_t i = 0; i < engine.blas.size(); i++ ) {
+        auto& blas = engine.blas[i];
+        objects.push_back( vk::rt::Object { .blas = &blas, .transform = transforms[i] } );
     }
 
     engine.tlas = vk::rt::build_tlas( ctx.vulkan.device, ctx.vulkan.allocator,
@@ -1068,7 +1072,13 @@ void run( bool use_fullscreen )
         }
 
         camera::OrbitCamera& camera = engine.camera;
-        camera.center = model_mat_uniform_buffers.at( 0 ).get_data().model_mat[3];
+
+        if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
+            camera.center
+                = model_mat_uniform_buffers.at( scene.demo_scene_nodes.car_parent_id.value() )
+                      .get_data()
+                      .model_mat[3];
+        }
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
             camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
@@ -1261,17 +1271,16 @@ void run( bool use_fullscreen )
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        {
-            ub_data::ModelMat model_mat_ub = model_mat_uniform_buffers.at( 0 ).get_data();
-
+        if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
             glm::vec3 velocity = glm::vec3(
                 0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 1000.0 ), 0,
                 0.025 );
-            model_mat_ub.model_mat = glm::translate( model_mat_ub.model_mat, velocity );
-            model_mat_ub.inv_model_mat = glm::inverse( model_mat_ub.model_mat );
+            glm::mat4 transform = glm::translate( glm::identity<glm::mat4>(), velocity );
 
-            model_mat_uniform_buffers.at( 0 ).set_data( model_mat_ub );
-            model_mat_uniform_buffers.at( 0 ).update( ctx.vulkan, engine.get_frame_index() );
+            std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
+
+            scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
+                scene.demo_scene_nodes.car_parent_id.value(), transform, discovered );
         }
 
         // {

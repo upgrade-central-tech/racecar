@@ -141,6 +141,7 @@ struct AA {
 struct ModelMat {
     glm::mat4 model_mat = {};
     glm::mat4 inv_model_mat = {};
+    glm::mat4 prev_model_mat = {};
 };
 
 } // namespace racecar::uniform_buffer

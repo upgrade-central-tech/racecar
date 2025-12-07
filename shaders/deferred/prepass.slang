@@ -5,6 +5,7 @@ struct VertexInput {
     float3 normal : NORMAL;
     float4 tangent : TANGENT0;
     float2 uv : TEXCOORD0;
+    float2 id : IDS;
 };
 
 struct VertexOutput {
@@ -146,8 +147,12 @@ FragmentOutput fs_main( VertexOutput in )
 
     float maxNDF = 10000.0f;
     float targetNDF = NDF;
-    NDF = lerp( targetNDF, SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy, 
-        material_data.glint_log_density, material_data.glint_roughness, material_data.glint_randomness ).x, material_data.glintiness);
+    NDF = lerp( targetNDF,
+        SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy,
+            material_data.glint_log_density, material_data.glint_roughness,
+            material_data.glint_randomness )
+            .x,
+        material_data.glintiness );
 #endif
 
     output.position = float4( in.position, stencil );
