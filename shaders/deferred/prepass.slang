@@ -10,6 +10,8 @@ struct VertexInput {
 struct VertexOutput {
     float4 sv_position : SV_Position;
     float3 position;
+    float4 prev_clip_pos;
+    float4 curr_clip_pos;
     float3 normal;
     float4 tangent;
     float2 uv;
@@ -75,8 +77,16 @@ float3 world_to_local( float3 world_dir, float3 normal )
 VertexOutput vs_main( VertexInput input )
 {
     VertexOutput output;
-    output.sv_position = mul(
+    float4 clip_pos = mul(
         mul( camera_buffer_data.mvp, model_mat_data.model_mat ), float4( input.position, 1.0 ) );
+
+    float4 prev_clip_pos = mul( mul( camera_buffer_data.prev_mvp, model_mat_data.prev_model_mat ),
+        float4( input.position, 1.0f ) );
+
+    output.sv_position = clip_pos;
+    output.curr_clip_pos = clip_pos;
+    output.prev_clip_pos = prev_clip_pos;
+
     output.position = mul(
         mul( camera_buffer_data.model, model_mat_data.model_mat ), float4( input.position, 1.0 ) )
                           .xyz;
@@ -102,6 +112,7 @@ struct FragmentOutput {
     float4 albedo : SV_Target4;
     /// roughness, metallic, clearcoat roughness, clearcoat weight
     float4 packed_data : SV_Target5;
+    float2 velocity : SV_Target6;
 }
 
 [shader( "fragment" )]
@@ -114,6 +125,15 @@ FragmentOutput fs_main( VertexOutput in )
     // 1 - car shading
     // 2 - terrain shading
     float stencil = CAR_ID;
+
+    // VELOCITY
+    float4 old_pos = in.prev_clip_pos;
+    old_pos.xy = 0.5f * ( old_pos.xy ) + 0.5f;
+
+    float4 curr_pos = in.curr_clip_pos;
+    curr_pos.xy = 0.5f * ( curr_pos.xy ) + 0.5f;
+
+    output.velocity = ( curr_pos - old_pos ).xy;
 
     if ( material_data.has_base_color_texture != 0 && debug_data.enable_albedo_map != 1 ) {
         output.albedo = albedo_map.Sample( nearest_sampler, in.uv );
@@ -146,8 +166,12 @@ FragmentOutput fs_main( VertexOutput in )
 
     float maxNDF = 10000.0f;
     float targetNDF = NDF;
-    NDF = lerp( targetNDF, SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy, 
-        material_data.glint_log_density, material_data.glint_roughness, material_data.glint_randomness ).x, material_data.glintiness);
+    NDF = lerp( targetNDF,
+        SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy,
+            material_data.glint_log_density, material_data.glint_roughness,
+            material_data.glint_randomness )
+            .x,
+        material_data.glintiness );
 #endif
 
     output.position = float4( in.position, stencil );

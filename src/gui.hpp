@@ -84,7 +84,7 @@ struct Gui {
     } tonemapping = {};
 
     struct AAData {
-        enum class Mode : int { NONE = 0, TAA } mode = Mode::NONE;
+        enum class Mode : int { NONE = 0, TAA } mode = Mode::TAA;
     } aa = {};
 };
 
