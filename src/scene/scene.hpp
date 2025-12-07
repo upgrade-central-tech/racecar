@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../engine/ub_data.hpp"
+#include "../engine/uniform_buffer.hpp"
 #include "../geometry/scene_mesh.hpp"
 
 #include <glm/glm.hpp>
@@ -93,14 +95,7 @@ struct Node {
 
     Node* parent = nullptr;
     std::vector<Node*> children;
-};
-
-struct Scene {
-    std::vector<std::unique_ptr<Node>> nodes;
-    std::vector<Material> materials;
-    std::vector<Texture> textures;
-
-    std::optional<size_t> hdri_index;
+    size_t id;
 };
 
 struct DemoSceneNodes {
@@ -112,10 +107,23 @@ struct DemoSceneNodes {
     std::optional<size_t> wheel_back_left_id = std::nullopt;
 };
 
+struct Scene {
+    std::vector<std::unique_ptr<Node>> nodes;
+    std::vector<Material> materials;
+    std::vector<Texture> textures;
+
+    std::optional<size_t> hdri_index;
+    DemoSceneNodes demo_scene_nodes;
+};
+
 void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,
     Scene& scene, std::vector<geometry::scene::Vertex>& out_vertices,
     std::vector<uint32_t>& out_indices );
 
 bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene );
+
+void propagate_transform( vk::Common vulkan, engine::State& engine, Scene& scene,
+    std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers, size_t start_node_id,
+    glm::mat4 transform, std::vector<bool>& discovered );
 
 } // namespace racecar::scene
