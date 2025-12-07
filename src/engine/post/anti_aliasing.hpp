@@ -19,7 +19,7 @@ struct AAPass {
 };
 
 AAPass add_aa( vk::Common& vulkan, State& engine, const RWImage& input,
-    const RWImage& GBuffer_Depth, RWImage& output, RWImage& history, TaskList& task_list,
-    UniformBuffer<ub_data::Camera>& camera_buffer );
+    const RWImage& GBuffer_Depth, const RWImage& GBuffer_Velocity, RWImage& output,
+    RWImage& history, TaskList& task_list, UniformBuffer<ub_data::Camera>& camera_buffer );
 
 }
