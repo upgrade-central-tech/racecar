@@ -79,7 +79,7 @@ struct Gui {
             REINHARD,
             ACES,
         } mode
-            = Mode::NONE;
+            = Mode::GT7_HDR;
 
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};
@@ -87,7 +87,7 @@ struct Gui {
     struct BloomData {
         bool enable = true;
         float threshold = 1.2f;
-        float filter_radius = 0.005f;
+        float filter_radius = 0.003f;
     } bloom = {};
 
     struct AAData {
