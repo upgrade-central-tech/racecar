@@ -58,7 +58,7 @@ struct Gui {
         float radius = 0.324f;
         float offset = 0.0f;
         bool enable_debug = false;
-        bool enable_ao = false;
+        bool enable_ao = true;
     } ao = {};
 
     struct TerrainData {
