@@ -312,7 +312,7 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     engine::Pipeline cs_terrain_lighting_pipeline = engine::create_compute_pipeline( vulkan,
         { terrain.uniform_desc_set.layouts[0], terrain.texture_desc_set.layouts[0],
             terrain.lut_desc_set.layouts[0], terrain.sampler_desc_set.layouts[0],
-            terrain.accel_structure_desc_set->layouts[0] },
+            terrain.accel_structure_desc_set->layouts[0], terrain.reflection_texture_desc_set->layouts[0] },
         vk::create::shader_module( vulkan, TERRAIN_SHADER_LIGHTING_MODULE_PATH ),
         "cs_terrain_draw" );
 
@@ -325,7 +325,7 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     engine::ComputeTask cs_terrain_draw_task = {
         cs_terrain_lighting_pipeline,
         { &terrain.uniform_desc_set, &terrain.texture_desc_set, &terrain.lut_desc_set,
-            &terrain.sampler_desc_set, terrain.accel_structure_desc_set },
+            &terrain.sampler_desc_set, terrain.accel_structure_desc_set, terrain.reflection_texture_desc_set },
         dispatch_dims,
     };
 

@@ -897,7 +897,7 @@ void run( bool use_fullscreen )
         { uniform_desc_set.layouts[0], sampler_desc_set.layouts[0],
             gbuffer_descriptor_set.layouts[0], as_desc_set.layouts[0],
             terrain_as_desc_set.layouts[0], car_descriptor_set.layouts[0], combined_textures_desc_set.layouts[0] },
-        { reflection_data.images[0].image_format }, VK_SAMPLE_COUNT_1_BIT, true, false,
+        { VK_FORMAT_R16G16B16A16_SFLOAT }, VK_SAMPLE_COUNT_1_BIT, false, false,
         vk::create::shader_module( ctx.vulkan, REFLECTION_PASS_SHADER_MODULE_PATH ), false );
 
     engine::DrawResourceDescriptor reflection_prepass_desc {
@@ -919,6 +919,8 @@ void run( bool use_fullscreen )
     engine::DescriptorSet reflection_buffer_desc_set
         = engine::generate_descriptor_set( ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
             VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT );
+
+    test_terrain.reflection_texture_desc_set = &reflection_buffer_desc_set;
     // end reflection data pass
 
     // Lighting pass

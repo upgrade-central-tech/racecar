@@ -102,10 +102,8 @@ float4 fs_main( VertexOutput in )
 
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
 
-    if ( stencil != CAR_ID ) {
-        return float4( in_refl.rgb, 1.0 );
-    }
-
+    // float4 refl = in_refl;
+    float4 refl = float4(0.0);
 
     float2 ddx_uv = float2( GBuffer_Position.Sample( nearest_sampler, in.uv ).a,
         GBuffer_Normals.Sample( nearest_sampler, in.uv ).a );
@@ -154,7 +152,7 @@ float4 fs_main( VertexOutput in )
     }
 
     float3 out_color
-        = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0 );
+        = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0, refl );
 
     return float4( out_color, 1.0f );
 }

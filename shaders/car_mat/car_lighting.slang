@@ -20,7 +20,7 @@ float3 sample_glossy_ibl( float roughness, float2 direction )
 }
 
 float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 light, Material pbr,
-    GBuffer g_buffer, float sun_V )
+    GBuffer g_buffer, float sun_V, float4 refl )
 {
     // Essential dot products
     float n_dot_v = ( dot( normal, view ) );
@@ -55,6 +55,9 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
 
     float2 encoded_direction = oct_encode( reflect( -view, normal ) );
     float3 precomputed_lo_specular = sample_glossy_ibl( roughness, encoded_direction );
+
+    // reflection value
+    precomputed_lo_specular = lerp( precomputed_lo_specular, refl.rgb, refl.a );
 
     float3 F0 = float3( 0.04f );
     F0 = lerp( F0, base_albedo, pbr.metallic );

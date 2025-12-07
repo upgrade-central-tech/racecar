@@ -132,7 +132,7 @@ float4 fs_main( VertexOutput in )
 
     if ( hit ) {
         if ( stencil == CAR_ID ) {
-            return float4( float( instance_idx ) / 40.0f, 1.0 - float( instance_idx ) / 40.0f, 0.0, 1.0 );
+            return float4( 0.0 );
         } else {
             // return float4( float( instance_idx ) / 40.0f, 1.0 - float( instance_idx ) / 40.0f, 0.0, 1.0 );
             uint4 idx_buf = blas_offsets.index_buffer_offset[instance_idx / 4];
@@ -157,7 +157,7 @@ float4 fs_main( VertexOutput in )
             int albedo_texture_index = rt_texture_uniform.albedo_texture_index[instance_idx / 4][instance_idx % 4];
 
             if ( albedo_texture_index == -1 ) {
-                return rt_texture_uniform.base_color[instance_idx];
+                return float4(rt_texture_uniform.base_color[instance_idx].rgb, 1.0);
             }
             else {
                 float4 sample = albedo_textures[albedo_texture_index].Sample( nearest_sampler, uv );
@@ -178,7 +178,7 @@ float4 fs_main( VertexOutput in )
             // return float4( normalize(color), 1.0 );
         }
     } else {
-        return float4( asfloat( -1 ), 1.0, 0.0, 0.0 );
+        return float4( 0.0 );
     }
 }
 

@@ -56,6 +56,7 @@ struct Terrain {
     engine::DescriptorSet lut_desc_set;
     engine::DescriptorSet sampler_desc_set;
     engine::DescriptorSet* accel_structure_desc_set;
+    engine::DescriptorSet* reflection_texture_desc_set;
 
     engine::GfxTask terrain_prepass_task;
 
