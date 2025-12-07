@@ -44,6 +44,8 @@ struct Gui {
     } debug = {};
 
     struct DemoData {
+        bool enable_translation = false;
+        bool enable_camera_lock_on_car = false;
         bool rotate_on = false;
         float rotate_speed = 0.005f;
     } demo = {};

@@ -157,6 +157,8 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::Checkbox( "Ray Traced Shadows", &gui.debug.ray_traced_shadows );
 
                 ImGui::SeparatorText( "Demo Settings" );
+                ImGui::Checkbox( "Enable car translation", &gui.demo.enable_translation );
+                ImGui::Checkbox( "Enable camera lock on car", &gui.demo.enable_camera_lock_on_car );
                 ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );
                 ImGui::Text( "Spin speed:" );
                 ImGui::SliderFloat( "Min", &gui.demo.rotate_speed, 0, 0.05f );

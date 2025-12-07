@@ -1086,7 +1086,8 @@ void run( bool use_fullscreen )
 
         camera::OrbitCamera& camera = engine.camera;
 
-        if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
+        if ( scene.demo_scene_nodes.car_parent_id.has_value()
+            && gui.demo.enable_camera_lock_on_car ) {
             camera.center
                 = model_mat_uniform_buffers.at( scene.demo_scene_nodes.car_parent_id.value() )
                       .get_data()
@@ -1134,9 +1135,6 @@ void run( bool use_fullscreen )
         {
             ub_data::Camera camera_ub = camera_buffer.get_data();
 
-            // glm::mat4 model = gui.demo.rotate_on
-            // ? glm::rotate( camera_ub.model, gui.demo.rotate_speed, glm::vec3( 0, 1, 0 ) )
-            // : camera_ub.model;
             glm::mat4 model = glm::identity<glm::mat4>();
 
             glm::mat4 jittered_projection = projection;
@@ -1310,8 +1308,10 @@ void run( bool use_fullscreen )
 
             std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
 
-            scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
-                scene.demo_scene_nodes.car_parent_id.value(), transform, discovered );
+            if ( gui.demo.enable_translation ) {
+                scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
+                    scene.demo_scene_nodes.car_parent_id.value(), transform, discovered );
+            }
         }
 
         // Update bloom settings
