@@ -14,41 +14,6 @@ const static float RADIUS = 1;
 
 const static float FOV = 60.0f;
 
-uint2 view_to_pixel( float3 view_pos )
-{
-    uint width, height;
-    gbuffer_depth.GetDimensions( width, height );
-
-    float fx = 1.0f / tan( 0.5f * FOV );
-    float fy = fx * height / width;
-
-    // This is just the inverse of pixel_to_view.
-    // In theory, the math should keep it consistent, which is good
-    float2 ndc;
-    ndc.x = saturate( 0.5f * ( view_pos.x * fx / view_pos.z ) + 0.5f );
-    ndc.y = saturate( 0.5f * ( view_pos.y * fy / view_pos.z ) + 0.5f );
-
-    return uint2( uint( ndc.x * width ), uint( ndc.y * height ) );
-}
-
-float3 pixel_to_view( uint2 pixel )
-{
-    uint width, height;
-    gbuffer_depth.GetDimensions( width, height );
-
-    float linear_depth = sample_linear_depth( pixel );
-
-    float2 ndc;
-    ndc.x = 2.0f * ( float( pixel.x ) + 0.5f ) / float( width ) - 1.0f;
-    ndc.y = 2.0f * ( float( pixel.y ) + 0.5f ) / float( height ) - 1.0f;
-
-    float fx = 1.0f / tan( 0.5f * FOV );
-    float fy = fx * height / width;
-
-    float3 view_pos = float3( ndc.x / fx, ndc.y / fy, 1.0f );
-    return view_pos * linear_depth;
-}
-
 float3 world_nor_to_view( float3 normal ) { return mul( (float3x3)camera_data.view_mat, normal ); }
 
 float sample_linear_depth( uint2 pixel_sample )
@@ -77,43 +42,74 @@ float2 rng_from_float( float x )
     return float2( x_rand, y_rand );
 }
 
-float3 SSAO( float3 view_position, float3 view_normal )
+uint2 view_to_pixel( float3 view_pos, float2 size )
+{
+    float4 clip_pos = mul( camera_data.proj_mat, float4( view_pos, 1.0f ) );
+    clip_pos.xyz /= clip_pos.w;
+
+    float2 ndc_coord = clip_pos.xy;
+    float2 normalized_ss = 0.5f * ndc_coord + 0.5f;
+    float2 ss_pos = normalized_ss * size;
+
+    return uint2( ss_pos );
+}
+
+float3 SSAO( float3 view_position, float3 view_normal, float2 size )
 {
     float g = 1.220744084605759;
 
     float occlusion = 0.0f;
     float samples = 0.0f;
 
-    for ( uint i = 0; i < SLICES; i++ ) {
+    float test_depth;
+    float sample_linear_depth;
+    float truth_depth;
+
+    for ( uint i = 0; i < 8; i++ ) {
         float2 rng = rng_from_float( g + view_position.x + view_position.y + float( i ) );
         // Assume one step per direction for now
         float radius = 1.0f * ao_data.packed_floats0.y;
-        float3 view_offset = radius * get_cos_vec( view_normal, rng );
+        float3 view_offset = get_cos_vec( view_normal, rng );
+        view_offset = radius * normalize( view_offset + 0.2f * view_normal );
 
-        // Bias towards normal
-        view_offset = normalize( view_offset + view_normal * 0.2f );
+        float3 sample_view_pos = view_offset + view_position;
+        float4 sample_clip_pos = mul( camera_data.proj_mat, float4( sample_view_pos, 1.0f ) );
+        float sample_ndc_z = sample_clip_pos.z / sample_clip_pos.w;
+        sample_linear_depth = LinearDepth( sample_ndc_z * 0.5f + 0.5f, 0.1f, 100.0f );
 
-        float sample_view_depth = ( view_offset + view_position ).z;
+        // in clip-z space... flip sign to be positive
+        // x: [-inf, inf]
+        // y: [-inf, inf]
+        // z: [-near, -far] currently, I think
 
         // Convert to screenspace back
-        uint2 pixel_sample = view_to_pixel( view_offset + view_position );
-        float sample_depth = sample_linear_depth( pixel_sample );
+        uint2 pixel_sample = view_to_pixel( sample_view_pos, size );
+
+        if ( pixel_sample.x >= size.x || pixel_sample.y >= size.y ) {
+            continue;
+        }
+
+        // Clip-space depth
+        truth_depth = gbuffer_depth[pixel_sample].r;
+        // LINEAR DEPTH TAKES IN A VALUE FROM 0-1!!!!
+        truth_depth = LinearDepth( truth_depth, 0.1f, 100.0f );
+
+        float3 sample_offset = sample_view_pos - view_position;
+        float dist = length( sample_offset );
+        float falloff = saturate( 1.0 - dist / radius );
+        float n_dot_d = saturate( dot( view_normal, normalize( sample_offset ) ) );
 
         // Depth check
-        float offset = 1.0f * ao_data.packed_floats0.z;
-        bool isOccluded = ( sample_depth + offset ) < sample_view_depth;
+        bool rangeCheck = abs( sample_linear_depth - truth_depth ) < radius + 0.1f;
 
-        // Distance check
-        float thickness_strength = ao_data.packed_floats0.x;
-        float threshold
-            = smoothstep( 0.0f, 1.0f, radius / abs( sample_view_depth - sample_depth ) );
-        float thickness = threshold * thickness_strength;
-
-        occlusion += select( isOccluded, 1.0f, 0.0f ) * thickness;
+        float offset = ao_data.packed_floats0.z;
+        bool isOccluded = sample_linear_depth - offset > truth_depth;
+        occlusion += select( isOccluded && rangeCheck, 1.0f, 0.0f );
         samples += 1.0f;
     }
 
-    float ao = 1.0f - ( occlusion / samples ) * 1.50f;
+    float thickness = 1.5f * ao_data.packed_floats0.y;
+    float ao = saturate( 1.0f - ( occlusion / samples ) * ( 1.0f + thickness ) );
 
     return float3( ao );
 }
@@ -153,14 +149,25 @@ func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
     // World-space normal
     float3 normal = gbuffer_normal[pixel].rgb;
 
-    // Acquire view_position? somehow...
-    // The "view_pos" I want is something that the view space normal can offset from.
-    // The only goal for it is to essentially be an origin for our next sample, which we will
-    // sample the same depth from for consistency.
-    float3 view_pos = pixel_to_view( pixel );
-    float3 view_normal = normalize( world_nor_to_view( normal ) );
+    // Hardcoded screen dimensions
+    uint width;
+    uint height;
+    scene_color.GetDimensions( width, height );
+    let size = float2( width, height );
+    float2 uv = ( float2( pixel ) + 0.5f ) / size;
 
-    float3 ao = SSAO( view_pos, normal );
+    // Reconstruct world-pos
+    float depth = gbuffer_depth[pixel].r;
+    float ndc_depth = depth * 2.0f - 1.0f;
+
+    float4 clip_pos = float4( uv * 2.0f - 1.0f, ndc_depth, 1.0f );
+    float4 view_pos_h = mul( camera_data.inv_proj, clip_pos );
+
+    // this is NOT NDC depth
+    float3 view_pos = ( view_pos_h.xyz / view_pos_h.w );
+    float3 view_normal = normalize( mul( (float3x3)camera_data.view_mat, normal ) );
+
+    float3 ao = SSAO( view_pos, view_normal, size );
 
     bool enable_debug = ao_data.packed_floats0.w > 0.5f;
     float3 result = select( enable_debug, ao, ao * scene_color[pixel].rgb );

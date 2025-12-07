@@ -224,7 +224,7 @@ State initialize( Context& ctx )
         create_depth_images( engine, vulkan );
 
         engine.camera = {
-            .center = glm::vec3( 2.5f, -0.3f, 1.f ),
+            .center = glm::vec3( 2.5f, 2.5f, 1.f ),
             .radius = 8.f,
             .azimuth = 0.f,
             .zenith = 0.f,

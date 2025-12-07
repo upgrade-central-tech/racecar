@@ -135,6 +135,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
             *prepass_info.GBuffer_Normal, 
             *prepass_info.GBuffer_Albedo, 
             *prepass_info.GBuffer_Packed_Data,
+            *prepass_info.GBuffer_Velocity,
         },
         .depth_image = { *prepass_info.GBuffer_Depth },
         .extent = engine.swapchain.extent,
@@ -194,6 +195,7 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
                 VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
                 VK_FORMAT_R16G16B16A16_SFLOAT, // ALBEDO
                 VK_FORMAT_R16G16B16A16_SFLOAT, // PACKED DATA
+                VK_FORMAT_R16G16_SFLOAT, // VELOCITY
             },
             VK_SAMPLE_COUNT_1_BIT, false, true,
             vk::create::shader_module( vulkan, TERRAIN_SHADER_PREPASS_MODULE_PATH ), true );

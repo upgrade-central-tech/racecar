@@ -308,8 +308,8 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
                 new_prim.node_id = static_cast<int>( node_idx );
                 new_prim.material_id = loaded_prim.material;
                 if ( new_prim.material_id == -1 ) {
-                    // Creates a default, white material if a prim is not assigned a material in the
-                    // gltf file
+                    // Creates a default, white material if a prim is not assigned a material in
+                    // the gltf file
                     if ( default_material_id == -1 ) {
                         Material default_material = Material();
                         default_material_id = static_cast<int>( scene.materials.size() );

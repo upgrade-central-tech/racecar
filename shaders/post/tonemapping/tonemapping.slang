@@ -62,7 +62,7 @@ func eotf_st_2084( n: float, exponent_scale_factor: float )->float
     let pq_c = 10000.f; // Maximum luminance supported by PQ (cd/m^2)
 
     // Does not handle signal range from 2084 - assumes full range (0-1)
-    let np = pow( n, 1.f / m2 );
+    let np = pow( n_new, 1.f / m2 );
     var l = max( np - c1, 0.f );
     l = l / ( c2 - c3 * np );
     l = pow( l, 1.f / m1 );
@@ -217,8 +217,11 @@ func apply_tonemapping( rgb: float3, in GTTonemappingCurveV2 curve,
 }
 
 // Stolen from: https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
-static const float3x3 ACESInputMat = { { 0.59719, 0.35458, 0.04823 }, { 0.07600, 0.90834, 0.01566 },
-    { 0.02840, 0.13383, 0.83777 } };
+static const float3x3 ACESInputMat = {
+    { 0.59719, 0.35458, 0.04823 },
+    { 0.07600, 0.90834, 0.01566 },
+    { 0.02840, 0.13383, 0.83777 },
+};
 
 // ODT_SAT => XYZ => D60_2_D65 => sRGB
 static const float3x3 ACESOutputMat = { { 1.60475, -0.53108, -0.07367 },

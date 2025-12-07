@@ -350,9 +350,10 @@ void run( bool use_fullscreen )
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // UV
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // ALBEDO
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT // PACKED DATA (metallic, roughness,
-                                                        // clearcoat roughness, clearcoat
-                                                        // weight)
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // PACKED DATA (metallic, roughness,
+                                                         // clearcoat roughness, clearcoat
+                                                         // weight)
+                VkFormat::VK_FORMAT_R16G16_SFLOAT, // VELOCITY
             },
             VK_SAMPLE_COUNT_1_BIT, false, true,
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ), false );
@@ -404,8 +405,8 @@ void run( bool use_fullscreen )
 
     engine::RWImage GBuffer_Velocity = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
-        VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
+        VkFormat::VK_FORMAT_R16G16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
 #if ENABLE_DEFERRED_AA
     // Render to an offscreen image, this is what we'll present to the swapchain.
@@ -448,6 +449,14 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Velocity,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
                     .src_access = VK_ACCESS_2_NONE,
@@ -596,7 +605,7 @@ void run( bool use_fullscreen )
         .clear_depth = 1.f,
         .render_target_is_swapchain = false,
         .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Tangent, GBuffer_UV,
-            GBuffer_Albedo, GBuffer_Packed_Data },
+            GBuffer_Albedo, GBuffer_Packed_Data, GBuffer_Velocity },
         .depth_image = GBuffer_Depth,
         .extent = engine.swapchain.extent,
     };
@@ -755,6 +764,7 @@ void run( bool use_fullscreen )
         &GBuffer_Albedo,
         &GBuffer_Depth,
         &GBuffer_Packed_Data,
+        &GBuffer_Velocity,
         &glint_noise,
     };
 
@@ -778,6 +788,14 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
                     .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Velocity,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -989,33 +1007,28 @@ void run( bool use_fullscreen )
                 },
             } } );
 
-    engine::post::BloomPass bloom_pass = engine::post::add_bloom(
-        ctx.vulkan, engine, task_list, screen_color, screen_buffer, debug_buffer );
+    engine::post::BloomPass bloom_pass
+        = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
 
     engine::post::AoPass ao_pass = {
-        &camera_buffer,
-        &GBuffer_Normal,
-        &GBuffer_Depth,
-        &screen_buffer,
-        &screen_color,
+        .camera_buffer = &camera_buffer,
+        .GBuffer_Normal = &GBuffer_Normal,
+        .GBuffer_Depth = &GBuffer_Depth,
+        .in_color = &screen_color,
+        .out_color = &screen_buffer,
     };
-    {
-        engine::transition_cs_read_to_write( task_list, screen_color );
-        engine::transition_cs_write_to_read( task_list, screen_buffer );
+    add_ao( ao_pass, ctx.vulkan, engine, task_list );
 
-        add_ao( ao_pass, ctx.vulkan, engine, task_list );
-    }
-
-    engine::transition_cs_read_to_write( task_list, screen_buffer );
-    engine::transition_cs_write_to_read( task_list, screen_color );
-    engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
-        ctx.vulkan, engine, screen_color, screen_buffer, task_list );
-
-    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
     engine::transition_cs_read_to_write( task_list, screen_color );
     engine::transition_cs_write_to_read( task_list, screen_buffer );
-    engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_buffer,
-        GBuffer_Depth, screen_color, screen_history, task_list, camera_buffer );
+    engine::post::TonemappingPass tm_pass = engine::post::add_tonemapping(
+        ctx.vulkan, engine, screen_buffer, screen_color, task_list );
+
+    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
+    engine::transition_cs_read_to_write( task_list, screen_buffer );
+    engine::transition_cs_write_to_read( task_list, screen_color );
+    engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_color,
+        GBuffer_Depth, GBuffer_Velocity, screen_buffer, screen_history, task_list, camera_buffer );
 
     // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
     // screen.
@@ -1029,12 +1042,12 @@ void run( bool use_fullscreen )
                     .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = screen_color,
+                    .image = screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
             } } );
 
-    engine::add_blit_task( task_list, { screen_color } );
+    engine::add_blit_task( task_list, { screen_buffer } );
 #endif
 
     // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
@@ -1050,7 +1063,7 @@ void run( bool use_fullscreen )
     while ( !will_quit ) {
         while ( SDL_PollEvent( &event ) ) {
             gui::process_event( &event );
-            camera::process_event( ctx, &event, engine.camera );
+            camera::process_event( ctx, &event, engine.camera, gui.show_window );
 
             if ( event.type == SDL_EVENT_QUIT ) {
                 will_quit = true;
@@ -1143,6 +1156,10 @@ void run( bool use_fullscreen )
             camera_ub.view_mat = view;
             camera_ub.inv_model = glm::inverse( model );
             camera_ub.inv_vp = glm::inverse( jittered_projection * view );
+
+            camera_ub.proj_mat = jittered_projection;
+            camera_ub.inv_proj = glm::inverse( jittered_projection );
+
             camera_ub.camera_pos = glm::vec4( camera_position, 1.0f );
             camera_ub.camera_constants = glm::vec4(
                 camera.near_plane, camera.far_plane, camera.aspect_ratio, camera.fov_y );
@@ -1219,7 +1236,6 @@ void run( bool use_fullscreen )
                 .albedo_only = gui.debug.albedo_only,
                 .roughness_metal_only = gui.debug.roughness_metal_only,
 
-                .enable_bloom = gui.debug.enable_bloom,
                 .ray_traced_shadows = gui.debug.ray_traced_shadows };
 
             debug_buffer.set_data( debug_ub );
@@ -1283,18 +1299,21 @@ void run( bool use_fullscreen )
                 scene.demo_scene_nodes.car_parent_id.value(), transform, discovered );
         }
 
-        // {
-        //     ub_data::RaymarchBufferData raymarch_ub = {
-        //         .step_size = 1,
-        //     };
+        // Update bloom settings
+        {
+            ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();
 
-        //     raymarch_buffer.set_data( raymarch_ub );
-        //     raymarch_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        // }
+            bloom_ub.enable = gui.bloom.enable ? 1 : 0;
+            bloom_ub.threshold = gui.bloom.threshold;
+            bloom_ub.filter_radius = gui.bloom.filter_radius;
+
+            bloom_pass.bloom_ub.set_data( bloom_ub );
+            bloom_pass.bloom_ub.update( ctx.vulkan, engine.get_frame_index() );
+        }
 
         gui::update( gui, camera, atms );
 
-        engine::execute( engine, ctx, task_list );
+        engine::execute( engine, ctx, task_list, gui );
         engine.rendered_frames = engine.rendered_frames + 1;
         engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
 
