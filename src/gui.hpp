@@ -54,7 +54,7 @@ struct Gui {
 
     struct AoData {
         float thickness = 1.0f;
-        float radius = 0.062f;
+        float radius = 0.324f;
         float offset = 0.0f;
         bool enable_debug = false;
         bool enable_ao = false;
