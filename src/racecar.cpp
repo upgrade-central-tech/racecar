@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -197,6 +197,34 @@ void run( bool use_fullscreen )
         material_uniform_buffers[i] = std::move( material_buffer );
     }
 
+    size_t num_nodes = scene.nodes.size();
+    std::vector<engine::DescriptorSet> model_mat_desc_sets( num_nodes );
+    std::vector<UniformBuffer<ub_data::ModelMat>> model_mat_uniform_buffers( num_nodes );
+
+    for ( size_t i = 0; i < num_nodes; i++ ) {
+        model_mat_desc_sets[i] = engine::generate_descriptor_set(
+            ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_VERTEX_BIT );
+
+        scene::Node* node = scene.nodes[i].get();
+        glm::mat4 transform = node->transform;
+        while ( node->parent != nullptr ) {
+            node = node->parent;
+            transform = node->transform * transform;
+        }
+
+        UniformBuffer model_mat_buffer = create_uniform_buffer<ub_data::ModelMat>(
+            ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+
+        ub_data::ModelMat model_mat_ub
+            = { .model_mat = transform, .inv_model_mat = glm::inverse( transform ) };
+        model_mat_buffer.set_data( model_mat_ub );
+        model_mat_buffer.update( ctx.vulkan, engine.get_frame_index() );
+
+        engine::update_descriptor_set_uniform(
+            ctx.vulkan, engine, model_mat_desc_sets[i], model_mat_buffer, 0 );
+        model_mat_uniform_buffers[i] = std::move( model_mat_buffer );
+    }
+
     engine::DescriptorSet raymarch_tex_sets;
     {
         raymarch_tex_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
@@ -311,6 +339,7 @@ void run( bool use_fullscreen )
             {
                 uniform_desc_set.layouts[frame_index],
                 material_desc_sets[0].layouts[frame_index],
+                model_mat_desc_sets[0].layouts[frame_index],
                 lut_sets.layouts[frame_index],
                 sampler_desc_set.layouts[frame_index],
             },
@@ -320,9 +349,10 @@ void run( bool use_fullscreen )
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // UV
                 VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // ALBEDO
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT // PACKED DATA (metallic, roughness,
-                                                        // clearcoat roughness, clearcoat
-                                                        // weight)
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // PACKED DATA (metallic, roughness,
+                                                         // clearcoat roughness, clearcoat
+                                                         // weight)
+                VkFormat::VK_FORMAT_R16G16_SFLOAT, // VELOCITY
             },
             VK_SAMPLE_COUNT_1_BIT, false, true,
             vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ), false );
@@ -374,8 +404,8 @@ void run( bool use_fullscreen )
 
     engine::RWImage GBuffer_Velocity = engine::create_rwimage( ctx.vulkan, engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
-        VkFormat::VK_FORMAT_D32_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
+        VkFormat::VK_FORMAT_R16G16_SFLOAT, VkImageType::VK_IMAGE_TYPE_2D, VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT );
 
 #if ENABLE_DEFERRED_AA
     // Render to an offscreen image, this is what we'll present to the swapchain.
@@ -418,6 +448,14 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .image = GBuffer_Velocity,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
                     .src_access = VK_ACCESS_2_NONE,
@@ -566,7 +604,7 @@ void run( bool use_fullscreen )
         .clear_depth = 1.f,
         .render_target_is_swapchain = false,
         .color_attachments = { GBuffer_Position, GBuffer_Normal, GBuffer_Tangent, GBuffer_UV,
-            GBuffer_Albedo, GBuffer_Packed_Data },
+            GBuffer_Albedo, GBuffer_Packed_Data, GBuffer_Velocity },
         .depth_image = GBuffer_Depth,
         .extent = engine.swapchain.extent,
     };
@@ -652,6 +690,7 @@ void run( bool use_fullscreen )
                         .descriptor_sets = {
                             &uniform_desc_set,
                             &material_desc_sets[static_cast<size_t>( prim.material_id )],
+                            &model_mat_desc_sets[static_cast<size_t>(prim.node_id)],
                             &lut_sets,
                             &sampler_desc_set,
                         },
@@ -721,6 +760,7 @@ void run( bool use_fullscreen )
         &GBuffer_Albedo,
         &GBuffer_Depth,
         &GBuffer_Packed_Data,
+        &GBuffer_Velocity,
         &glint_noise,
     };
 
@@ -744,6 +784,14 @@ void run( bool use_fullscreen )
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
                     .image = GBuffer_Position,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = GBuffer_Velocity,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -976,7 +1024,7 @@ void run( bool use_fullscreen )
     engine::transition_cs_read_to_write( task_list, screen_buffer );
     engine::transition_cs_write_to_read( task_list, screen_color );
     engine::post::AAPass aa_pass = engine::post::add_aa( ctx.vulkan, engine, screen_color,
-        GBuffer_Depth, screen_buffer, screen_history, task_list, camera_buffer );
+        GBuffer_Depth, GBuffer_Velocity, screen_buffer, screen_history, task_list, camera_buffer );
 
     // This is the final pipeline barrier necessary for transitioning the chosen out_color to the
     // screen.
@@ -1033,6 +1081,9 @@ void run( bool use_fullscreen )
         }
 
         camera::OrbitCamera& camera = engine.camera;
+        // TEMP, remove bottom for TAA test
+        camera.center = model_mat_uniform_buffers.at( 0 ).get_data().model_mat[3];
+
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
             camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
@@ -1152,9 +1203,9 @@ void run( bool use_fullscreen )
             cloud_ub.inverse_proj = glm::inverse( projection );
             cloud_ub.inverse_view = glm::inverse( view );
             cloud_ub.camera_position = camera::calculate_eye_position( camera );
-            cloud_ub.cloud_offset_x = 0.f;
+            cloud_ub.cloud_offset_x += 0.0001f;
             cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
-            cloud_ub.cloud_offset_y = 0.f;
+            cloud_ub.cloud_offset_y += 0.0001f;
 
             volumetric.uniform_buffer.set_data( cloud_ub );
             volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
@@ -1226,6 +1277,29 @@ void run( bool use_fullscreen )
 
             test_terrain.terrain_uniform.set_data( terrain_ub );
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
+        {
+            ub_data::ModelMat model_mat_ub = model_mat_uniform_buffers.at( 0 ).get_data();
+
+            model_mat_ub.prev_model_mat = model_mat_ub.model_mat;
+
+            glm::vec3 velocity = glm::vec3(
+                0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 200.0 ), 0,
+                0.01f );
+
+            // temp
+            float speed = 0.0f;
+            velocity *= speed;
+
+            model_mat_ub.model_mat = glm::translate( model_mat_ub.model_mat, velocity );
+
+            // model_mat_ub.model_mat
+            //     = glm::rotate( model_mat_ub.model_mat, 0.01f, glm::vec3( 0.0f, 0.0f, 1.0f ) );
+            model_mat_ub.inv_model_mat = glm::inverse( model_mat_ub.model_mat );
+
+            model_mat_uniform_buffers.at( 0 ).set_data( model_mat_ub );
+            model_mat_uniform_buffers.at( 0 ).update( ctx.vulkan, engine.get_frame_index() );
         }
 
         // Update bloom settings

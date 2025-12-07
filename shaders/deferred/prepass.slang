@@ -10,6 +10,8 @@ struct VertexInput {
 struct VertexOutput {
     float4 sv_position : SV_Position;
     float3 position;
+    float4 prev_clip_pos;
+    float4 curr_clip_pos;
     float3 normal;
     float4 tangent;
     float2 uv;
@@ -24,14 +26,16 @@ layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
 layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 layout( binding = 3, set = 1 ) ConstantBuffer<MaterialData> material_data;
 
-// Cubemaps + LUTs
-layout( binding = 0, set = 2 ) Texture2D<float2> BRDF_LUT;
-layout( binding = 1, set = 2 ) Texture2D<float4> glint_noise;
-layout( binding = 2, set = 2 ) Texture2D<float4> octahedral_sky;
-layout( binding = 3, set = 2 ) Texture2D<float4> octahedral_sky_irradiance;
-layout( binding = 4, set = 2 ) Texture2D<float4> octahedral_sky_mips;
+layout( binding = 0, set = 2 ) ConstantBuffer<ModelMatData> model_mat_data;
 
-layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
+// Cubemaps + LUTs
+layout( binding = 0, set = 3 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 1, set = 3 ) Texture2D<float4> glint_noise;
+layout( binding = 2, set = 3 ) Texture2D<float4> octahedral_sky;
+layout( binding = 3, set = 3 ) Texture2D<float4> octahedral_sky_irradiance;
+layout( binding = 4, set = 3 ) Texture2D<float4> octahedral_sky_mips;
+
+layout( binding = 0, set = 4 ) SamplerState nearest_sampler;
 
 #include "../glint/glint.hlsl"
 
@@ -73,10 +77,22 @@ float3 world_to_local( float3 world_dir, float3 normal )
 VertexOutput vs_main( VertexInput input )
 {
     VertexOutput output;
-    output.sv_position = mul( camera_buffer_data.mvp, float4( input.position, 1.0 ) );
-    output.position = mul( camera_buffer_data.model, float4( input.position, 1.0 ) ).xyz;
+    float4 clip_pos = mul(
+        mul( camera_buffer_data.mvp, model_mat_data.model_mat ), float4( input.position, 1.0 ) );
 
-    float3x3 normal_matrix = (float3x3)transpose( camera_buffer_data.inv_model );
+    float4 prev_clip_pos = mul( mul( camera_buffer_data.prev_mvp, model_mat_data.prev_model_mat ),
+        float4( input.position, 1.0f ) );
+
+    output.sv_position = clip_pos;
+    output.curr_clip_pos = clip_pos;
+    output.prev_clip_pos = prev_clip_pos;
+
+    output.position = mul(
+        mul( camera_buffer_data.model, model_mat_data.model_mat ), float4( input.position, 1.0 ) )
+                          .xyz;
+
+    float3x3 normal_matrix
+        = (float3x3)transpose( mul( model_mat_data.inv_model_mat, camera_buffer_data.inv_model ) );
     float3 normal = normalize( mul( normal_matrix, input.normal ) );
     float3 tangent = normalize( mul( normal_matrix, input.tangent.xyz ) );
     tangent = normalize( tangent - normal * dot( normal, tangent ) );
@@ -96,6 +112,7 @@ struct FragmentOutput {
     float4 albedo : SV_Target4;
     /// roughness, metallic, clearcoat roughness, clearcoat weight
     float4 packed_data : SV_Target5;
+    float2 velocity : SV_Target6;
 }
 
 [shader( "fragment" )]
@@ -108,6 +125,15 @@ FragmentOutput fs_main( VertexOutput in )
     // 1 - car shading
     // 2 - terrain shading
     float stencil = CAR_ID;
+
+    // VELOCITY
+    float4 old_pos = in.prev_clip_pos;
+    old_pos.xy = 0.5f * ( old_pos.xy ) + 0.5f;
+
+    float4 curr_pos = in.curr_clip_pos;
+    curr_pos.xy = 0.5f * ( curr_pos.xy ) + 0.5f;
+
+    output.velocity = ( curr_pos - old_pos ).xy;
 
     if ( material_data.has_base_color_texture != 0 && debug_data.enable_albedo_map != 1 ) {
         output.albedo = albedo_map.Sample( nearest_sampler, in.uv );

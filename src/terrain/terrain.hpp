@@ -38,6 +38,7 @@ struct TerrainPrepassInfo {
     engine::RWImage* GBuffer_Albedo;
     engine::RWImage* GBuffer_Depth;
     engine::RWImage* GBuffer_Packed_Data;
+    engine::RWImage* GBuffer_Velocity;
 
     vk::mem::AllocatedImage* glint_noise;
 };
