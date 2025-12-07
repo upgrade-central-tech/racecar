@@ -83,7 +83,7 @@ public static const float PI = 3.14159265358979323846f;
 public static const float INV_PI = 0.3183098861837906715377f;
 
 /// Expressed in radians.
-public static const float SUN_ANGULAR_RADIUS = 0.04f;
+public static const float SUN_ANGULAR_RADIUS = 0.02f;
 public static const float SUN_SIZE = cos( SUN_ANGULAR_RADIUS );
 
 /// Earth radius is 6360 km, which we represent as height. This is a negative value because

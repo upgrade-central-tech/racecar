@@ -85,7 +85,7 @@ struct Gui {
 
     struct BloomData {
         bool enable = true;
-        float threshold = 1.f;
+        float threshold = 1.2f;
         float filter_radius = 0.005f;
     } bloom = {};
 };

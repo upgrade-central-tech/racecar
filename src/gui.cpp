@@ -197,7 +197,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
             if ( ImGui::BeginTabItem( "Post" ) ) {
                 ImGui::SeparatorText( "Bloom" );
                 ImGui::Checkbox( "Enable", &gui.bloom.enable );
-                ImGui::InputFloat( "Threshold", &gui.bloom.threshold );
+                ImGui::SliderFloat( "Threshold", &gui.bloom.threshold, 0.f, 5.f );
                 ImGui::SliderFloat( "Filter radius", &gui.bloom.filter_radius, 0.f, 0.025f );
 
                 ImGui::SeparatorText( "Tonemapping" );
