@@ -54,8 +54,8 @@ struct Gui {
 
     struct AoData {
         float thickness = 1.0f;
-        float radius = 0.20f;
-        float offset = 0.20f;
+        float radius = 0.062f;
+        float offset = 0.0f;
         bool enable_debug = false;
         bool enable_ao = false;
     } ao = {};
@@ -78,7 +78,7 @@ struct Gui {
             REINHARD,
             ACES,
         } mode
-            = Mode::GT7_HDR;
+            = Mode::NONE;
 
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};

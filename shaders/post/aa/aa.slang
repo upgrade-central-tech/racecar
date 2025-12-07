@@ -26,11 +26,11 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     float depth = gbuffer_depth[pixel].r;
 
     float4 curr_clip = float4( uv * 2.0f - 1.0f, depth, 1.0f );
-    float4 curr_viewpos = mul( camera_data.inv_vp, curr_clip );
-    curr_viewpos.xyz /= curr_viewpos.w;
+    float4 curr_world_pos = mul( camera_data.inv_vp, curr_clip );
+    curr_world_pos.xyz /= curr_world_pos.w;
 
     // Reproject into prev-frame
-    float4 prev_clip = mul( camera_data.prev_mvp, float4( curr_viewpos.xyz, 1.0f ) );
+    float4 prev_clip = mul( camera_data.prev_mvp, float4( curr_world_pos.xyz, 1.0f ) );
     float2 prev_uv = prev_clip.xy / prev_clip.w * 0.5f + 0.5f;
 
     bool invalid = any( prev_uv < 0.0f ) || any( prev_uv > 1.0f );

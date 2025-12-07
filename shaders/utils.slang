@@ -317,6 +317,8 @@ float LinearDepth( float perspective_depth, float near, float far )
     return ( near * far ) / ( far - perspective_depth * ( far - near ) );
 }
 
+// 10 / ( 100 - (-1) * 99.9 )
+
 float LinearDepth01( float perspective_depth, float near, float far )
 {
     float linear_depth = LinearDepth( perspective_depth, near, far );
