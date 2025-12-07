@@ -1102,6 +1102,10 @@ void run( bool use_fullscreen )
             camera_ub.view_mat = view;
             camera_ub.inv_model = glm::inverse( model );
             camera_ub.inv_vp = glm::inverse( jittered_projection * view );
+
+            camera_ub.proj_mat = jittered_projection;
+            camera_ub.inv_proj = glm::inverse( jittered_projection );
+
             camera_ub.camera_pos = glm::vec4( camera_position, 1.0f );
             camera_ub.camera_constants = glm::vec4(
                 camera.near_plane, camera.far_plane, camera.aspect_ratio, camera.fov_y );

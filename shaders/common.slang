@@ -12,6 +12,8 @@ struct CameraBufferData {
     float4x4 inv_model;
     float4x4 inv_vp;
     float4x4 view_mat;
+    float4x4 proj_mat;
+    float4x4 inv_proj;
     float4 camera_pos;
     // Pack: near plane, far plane, aspect ratio, fov_Y
     float4 camera_constants;
