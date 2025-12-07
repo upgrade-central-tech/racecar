@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view REFLECTION_PASS_SHADER_MODULE_PATH
@@ -857,8 +857,15 @@ void run( bool use_fullscreen )
     vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
 
     engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set( ctx.vulkan, engine,
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+        {
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // vertex_data
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // index_data
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // blas_offsets
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // rt_texture_uniform,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF_LUT
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // octahedral_sky_mips
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // octahedral_sky_irradiance
+        },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     std::vector<ub_data::PaddedVertex> padded_vertex_data {};
@@ -905,13 +912,23 @@ void run( bool use_fullscreen )
     offset_data.set_data( blas_offsets );
     engine::update_descriptor_set_uniform( ctx.vulkan, engine, car_descriptor_set, offset_data, 2 );
 
+    engine::update_descriptor_set_image( ctx.vulkan, engine, car_descriptor_set, lut_brdf, 4 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, car_descriptor_set,
+        atms_baker.octahedral_sky_test, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 5 );
+    engine::update_descriptor_set_rwimage( ctx.vulkan, engine, car_descriptor_set,
+        atms_baker.octahedral_sky_irradiance, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 6 );
+
     engine::add_gfx_task( task_list, depth_ms_gfx_task );
 
     // number of albedo textures to bind
-    engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(
-        ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        uint32_t( albedo_textures.size() ) );
+    engine::DescriptorSet combined_textures_desc_set
+        = engine::generate_array_descriptor_set( ctx.vulkan, engine,
+            {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // albedo_textures array
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // metallic_roughness_textures array
+            },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            uint32_t( albedo_textures.size() ) );
 
     engine::update_descriptor_set_image_array(
         ctx.vulkan, engine, combined_textures_desc_set, albedo_textures, 0 );

@@ -169,8 +169,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     float specular_strength = 0.75f;
     float3 specular_irradiance = sample_glossy_ibl( mixed_roughness, oct_refl_uv );
-
-    specular_irradiance = lerp( specular_irradiance, refl.rgb, refl.a );
+    specular_irradiance = lerp( specular_irradiance, 2.0f * refl.rgb, refl.a );
 
     float metallic = 0.0f;
     float n_dot_v = max( dot( mixed_normal, view ), 0.0f );

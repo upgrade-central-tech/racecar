@@ -1,8 +1,6 @@
 // module car_lighting;
 
 #include "../utils.slang"
-#include "../sh_utils.slang"
-#include "../glint/glint.hlsl"
 
 #define USE_GLINTS 1
 #define USE_SH_IRRADIANCE 0
@@ -82,6 +80,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
 #endif
 
     float3 glint_specular = ( NDF * G * F ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
+
+    // return float3( clamped_n_dot_h );
 
     // Clearcoat evaluation
     // float alpha_cc = clearcoat_roughness * clearcoat_roughness;
