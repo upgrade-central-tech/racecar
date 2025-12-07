@@ -27,7 +27,6 @@ struct Debug {
     uint32_t normals_only = 0;
     uint32_t albedo_only = 0;
     uint32_t roughness_metal_only = 0;
-    uint32_t enable_bloom = 0;
     uint32_t ray_traced_shadows = 0;
 };
 
@@ -128,6 +127,11 @@ struct TerrainData {
 struct Tonemapping {
     int mode = 0;
     float hdr_target_luminance = 0.f;
+};
+
+struct Bloom {
+    uint32_t enable = 0.f;
+    float threshold = 0.f;
 };
 
 } // namespace racecar::uniform_buffer

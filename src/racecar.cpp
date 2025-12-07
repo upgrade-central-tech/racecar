@@ -940,22 +940,17 @@ void run( bool use_fullscreen )
                 },
             } } );
 
-    engine::post::BloomPass bloom_pass = engine::post::add_bloom(
-        ctx.vulkan, engine, task_list, screen_color, screen_buffer, debug_buffer );
+    engine::post::BloomPass bloom_pass
+        = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, debug_buffer );
 
     engine::post::AoPass ao_pass = {
-        &camera_buffer,
-        &GBuffer_Normal,
-        &GBuffer_Depth,
-        &screen_buffer,
-        &screen_color,
+        .camera_buffer = &camera_buffer,
+        .GBuffer_Normal = &GBuffer_Normal,
+        .GBuffer_Depth = &GBuffer_Depth,
+        .in_color = &screen_color,
+        .out_color = &screen_buffer,
     };
-    {
-        engine::transition_cs_read_to_write( task_list, screen_color );
-        engine::transition_cs_write_to_read( task_list, screen_buffer );
-
-        add_ao( ao_pass, ctx.vulkan, engine, task_list );
-    }
+    add_ao( ao_pass, ctx.vulkan, engine, task_list );
 
     engine::transition_cs_read_to_write( task_list, screen_buffer );
     engine::transition_cs_write_to_read( task_list, screen_color );
@@ -1130,7 +1125,6 @@ void run( bool use_fullscreen )
                 .albedo_only = gui.debug.albedo_only,
                 .roughness_metal_only = gui.debug.roughness_metal_only,
 
-                .enable_bloom = gui.debug.enable_bloom,
                 .ray_traced_shadows = gui.debug.ray_traced_shadows };
 
             debug_buffer.set_data( debug_ub );
@@ -1179,6 +1173,17 @@ void run( bool use_fullscreen )
 
             test_terrain.terrain_uniform.set_data( terrain_ub );
             test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
+        }
+
+        // Update bloom settings
+        {
+            ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();
+
+            bloom_ub.enable = gui.bloom.enable ? 1 : 0;
+            bloom_ub.threshold = gui.bloom.threshold;
+
+            bloom_pass.bloom_ub.set_data( bloom_ub );
+            bloom_pass.bloom_ub.update( ctx.vulkan, engine.get_frame_index() );
         }
 
         gui::update( gui, camera, atms );

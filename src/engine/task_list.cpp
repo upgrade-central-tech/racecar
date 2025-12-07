@@ -51,7 +51,6 @@ void add_cpu_task( TaskList& task_list, std::function<void()> task )
     task_list.cpu_tasks.push_back( { task } );
 }
 
-// TODO: This func and the above should be moved into its own file.
 void transition_cs_read_to_write( engine::TaskList& task_list, engine::RWImage& image )
 {
     engine::add_pipeline_barrier( task_list,
@@ -78,6 +77,60 @@ void transition_cs_write_to_read( engine::TaskList& task_list, engine::RWImage& 
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .image = image,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+            } } );
+}
+
+void transition_cs_read_to_rw( engine::TaskList& task_list, engine::RWImage& image )
+{
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers = {
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .image = image,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+            } } );
+}
+
+void transition_cs_write_to_rw( engine::TaskList& task_list, engine::RWImage& image )
+{
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers = {
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .image = image,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+            } } );
+}
+
+void transition_cs_rw_to_read( engine::TaskList& task_list, engine::RWImage& image )
+{
+    engine::add_pipeline_barrier( task_list,
+        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+            .image_barriers = {
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
                     .src_layout = VK_IMAGE_LAYOUT_GENERAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,

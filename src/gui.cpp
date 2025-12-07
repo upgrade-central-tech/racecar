@@ -196,7 +196,8 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
 
             if ( ImGui::BeginTabItem( "Post" ) ) {
                 ImGui::SeparatorText( "Bloom" );
-                ImGui::Checkbox( "Enable", &gui.debug.enable_bloom );
+                ImGui::Checkbox( "Enable", &gui.bloom.enable );
+                ImGui::InputFloat( "Threshold", &gui.bloom.threshold );
 
                 ImGui::SeparatorText( "Tonemapping" );
                 size_t selected_index = static_cast<size_t>( gui.tonemapping.mode );

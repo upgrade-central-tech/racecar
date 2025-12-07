@@ -38,7 +38,6 @@ struct Gui {
         bool normals_only = false;
         bool albedo_only = false;
         bool roughness_metal_only = false;
-        bool enable_bloom = true;
         bool ray_traced_shadows = true;
         int current_editing_material = 0;
         bool load_material_into_gui = true;
@@ -83,6 +82,11 @@ struct Gui {
 
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};
+
+    struct BloomData {
+        bool enable = true;
+        float threshold = 1.f;
+    } bloom = {};
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );
