@@ -7,17 +7,19 @@ namespace racecar::engine::post {
 
 namespace {
 
+constexpr std::string_view THRESHOLD_SHADER_PATH = "../shaders/post/bloom/threshold.spv";
 constexpr std::string_view DOWNSAMPLE_SHADER_PATH = "../shaders/post/bloom/downsample.spv";
 constexpr std::string_view UPSAMPLE_SHADER_PATH = "../shaders/post/bloom/upsample.spv";
 
 }
 
 BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_list, RWImage& inout,
-    const UniformBuffer<ub_data::Debug>& )
+    RWImage& write_only, const UniformBuffer<ub_data::Debug>& )
 {
     BloomPass pass;
 
     engine::transition_cs_read_to_rw( task_list, inout );
+    engine::transition_cs_write_to_rw( task_list, write_only );
 
     log::info( "[Post] [Bloom] Number of passes: {}", BloomPass::NUM_PASSES );
 
@@ -71,28 +73,30 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             = std::make_unique<engine::DescriptorSet>( std::move( sampler_desc_set ) );
     }
 
-    // {
-    //     engine::DescriptorSet threshold_desc_set = engine::generate_descriptor_set(
-    //         vulkan, engine, { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE }, VK_SHADER_STAGE_COMPUTE_BIT );
-    //     engine::update_descriptor_set_rwimage( vulkan, engine, threshold_desc_set, inout,
-    //         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+    {
+        engine::DescriptorSet threshold_desc_set = engine::generate_descriptor_set( vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            VK_SHADER_STAGE_COMPUTE_BIT );
+        engine::update_descriptor_set_rwimage( vulkan, engine, threshold_desc_set, inout,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+        engine::update_descriptor_set_rwimage( vulkan, engine, threshold_desc_set, write_only,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
 
-    //     engine::Pipeline brightness_threshold_pipeline = engine::create_compute_pipeline( vulkan,
-    //         { threshold_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
-    //         vk::create::shader_module( vulkan, BRIGHTNESS_THRESHOLD_PATH ), "cs_main" );
+        engine::Pipeline threshold_pipeline = engine::create_compute_pipeline( vulkan,
+            { threshold_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
+            vk::create::shader_module( vulkan, THRESHOLD_SHADER_PATH ), "threshold" );
 
-    //     pass.brightness_threshold_desc_set
-    //         = std::make_unique<engine::DescriptorSet>( std::move( brightness_threshold_desc_set )
-    //         );
+        pass.threshold_desc_set
+            = std::make_unique<engine::DescriptorSet>( std::move( threshold_desc_set ) );
 
-    //     engine::add_cs_task( task_list,
-    //         {
-    //             .pipeline = brightness_threshold_pipeline,
-    //             .descriptor_sets
-    //             = { pass.brightness_threshold_desc_set.get(), pass.uniform_desc_set.get() },
-    //             .group_size = swapchain_dims,
-    //         } );
-    // }
+        engine::add_cs_task( task_list,
+            {
+                .pipeline = threshold_pipeline,
+                .descriptor_sets = { pass.threshold_desc_set.get(), pass.uniform_desc_set.get() },
+                .group_size = { ( engine.swapchain.extent.width + 7 ) / 8,
+                    ( engine.swapchain.extent.height + 7 ) / 8, 1 },
+            } );
+    }
 
     VkShaderModule downsample_shader = vk::create::shader_module( vulkan, DOWNSAMPLE_SHADER_PATH );
 
@@ -105,7 +109,7 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
             engine::transition_cs_read_to_write( task_list, pass.images[i] );
         }
 
-        const RWImage& input_image = i == 0 ? inout : pass.images[i - 1];
+        const RWImage& input_image = i == 0 ? write_only : pass.images[i - 1];
         VkExtent3D output_extent = pass.images[i].images[0].image_extent;
 
         engine::DescriptorSet downsample_desc_set = engine::generate_descriptor_set( vulkan, engine,
@@ -132,6 +136,10 @@ BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_lis
                 .group_size
                 = { ( output_extent.width + 7 ) / 8, ( output_extent.height + 7 ) / 8, 1 },
             } );
+
+        if ( i == 0 ) {
+            engine::transition_cs_rw_to_write( task_list, write_only );
+        }
     }
 
     engine::transition_cs_write_to_rw( task_list, pass.images[BloomPass::NUM_PASSES - 1] );

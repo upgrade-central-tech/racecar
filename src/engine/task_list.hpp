@@ -53,5 +53,6 @@ void transition_cs_write_to_read( engine::TaskList& task_list, engine::RWImage& 
 void transition_cs_read_to_rw( engine::TaskList& task_list, engine::RWImage& image );
 void transition_cs_write_to_rw( engine::TaskList& task_list, engine::RWImage& image );
 void transition_cs_rw_to_read( engine::TaskList& task_list, engine::RWImage& image );
+void transition_cs_rw_to_write( engine::TaskList& task_list, engine::RWImage& image );
 
 } // namespace racecar::engine

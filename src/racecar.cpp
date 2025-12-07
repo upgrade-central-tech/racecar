@@ -940,8 +940,8 @@ void run( bool use_fullscreen )
                 },
             } } );
 
-    engine::post::BloomPass bloom_pass
-        = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, debug_buffer );
+    engine::post::BloomPass bloom_pass = engine::post::add_bloom(
+        ctx.vulkan, engine, task_list, screen_color, screen_buffer, debug_buffer );
 
     engine::post::AoPass ao_pass = {
         .camera_buffer = &camera_buffer,
