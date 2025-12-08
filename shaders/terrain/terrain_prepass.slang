@@ -235,13 +235,11 @@ FragmentOutput fs_main( DomainOutput in )
 
     float small_puddle_map
         = perlin_noise3D( puddle_scale
-              * ( world_position_uvw
-                  + puddle_speed * float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) ) )
+              * ( puddle_speed * float3( world_uv_unwrapped.x, 0.0, world_uv_unwrapped.y) ) )
         + 0.25f;
     float big_puddle_map
         = perlin_noise3D( 0.125f * puddle_scale
-              * ( world_position_uvw
-                  + puddle_speed * float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) ) )
+              * ( puddle_speed * float3( world_uv_unwrapped.x, 0.0, world_uv_unwrapped.y ) ) )
         + 0.50f;
 
     float wetness = clamp_range( big_puddle_map, 0.35f, 0.75f )
