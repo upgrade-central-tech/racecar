@@ -98,11 +98,28 @@ Gui initialize( Context& ctx, const engine::State& engine )
     return gui;
 }
 
-void process_event( const SDL_Event* event )
+void process_event( Gui& gui, const SDL_Event* event )
 {
     // We may want to expand this function later. For now, it serves to remove any ImGui header
     // includes in non-GUI related files.
     ImGui_ImplSDL3_ProcessEvent( event );
+
+    if ( gui.show_window && ImGui::GetIO().WantCaptureMouse ) {
+        return;
+    }
+
+    switch ( event->type ) {
+    case SDL_EVENT_KEY_DOWN: {
+        const SDL_KeyboardEvent& key_event = event->key;
+
+        // Ctrl+, pressed (toggle GUI)
+        if ( key_event.key == SDLK_COMMA && key_event.mod & SDL_KMOD_CTRL ) {
+            gui.show_window = !gui.show_window;
+        }
+
+        break;
+    }
+    }
 }
 
 void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere& atms )

@@ -97,7 +97,7 @@ struct Gui {
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );
-void process_event( const SDL_Event* event );
+void process_event( Gui& gui, const SDL_Event* event );
 void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere& atms );
 void free();
 
