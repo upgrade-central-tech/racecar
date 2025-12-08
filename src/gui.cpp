@@ -493,12 +493,14 @@ void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& at
         before.materials = std::move( before_materials );
     }
 
+    float duration = preset.duration_opt.value_or( gui.preset.transition_duration );
+
     // Create transition
     gui.preset.transition = PresetTransition {
         .before = std::move( before ),
         .after = preset,
         .progress = 0.f,
-        .duration = preset.duration_opt.value_or( gui.preset.transition_duration ),
+        .duration = duration,
     };
 }
 

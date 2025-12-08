@@ -6,8 +6,7 @@
     "snow": 0.30,
     "scrollingSpeed": 0.0,
     "bumpiness": 0.0,
-    "materials": [
-    ],
+    "materials": [],
     "camera": {
         "center": [
             2.9,
