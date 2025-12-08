@@ -29,7 +29,10 @@ constexpr std::array AA_OPTIONS = std::to_array<std::string_view>( {
 
 constexpr std::array EASING_OPTIONS = std::to_array<std::string_view>( {
     "Linear",
+    "Ease out quadratic",
     "Ease out quint",
+    "Ease in out quadratic",
+    "Ease in out quint",
 } );
 
 }
