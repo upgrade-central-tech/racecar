@@ -42,7 +42,7 @@ glm::mat4 calculate_view_proj_matrix( const OrbitCamera& cam );
 glm::vec3 calculate_eye_position( const OrbitCamera& cam );
 
 void process_event(
-    const Context& ctx, const SDL_Event* event, OrbitCamera& cam, bool& show_window );
+    const Context& ctx, const SDL_Event* event, OrbitCamera& cam, bool show_window );
 void process_input( OrbitCamera& cam );
 
 } // namespace racecar::camera
