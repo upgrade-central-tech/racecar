@@ -1463,7 +1463,7 @@ void run( bool use_fullscreen )
                 float sin
                     = std::sin( static_cast<float>( engine.time ) * gui.atms.animate_zenith_speed );
                 float t = ( sin + 1.f ) * 0.5f;
-                atms.sun_zenith = glm::lerp( 0.f, glm::pi<float>(), t );
+                atms.sun_zenith = glm::lerp( -glm::half_pi<float>(), glm::half_pi<float>(), t );
             }
 
             glm::vec3 atmosphere_position = {
