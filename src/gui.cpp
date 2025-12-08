@@ -27,6 +27,11 @@ constexpr std::array AA_OPTIONS = std::to_array<std::string_view>( {
     "TAA",
 } );
 
+constexpr std::array EASING_OPTIONS = std::to_array<std::string_view>( {
+    "Linear",
+    "Ease out quint",
+} );
+
 }
 
 Gui initialize( Context& ctx, const engine::State& engine )
@@ -225,6 +230,24 @@ void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera
 
                 ImGui::SeparatorText( "Transitions" );
                 ImGui::SliderFloat( "Duration", &gui.preset.transition_duration, 0.f, 5.f );
+                size_t selected_index = static_cast<size_t>( gui.preset.easing );
+                std::string_view preview_value = EASING_OPTIONS[selected_index];
+                if ( ImGui::BeginCombo( "Easing", preview_value.data() ) ) {
+                    for ( size_t i = 0; i < EASING_OPTIONS.size(); ++i ) {
+                        bool is_selected = ( selected_index == i );
+
+                        if ( ImGui::Selectable( EASING_OPTIONS[i].data(), is_selected ) ) {
+                            selected_index = i;
+                        }
+
+                        if ( is_selected ) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+
+                    gui.preset.easing = static_cast<Gui::PresetData::Easing>( selected_index );
+                    ImGui::EndCombo();
+                }
 
                 ImGui::SeparatorText( "Loaded presets" );
                 for ( const auto& preset : gui.preset.presets ) {

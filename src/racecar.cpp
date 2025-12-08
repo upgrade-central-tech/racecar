@@ -1336,6 +1336,23 @@ void run( bool use_fullscreen )
             const Preset& i = transition.before;
             const Preset& f = transition.after;
 
+            {
+                using enum gui::Gui::PresetData::Easing;
+
+                switch ( gui.preset.easing ) {
+                case LINEAR:
+                    break;
+
+                case EASE_OUT_QUINT: {
+                    t = 1.f - std::pow( 1.f - t, 5.f );
+                    break;
+                }
+
+                default:
+                    throw Exception( "[preset] Unhandled easing type" );
+                }
+            }
+
             atms.sun_zenith = glm::mix( i.sun_zenith, f.sun_zenith, t );
             atms.sun_azimuth = glm::mix( i.sun_azimuth, f.sun_azimuth, t );
 
