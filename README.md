@@ -9,7 +9,7 @@ Team 6
 
 RACECAR is a Vulkan renderer written in C++. It's inspired by racing games like the _Forza_ and _Gran Turismo_ series. We aim to implement state-of-the-art material, environment, and sky rendering based on recent papers and graphics techniques.
 
-<img width="1894" height="1052" alt="image" src="https://github.com/user-attachments/assets/d09c2a09-9438-4afa-a3e1-b0ffbdd8f05e" />
+<img width="1894" alt="image" src="images/" />
 
 ## Material Rendering
 
@@ -48,19 +48,28 @@ The sample code in the 2017 codebase could not be used directly for a number of 
 ## Raytracing
 Our renderer features fully raytraced shadows, enabling self-shadowing and realistic lighting.
 
-|![](images/rt_off.png)|![](images/rt_on.png)|
+### Shadows
+|![](images/rt_shadow_off.png)|![](images/rt_shadow_on.png)|
 |:-:|:-:|
 |Raytracing off|Raytracing on|
-|![](images/rt_off1.png)|![](images/rt_off2.png)|
-|Raytracing off|Raytracing on|
+
+### Reflections
+Using hardware raytracing, we also support pure specular reflections to simulate realistic wet surfaces.
+
+![](images/rt_refl.png)
+
 ## Clouds
 
-The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC. It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts.
+The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC. It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts. 
 
-<img width="682" src="images/clouds.png" />
+Clouds are rendered at half-resolution for better performance and with minimal visual impact.
+
+<img width="682" src="images/clouds2.png" />
 
 ## Terrain
 The terrain is rendered via a separate deferred pass, using an artist-authored material-mask to determine which types of materials (snow, grass, etc.) exist at a given world position. We blend materials together seamelessly and use UV distortion to break-up harsh transitions.
+
+![terrain render](images/terrain_render.png)
 
 ![Terrain breakdown](images/terrain_breakdown.png)
 
@@ -84,12 +93,58 @@ These steps can also be seen in the screenshots below.
 
 Performance is currently 0.4 ms on a RTX 5060 Ti, and 1.3 ms on a RTX 4070 Laptop GPU.
 
-### Tonemapping
-We implement [Gran Turismo 7's tonemapping solution](https://blog.selfshadow.com/publications/s2025-shading-course/pdi/s2025_pbs_pdi_slides_v1.1.pdf) presented at SIGGRAPH 2025.
+### SSAO
+To help capture shadowing and occlusion details, we implemented screen-space ambient occlusion to imitate real-world phenomenom of darkening in crevices and corners seen in geometry.
 
-|![](images/pretonemap.png)|![](images/posttonemap.png)|![](images/posttonemap2.png)
-|:-:|:-:|:-:|
-|Original|Post-tonemapped|Post-tonemapped
+<img src="images/with_AO.png" alt="RT on">
+
+<table>
+  <tr>
+    <th>SSAO off</th>
+    <th>SSAO on</th>
+    <th>SSAO only</th>
+  </tr>
+  <tr>
+    <td><img src="images/no_AO.png" alt="RT off"></td>
+    <td><img src="images/with_AO.png" alt="RT on"></td>
+    <td><img src="images/AO_only.png" alt="RT on"></td>
+  </tr>
+</table>
+
+### Anti-Aliasing
+To combat jagged edges from a lack of resolution, we use a form of temporal anti-aliasing to jitter frames and accumulate multiple samples to better approximate multi-sampled images. This helps smooth out jagged edges and produces smooth results.
+
+<table>
+  <tr>
+    <th>AA off</th>
+    <th>AA on</th>
+  </tr>
+  <tr>
+    <td><img src="images/no_AA.png" alt="RT off"></td>
+    <td><img src="images/with_AA.png" alt="RT on"></td>
+  </tr>
+</table>
+
+
+### Tonemapping
+We implement [Gran Turismo 7's tonemapping solution](https://blog.selfshadow.com/publications/s2025-shading-course/pdi/s2025_pbs_pdi_slides_v1.1.pdf) presented at SIGGRAPH 2025, along with a few other options. However, we recommend GT7 for the best visuals.
+
+![tonemapped gt7](images/gt7_tm.png)
+
+<table>
+  <tr>
+    <th>None</th>
+    <th>GT7</th>    
+    <th>Reinhard</th>
+    <th>ACES 1.0</th>
+  </tr>
+  <tr>
+    <td><img src="images/no_tm.png" width="200"></td>
+    <td><img src="images/gt7_tm.png" width="200"></td>
+    <td><img src="images/reinhard_tm.png" width="200"></td>
+    <td><img src="images/aces_tm.png" width="200"></td>
+  </tr>
+</table>
 
 
 
