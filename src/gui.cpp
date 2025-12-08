@@ -158,6 +158,33 @@ void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& at
                 reload_presets( gui );
                 break;
             }
+
+            case SDLK_LEFT: {
+                int new_number = std::max( 1, gui.preset.number - 1 );
+
+                if ( new_number != gui.preset.number ) {
+                    log::info( "[preset] Decreased preset number to {}", new_number );
+                    use_preset( gui.preset.presets[static_cast<size_t>( new_number - 1 )], gui,
+                        atms, camera, material_buffers );
+                }
+
+                gui.preset.number = new_number;
+                break;
+            }
+
+            case SDLK_RIGHT: {
+                int num_presets = static_cast<int>( gui.preset.presets.size() );
+                int new_number = std::min( num_presets, gui.preset.number + 1 );
+
+                if ( new_number != gui.preset.number ) {
+                    log::info( "[preset] Increased preset number to {}", new_number );
+                    use_preset( gui.preset.presets[static_cast<size_t>( new_number - 1 )], gui,
+                        atms, camera, material_buffers );
+                }
+
+                gui.preset.number = new_number;
+                break;
+            }
             }
 
             if ( preset_number_opt.has_value() ) {
@@ -166,6 +193,7 @@ void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& at
                     preset_number <= gui.preset.presets.size() ) {
                     const Preset& preset = gui.preset.presets[preset_number - 1];
                     use_preset( preset, gui, atms, camera, material_buffers );
+                    gui.preset.number = static_cast<int>( preset_number );
                 }
             }
         }
