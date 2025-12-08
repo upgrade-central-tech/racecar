@@ -17,6 +17,7 @@ struct Vertex {
     glm::vec3 normal;
     glm::vec4 tangent;
     glm::vec2 uv;
+    glm::vec2 ids;
 };
 
 struct Mesh {

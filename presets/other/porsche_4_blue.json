@@ -1,0 +1,38 @@
+{
+    "version": 1,
+    "sunZenith": -1.291,
+    "sunAzimuth": 2.863,
+    "wetness": 0.890,
+    "snow": 0.30,
+    "scrollingSpeed": 0.01,
+    "bumpiness": 0.0,
+    "materials": [
+        {
+            "slot": 0,
+            "color": [
+                0.084,
+                0.334,
+                0.858,
+                1
+            ],
+            "roughness": 0.095,
+            "metallic": 0.0,
+            "clearcoatRoughness": 0.851,
+            "clearcoatWeight": 0.266,
+            "glintiness": 0.9,
+            "glintLogDensity": 21.960,
+            "glintRoughness": 0.723,
+            "glintRandomness": 1.53
+        }
+    ],
+    "camera": {
+        "center": [
+            2.9,
+            2.0,
+            -0.0
+        ],
+        "radius": 8.0,
+        "azimuth": 0.0,
+        "zenith": 0.0
+    }
+}

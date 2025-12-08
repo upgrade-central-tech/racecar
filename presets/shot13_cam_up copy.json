@@ -1,0 +1,20 @@
+{
+    "version": 1,
+    "sunZenith": 1.437,
+    "sunAzimuth": 6.10,
+    "wetness": 0.890,
+    "snow": 0.30,
+    "scrollingSpeed": 0.01,
+    "bumpiness": 0.0,
+    "materials": [],
+    "camera": {
+        "center": [
+            2.9,
+            2.0,
+            -0.0
+        ],
+        "radius": 13.0,
+        "azimuth": 2.5,
+        "zenith": 0.3
+    }
+}

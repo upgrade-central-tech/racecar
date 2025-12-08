@@ -7,6 +7,7 @@ set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
 set(POST_DIR "${ENGINE_DIR}/post")
 set(GEOMETRY_DIR "${SRC_DIR}/geometry")
+set(TERRAIN_DIR "${SRC_DIR}/terrain")
 set(SCENE_DIR "${SRC_DIR}/scene")
 
 add_executable(racecar
@@ -17,13 +18,16 @@ add_executable(racecar
     ${SRC_DIR}/gui.cpp
     ${SRC_DIR}/stb.cpp
     ${SRC_DIR}/atmosphere.cpp
+    ${SRC_DIR}/atmosphere_baker.cpp
     ${SRC_DIR}/volumetrics.cpp
+    ${SRC_DIR}/preset.cpp
 
     ${VK_DIR}/common.cpp
     ${VK_DIR}/create.cpp
     ${VK_DIR}/utility.cpp
     ${VK_DIR}/vma.cpp
     ${VK_DIR}/mem.cpp
+    ${VK_DIR}/ray_tracing.cpp
 
     ${ENGINE_DIR}/execute.cpp
     ${ENGINE_DIR}/state.cpp
@@ -42,11 +46,17 @@ add_executable(racecar
     ${ENGINE_DIR}/blit_task.cpp
 
     ${POST_DIR}/bloom.cpp
+    ${POST_DIR}/ao.cpp
+    ${POST_DIR}/tonemapping.cpp
+    ${POST_DIR}/anti_aliasing.cpp
 
     ${GEOMETRY_DIR}/scene_mesh.cpp
     ${GEOMETRY_DIR}/procedural.cpp
     ${GEOMETRY_DIR}/quad.cpp
     ${GEOMETRY_DIR}/ibl.cpp
+    ${GEOMETRY_DIR}/gpu_mesh_buffers.cpp
+
+    ${TERRAIN_DIR}/terrain.cpp
 
     ${SCENE_DIR}/scene.cpp
 )
@@ -87,6 +97,7 @@ find_package(SDL3 CONFIG REQUIRED)
 find_package(vk-bootstrap CONFIG REQUIRED)
 find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
 find_package(Stb REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # ImGui has to use volk, otherwise it won't find the correct function pointers
 target_link_libraries(imgui PRIVATE volk::volk)
@@ -98,6 +109,7 @@ target_link_libraries(racecar PRIVATE
     glm::glm
     SDL3::SDL3
     vk-bootstrap::vk-bootstrap
+    nlohmann_json::nlohmann_json
 )
 
 # Enable RACECAR_MACOS macro if compiling on macOS

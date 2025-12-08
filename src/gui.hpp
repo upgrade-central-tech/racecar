@@ -3,11 +3,18 @@
 #include "atmosphere.hpp"
 #include "context.hpp"
 #include "engine/state.hpp"
+#include "engine/ub_data.hpp"
+#include "engine/uniform_buffer.hpp"
+#include "gui_material.hpp"
 #include "orbit_camera.hpp"
+#include "preset.hpp"
 
 #include <SDL3/SDL_events.h>
 #include <imgui.h>
 #include <vulkan/vulkan_core.h>
+
+#include <optional>
+#include <vector>
 
 namespace racecar::gui {
 
@@ -17,13 +24,9 @@ struct Gui {
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
     ImGuiContext* ctx = nullptr;
 
-    struct DebugData {
-        glm::vec4 color = glm::vec4( 0.85f, 0.0f, 0.0f, 1.0f );
-        float roughness;
-        float metallic;
-        float clearcoat_roughness = 0.30f;
-        float clearcoat_weight = 1.0f;
+    bool show_window = true;
 
+    struct DebugData : public Material {
         bool enable_albedo_map = false;
         bool enable_normal_map = false;
         bool enable_roughness_metal_map = false;
@@ -31,24 +34,96 @@ struct Gui {
         bool normals_only = false;
         bool albedo_only = false;
         bool roughness_metal_only = false;
-
-        bool enable_bloom = true;
+        bool ray_traced_shadows = true;
+        int current_editing_material = 0;
+        bool load_material_into_gui = true;
     } debug = {};
 
     struct DemoData {
+        bool enable_translation = false;
+        bool enable_camera_lock_on_car = false;
         bool rotate_on = false;
         float rotate_speed = 0.005f;
+        float bumpiness = 0.001f;
     } demo = {};
 
     struct AtmosphereData {
         bool animate_zenith = false;
-        float radiance_exposure = 2.25f;
+        float animate_zenith_speed = 1.f;
+        float radiance_exposure = 2.5f;
     } atms = {};
+
+    struct AoData {
+        float thickness = 1.0f;
+        float radius = 0.324f;
+        float offset = 0.0f;
+        bool enable_debug = false;
+        bool enable_ao = true;
+    } ao = {};
+
+    struct TerrainData {
+        float gt7_local_shadow_strength = 1.0f;
+        float wetness = 0.8f; // temporary param
+        float snow = 0.3f;
+        float scrolling_speed = 0.0f;
+
+        bool enable_gt7_ao = true;
+        bool shadowing_only = false;
+        bool roughness_only = false;
+    } terrain = {};
+
+    struct TonemappingData {
+        enum class Mode : int {
+            NONE = 0,
+            GT7_SDR,
+            GT7_HDR,
+            REINHARD,
+            ACES,
+        } mode
+            = Mode::GT7_HDR;
+
+        float hdr_target_luminance = 1'000.f;
+    } tonemapping = {};
+
+    struct BloomData {
+        bool enable = true;
+        float threshold = 1.2f;
+        float filter_radius = 0.003f;
+    } bloom = {};
+
+    struct AAData {
+        enum class Mode : int { NONE = 0, TAA } mode = Mode::TAA;
+    } aa = {};
+
+    struct PresetData {
+        std::vector<Preset> presets = load_presets();
+        std::optional<PresetTransition> transition;
+        float transition_duration = 2.f;
+
+        enum class Easing : int {
+            LINEAR = 0,
+            EASE_OUT_QUAD,
+            EASE_OUT_QUINT,
+            EASE_IN_OUT_QUAD,
+            EASE_IN_OUT_QUINT,
+        } easing = Easing::EASE_IN_OUT_QUINT;
+
+        ///< Which preset we're currently on. Note: starts at 1!
+        int number = 1;
+    } preset = {};
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );
-void process_event( const SDL_Event* event );
-void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere& atms );
+void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms,
+    camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers );
+void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers );
 void free();
+
+void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms,
+    camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers );
+void reload_presets( gui::Gui& gui );
 
 } // namespace racecar::engine::gui

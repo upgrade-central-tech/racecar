@@ -80,9 +80,9 @@ glm::mat4 calculate_view_proj_matrix( const OrbitCamera& cam )
     return calculate_view_matrix( cam ) * calculate_proj_matrix( cam );
 }
 
-void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam )
+void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam, bool show_window )
 {
-    if ( ImGui::GetIO().WantCaptureMouse ) {
+    if ( show_window && ImGui::GetIO().WantCaptureMouse ) {
         return;
     }
 

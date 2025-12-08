@@ -25,7 +25,7 @@ VkImageCreateInfo image_info( VkFormat format, VkImageType image_type, uint32_t 
 VkImageViewCreateInfo image_view_info(
     VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags );
 
-VkSamplerCreateInfo sampler_info( VkFilter filter_type );
+VkSamplerCreateInfo sampler_info( VkFilter filter_type, VkSamplerAddressMode address_mode );
 
 // Sync related
 VkFenceCreateInfo fence_info( VkFenceCreateFlags flags );

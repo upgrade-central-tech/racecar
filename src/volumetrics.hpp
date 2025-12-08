@@ -15,11 +15,14 @@ struct Volumetric {
     vk::mem::AllocatedImage low_freq_noise;
     vk::mem::AllocatedImage high_freq_noise;
 
-    UniformBuffer<ub_data::Camera> uniform_buffer;
+    engine::RWImage cloud_buffer;
+
+    UniformBuffer<ub_data::Clouds> uniform_buffer;
 
     engine::DescriptorSet uniform_desc_set;
     engine::DescriptorSet lut_desc_set;
     engine::DescriptorSet sampler_desc_set;
+    engine::DescriptorSet texture_composite_desc_set;
 };
 
 Volumetric initialize( vk::Common& vulkan, engine::State& engine );

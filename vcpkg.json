@@ -8,10 +8,11 @@
       ],
       "version>=": "3.2.0"
     },
+    "stb",
     "tinygltf",
     "vk-bootstrap",
     "volk",
     "vulkan-memory-allocator",
-    "stb"
+    "nlohmann-json"
   ]
 }

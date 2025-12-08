@@ -1,0 +1,1 @@
+../../../slang/bin/slangc.exe "$PSScriptRoot\ao.slang" -target spirv -profile spirv_1_4 -g2 -fvk-use-entrypoint-name -entry cs_ao -o "$PSScriptRoot\ao.spv"

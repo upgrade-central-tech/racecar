@@ -9,10 +9,16 @@ namespace racecar::ub_data {
 /// Camera data
 struct Camera {
     glm::mat4 mvp = {};
+    glm::mat4 prev_mvp = {};
     glm::mat4 model = glm::mat4( 1.f );
     glm::mat4 inv_model = {};
+    glm::mat4 inv_vp = {};
+    glm::mat4 view_mat = {};
+    glm::mat4 proj_mat = {};
+    glm::mat4 inv_proj = {};
     glm::vec4 camera_pos = {};
     glm::vec4 camera_constants = {};
+    glm::vec4 camera_constants1 = {};
 };
 
 struct Debug {
@@ -26,13 +32,23 @@ struct Debug {
     uint32_t normals_only = 0;
     uint32_t albedo_only = 0;
     uint32_t roughness_metal_only = 0;
+    uint32_t ray_traced_shadows = 0;
+};
 
-    uint32_t enable_bloom = 0;
+struct AOData {
+    // Pack: thickness, radius, offset, null
+    glm::vec4 packed_floats0;
+    // Pack: enable ao, null, null, null
+    glm::vec4 packed_floats1;
+};
 
-    uint32_t padding;
+struct OctahedralData {
+    // Pack: mip level, roughness
+    glm::vec4 packedfloats0;
 };
 
 struct SHData {
+
     // Packs all 9 spherical harmonics
     glm::vec4 coeff0 = {};
     glm::vec4 coeff1 = {};
@@ -71,6 +87,11 @@ struct Material {
     glm::vec3 emissive = glm::vec3( 0.f );
     // 0 if lit, 1 if unlit
     int unlit = false;
+
+    float glintiness = 0.0f;
+    float glint_log_density = 22.0f;
+    float glint_roughness = 0.518f;
+    float glint_randomness = 2.0f;
 };
 
 struct RaymarchBufferData {
@@ -85,6 +106,80 @@ struct Atmosphere {
     uint8_t p0 = 0;
     glm::vec3 sun_direction = {};
     float radiance_exposure = 0.f;
+};
+
+struct Clouds {
+    glm::mat4 inverse_proj = {};
+    glm::mat4 inverse_view = {};
+    glm::vec3 camera_position = {};
+    float cloud_offset_x = 0.f;
+    glm::vec3 sun_direction = {};
+    float cloud_offset_y = 0.f;
+};
+
+struct TerrainData {
+    // Store:
+    // float gt7_local_shadow_strength;
+    // float wetness = 0.0f;
+    // float snow = 0.0f;
+    // null
+    glm::vec4 terrain_data0;
+
+    // Store: vec2 offsetXY
+    glm::vec4 terrain_data1;
+
+    // debug info
+    // bool enable_gt7_ao;
+    // bool shadowing_only;
+    // bool roughness_only;
+    glm::vec4 packed_data0;
+};
+
+struct Tonemapping {
+    int mode = 0;
+    float hdr_target_luminance = 0.f;
+};
+
+struct Bloom {
+    uint32_t enable = 0;
+    float threshold = 0.f;
+    float filter_radius = 0.f;
+};
+
+struct AA {
+    int mode = 0;
+};
+
+struct ModelMat {
+    glm::mat4 model_mat = {};
+    glm::mat4 inv_model_mat = {};
+    glm::mat4 prev_model_mat = {};
+};
+
+struct BLASOffsets {
+    uint32_t vertex_buffer_offset[104];
+    uint32_t index_buffer_offset[104];
+};
+
+struct PaddedVertex {
+    glm::vec3 position;
+    float _pad1;
+    glm::vec3 normal;
+    float _pad2;
+    glm::vec4 tangent;
+    glm::vec2 uv;
+    float _pad3[2];
+};
+
+struct RTTextureUniform {
+    glm::vec4 base_color[104];
+    int32_t albedo_texture_index[104];
+
+    float metallic[104];
+    float roughness[104];
+    int32_t metallic_roughness_texture_index[104];
+
+    int32_t normal_texture_index[104];
 };
 
 } // namespace racecar::uniform_buffer
