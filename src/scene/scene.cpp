@@ -237,6 +237,7 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
     std::vector<std::vector<int>> children_lists;
 
     // Load Nodes
+    int prim_counter_id = 0;
     for ( size_t node_idx = 0; node_idx < model.nodes.size(); node_idx++ ) {
         tinygltf::Node& loaded_node = model.nodes[node_idx];
         std::unique_ptr<Node> new_node = std::make_unique<Node>();
@@ -307,6 +308,8 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
                 Primitive new_prim;
                 new_prim.node_id = static_cast<int>( node_idx );
                 new_prim.material_id = loaded_prim.material;
+                new_prim.prim_id = prim_counter_id;
+                prim_counter_id++;
                 if ( new_prim.material_id == -1 ) {
                     // Creates a default, white material if a prim is not assigned a material in
                     // the gltf file
@@ -550,7 +553,7 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
 
 void propagate_transform( vk::Common vulkan, engine::State& engine, Scene& scene,
     std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers, size_t start_node_id,
-    glm::mat4 transform, std::vector<bool>& discovered )
+    glm::mat4 transform, std::vector<bool>& discovered, std::vector<vk::rt::Object>& objects )
 {
     std::vector<size_t> stack;
     stack.push_back( start_node_id );
@@ -572,6 +575,13 @@ void propagate_transform( vk::Common vulkan, engine::State& engine, Scene& scene
 
         model_mat_uniform_buffers.at( current_node_id ).set_data( model_mat_ub );
         model_mat_uniform_buffers.at( current_node_id ).update( vulkan, engine.get_frame_index() );
+
+        Node* curr_node = scene.nodes[current_node_id].get();
+        if ( curr_node->mesh.has_value() ) {
+            for ( const auto& prim : curr_node->mesh.value()->primitives ) {
+                objects[static_cast<size_t>( prim.prim_id )].transform = model_mat_ub.model_mat;
+            }
+        }
 
         for ( Node* child : scene.nodes.at( current_node_id )->children ) {
             stack.push_back( child->id );

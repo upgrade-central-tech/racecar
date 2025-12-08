@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/bugatti.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
@@ -1310,8 +1310,35 @@ void run( bool use_fullscreen )
 
             if ( gui.demo.enable_translation ) {
                 scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
-                    scene.demo_scene_nodes.car_parent_id.value(), transform, discovered );
+                    scene.demo_scene_nodes.car_parent_id.value(), transform, discovered, objects );
             }
+
+            VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
+            VkFence recompute_tlas_fence;
+            vk::check(
+                vkCreateFence( ctx.vulkan.device, &fence_info, nullptr, &recompute_tlas_fence ),
+                "Failed to create precompute fence" );
+            VkCommandBufferBeginInfo command_buffer_begin_info
+                = vk::create::command_buffer_begin_info(
+                    VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
+            vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
+            vkResetFences( ctx.vulkan.device, 1, &recompute_tlas_fence );
+            vkBeginCommandBuffer( engine.frames[0].start_cmdbuf, &command_buffer_begin_info );
+
+            engine.tlas = vk::rt::build_tlas( ctx.vulkan.device, ctx.vulkan.allocator,
+                ctx.vulkan.ray_tracing_properties, objects, engine.frames[0].start_cmdbuf,
+                ctx.vulkan.destructor_stack );
+
+            vkEndCommandBuffer( engine.frames[0].start_cmdbuf );
+            VkSubmitInfo submit_info = {};
+            submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submit_info.commandBufferCount = 1;
+            submit_info.pCommandBuffers = &engine.frames[0].start_cmdbuf;
+            vkQueueSubmit( ctx.vulkan.graphics_queue, 1, &submit_info, recompute_tlas_fence );
+            vkWaitForFences( ctx.vulkan.device, 1, &recompute_tlas_fence, VK_TRUE, UINT64_MAX );
+            vkResetFences( ctx.vulkan.device, 1, &recompute_tlas_fence );
+            vkDestroyFence( ctx.vulkan.device, recompute_tlas_fence, VK_NULL_HANDLE );
+            vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
         }
 
         // Update bloom settings

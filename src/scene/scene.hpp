@@ -78,6 +78,8 @@ struct Primitive {
     int ind_offset = -1;
     size_t ind_count = 0; /// Index count is in actual indices, not in bytes.
     bool is_indexed = true;
+
+    int prim_id = -1;
 };
 
 /// A mesh is divided into primitive surfaces that may each have a different material
@@ -124,6 +126,6 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
 
 void propagate_transform( vk::Common vulkan, engine::State& engine, Scene& scene,
     std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers, size_t start_node_id,
-    glm::mat4 transform, std::vector<bool>& discovered );
+    glm::mat4 transform, std::vector<bool>& discovered, std::vector<vk::rt::Object>& objects );
 
 } // namespace racecar::scene
