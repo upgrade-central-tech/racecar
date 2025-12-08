@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren_f1.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/porsche.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view REFLECTION_PASS_SHADER_MODULE_PATH
@@ -73,8 +73,8 @@ std::unordered_map<std::string, std::array<glm::vec2, 2>> wheel_centers = {
         { glm::vec2( -0.358881, -1.47297 ), glm::vec2( -0.358822, 2.10473 ) } },
     { "../assets/lamborghini_sesto.glb",
         { glm::vec2( -0.309112, -1.28 ), glm::vec2( -0.317127, 1.27501 ) } },
-    {"../assets/mclaren_f1.glb", 
-        { glm::vec2( -0.470348, -2.05553 ), glm::vec2(-0.510266, 2.74863 ) } }
+    { "../assets/mclaren_f1.glb",
+        { glm::vec2( -0.470348, -2.05553 ), glm::vec2( -0.510266, 2.74863 ) } }
 };
 
 void run( bool use_fullscreen )
