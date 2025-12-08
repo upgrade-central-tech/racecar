@@ -193,7 +193,7 @@ void evaluate_wetness( float wetness, float porosity, inout float3 color, inout 
 {
     // https://advances.realtimerendering.com/other/2016/naughty_dog/NaughtyDog_TechArt_Final.pdf
     float3 color_sq = color * color;
-    color = lerp( color, color_sq, clamp_range( wetness, 0.0f, 0.35f ) * porosity );
+    color = lerp( color, color_sq, clamp_range( wetness, 0.1f, 0.35f ) * porosity );
     roughness = lerp( roughness, 0.1f, clamp_range( wetness, 0.2f, 1.0f ) );
     ao = lerp( ao, 1.0f, clamp_range( wetness, 0.45f, 0.95f ) );
 
@@ -369,10 +369,15 @@ FragmentOutput fs_main( DomainOutput in )
             snow_lerp );
     }
 
+    mixed_albedo = mixed_albedo * exp2( lerp( 0.0, -1.5, wetness_toggle ) );
+    mixed_roughness = mixed_roughness * exp2( lerp( 0.0, -1.5, wetness_toggle) );
+
     output.packed_data = float4( wetness, min( density, 65.f ), 0.0f, 0.0f );
 
     output.normal = float4( mixed_normal, mixed_ao );
     output.albedo = float4( mixed_albedo, mixed_roughness );
+
+
     output.velocity = float2( 0.0f );
 
     return output;
