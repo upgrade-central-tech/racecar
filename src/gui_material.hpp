@@ -11,10 +11,10 @@ struct Material {
     float clearcoat_roughness = 0.f;
     float clearcoat_weight = 0.f;
 
-    float glintiness = 0.f;
-    float glint_log_density = 0.f;
-    float glint_roughness = 0.f;
-    float glint_randomness = 0.f;
+    float glintiness = 1.0f;
+    float glint_log_density = 18.0f;
+    float glint_roughness = 0.28f;
+    float glint_randomness = 2.0f;
 };
 
 }
