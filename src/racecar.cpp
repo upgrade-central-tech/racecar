@@ -77,6 +77,15 @@ std::unordered_map<std::string, std::array<glm::vec2, 2>> wheel_centers = {
         { glm::vec2( -0.470348, -2.05553 ), glm::vec2( -0.510266, 2.74863 ) } }
 };
 
+std::unordered_map<std::string, float> wheel_radii = {
+    {"../assets/bugatti.glb", 1.28f},
+    {"../assets/mclaren.glb", 0.997f},
+    {"../assets/porsche.glb", 1.32f},
+    {"../assets/ferrari.glb", 0.715f},
+    {"../assets/lamborghini_sesto.glb", 0.649f},
+    {"../assets/mclaren_f1.glb", 1.07f}
+};
+
 void run( bool use_fullscreen )
 {
     Context ctx;
@@ -1685,7 +1694,7 @@ void run( bool use_fullscreen )
         {
             // front wheels
             glm::vec3 pivot = -glm::vec3( 0.0f, wheel_centers[std::string( GLTF_FILE_PATH )][0] );
-            float angle = gui.terrain.scrolling_speed * 12;
+            float angle = gui.terrain.scrolling_speed * 30 / wheel_radii[std::string(GLTF_FILE_PATH)];
 
             glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
             model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
