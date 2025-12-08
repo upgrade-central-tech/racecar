@@ -12,7 +12,9 @@
 
 namespace racecar::gui {
 
-static constexpr std::array TONEMAPPING_OPTIONS = std::to_array<std::string_view>( {
+namespace {
+
+constexpr std::array TONEMAPPING_OPTIONS = std::to_array<std::string_view>( {
     "None",
     "GT7 SDR",
     "GT7 HDR",
@@ -20,7 +22,12 @@ static constexpr std::array TONEMAPPING_OPTIONS = std::to_array<std::string_view
     "ACES",
 } );
 
-static constexpr std::array AA_OPTIONS = std::to_array<std::string_view>( { "None", "TAA" } );
+constexpr std::array AA_OPTIONS = std::to_array<std::string_view>( {
+    "None",
+    "TAA",
+} );
+
+}
 
 Gui initialize( Context& ctx, const engine::State& engine )
 {
@@ -206,9 +213,11 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
             if ( ImGui::BeginTabItem( "Presets" ) ) {
                 ImGui::SeparatorText( "Loaded presets" );
                 for ( const auto& preset : gui.preset.presets ) {
+                    ImGui::PushID( preset.name.c_str() );
                     if ( ImGui::Button( "Use" ) ) {
                         use_preset( preset, gui, atms );
                     }
+                    ImGui::PopID();
 
                     ImGui::SameLine();
                     ImGui::Text( "%s", preset.name.c_str() );
@@ -359,6 +368,14 @@ void free()
 void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms )
 {
     log::info( "[preset] Using preset \"{}\"", preset.name );
+
+    // Preset before = {
+    //     .version = 1,
+    //     .name = "__before_generated",
+
+    //     .sun_zenith = atms.sun_zenith,
+
+    // }
 
     atms.sun_zenith = preset.sun_zenith;
     atms.sun_azimuth = preset.sun_azimuth;
