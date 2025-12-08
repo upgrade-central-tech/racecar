@@ -1596,7 +1596,6 @@ void run( bool use_fullscreen )
                 gui.debug.clearcoat_weight = mat_data.clearcoat;
                 gui.debug.clearcoat_roughness = mat_data.clearcoat_roughness;
                 gui.debug.load_material_into_gui = false;
-                log::info( "FUCK FUCK FUCK" );
             }
             mat_data.base_color = gui.debug.color;
             mat_data.roughness = gui.debug.roughness;
