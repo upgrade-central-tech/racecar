@@ -35,7 +35,7 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     [[maybe_unused]] int32_t size = 1;
 
     // float scale = 10.0f;
-    float offset_y = -0.15f;
+    float offset_y = 0.0f;
 
     terrain.vertices.clear();
     terrain.indices.clear();
