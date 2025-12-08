@@ -109,7 +109,7 @@ struct Gui {
         } easing = Easing::EASE_IN_OUT_QUINT;
 
         ///< Which preset we're currently on. Note: starts at 1!
-        int number = 1.f;
+        int number = 1;
     } preset = {};
 };
 
