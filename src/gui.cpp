@@ -143,6 +143,20 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 ImGui::EndTabItem();
             }
 
+            if ( ImGui::BeginTabItem( "Presets" ) ) {
+                ImGui::SeparatorText( "Loaded presets" );
+                for ( const auto& preset : gui.preset.presets ) {
+                    if ( ImGui::Button( "Use" ) ) {
+                        use_preset( preset, gui, atms );
+                    }
+
+                    ImGui::SameLine();
+                    ImGui::Text( "%s", preset.name.c_str() );
+                }
+
+                ImGui::EndTabItem();
+            }
+
             if ( ImGui::BeginTabItem( "General" ) ) {
                 ImGui::SeparatorText( "Debug" );
                 ImGui::Checkbox( "Enable albedo map", &gui.debug.enable_albedo_map );
@@ -278,6 +292,34 @@ void free()
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
+}
+
+void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms )
+{
+    log::info( "[preset] Using preset \"{}\"", preset.name );
+
+    atms.sun_zenith = preset.sun_zenith;
+    atms.sun_azimuth = preset.sun_azimuth;
+
+    gui.terrain.wetness = preset.wetness;
+    gui.terrain.snow = preset.snow;
+    gui.terrain.scrolling_speed = preset.scrolling_speed;
+    // gui.terrain.bumpiness = preset.bumpiness;
+
+    for ( const auto& material : preset.materials ) {
+        gui.debug.current_editing_material = material.slot;
+
+        const gui::Material& data = material.data;
+        gui.debug.color = data.color;
+        gui.debug.roughness = data.roughness;
+        gui.debug.metallic = data.metallic;
+        gui.debug.clearcoat_roughness = data.clearcoat_roughness;
+        gui.debug.clearcoat_weight = data.clearcoat_weight;
+        gui.debug.glintiness = data.glintiness;
+        gui.debug.glint_log_density = data.glint_log_density;
+        gui.debug.glint_roughness = data.glint_roughness;
+        gui.debug.glint_randomness = data.glint_randomness;
+    }
 }
 
 } // namespace racecar::engine::gui

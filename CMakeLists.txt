@@ -20,6 +20,7 @@ add_executable(racecar
     ${SRC_DIR}/atmosphere.cpp
     ${SRC_DIR}/atmosphere_baker.cpp
     ${SRC_DIR}/volumetrics.cpp
+    ${SRC_DIR}/preset.cpp
 
     ${VK_DIR}/common.cpp
     ${VK_DIR}/create.cpp
@@ -96,6 +97,7 @@ find_package(SDL3 CONFIG REQUIRED)
 find_package(vk-bootstrap CONFIG REQUIRED)
 find_path(TINYGLTF_INCLUDE_DIRS "tiny_gltf.h")
 find_package(Stb REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # ImGui has to use volk, otherwise it won't find the correct function pointers
 target_link_libraries(imgui PRIVATE volk::volk)
@@ -107,6 +109,7 @@ target_link_libraries(racecar PRIVATE
     glm::glm
     SDL3::SDL3
     vk-bootstrap::vk-bootstrap
+    nlohmann_json::nlohmann_json
 )
 
 # Enable RACECAR_MACOS macro if compiling on macOS

@@ -1,0 +1,28 @@
+{
+    "version": 1,
+    "sunZenith": -0.5,
+    "sunAzimuth": 3.14,
+    "wetness": 0.5,
+    "snow": 0.5,
+    "scrollingSpeed": 0.5,
+    "bumpiness": 0.5,
+    "materials": [
+        {
+            "slot": 2,
+            "color": [
+                0,
+                0.9,
+                0.2,
+                1
+            ],
+            "roughness": 0.5,
+            "metallic": 0.2,
+            "clearcoatRoughness": 0.5,
+            "clearcoatWeight": 0.2,
+            "glintiness": 0.7,
+            "glintLogDensity": 0.3,
+            "glintRoughness": 0.8,
+            "glintRandomness": 0.6
+        }
+    ]
+}
