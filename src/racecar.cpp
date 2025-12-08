@@ -1339,10 +1339,23 @@ void run( bool use_fullscreen )
                 case LINEAR:
                     break;
 
-                case EASE_OUT_QUINT: {
-                    t = 1.f - std::pow( 1.f - t, 5.f );
+                case EASE_OUT_QUAD:
+                    t = glm::saturate( 1.f - ( 1.f - t ) * ( 1.f - t ) );
                     break;
-                }
+
+                case EASE_OUT_QUINT:
+                    t = glm::saturate( 1.f - std::pow( 1.f - t, 5.f ) );
+                    break;
+
+                case EASE_IN_OUT_QUAD:
+                    t = glm::saturate(
+                        t < 0.5f ? 2.f * t * t : 1.f - std::pow( -2.f * t + 2.f, 2.f ) * 0.5f );
+                    break;
+
+                case EASE_IN_OUT_QUINT:
+                    t = glm::saturate( t < 0.5f ? 16.f * t * t * t * t * t
+                                                : 1.f - std::pow( -2.f * t + 2.f, 5.f ) * 0.5f );
+                    break;
 
                 default:
                     throw Exception( "[preset] Unhandled easing type" );

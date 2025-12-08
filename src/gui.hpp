@@ -98,12 +98,15 @@ struct Gui {
     struct PresetData {
         std::vector<Preset> presets = load_presets();
         std::optional<PresetTransition> transition;
-        float transition_duration = 0.2f;
+        float transition_duration = 2.f;
 
         enum class Easing : int {
             LINEAR = 0,
+            EASE_OUT_QUAD,
             EASE_OUT_QUINT,
-        } easing = Easing::EASE_OUT_QUINT;
+            EASE_IN_OUT_QUAD,
+            EASE_IN_OUT_QUINT,
+        } easing = Easing::EASE_IN_OUT_QUINT;
     } preset = {};
 };
 
