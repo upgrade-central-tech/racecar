@@ -34,5 +34,6 @@
         "radius": 8.0,
         "azimuth": 0.0,
         "zenith": 0.0
-    }
+    },
+    "duration": 0.1
 }

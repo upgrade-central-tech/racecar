@@ -6,15 +6,16 @@
     "snow": 0.30,
     "scrollingSpeed": 0.0,
     "bumpiness": 0.0,
-    "materials": [],
+    "materials": [
+    ],
     "camera": {
         "center": [
             2.9,
             2.5,
-            -0.0
+            0.0
         ],
-        "radius": 8.0,
-        "azimuth": 0.0,
-        "zenith": 0.0
+        "radius": 19.3,
+        "azimuth": 2.5,
+        "zenith": 0.1
     }
 }
