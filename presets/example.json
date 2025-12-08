@@ -27,12 +27,12 @@
     ],
     "camera": {
         "center": [
-            1,
-            2,
-            5
+            1.0,
+            1.0,
+            5.0
         ],
         "radius": 3,
         "azimuth": 0.5,
-        "zenith": 1.2
+        "zenith": 0.5
     }
 }

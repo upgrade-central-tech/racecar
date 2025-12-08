@@ -107,5 +107,6 @@ void free();
 
 void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms,
     camera::OrbitCamera& camera );
+void reload_presets( gui::Gui& gui );
 
 } // namespace racecar::engine::gui

@@ -144,6 +144,11 @@ void process_event(
             case SDLK_9: preset_number_opt = 9; break;
             case SDLK_0: preset_number_opt = 10; break;
                 // clang-format on
+
+            case SDLK_R: {
+                reload_presets( gui );
+                break;
+            }
             }
 
             if ( preset_number_opt.has_value() ) {
@@ -180,7 +185,7 @@ void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera
             ImGui::SeparatorText( "Camera" );
             glm::vec3 cam_pos = camera::calculate_eye_position( camera );
             ImGui::Text(
-                "Center: [%1.f, %1.f, %.1f]", camera.center.x, camera.center.y, camera.center.z );
+                "Center: [%.1f, %.1f, %.1f]", camera.center.x, camera.center.y, camera.center.z );
             ImGui::SameLine();
             ImGui::Text( "Position: [%.1f, %.1f, %1.f]", cam_pos.x, cam_pos.y, cam_pos.z );
 
@@ -212,6 +217,11 @@ void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera
             }
 
             if ( ImGui::BeginTabItem( "Presets" ) ) {
+                ImGui::SeparatorText( "Actions" );
+                if ( ImGui::Button( "Reload presets" ) ) {
+                    reload_presets( gui );
+                }
+
                 ImGui::SeparatorText( "Loaded presets" );
                 for ( const auto& preset : gui.preset.presets ) {
                     ImGui::PushID( preset.name.c_str() );
@@ -416,6 +426,16 @@ void use_preset(
     camera.radius = preset.camera_radius;
     camera.azimuth = preset.camera_azimuth;
     camera.zenith = preset.camera_zenith;
+}
+
+void reload_presets( gui::Gui& gui )
+{
+    gui.preset.presets.clear();
+    gui.preset.transition = std::nullopt;
+
+    gui.preset.presets = load_presets();
+
+    log::info( "[preset] Reloaded all presets" );
 }
 
 } // namespace racecar::engine::gui
