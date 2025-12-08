@@ -1078,7 +1078,7 @@ void run( bool use_fullscreen )
         current_tick = std::chrono::steady_clock::now();
 
         while ( SDL_PollEvent( &event ) ) {
-            gui::process_event( gui, &event );
+            gui::process_event( gui, &event, atms );
             camera::process_event( ctx, &event, engine.camera, gui.show_window );
 
             if ( event.type == SDL_EVENT_QUIT ) {

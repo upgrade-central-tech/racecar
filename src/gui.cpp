@@ -7,6 +7,7 @@
 #include <imgui_impl_vulkan.h>
 
 #include <array>
+#include <optional>
 #include <string_view>
 
 namespace racecar::gui {
@@ -98,7 +99,7 @@ Gui initialize( Context& ctx, const engine::State& engine )
     return gui;
 }
 
-void process_event( Gui& gui, const SDL_Event* event )
+void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms )
 {
     // We may want to expand this function later. For now, it serves to remove any ImGui header
     // includes in non-GUI related files.
@@ -112,9 +113,39 @@ void process_event( Gui& gui, const SDL_Event* event )
     case SDL_EVENT_KEY_DOWN: {
         const SDL_KeyboardEvent& key_event = event->key;
 
-        // Ctrl+, pressed (toggle GUI)
-        if ( key_event.key == SDLK_COMMA && key_event.mod & SDL_KMOD_CTRL ) {
-            gui.show_window = !gui.show_window;
+        // Control pressed
+        if ( key_event.mod & SDL_KMOD_CTRL ) {
+            std::optional<size_t> preset_number_opt;
+
+            switch ( key_event.key ) {
+            case SDLK_COMMA: {
+                // Toggle GUI
+                gui.show_window = !gui.show_window;
+                break;
+            }
+
+                // clang-format off
+            case SDLK_1: preset_number_opt = 1; break;
+            case SDLK_2: preset_number_opt = 2; break;
+            case SDLK_3: preset_number_opt = 3; break;
+            case SDLK_4: preset_number_opt = 4; break;
+            case SDLK_5: preset_number_opt = 5; break;
+            case SDLK_6: preset_number_opt = 6; break;
+            case SDLK_7: preset_number_opt = 7; break;
+            case SDLK_8: preset_number_opt = 8; break;
+            case SDLK_9: preset_number_opt = 9; break;
+            case SDLK_0: preset_number_opt = 10; break;
+                // clang-format on
+            }
+
+            if ( preset_number_opt.has_value() ) {
+                // Switch to preset number, if it exists
+                if ( size_t preset_number = preset_number_opt.value();
+                    preset_number <= gui.preset.presets.size() ) {
+                    const Preset& preset = gui.preset.presets[preset_number - 1];
+                    use_preset( preset, gui, atms );
+                }
+            }
         }
 
         break;
