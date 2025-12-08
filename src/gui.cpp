@@ -168,8 +168,20 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
         float average_fps = io.Framerate;
         ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );
 
-        glm::vec3 cam_pos = camera::calculate_eye_position( camera );
-        ImGui::Text( "Camera: [x=%.1f, y=%.1f, z=%1.f]", cam_pos.x, cam_pos.y, cam_pos.z );
+        {
+            ImGui::SeparatorText( "Camera" );
+            glm::vec3 cam_pos = camera::calculate_eye_position( camera );
+            ImGui::Text(
+                "Center: [%1.f, %1.f, %.1f]", camera.center.x, camera.center.y, camera.center.z );
+            ImGui::SameLine();
+            ImGui::Text( "Position: [%.1f, %.1f, %1.f]", cam_pos.x, cam_pos.y, cam_pos.z );
+
+            ImGui::Text( "Radius: %.1f", camera.radius );
+            ImGui::SameLine();
+            ImGui::Text( "Azimuth: %.1f", camera.azimuth );
+            ImGui::SameLine();
+            ImGui::Text( "Zenith: %.1f", camera.zenith );
+        }
 
         if ( ImGui::BeginTabBar( "Categories" ) ) {
             if ( ImGui::BeginTabItem( "Materials" ) ) {

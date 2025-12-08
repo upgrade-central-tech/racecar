@@ -11,6 +11,7 @@
 #include <imgui.h>
 #include <vulkan/vulkan_core.h>
 
+#include <optional>
 #include <vector>
 
 namespace racecar::gui {
@@ -94,6 +95,7 @@ struct Gui {
 
     struct PresetData {
         std::vector<Preset> presets = load_presets();
+        std::optional<PresetTransition> transition;
     } preset = {};
 };
 
