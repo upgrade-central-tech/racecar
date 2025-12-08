@@ -24,7 +24,7 @@ Mesh create( vk::Common& vulkan, const engine::State& engine )
     try {
         mesh.mesh_buffers = {
             .index_buffer = vk::mem::create_buffer( vulkan, index_buffer_size,
-                VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                 VMA_MEMORY_USAGE_GPU_ONLY ),
             .vertex_buffer = vk::mem::create_buffer( vulkan, vertex_buffer_size,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT

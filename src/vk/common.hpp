@@ -12,6 +12,8 @@
 /// this function is never used (and not even supported), I blame vcpkg for everything
 #define fp_vkCmdDispatchTileQCOM( commandBuffer ) fp_vkCmdDispatchTileQCOM( commandBuffer, nullptr )
 #endif
+#include "ray_tracing.hpp"
+
 #include <VkBootstrap.h>
 
 #include <source_location>
@@ -36,9 +38,37 @@ constexpr int MAX_IMAGES_BINDED = 4;
 
 } // namespace binding
 
+namespace GeeometryClass {
+
+constexpr int CAR_ID = 1;
+constexpr int TERRAIN_ID = 2;
+
+}
+
 struct GlobalSamplers {
-    VkSampler linear_sampler;
-    VkSampler nearest_sampler;
+    VkSampler linear_sampler = VK_NULL_HANDLE;
+    VkSampler nearest_sampler = VK_NULL_HANDLE;
+    VkSampler linear_mirrored_repeat_sampler = VK_NULL_HANDLE;
+};
+
+// These are for temporal jittering
+const static glm::vec2 Jitter16[16] = {
+    glm::vec2( -0.25, -0.1666667 ),
+    glm::vec2( 0.25, 0.1666667 ),
+    glm::vec2( -0.375, 0.3888889 ),
+    glm::vec2( 0.125, -0.0555556 ),
+    glm::vec2( -0.125, -0.2777778 ),
+    glm::vec2( 0.375, 0.2777778 ),
+    glm::vec2( -0.4375, 0.0555556 ),
+    glm::vec2( 0.0625, 0.4444444 ),
+    glm::vec2( -0.3125, -0.3888889 ),
+    glm::vec2( 0.1875, -0.2777778 ),
+    glm::vec2( -0.1875, 0.0555556 ),
+    glm::vec2( 0.3125, 0.1666667 ),
+    glm::vec2( -0.46875, 0.3888889 ),
+    glm::vec2( 0.03125, -0.1666667 ),
+    glm::vec2( -0.21875, 0.2777778 ),
+    glm::vec2( 0.28125, 0.0555556 ),
 };
 
 /// Stores common Vulkan-related objects.
@@ -58,6 +88,8 @@ struct Common {
     VmaAllocator allocator;
 
     DestructorStack destructor_stack;
+
+    rt::RayTracingProperties ray_tracing_properties;
 };
 
 Common initialize( SDL_Window* window );

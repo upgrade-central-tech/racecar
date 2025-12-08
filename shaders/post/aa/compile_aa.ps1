@@ -1,0 +1,2 @@
+../../../slang/bin/slangc.exe "$PSScriptRoot\aa.slang" -target spirv -profile spirv_1_4 -g2 -fvk-use-entrypoint-name -entry cs_main -o "$PSScriptRoot\aa.spv"
+../../../slang/bin/slangc.exe "$PSScriptRoot\aa.slang" -target spirv -profile spirv_1_4 -g2 -fvk-use-entrypoint-name -entry cs_write_history -o "$PSScriptRoot\history_aa.spv"

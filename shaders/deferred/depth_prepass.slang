@@ -40,7 +40,6 @@ struct FragmentOutput {
 }
 
 [shader( "fragment" )]
-void fs_main( VertexOutput in )
-{}
+void fs_main( VertexOutput in ) { }
 
 

@@ -41,8 +41,8 @@ glm::mat4 calculate_proj_matrix( const OrbitCamera& cam );
 glm::mat4 calculate_view_proj_matrix( const OrbitCamera& cam );
 glm::vec3 calculate_eye_position( const OrbitCamera& cam );
 
-/// TODO: this should probably be moved to another namespace (like orbit_camera)
-void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam );
+void process_event(
+    const Context& ctx, const SDL_Event* event, OrbitCamera& cam, bool show_window );
 void process_input( OrbitCamera& cam );
 
 } // namespace racecar::camera

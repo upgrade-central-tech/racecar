@@ -110,9 +110,6 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
             new_mat.base_color_texture_index = std::nullopt;
         }
 
-        log::info( "[Scene] PBR base color texture index: {}",
-            loaded_mat.pbrMetallicRoughness.baseColorTexture.index );
-
         new_mat.metallic = static_cast<float>( loaded_mat.pbrMetallicRoughness.metallicFactor );
         new_mat.roughness = static_cast<float>( loaded_mat.pbrMetallicRoughness.roughnessFactor );
         new_mat.metallic_roughness_texture_index
@@ -240,9 +237,24 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
     std::vector<std::vector<int>> children_lists;
 
     // Load Nodes
-    for ( tinygltf::Node& loaded_node : model.nodes ) {
+    for ( size_t node_idx = 0; node_idx < model.nodes.size(); node_idx++ ) {
+        tinygltf::Node& loaded_node = model.nodes[node_idx];
         std::unique_ptr<Node> new_node = std::make_unique<Node>();
 
+        // save relavant nodes for demo
+        if ( loaded_node.name == "car_root" ) {
+            scene.demo_scene_nodes.car_parent_id = node_idx;
+        } else if ( loaded_node.name == "wheel_front_left" ) {
+            scene.demo_scene_nodes.wheel_front_left_id = node_idx;
+        } else if ( loaded_node.name == "wheel_front_right" ) {
+            scene.demo_scene_nodes.wheel_front_right_id = node_idx;
+        } else if ( loaded_node.name == "wheel_back_left" ) {
+            scene.demo_scene_nodes.wheel_back_left_id = node_idx;
+        } else if ( loaded_node.name == "wheel_back_right" ) {
+            scene.demo_scene_nodes.wheel_back_right_id = node_idx;
+        }
+
+        new_node->id = node_idx;
         // Get node transform
         if ( loaded_node.matrix.size() ) {
             std::vector<double> mat = loaded_node.matrix;
@@ -293,10 +305,11 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
             // Load primitives
             for ( tinygltf::Primitive& loaded_prim : loaded_mesh.primitives ) {
                 Primitive new_prim;
+                new_prim.node_id = static_cast<int>( node_idx );
                 new_prim.material_id = loaded_prim.material;
                 if ( new_prim.material_id == -1 ) {
-                    // Creates a default, white material if a prim is not assigned a material in the
-                    // gltf file
+                    // Creates a default, white material if a prim is not assigned a material in
+                    // the gltf file
                     if ( default_material_id == -1 ) {
                         Material default_material = Material();
                         default_material_id = static_cast<int>( scene.materials.size() );
@@ -533,6 +546,37 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
     scene.textures.push_back( hdri );
     scene.hdri_index = scene.textures.size() - 1;
     return true;
+}
+
+void propagate_transform( vk::Common vulkan, engine::State& engine, Scene& scene,
+    std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers, size_t start_node_id,
+    glm::mat4 transform, std::vector<bool>& discovered )
+{
+    std::vector<size_t> stack;
+    stack.push_back( start_node_id );
+
+    while ( !stack.empty() ) {
+        size_t current_node_id = stack.back();
+        stack.pop_back();
+
+        UniformBuffer model_mat_buffer = model_mat_uniform_buffers.at( current_node_id );
+        ub_data::ModelMat model_mat_ub = model_mat_buffer.get_data();
+
+        if ( !discovered.at( current_node_id ) ) {
+            model_mat_ub.prev_model_mat = model_mat_ub.model_mat;
+            discovered.at( current_node_id ) = true;
+        }
+
+        model_mat_ub.model_mat *= transform;
+        model_mat_ub.inv_model_mat = glm::inverse( model_mat_ub.model_mat );
+
+        model_mat_uniform_buffers.at( current_node_id ).set_data( model_mat_ub );
+        model_mat_uniform_buffers.at( current_node_id ).update( vulkan, engine.get_frame_index() );
+
+        for ( Node* child : scene.nodes.at( current_node_id )->children ) {
+            stack.push_back( child->id );
+        }
+    }
 }
 
 } // namespace racecar::scene

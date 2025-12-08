@@ -44,8 +44,8 @@ void draw( const engine::State& engine, const DrawTask& draw_task, const VkComma
         cmd_buf, draw_task.draw_resource_descriptor.index_buffer, 0, VK_INDEX_TYPE_UINT32 );
 
     vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_descriptor.index_count, 1,
-        uint32_t( draw_task.draw_resource_descriptor.first_index ),
-        draw_task.draw_resource_descriptor.index_buffer_offset, 0 );
+        uint32_t( draw_task.draw_resource_descriptor.index_offset ),
+        draw_task.draw_resource_descriptor.vertex_offset, 0 );
 }
 
 DrawResourceDescriptor DrawResourceDescriptor::from_mesh( VkBuffer vertex_buffer,
@@ -55,14 +55,14 @@ DrawResourceDescriptor DrawResourceDescriptor::from_mesh( VkBuffer vertex_buffer
         .vertex_buffers = { vertex_buffer },
         .index_buffer = index_buffer,
         .vertex_buffer_offsets = { 0 },
-        .index_buffer_offset = 0,
-        .first_index = 0,
+        .vertex_offset = 0,
+        .index_offset = 0,
         .index_count = num_indices,
     };
 
     if ( primitive.has_value() ) {
-        draw_mesh_desc.first_index = primitive->ind_offset;
-        draw_mesh_desc.index_buffer_offset = primitive->vertex_offset;
+        draw_mesh_desc.index_offset = primitive->ind_offset;
+        draw_mesh_desc.vertex_offset = primitive->vertex_offset;
         draw_mesh_desc.index_count = static_cast<uint32_t>( primitive->ind_count );
     }
 

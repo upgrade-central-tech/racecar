@@ -37,7 +37,7 @@ vkb::Instance create_instance()
 
 #if RACECAR_DEBUG
     if ( system_info.validation_layers_available ) {
-        instance_builder.enable_validation_layers().use_default_debug_messenger();
+        // instance_builder.enable_validation_layers().use_default_debug_messenger();
     }
 #endif
 
@@ -95,6 +95,22 @@ vkb::Device pick_and_create_device( const Common& vulkan )
 {
     vkb::PhysicalDeviceSelector phys_selector( vulkan.instance, vulkan.surface );
 
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features { .sType
+        = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+        .pNext = nullptr,
+        .accelerationStructure = VK_TRUE,
+        .accelerationStructureCaptureReplay = VK_TRUE };
+
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_pipeline_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+        .pNext = nullptr,
+        .rayTracingPipeline = VK_TRUE, // Explicitly enable ray tracing pipelines
+    };
+
+    VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features
+        = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
+              .rayQuery = VK_TRUE };
+
     VkPhysicalDeviceVulkan11Features required_features_11 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
         .shaderDrawParameters = VK_TRUE,
@@ -108,11 +124,13 @@ vkb::Device pick_and_create_device( const Common& vulkan )
 
     VkPhysicalDeviceVulkan13Features required_features_13 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .pNext = &rt_pipeline_features,
         .synchronization2 = VK_TRUE,
         .dynamicRendering = VK_TRUE,
     };
 
     VkPhysicalDeviceFeatures required_features = {
+        .tessellationShader = VK_TRUE,
         .shaderInt16 = VK_TRUE,
     };
 
@@ -122,6 +140,13 @@ vkb::Device pick_and_create_device( const Common& vulkan )
               .set_minimum_version( 1, 3 )
               .add_required_extension( VK_KHR_SWAPCHAIN_EXTENSION_NAME )
               .add_required_extension( VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME )
+              .add_required_extension( VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME )
+              .add_required_extension( VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME )
+              .add_required_extension( VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME )
+              .add_required_extension( VK_KHR_RAY_QUERY_EXTENSION_NAME )
+              .add_required_extension_features( as_features )
+              .add_required_extension_features( rt_pipeline_features )
+              .add_required_extension_features( ray_query_features )
               .set_required_features_13( required_features_13 )
               .set_required_features_12( required_features_12 )
               .set_required_features_11( required_features_11 )
@@ -236,21 +261,31 @@ Common initialize( SDL_Window* window )
 
         // Used by a lot of stuff
         {
-            VkSamplerCreateInfo linear_sampler_info = vk::create::sampler_info( VK_FILTER_LINEAR );
+            VkSamplerCreateInfo linear_sampler_info = vk::create::sampler_info(
+                VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE );
             vk::check( vkCreateSampler( vulkan.device, &linear_sampler_info, nullptr,
                            &vulkan.global_samplers.linear_sampler ),
                 "Failed to create global linear sampler" );
             vulkan.destructor_stack.push(
                 vulkan.device, vulkan.global_samplers.linear_sampler, vkDestroySampler );
 
-            VkSamplerCreateInfo nearest_sampler_info
-                = vk::create::sampler_info( VK_FILTER_NEAREST );
+            VkSamplerCreateInfo nearest_sampler_info = vk::create::sampler_info(
+                VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE );
             vk::check( vkCreateSampler( vulkan.device, &nearest_sampler_info, nullptr,
                            &vulkan.global_samplers.nearest_sampler ),
                 "Failed to create global nearest sampler" );
             vulkan.destructor_stack.push(
                 vulkan.device, vulkan.global_samplers.nearest_sampler, vkDestroySampler );
+
+            VkSamplerCreateInfo linear_mirrored_repeat_sampler_info = vk::create::sampler_info(
+                VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT );
+            vk::check( vkCreateSampler( vulkan.device, &linear_mirrored_repeat_sampler_info,
+                           nullptr, &vulkan.global_samplers.linear_mirrored_repeat_sampler ),
+                "Failed to create global linear mirrored repeat sampler" );
+            vulkan.destructor_stack.push( vulkan.device,
+                vulkan.global_samplers.linear_mirrored_repeat_sampler, vkDestroySampler );
         }
+        vulkan.ray_tracing_properties = rt::query_rt_properties( vulkan.device.physical_device );
     } catch ( const Exception& ex ) {
         log::error( "[vk] {}", ex.what() );
         throw Exception( "[Vulkan] Failed to initialize" );

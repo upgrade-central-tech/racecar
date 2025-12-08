@@ -16,7 +16,7 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
     const std::vector<VkDescriptorSetLayout>& layouts,
     const std::vector<VkFormat> color_attachment_formats, VkSampleCountFlagBits samples, bool blend,
-    bool depth_test, VkShaderModule shader_module );
+    bool depth_test, VkShaderModule shader_module, bool enable_tessellation_shaders );
 
 Pipeline create_compute_pipeline( vk::Common& vulkan,
     const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module,

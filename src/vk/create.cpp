@@ -103,15 +103,18 @@ VkImageViewCreateInfo image_view_info(
     return info;
 }
 
-VkSamplerCreateInfo sampler_info( VkFilter filter_type )
+VkSamplerCreateInfo sampler_info( VkFilter filter_type, VkSamplerAddressMode address_mode )
 {
     return {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = filter_type,
         .minFilter = filter_type,
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+        .addressModeU = address_mode,
+        .addressModeV = address_mode,
+        .addressModeW = address_mode,
+        .minLod = 0.0f,
+        .maxLod = 100.0f,
     };
 }
 

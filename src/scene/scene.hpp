@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../engine/ub_data.hpp"
+#include "../engine/uniform_buffer.hpp"
 #include "../geometry/scene_mesh.hpp"
 
 #include <glm/glm.hpp>
@@ -70,6 +72,7 @@ struct Texture {
 /// data and index data.
 struct Primitive {
     int material_id = -1;
+    int node_id = -1;
     int vertex_offset = -1; ///< Offsets are for the out_vertices array.
     ///< Index data can be a unsigned short uint_16t or an unsigned int uint_32t.
     int ind_offset = -1;
@@ -92,6 +95,16 @@ struct Node {
 
     Node* parent = nullptr;
     std::vector<Node*> children;
+    size_t id;
+};
+
+struct DemoSceneNodes {
+    // Node Ids for getting and setting model matrices
+    std::optional<size_t> car_parent_id = std::nullopt;
+    std::optional<size_t> wheel_front_right_id = std::nullopt;
+    std::optional<size_t> wheel_front_left_id = std::nullopt;
+    std::optional<size_t> wheel_back_right_id = std::nullopt;
+    std::optional<size_t> wheel_back_left_id = std::nullopt;
 };
 
 struct Scene {
@@ -100,6 +113,7 @@ struct Scene {
     std::vector<Texture> textures;
 
     std::optional<size_t> hdri_index;
+    DemoSceneNodes demo_scene_nodes;
 };
 
 void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,
@@ -107,5 +121,9 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
     std::vector<uint32_t>& out_indices );
 
 bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene );
+
+void propagate_transform( vk::Common vulkan, engine::State& engine, Scene& scene,
+    std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers, size_t start_node_id,
+    glm::mat4 transform, std::vector<bool>& discovered );
 
 } // namespace racecar::scene

@@ -4,6 +4,36 @@
 
 namespace racecar::vk::utility {
 
+void transition_image_mips( VkCommandBuffer command_buffer, VkImage image, VkImageLayout old_layout,
+    VkImageLayout new_layout, VkAccessFlags2 src_access_mask, VkAccessFlags2 dst_access_mask,
+    VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask,
+    VkImageAspectFlags aspect_flags, uint32_t mip_levels )
+{
+    VkImageMemoryBarrier2 image_barrier {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask = src_stage_mask,
+        .srcAccessMask = src_access_mask,
+        .dstStageMask = dst_stage_mask,
+        .dstAccessMask = dst_access_mask,
+
+        .oldLayout = old_layout,
+        .newLayout = new_layout,
+
+        .image = image,
+        .subresourceRange = vk::create::image_subresource_range( aspect_flags ),
+    };
+
+    image_barrier.subresourceRange.levelCount = mip_levels;
+
+    VkDependencyInfo dependency_info = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &image_barrier,
+    };
+
+    vkCmdPipelineBarrier2( command_buffer, &dependency_info );
+}
+
 void transition_image( VkCommandBuffer command_buffer, VkImage image, VkImageLayout old_layout,
     VkImageLayout new_layout, VkAccessFlags2 src_access_mask, VkAccessFlags2 dst_access_mask,
     VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask,
@@ -47,6 +77,8 @@ uint32_t bytes_from_format( VkFormat format )
     switch ( format ) {
     case VK_FORMAT_R8_UNORM:
         return 1;
+    case VK_FORMAT_R8G8_UNORM:
+        return 2;
     case VK_FORMAT_R8G8B8_UNORM:
         return 3;
     case VK_FORMAT_R32_SFLOAT:
@@ -100,12 +132,10 @@ float eval_SH( uint32_t lm_index, glm::vec3 direction )
         return 1.092548f * ( direction.x * direction.z );
     if ( lm_index == 8 ) // 2,  2
         return 0.546274f * ( ( direction.x * direction.x ) - ( direction.y * direction.y ) );
-    
+
     return -1.0f;
 }
 
-float area_element( float x, float y ) {
-    return atan2( x * y , sqrt( x * x + y * y + 1.0f ) );
-}
+float area_element( float x, float y ) { return atan2( x * y, sqrt( x * x + y * y + 1.0f ) ); }
 
 } // namespace racecar::vk::utility

@@ -1,0 +1,55 @@
+{
+    "version": 1,
+    "sunZenith": -1.291,
+    "sunAzimuth": 2.863,
+    "wetness": 0.890,
+    "snow": 0.30,
+    "scrollingSpeed": 0.01,
+    "bumpiness": 0.0,
+    "materials": [
+        {
+            "slot": 4,
+            "color": [
+                1.0,
+                1.0,
+                1.0,
+                1
+            ],
+            "roughness": 0.019,
+            "metallic": 0.0,
+            "clearcoatRoughness": 1.0,
+            "clearcoatWeight": 0.089,
+            "glintiness": 0.0,
+            "glintLogDensity": 21.960,
+            "glintRoughness": 0.723,
+            "glintRandomness": 1.53
+        },
+        {
+            "slot": 11,
+            "color": [
+                0.025,
+                0.025,
+                0.025,
+                1
+            ],
+            "roughness": 0.004,
+            "metallic": 0.0,
+            "clearcoatRoughness": 0.848,
+            "clearcoatWeight": 0.225,
+            "glintiness": 0.022,
+            "glintLogDensity": 18.0,
+            "glintRoughness": 0.2,
+            "glintRandomness": 1.53
+        }
+    ],
+    "camera": {
+        "center": [
+            2.9,
+            2.0,
+            -0.0
+        ],
+        "radius": 8.0,
+        "azimuth": 0.0,
+        "zenith": 0.0
+    }
+}

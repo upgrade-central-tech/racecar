@@ -11,7 +11,7 @@
 
 namespace racecar::engine {
 
-void execute( State& engine, Context& ctx, TaskList& task_list )
+void execute( State& engine, Context& ctx, TaskList& task_list, const gui::Gui& gui )
 {
     vk::Common& vulkan = ctx.vulkan;
 
@@ -106,6 +106,7 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
         size_t gfx_ptr = 0;
         size_t cs_ptr = 0;
         size_t blit_ptr = 0;
+        size_t cpu_ptr = 0;
         for ( task_ptr = 0; task_ptr < task_list.tasks.size(); task_ptr++ ) {
             Task& task = task_list.tasks[task_ptr];
 
@@ -135,33 +136,66 @@ void execute( State& engine, Context& ctx, TaskList& task_list )
                 }
             }
 #endif
-
             switch ( task.type ) {
             case Task::GFX: {
                 GfxTask& gfx_task = task_list.gfx_tasks[gfx_ptr++];
+
+                // Brain-dead solution. We need to ensure the pointers advance
+                if ( task.is_single_run && task.is_ran ) {
+                    break;
+                }
+
                 execute_gfx_task( engine, frame.render_cmdbuf, gfx_task );
                 break;
             }
 
             case Task::COMP: {
                 ComputeTask& cs_task = task_list.cs_tasks[cs_ptr++];
+
+                // Brain-dead solution. We need to ensure the pointers advance
+                if ( task.is_single_run && task.is_ran ) {
+                    break;
+                }
+
                 execute_cs_task( engine, frame.render_cmdbuf, cs_task );
                 break;
             }
 
             case Task::BLIT: {
                 BlitTask& blit_task = task_list.blit_tasks[blit_ptr++];
-                execute_blit_task( engine, frame.render_cmdbuf, blit_task, output_image );
+
+                // Brain-dead solution. We need to ensure the pointers advance
+                if ( task.is_single_run && task.is_ran ) {
+                    break;
+                }
+
+                const VkImage& dst_image = blit_task.out_color.has_value()
+                    ? blit_task.out_color.value().images[output_swapchain_index].image
+                    : output_image;
+
+                execute_blit_task( engine, frame.render_cmdbuf, blit_task, dst_image );
+                break;
+            }
+
+            case Task::CPU_CALL: {
+                CPUTask& descriptor_task = task_list.cpu_tasks[cpu_ptr++];
+
+                // This is not ran on the GPU! This is a purely CPU-side call.
+                descriptor_task.task();
                 break;
             }
 
             default:
                 throw Exception( "Unknown task type" );
             }
+
+            if ( !task.is_ran ) {
+                task.is_ran = true;
+            }
         }
 
         // GUI render pass
-        {
+        if ( gui.show_window ) {
             VkRenderingAttachmentInfo gui_color_attachment_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
                 .imageView = output_image_view,

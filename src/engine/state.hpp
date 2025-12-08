@@ -49,6 +49,12 @@ struct State {
     DescriptorSystem descriptor_system = {};
 
     size_t get_frame_index() const;
+
+    std::vector<vk::rt::AccelerationStructure> blas;
+    vk::rt::AccelerationStructure tlas;
+
+    double time = 0.f; ///< Expressed in seconds.
+    double delta = 0.f; ///< Expressed in seconds.
 };
 
 State initialize( Context& ctx );

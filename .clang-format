@@ -23,7 +23,7 @@ IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^".*"'
     Priority: 1
-  - Regex: '^<(SDL|glm|imgui|vulkan|tiny_gltf|stb)/?.*>'
+  - Regex: '^<(SDL|glm|imgui|vulkan|tiny_gltf|stb|nlohmann)/?.*>'
     Priority: 2
   - Regex: '^<(volk)/?.*>'
     Priority: 2

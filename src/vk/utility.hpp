@@ -1,7 +1,8 @@
 #pragma once
 
-#include <volk.h>
 #include <glm/glm.hpp>
+#include <volk.h>
+
 
 namespace racecar::vk::utility {
 
@@ -16,6 +17,11 @@ void transition_image( VkCommandBuffer command_buffer, VkImage image, VkImageLay
     VkImageLayout new_layout, VkAccessFlags2 src_access_mask, VkAccessFlags2 dst_access_mask,
     VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask,
     VkImageAspectFlags aspect_flags );
+
+void transition_image_mips( VkCommandBuffer command_buffer, VkImage image, VkImageLayout old_layout,
+    VkImageLayout new_layout, VkAccessFlags2 src_access_mask, VkAccessFlags2 dst_access_mask,
+    VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask,
+    VkImageAspectFlags aspect_flags, uint32_t mip_levels );
 
 uint32_t bytes_from_format( VkFormat format );
 

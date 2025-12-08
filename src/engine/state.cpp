@@ -224,7 +224,7 @@ State initialize( Context& ctx )
         create_depth_images( engine, vulkan );
 
         engine.camera = {
-            .center = glm::vec3( 2.5f, -0.3f, 1.f ),
+            .center = glm::vec3( 2.5f, 2.5f, 1.f ),
             .radius = 8.f,
             .azimuth = 0.f,
             .zenith = 0.f,
@@ -232,7 +232,7 @@ State initialize( Context& ctx )
             .fov_y = float( glm::radians( 60.0 ) ),
             .aspect_ratio = static_cast<float>( constant::SCREEN_W ) / constant::SCREEN_H,
             .near_plane = 0.1f,
-            .far_plane = 100.f,
+            .far_plane = 1000.f,
         };
 
         create_immediate_commands( engine.immediate_submit, vulkan );

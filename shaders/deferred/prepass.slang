@@ -1,72 +1,22 @@
+#include "../common.slang"
+
 struct VertexInput {
     float3 position : POSITION;
     float3 normal : NORMAL;
     float4 tangent : TANGENT0;
     float2 uv : TEXCOORD0;
+    float2 id : IDS;
 };
 
 struct VertexOutput {
     float4 sv_position : SV_Position;
     float3 position;
+    float4 prev_clip_pos;
+    float4 curr_clip_pos;
     float3 normal;
     float4 tangent;
     float2 uv;
 };
-
-struct CameraBufferData {
-    float4x4 mvp;
-    float4x4 model;
-    float4x4 inv_model;
-    float4 camera_pos;
-    // Pack: near plane, far plane, aspect ratio, fov_Y
-    float4 camera_constants;
-};
-
-struct DebugData {
-    float4 color;
-
-    // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
-    float4 packed_data0;
-    float4 sun_direction;
-
-    bool enable_albedo_map;
-    bool enable_normal_map;
-    bool enable_roughness_metal_map;
-    bool normals_only;
-    bool albedo_only;
-    bool roughness_metal_only;
-
-    bool enable_bloom;
-}
-
-struct MaterialData {
-    int has_base_color_texture;
-    int has_metallic_roughness_texture;
-    int has_normal_texture;
-    int has_emmisive_texture;
-
-    float4 base_color;
-
-    float metallic;
-    float roughness;
-    float normal_texture_weight;
-    float ior;
-
-    float3 specular_tint;
-    float specular;
-
-    float3 sheen_tint;
-    float sheen_roughness;
-
-    float sheen_weight;
-    float transmission;
-    float clearcoat;
-    float clearcoat_roughness;
-
-    float3 emissive;
-    // 0 if lit, 1 if unlit
-    int unlit = false;
-}
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
@@ -77,14 +27,16 @@ layout( binding = 1, set = 1 ) Texture2D<float4> normal_map;
 layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 layout( binding = 3, set = 1 ) ConstantBuffer<MaterialData> material_data;
 
+layout( binding = 0, set = 2 ) ConstantBuffer<ModelMatData> model_mat_data;
+
 // Cubemaps + LUTs
-layout( binding = 0, set = 2 ) TextureCube<float4> cubemap;
-layout( binding = 1, set = 2 ) Texture2D<float2> BRDF_LUT;
-layout( binding = 4, set = 2 ) Texture2D<float4> glint_noise;
+layout( binding = 0, set = 3 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 1, set = 3 ) Texture2D<float4> glint_noise;
+layout( binding = 2, set = 3 ) Texture2D<float4> octahedral_sky;
+layout( binding = 3, set = 3 ) Texture2D<float4> octahedral_sky_irradiance;
+layout( binding = 4, set = 3 ) Texture2D<float4> octahedral_sky_mips;
 
-layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
-
-static const float PI = 3.14159265359;
+layout( binding = 0, set = 4 ) SamplerState nearest_sampler;
 
 #include "../glint/glint.hlsl"
 
@@ -126,10 +78,22 @@ float3 world_to_local( float3 world_dir, float3 normal )
 VertexOutput vs_main( VertexInput input )
 {
     VertexOutput output;
-    output.sv_position = mul( camera_buffer_data.mvp, float4( input.position, 1.0 ) );
-    output.position = mul( camera_buffer_data.model, float4( input.position, 1.0 ) ).xyz;
+    float4 clip_pos = mul(
+        mul( camera_buffer_data.mvp, model_mat_data.model_mat ), float4( input.position, 1.0 ) );
 
-    float3x3 normal_matrix = (float3x3)transpose( camera_buffer_data.inv_model );
+    float4 prev_clip_pos = mul( mul( camera_buffer_data.prev_mvp, model_mat_data.prev_model_mat ),
+        float4( input.position, 1.0f ) );
+
+    output.sv_position = clip_pos;
+    output.curr_clip_pos = clip_pos;
+    output.prev_clip_pos = prev_clip_pos;
+
+    output.position = mul(
+        mul( camera_buffer_data.model, model_mat_data.model_mat ), float4( input.position, 1.0 ) )
+                          .xyz;
+
+    float3x3 normal_matrix
+        = (float3x3)transpose( mul( model_mat_data.inv_model_mat, camera_buffer_data.inv_model ) );
     float3 normal = normalize( mul( normal_matrix, input.normal ) );
     float3 tangent = normalize( mul( normal_matrix, input.tangent.xyz ) );
     tangent = normalize( tangent - normal * dot( normal, tangent ) );
@@ -149,6 +113,7 @@ struct FragmentOutput {
     float4 albedo : SV_Target4;
     /// roughness, metallic, clearcoat roughness, clearcoat weight
     float4 packed_data : SV_Target5;
+    float2 velocity : SV_Target6;
 }
 
 [shader( "fragment" )]
@@ -156,11 +121,36 @@ FragmentOutput fs_main( VertexOutput in )
 {
     FragmentOutput output;
 
-    // awesome packing hacks
+    // Stencil is defined as such:
+    // 0 - nothing shaded
+    // 1 - car shading
+    // 2 - terrain shading
+    float stencil = CAR_ID;
 
-    float stencil = 1.0f;
+    // VELOCITY
+    float4 old_pos = in.prev_clip_pos;
+    old_pos.xy = 0.5f * ( old_pos.xy ) + 0.5f;
 
-#if 1
+    float4 curr_pos = in.curr_clip_pos;
+    curr_pos.xy = 0.5f * ( curr_pos.xy ) + 0.5f;
+
+    output.velocity = ( curr_pos - old_pos ).xy;
+
+    if ( material_data.has_base_color_texture != 0 && debug_data.enable_albedo_map != 1 ) {
+        output.albedo = albedo_map.Sample( nearest_sampler, in.uv );
+    } else {
+        output.albedo = material_data.base_color;
+    }
+
+    if ( material_data.has_metallic_roughness_texture != 0
+        && debug_data.enable_roughness_metal_map ) {
+        output.packed_data = float4( metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb,
+            material_data.clearcoat_roughness, material_data.clearcoat );
+    } else {
+        output.packed_data = float4( material_data.roughness, material_data.metallic,
+            material_data.clearcoat_roughness, material_data.clearcoat );
+    }
+
     float3 normal = normalize( in.normal );
     float3 light = normalize( debug_data.sun_direction.rgb );
     float3 view = normalize( camera_buffer_data.camera_pos.rgb - in.position );
@@ -170,14 +160,18 @@ FragmentOutput fs_main( VertexOutput in )
     float2 duvdx = ddx( in.uv );
     float2 duvdy = ddy( in.uv );
 
-    float alpha = debug_data.packed_data0.x * debug_data.packed_data0.x;
+    float alpha = material_data.roughness * material_data.roughness;
     float clamped_n_dot_h = max( dot( normal, half ), 0.0f );
     float NDF = DistributionGGX( clamped_n_dot_h, alpha );
 
     float maxNDF = 10000.0f;
     float targetNDF = NDF;
-    NDF = SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy ).x;
-#endif
+    NDF = lerp( targetNDF,
+        SampleGlints2023NDF( local_half, targetNDF, maxNDF, in.uv, duvdx, duvdy,
+            material_data.glint_log_density, material_data.glint_roughness,
+            material_data.glint_randomness )
+            .x,
+        material_data.glintiness );
 
     output.position = float4( in.position, stencil );
     output.normal = float4( in.normal, 1.0f );
@@ -191,20 +185,6 @@ FragmentOutput fs_main( VertexOutput in )
 
     output.tangent = in.tangent;
     output.uv = float4( in.uv, NDF, 0.0f );
-
-    if ( material_data.has_base_color_texture != 0 ) {
-        output.albedo = albedo_map.Sample( nearest_sampler, in.uv );
-    } else {
-        output.albedo = material_data.base_color;
-    }
-
-    if ( material_data.has_metallic_roughness_texture != 0 ) {
-        output.packed_data = float4( metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb,
-            material_data.clearcoat_roughness, material_data.clearcoat );
-    } else {
-        output.packed_data = float4( material_data.roughness, material_data.metallic,
-            material_data.clearcoat_roughness, material_data.clearcoat );
-    }
 
     return output;
 }
