@@ -6,7 +6,6 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 
-#include <algorithm>
 #include <array>
 #include <optional>
 #include <string_view>
@@ -414,15 +413,27 @@ void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& at
     // Only add materials that will be modified by the new preset to the before preset
     // for transition purposes
     {
-
         std::vector<Preset::MaterialData> before_materials;
 
-        for ( size_t idx = 0; idx < material_buffers.size(); ++idx ) {
-            if ( auto it = std::ranges::find( preset.materials, idx, &Preset::MaterialData::slot );
-                it != preset.materials.end() ) {
-                before_materials.push_back( *it );
-                log::info( "[preset] Transitioning material with ID {}", it->slot );
-            }
+        for ( const auto& preset_material : preset.materials ) {
+            size_t material_idx = static_cast<size_t>( preset_material.slot );
+            ub_data::Material material = material_buffers[material_idx].get_data();
+
+            Preset::MaterialData before_material = { .slot = preset_material.slot,
+                .data = gui::Material {
+                    .color = material.base_color,
+                    .roughness = material.roughness,
+                    .metallic = material.metallic,
+                    .clearcoat_roughness = material.clearcoat_roughness,
+                    .clearcoat_weight = material.clearcoat,
+                    .glintiness = material.glintiness,
+                    .glint_log_density = material.glint_log_density,
+                    .glint_roughness = material.roughness,
+                    .glint_randomness = material.glint_randomness,
+                } };
+
+            before_materials.push_back( std::move( before_material ) );
+            log::info( "[preset] Transitioning material with ID {}", preset_material.slot );
         }
 
         before.materials = std::move( before_materials );

@@ -1344,20 +1344,32 @@ void run( bool use_fullscreen )
             gui.terrain.scrolling_speed = glm::mix( i.scrolling_speed, f.scrolling_speed, t );
             gui.demo.bumpiness = glm::mix( i.bumpiness, f.bumpiness, t );
 
-            // for ( const auto& material : preset.materials ) {
-            //     gui.debug.current_editing_material = material.slot;
+            for ( size_t idx = 0; idx < i.materials.size(); ++idx ) {
+                const gui::Material& i_mat = i.materials[idx].data;
+                const gui::Material& f_mat = f.materials[idx].data;
 
-            //     const gui::Material& data = material.data;
-            //     gui.debug.color = data.color;
-            //     gui.debug.roughness = data.roughness;
-            //     gui.debug.metallic = data.metallic;
-            //     gui.debug.clearcoat_roughness = data.clearcoat_roughness;
-            //     gui.debug.clearcoat_weight = data.clearcoat_weight;
-            //     gui.debug.glintiness = data.glintiness;
-            //     gui.debug.glint_log_density = data.glint_log_density;
-            //     gui.debug.glint_roughness = data.glint_roughness;
-            //     gui.debug.glint_randomness = data.glint_randomness;
-            // }
+                size_t material_idx = static_cast<size_t>( i.materials[idx].slot );
+                auto mat_data = material_uniform_buffers[material_idx].get_data();
+
+                mat_data.base_color = glm::mix( i_mat.color, f_mat.color, t );
+                mat_data.roughness = glm::mix( i_mat.roughness, f_mat.roughness, t );
+                mat_data.metallic = glm::mix( i_mat.metallic, f_mat.metallic, t );
+                mat_data.clearcoat = glm::mix( i_mat.clearcoat_weight, f_mat.clearcoat_weight, t );
+                mat_data.clearcoat_roughness
+                    = glm::mix( i_mat.clearcoat_roughness, f_mat.clearcoat_roughness, t );
+
+                mat_data.glintiness = glm::mix( i_mat.glintiness, f_mat.glintiness, t );
+                mat_data.glint_log_density
+                    = glm::mix( i_mat.glint_log_density, f_mat.glint_log_density, t );
+                mat_data.glint_roughness
+                    = glm::mix( i_mat.glint_roughness, f_mat.glint_roughness, t );
+                mat_data.glint_randomness
+                    = glm::mix( i_mat.glint_randomness, f_mat.glint_randomness, t );
+
+                material_uniform_buffers[material_idx].set_data( mat_data );
+                material_uniform_buffers[material_idx].update(
+                    ctx.vulkan, engine.get_frame_index() );
+            }
 
             engine.camera.center = glm::mix( i.camera_center, f.camera_center, t );
             engine.camera.radius = glm::mix( i.camera_radius, f.camera_radius, t );
