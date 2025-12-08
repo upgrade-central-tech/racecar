@@ -106,7 +106,8 @@ Gui initialize( Context& ctx, const engine::State& engine )
     return gui;
 }
 
-void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms )
+void process_event(
+    Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera )
 {
     // We may want to expand this function later. For now, it serves to remove any ImGui header
     // includes in non-GUI related files.
@@ -150,7 +151,7 @@ void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& at
                 if ( size_t preset_number = preset_number_opt.value();
                     preset_number <= gui.preset.presets.size() ) {
                     const Preset& preset = gui.preset.presets[preset_number - 1];
-                    use_preset( preset, gui, atms );
+                    use_preset( preset, gui, atms, camera );
                 }
             }
         }
@@ -160,7 +161,7 @@ void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& at
     }
 }
 
-void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere& atms )
+void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera )
 {
     if ( !gui.show_window ) {
         return;
@@ -215,7 +216,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
                 for ( const auto& preset : gui.preset.presets ) {
                     ImGui::PushID( preset.name.c_str() );
                     if ( ImGui::Button( "Use" ) ) {
-                        use_preset( preset, gui, atms );
+                        use_preset( preset, gui, atms, camera );
                     }
                     ImGui::PopID();
 
@@ -365,17 +366,28 @@ void free()
     ImGui::DestroyContext();
 }
 
-void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms )
+void use_preset(
+    const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera )
 {
     log::info( "[preset] Using preset \"{}\"", preset.name );
 
-    // Preset before = {
-    //     .version = 1,
-    //     .name = "__before_generated",
+    Preset before = {
+        .version = 1,
+        .name = "__before_generated",
 
-    //     .sun_zenith = atms.sun_zenith,
+        .sun_zenith = atms.sun_zenith,
+        .sun_azimuth = atms.sun_azimuth,
 
-    // }
+        .wetness = gui.terrain.wetness,
+        .snow = gui.terrain.snow,
+        .scrolling_speed = gui.terrain.scrolling_speed,
+        .bumpiness = gui.demo.bumpiness,
+
+        .camera_center = camera.center,
+        .camera_radius = camera.radius,
+        .camera_azimuth = camera.azimuth,
+        .camera_zenith = camera.zenith,
+    };
 
     atms.sun_zenith = preset.sun_zenith;
     atms.sun_azimuth = preset.sun_azimuth;
@@ -383,7 +395,7 @@ void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& at
     gui.terrain.wetness = preset.wetness;
     gui.terrain.snow = preset.snow;
     gui.terrain.scrolling_speed = preset.scrolling_speed;
-    // gui.terrain.bumpiness = preset.bumpiness;
+    gui.demo.bumpiness = preset.bumpiness;
 
     for ( const auto& material : preset.materials ) {
         gui.debug.current_editing_material = material.slot;
@@ -399,6 +411,11 @@ void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& at
         gui.debug.glint_roughness = data.glint_roughness;
         gui.debug.glint_randomness = data.glint_randomness;
     }
+
+    camera.center = preset.camera_center;
+    camera.radius = preset.camera_radius;
+    camera.azimuth = preset.camera_azimuth;
+    camera.zenith = preset.camera_zenith;
 }
 
 } // namespace racecar::engine::gui

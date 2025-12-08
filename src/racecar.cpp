@@ -1298,7 +1298,7 @@ void run( bool use_fullscreen )
         current_tick = std::chrono::steady_clock::now();
 
         while ( SDL_PollEvent( &event ) ) {
-            gui::process_event( gui, &event, atms );
+            gui::process_event( gui, &event, atms, engine.camera );
             camera::process_event( ctx, &event, engine.camera, gui.show_window );
 
             if ( event.type == SDL_EVENT_QUIT ) {
@@ -1614,7 +1614,7 @@ void run( bool use_fullscreen )
             bloom_pass.bloom_ub.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        gui::update( gui, camera, atms );
+        gui::update( gui, atms, camera );
 
         engine::execute( engine, ctx, task_list, gui );
         engine.rendered_frames = engine.rendered_frames + 1;

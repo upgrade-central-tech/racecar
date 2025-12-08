@@ -100,10 +100,12 @@ struct Gui {
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );
-void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms );
-void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere& atms );
+void process_event(
+    Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera );
+void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera );
 void free();
 
-void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms );
+void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms,
+    camera::OrbitCamera& camera );
 
 } // namespace racecar::engine::gui
