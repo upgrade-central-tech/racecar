@@ -65,14 +65,16 @@ constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
 
 std::unordered_map<std::string, std::array<glm::vec2, 2>> wheel_centers = {
     { "../assets/bugatti.glb",
-        { glm::vec2( -1.011506, -2.79548 ), glm::vec2( -1.041506, 4.90197 ) } },
+        { glm::vec2( -0.658391 , -2.35642 ), glm::vec2( -0.667301,2.57912  ) } },
     { "../assets/mclaren.glb",
         { glm::vec2( -0.452689, -1.66372 ), glm::vec2( -0.452689, 2.13727 ) } },
     { "../assets/porsche.glb", { glm::vec2( -0.669948, -2.32301 ), glm::vec2( -0.669948, 2.39 ) } },
     { "../assets/ferrari.glb",
         { glm::vec2( -0.358881, -1.47297 ), glm::vec2( -0.358822, 2.10473 ) } },
     { "../assets/lamborghini_sesto.glb",
-        { glm::vec2( -0.309112, -1.28 ), glm::vec2( -0.317127, 1.27501 ) } }
+        { glm::vec2( -0.309112, -1.28 ), glm::vec2( -0.317127, 1.27501 ) } },
+    { "../assets/mclaren_f1.glb",
+        { glm::vec2( -0.470348, -2.05553 ), glm::vec2( -0.510266, 2.74863 ) } }
 };
 
 void run( bool use_fullscreen )

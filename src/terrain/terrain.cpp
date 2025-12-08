@@ -12,7 +12,7 @@ const std::filesystem::path TERRAIN_SHADER_LIGHTING_MODULE_PATH
     = "../shaders/terrain/cs_terrain_draw.spv";
 
 // TEST FILE PATHS...
-const std::filesystem::path TEST_LAYER_MASK_PATH = "../assets/LUT/test_terrain_map2.bmp";
+const std::filesystem::path TEST_LAYER_MASK_PATH = "../assets/LUT/test_terrain_map.bmp";
 const std::filesystem::path TEST_GRASS_ALBEDO_ROUGHNESS_PATH
     = "../assets/terrain/better_grass/grass_albedo_roughness.png";
 const std::filesystem::path TEST_GRASS_NORMAL_AO_PATH
@@ -25,7 +25,7 @@ const std::filesystem::path TEST_ASPHALT_NORMAL_AO_PATH = "../assets/terrain/asp
 const std::filesystem::path TERRAIN_NOISE_PAPTH = "../assets/LUT/terrain_noise.jpg";
 
 const float TERRAIN_TILE_WIDTH = 10.0f;
-const size_t TERRAIN_NUM_TILES = 20;
+const size_t TERRAIN_NUM_TILES = 50;
 
 namespace racecar::geometry {
 
@@ -186,13 +186,13 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // ASPHALT ALBEDO + ROUGHNESS
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // ASPHALT NOMRAL + AO
         },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
 
     terrain.prepass_sampler_desc_set = engine::generate_descriptor_set( vulkan, engine,
         {
             VK_DESCRIPTOR_TYPE_SAMPLER,
         },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
 
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.prepass_texture_desc_set, terrain.test_layer_mask, 0 );

@@ -76,7 +76,7 @@ float edge_tess_factor( float3 v0, float3 v1 )
 {
     float3 mid = 0.5 * ( v0 + v1 );
     float dist = distance( mid, camera_buffer_data.camera_pos.xyz );
-    float f = lerp( 16.0, 2.0, saturate( dist / 60.0 ) );
+    float f = lerp( 32.0, 2.0, saturate( dist / 100.0 ) );
     return f;
 }
 
@@ -153,6 +153,31 @@ DomainOutput ts_eval_main(
 
     float2 t = patch[0].uv * ( 1 - uv.x ) * ( 1 - uv.y ) + patch[1].uv * ( uv.x ) * ( 1 - uv.y )
         + patch[3].uv * ( uv.x ) * ( uv.y ) + patch[2].uv * ( 1 - uv.x ) * ( uv.y );
+
+    // make edits to p
+    float3 world_position = p;
+    float2 uv_scrolling_offset = terrain_data.terrain_data1.xy;
+    float distort_scale = 5.0f;
+    float rand_sx = perlin_noise3D( distort_scale * world_position
+        + float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) );
+    float rand_sy = rand_sx;
+    float distort_amplitude = 0.1f;
+    float2 distortion_offset = 2.0f * float2( rand_sx, rand_sy ) * distort_amplitude - distort_amplitude;
+    float layer_map_scale = 0.025f;
+    float world_scale = 0.05f;
+    float2 world_position_uv = world_position.xz;
+
+    float2 my_uv = ( ( distortion_offset + float2( world_position.x + 22, world_position.y + 60 ) )
+            * layer_map_scale
+        + uv_scrolling_offset );
+    float2 world_uv_unwrapped = (world_position_uv)*world_scale + uv_scrolling_offset;
+
+    float2 layers = layer_test_mask.Sample( linear_sampler, my_uv );
+    float layer = 1.0 - layers.r;
+
+    float x_dist = clamp(abs( p.x / 50.0 ), 0.0, 1.0);
+
+    p.y = 5.0 * x_dist * layer * (perlin_noise3D( float3( world_uv_unwrapped.x * 0.5, 0.0, world_uv_unwrapped.y * 0.5) ) * 2.0 + 1.0);
 
     outVal.sv_position = mul( camera_buffer_data.mvp, float4( p, 1.0 ) );
     outVal.position = p;
@@ -256,6 +281,7 @@ FragmentOutput fs_main( DomainOutput in )
     // R - Asphalt
     // G - Grass/Terrain mask
     float2 layers = layer_test_mask.Sample( linear_sampler, uv );
+    // float2 layers = layer_test_mask.Sample( linear_sampler, world_uv );
 
     //=======================================================================================
     // Material property gather. TODO: use a struct?
@@ -286,7 +312,7 @@ FragmentOutput fs_main( DomainOutput in )
     //=======================================================================================
 
     // Naive lerping??? What's a better solution?
-    float3 mixed_albedo = lerp( float3( 1.0f, 0.0f, 0.0f ), asphalt_color, layers.x );
+    float3 mixed_albedo = lerp(float3(0.7, 0.0, 0.0), asphalt_color, layers.x);
     float snow_lerp = snow_map * snowness * ( 1.0f - layers.x );
 
     grass_color = lerp( grass_color, float3( 1.0f ), snow_lerp );
