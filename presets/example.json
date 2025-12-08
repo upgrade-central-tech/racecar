@@ -24,5 +24,15 @@
             "glintRoughness": 0.8,
             "glintRandomness": 0.6
         }
-    ]
+    ],
+    "camera": {
+        "center": [
+            1,
+            2,
+            5
+        ],
+        "radius": 3,
+        "azimuth": 0.5,
+        "zenith": 1.2
+    }
 }
