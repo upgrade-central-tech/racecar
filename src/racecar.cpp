@@ -1332,10 +1332,6 @@ void run( bool use_fullscreen )
                 return glm::saturate( transition.progress / transition.duration );
             } );
 
-            // Initial and final
-            const Preset& i = transition.before;
-            const Preset& f = transition.after;
-
             {
                 using enum gui::Gui::PresetData::Easing;
 
@@ -1343,15 +1339,32 @@ void run( bool use_fullscreen )
                 case LINEAR:
                     break;
 
-                case EASE_OUT_QUINT: {
-                    t = 1.f - std::pow( 1.f - t, 5.f );
+                case EASE_OUT_QUAD:
+                    t = glm::saturate( 1.f - ( 1.f - t ) * ( 1.f - t ) );
                     break;
-                }
+
+                case EASE_OUT_QUINT:
+                    t = glm::saturate( 1.f - std::pow( 1.f - t, 5.f ) );
+                    break;
+
+                case EASE_IN_OUT_QUAD:
+                    t = glm::saturate(
+                        t < 0.5f ? 2.f * t * t : 1.f - std::pow( -2.f * t + 2.f, 2.f ) * 0.5f );
+                    break;
+
+                case EASE_IN_OUT_QUINT:
+                    t = glm::saturate( t < 0.5f ? 16.f * t * t * t * t * t
+                                                : 1.f - std::pow( -2.f * t + 2.f, 5.f ) * 0.5f );
+                    break;
 
                 default:
                     throw Exception( "[preset] Unhandled easing type" );
                 }
             }
+
+            // Initial and final
+            const Preset& i = transition.before;
+            const Preset& f = transition.after;
 
             atms.sun_zenith = glm::mix( i.sun_zenith, f.sun_zenith, t );
             atms.sun_azimuth = glm::mix( i.sun_azimuth, f.sun_azimuth, t );
@@ -1365,23 +1378,41 @@ void run( bool use_fullscreen )
                 const gui::Material& i_mat = i.materials[idx].data;
                 const gui::Material& f_mat = f.materials[idx].data;
 
+                glm::vec4 color = glm::mix( i_mat.color, f_mat.color, t );
+                float roughness = glm::mix( i_mat.roughness, f_mat.roughness, t );
+                float metallic = glm::mix( i_mat.metallic, f_mat.metallic, t );
+                float clearcoat = glm::mix( i_mat.clearcoat_weight, f_mat.clearcoat_weight, t );
+                float clearcoat_roughness
+                    = glm::mix( i_mat.clearcoat_roughness, f_mat.clearcoat_roughness, t );
+                float glintiness = glm::mix( i_mat.glintiness, f_mat.glintiness, t );
+                float glint_log_density
+                    = glm::mix( i_mat.glint_log_density, f_mat.glint_log_density, t );
+                float glint_roughness = glm::mix( i_mat.glint_roughness, f_mat.glint_roughness, t );
+                float glint_randomness
+                    = glm::mix( i_mat.glint_randomness, f_mat.glint_randomness, t );
+
                 size_t material_idx = static_cast<size_t>( i.materials[idx].slot );
                 auto mat_data = material_uniform_buffers[material_idx].get_data();
 
-                mat_data.base_color = glm::mix( i_mat.color, f_mat.color, t );
-                mat_data.roughness = glm::mix( i_mat.roughness, f_mat.roughness, t );
-                mat_data.metallic = glm::mix( i_mat.metallic, f_mat.metallic, t );
-                mat_data.clearcoat = glm::mix( i_mat.clearcoat_weight, f_mat.clearcoat_weight, t );
-                mat_data.clearcoat_roughness
-                    = glm::mix( i_mat.clearcoat_roughness, f_mat.clearcoat_roughness, t );
+                mat_data.base_color = color;
+                mat_data.roughness = roughness;
+                mat_data.metallic = metallic;
+                mat_data.clearcoat = clearcoat;
+                mat_data.clearcoat_roughness = clearcoat_roughness;
+                mat_data.glintiness = glintiness;
+                mat_data.glint_log_density = glint_log_density;
+                mat_data.glint_roughness = glint_roughness;
+                mat_data.glint_randomness = glint_randomness;
 
-                mat_data.glintiness = glm::mix( i_mat.glintiness, f_mat.glintiness, t );
-                mat_data.glint_log_density
-                    = glm::mix( i_mat.glint_log_density, f_mat.glint_log_density, t );
-                mat_data.glint_roughness
-                    = glm::mix( i_mat.glint_roughness, f_mat.glint_roughness, t );
-                mat_data.glint_randomness
-                    = glm::mix( i_mat.glint_randomness, f_mat.glint_randomness, t );
+                gui.debug.color = color;
+                gui.debug.roughness = roughness;
+                gui.debug.metallic = metallic;
+                gui.debug.clearcoat_weight = clearcoat;
+                gui.debug.clearcoat_roughness = clearcoat_roughness;
+                gui.debug.glintiness = glintiness;
+                gui.debug.glint_log_density = glint_log_density;
+                gui.debug.glint_roughness = glint_roughness;
+                gui.debug.glint_randomness = glint_randomness;
 
                 material_uniform_buffers[material_idx].set_data( mat_data );
                 material_uniform_buffers[material_idx].update(
@@ -1395,7 +1426,7 @@ void run( bool use_fullscreen )
 
             transition.progress += static_cast<float>( engine.delta );
 
-            if ( transition.progress >= 1.f ) {
+            if ( transition.progress >= transition.duration ) {
                 // Finished the transition to the current preset
                 gui.preset.transition = std::nullopt;
             }
