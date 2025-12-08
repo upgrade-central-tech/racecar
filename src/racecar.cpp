@@ -1313,6 +1313,11 @@ void run( bool use_fullscreen )
                       .get_data()
                       .model_mat[3];
         }
+
+        camera.center.y += gui.demo.bumpiness
+            * static_cast<float>(
+                sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 6000.0 ) );
+
         glm::mat4 view = camera::calculate_view_matrix( camera );
         glm::mat4 projection = glm::perspective(
             camera.fov_y, camera.aspect_ratio, camera.near_plane, camera.far_plane );
@@ -1526,17 +1531,21 @@ void run( bool use_fullscreen )
         }
 
         if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
-            glm::vec3 velocity = glm::vec3(
-                0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 1000.0 ), 0,
-                0.025 );
+            glm::vec3 velocity = {};
+
+            if ( gui.demo.enable_translation ) {
+
+                velocity = glm::vec3(
+                    0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 1000.0 ), 0,
+                    0.025 );
+            }
+
             glm::mat4 transform = glm::translate( glm::identity<glm::mat4>(), velocity );
 
             std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
 
-            if ( gui.demo.enable_translation ) {
-                scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
-                    scene.demo_scene_nodes.car_parent_id.value(), transform, discovered );
-            }
+            scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
+                scene.demo_scene_nodes.car_parent_id.value(), transform, discovered );
         }
 
         // Update bloom settings
