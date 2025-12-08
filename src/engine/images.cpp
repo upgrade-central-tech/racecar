@@ -298,6 +298,7 @@ vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common&
 
     switch ( image_format ) {
     case VK_FORMAT_R8G8_UNORM:
+    case VK_FORMAT_R8_SNORM:
     case VK_FORMAT_R8G8B8A8_UNORM:
         type = FormatType::UNORM8;
         break;

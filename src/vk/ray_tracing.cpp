@@ -1,6 +1,5 @@
 #include "ray_tracing.hpp"
 #include "mem.hpp"
-#include "../geometry/scene_mesh.hpp"
 #include "../log.hpp"
 
 namespace racecar::vk::rt {
@@ -40,8 +39,8 @@ VkAccelerationStructureGeometryKHR create_acceleration_structure_from_geometry(
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
         .pNext = nullptr,
         .vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-        .vertexData = { .deviceAddress = mesh.vertex_buffer_address + mesh.vertex_offset * sizeof(geometry::scene::Vertex) },
-        .vertexStride = sizeof( geometry::scene::Vertex ),
+        .vertexData = { .deviceAddress = mesh.vertex_buffer_address + mesh.vertex_offset * mesh.vertex_stride },
+        .vertexStride = mesh.vertex_stride,
         .maxVertex = mesh.max_vertex,
 
         .indexType = VK_INDEX_TYPE_UINT32,
@@ -62,6 +61,8 @@ VkAccelerationStructureGeometryKHR create_acceleration_structure_from_geometry(
 AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
     RayTracingProperties& rt_props, MeshData mesh, VkCommandBuffer cmd_buf, [[maybe_unused]] DestructorStack& destructor_stack )
 {
+    log::info("Building BLAS with vertex stride {}", mesh.vertex_stride);
+
     if ( mesh.vertex_buffer == VK_NULL_HANDLE ) {
         throw Exception("[Build BLAS] MeshData vertex buffer is null");
     }

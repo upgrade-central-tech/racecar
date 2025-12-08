@@ -41,6 +41,7 @@ struct Gui {
         bool enable_camera_lock_on_car = false;
         bool rotate_on = false;
         float rotate_speed = 0.005f;
+        float bumpiness = 0.001f;
     } demo = {};
 
     struct AtmosphereData {

@@ -44,6 +44,8 @@ layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
 layout( binding = 0, set = 5 ) RaytracingAccelerationStructure sceneBVH;
 
+layout( binding = 0, set = 6 ) Texture2D<float4> ReflectionData;
+
 // #include "../utils.slang"
 // #include "../glint/glint_noise_init.hlsl"
 // #include "../glint/glint.hlsl"
@@ -96,8 +98,13 @@ float4 fs_main( VertexOutput in )
     float3 in_nor = GBuffer_Normals.Sample( nearest_sampler, in.uv ).rgb;
     float4 in_tangent = GBuffer_Position.Sample( nearest_sampler, in.uv );
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
+    float4 in_refl = ReflectionData.Sample( nearest_sampler, in.uv );
 
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
+
+    // float4 refl = in_refl;
+    float4 refl = float4(0.0);
+
     float2 ddx_uv = float2( GBuffer_Position.Sample( nearest_sampler, in.uv ).a,
         GBuffer_Normals.Sample( nearest_sampler, in.uv ).a );
 
@@ -145,7 +152,7 @@ float4 fs_main( VertexOutput in )
     }
 
     float3 out_color
-        = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0 );
+        = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0, refl );
 
     return float4( out_color, 1.0f );
 }

@@ -42,6 +42,7 @@ struct MeshData {
     uint32_t index_offset;
     VkDeviceAddress vertex_buffer_address; // Retrieved via vkGetBufferDeviceAddress
     VkDeviceAddress index_buffer_address; // Retrieved via vkGetBufferDeviceAddress
+    uint32_t vertex_stride;
 };
 
 VkAccelerationStructureGeometryKHR create_acceleration_structure_from_geometry(

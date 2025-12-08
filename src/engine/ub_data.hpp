@@ -156,4 +156,30 @@ struct ModelMat {
     glm::mat4 prev_model_mat = {};
 };
 
+struct BLASOffsets {
+    uint32_t vertex_buffer_offset[104];
+    uint32_t index_buffer_offset[104];
+};
+
+struct PaddedVertex {
+    glm::vec3 position;
+    float _pad1;
+    glm::vec3 normal;
+    float _pad2;
+    glm::vec4 tangent;
+    glm::vec2 uv;
+    float _pad3[2];
+};
+
+struct RTTextureUniform {
+    glm::vec4 base_color[104];
+    int32_t albedo_texture_index[104];
+
+    float metallic[104];
+    float roughness[104];
+    int32_t metallic_roughness_texture_index[104];
+
+    int32_t normal_texture_index[104];
+};
+
 } // namespace racecar::uniform_buffer

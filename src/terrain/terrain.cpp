@@ -22,8 +22,10 @@ const std::filesystem::path TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH
     = "../assets/terrain/asphalt_albedo_roughness.png";
 const std::filesystem::path TEST_ASPHALT_NORMAL_AO_PATH = "../assets/terrain/asphalt_normal_ao.png";
 
+const std::filesystem::path TERRAIN_NOISE_PAPTH = "../assets/LUT/terrain_noise.jpg";
+
 const float TERRAIN_TILE_WIDTH = 10.0f;
-const size_t TERRAIN_NUM_TILES = 50;
+const size_t TERRAIN_NUM_TILES = 20;
 
 namespace racecar::geometry {
 
@@ -46,7 +48,11 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
             float xpos = float( x ) * TERRAIN_TILE_WIDTH - half_width;
             float zpos = float( z ) * TERRAIN_TILE_WIDTH - half_width;
             terrain.vertices.push_back(
-                { glm::vec3( xpos, offset_y, zpos ), glm::vec3( 0, 1, 0 ) } );
+                { glm::vec3( xpos,
+                      ( x == TERRAIN_NUM_TILES && z == TERRAIN_NUM_TILES ) ? offset_y + 1.0
+                                                                           : offset_y,
+                      zpos ),
+                    glm::vec3( 0, 1, 0 ) } );
         }
     }
 
@@ -73,6 +79,34 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     // Upload to GPU
     geometry::upload_mesh_buffers(
         vulkan, engine, terrain.mesh_buffers, terrain.vertices.data(), terrain.indices.data() );
+
+    for ( size_t z = 0; z < TERRAIN_NUM_TILES; ++z ) {
+        for ( size_t x = 0; x < TERRAIN_NUM_TILES; ++x ) {
+            unsigned int top_left = (unsigned int)( z * ( TERRAIN_NUM_TILES + 1 ) + x );
+            unsigned int top_right = (unsigned int)( top_left + 1 );
+            unsigned int bottom_left = (unsigned int)( ( z + 1 ) * ( TERRAIN_NUM_TILES + 1 ) + x );
+            unsigned int bottom_right = (unsigned int)( bottom_left + 1 );
+
+            terrain.tri_indices.push_back( top_left ); // [0] TL
+            terrain.tri_indices.push_back( bottom_left ); // [2] BL
+            terrain.tri_indices.push_back( top_right ); // [1] TR
+            terrain.tri_indices.push_back( bottom_left ); // [2] BL
+            terrain.tri_indices.push_back( bottom_right ); // [3] BR
+            terrain.tri_indices.push_back( top_right ); // [1] TR
+        }
+    }
+
+    // Create respective mesh buffers using CPU data
+    geometry::create_mesh_buffers( vulkan, terrain.tri_buffers,
+        sizeof( TerrainVertex ) * terrain.vertices.size(),
+        sizeof( int32_t ) * terrain.tri_indices.size() );
+
+    // Upload to GPU
+    geometry::upload_mesh_buffers(
+        vulkan, engine, terrain.tri_buffers, terrain.vertices.data(), terrain.tri_indices.data() );
+
+    log::info(
+        "Terrain: {} verts, {} indices", terrain.vertices.size(), terrain.tri_indices.size() );
 
     // Build descriptors
     terrain.prepass_uniform_desc_set = engine::generate_descriptor_set( vulkan, engine,
@@ -102,6 +136,9 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
 
     terrain.asphalt_normal_ao = engine::load_image(
         TEST_ASPHALT_NORMAL_AO_PATH, vulkan, engine, 4, VK_FORMAT_R16G16B16A16_SFLOAT, true );
+
+    terrain.terrain_noise
+        = engine::load_image( TERRAIN_NOISE_PAPTH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM, true );
 }
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
@@ -174,11 +211,14 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
     terrain.prepass_lut_desc_set = engine::generate_descriptor_set( vulkan, engine,
         {
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Glint noise texture
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Terrain noise texture
         },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.prepass_lut_desc_set, *prepass_info.glint_noise, 0 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.prepass_lut_desc_set, terrain.terrain_noise, 1 );
 
     engine::Pipeline terrain_prepass_pipeline;
     try {
@@ -303,7 +343,8 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     engine::Pipeline cs_terrain_lighting_pipeline = engine::create_compute_pipeline( vulkan,
         { terrain.uniform_desc_set.layouts[0], terrain.texture_desc_set.layouts[0],
             terrain.lut_desc_set.layouts[0], terrain.sampler_desc_set.layouts[0],
-            terrain.accel_structure_desc_set->layouts[0] },
+            terrain.accel_structure_desc_set->layouts[0],
+            terrain.reflection_texture_desc_set->layouts[0] },
         vk::create::shader_module( vulkan, TERRAIN_SHADER_LIGHTING_MODULE_PATH ),
         "cs_terrain_draw" );
 
@@ -316,7 +357,8 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     engine::ComputeTask cs_terrain_draw_task = {
         cs_terrain_lighting_pipeline,
         { &terrain.uniform_desc_set, &terrain.texture_desc_set, &terrain.lut_desc_set,
-            &terrain.sampler_desc_set, terrain.accel_structure_desc_set },
+            &terrain.sampler_desc_set, terrain.accel_structure_desc_set,
+            terrain.reflection_texture_desc_set },
         dispatch_dims,
     };
 

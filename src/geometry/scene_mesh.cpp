@@ -17,7 +17,7 @@ GPUMeshBuffers upload_mesh( vk::Common& vulkan, const engine::State& engine,
         new_mesh_buffers = {
             .index_buffer = vk::mem::create_buffer( vulkan, index_buffer_size,
                 VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
-                    | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+                    | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
                     | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
                 VMA_MEMORY_USAGE_GPU_ONLY ),
             .vertex_buffer = vk::mem::create_buffer( vulkan, vertex_buffer_size,
