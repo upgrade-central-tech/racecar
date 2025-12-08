@@ -18,7 +18,6 @@ static constexpr std::string_view PRESETS_FOLDER_PATH = "../presets";
 
 std::vector<Preset> load_presets()
 {
-
     std::vector<Preset> presets;
 
     log::info( "[preset] Loading presets from: {}", fs::absolute( PRESETS_FOLDER_PATH ).string() );
@@ -61,6 +60,9 @@ Preset parse_preset_json( fs::path json_path )
             std::format( "[preset] \"version\" key must be set to {}!", CURRENT_VERSION ) );
     }
 
+    const json& camera = data["camera"];
+    const json& camera_center = camera["center"];
+
     Preset preset = {
         .version = static_cast<unsigned int>( version ),
         .name = absolute.stem().string(),
@@ -72,6 +74,11 @@ Preset parse_preset_json( fs::path json_path )
         .snow = data["snow"].get<decltype( Preset::snow )>(),
         .scrolling_speed = data["scrollingSpeed"].get<decltype( Preset::scrolling_speed )>(),
         .bumpiness = data["bumpiness"].get<decltype( Preset::bumpiness )>(),
+
+        .camera_center = { camera_center[0], camera_center[1], camera_center[2] },
+        .camera_radius = camera["radius"].get<decltype( Preset::camera_radius )>(),
+        .camera_azimuth = camera["azimuth"].get<decltype( Preset::camera_azimuth )>(),
+        .camera_zenith = camera["zenith"].get<decltype( Preset::camera_zenith )>(),
     };
 
     for ( const auto& material : data["materials"] ) {

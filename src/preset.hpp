@@ -27,6 +27,11 @@ struct Preset {
     };
 
     std::vector<MaterialData> materials;
+
+    glm::vec3 camera_center = {};
+    float camera_radius = 0.f;
+    float camera_azimuth = 0.f;
+    float camera_zenith = 0.f;
 };
 
 std::vector<Preset> load_presets();
