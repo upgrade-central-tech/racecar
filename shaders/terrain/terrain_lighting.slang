@@ -210,6 +210,15 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
         final_color = float3( mixed_roughness );
     }
 
+    float cam_dist = distance( camera_data.camera_pos.xyz, world_position );
+    float atten = clamp( ( cam_dist - 100.0 ) / 200.0, 0.0, 1.0 );
+
+    float3 view_dir = normalize(world_position - camera_data.camera_pos.xyz);
+
+    float3 sky_irr_color = sample_glossy_ibl( 1.0, oct_encode( view_dir));
+
+    final_color = lerp( final_color, float3( 0.75 ) * sky_irr_color, atten );
+
     out_color[pixel] = float4( final_color, 1.f );
 }
 
