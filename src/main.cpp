@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 /// Ideally we pass this in as a flag when running the program.
-static constexpr bool USE_FULLSCREEN = true;
+static constexpr bool USE_FULLSCREEN = false;
 
 int main( int, char*[] )
 {
