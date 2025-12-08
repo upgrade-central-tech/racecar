@@ -124,7 +124,7 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
         ImGui::Text( "Camera: [x=%.1f, y=%.1f, z=%1.f]", cam_pos.x, cam_pos.y, cam_pos.z );
 
         if ( ImGui::BeginTabBar( "Categories" ) ) {
-            if ( ImGui::BeginTabItem( "Material Editor" ) ) {
+            if ( ImGui::BeginTabItem( "Materials" ) ) {
                 gui.debug.load_material_into_gui
                     = ImGui::InputInt( "Editing Material", &gui.debug.current_editing_material );
                 ImGui::ColorEdit4( "Base color", &gui.debug.color[0] );
@@ -182,9 +182,14 @@ void update( Gui& gui, const camera::OrbitCamera& camera, atmosphere::Atmosphere
             }
 
             if ( ImGui::BeginTabItem( "Atmosphere" ) ) {
-                ImGui::Checkbox( "Ping-pong zenith", &gui.atms.animate_zenith );
+                ImGui::SeparatorText( "Animation" );
+                ImGui::Checkbox( "Animate sun movement", &gui.atms.animate_zenith );
+                ImGui::SliderFloat( "Animation speed", &gui.atms.animate_zenith_speed, 0.f, 2.f );
+
+                ImGui::SeparatorText( "Settings" );
+                ImGui::SliderFloat( "Sun zenith", &atms.sun_zenith,
+                    -( glm::half_pi<float>() + 0.1f ), glm::half_pi<float>() + 0.1f );
                 ImGui::SliderFloat( "Sun azimuth", &atms.sun_azimuth, 0.f, glm::two_pi<float>() );
-                ImGui::SliderFloat( "Sun zenith", &atms.sun_zenith, 0.f, glm::pi<float>() );
                 ImGui::SliderFloat( "Radiance exposure", &gui.atms.radiance_exposure, 0.f, 20.f );
 
                 ImGui::EndTabItem();

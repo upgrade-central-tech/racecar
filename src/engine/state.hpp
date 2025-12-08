@@ -8,8 +8,6 @@
 
 #include <SDL3/SDL.h>
 
-#include <chrono>
-
 namespace racecar::engine {
 
 struct FrameData {

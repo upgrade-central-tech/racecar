@@ -1110,9 +1110,9 @@ void run( bool use_fullscreen )
         // Update atmosphere uniform buffer
         {
             if ( gui.atms.animate_zenith ) {
-                float t
-                    = ( std::sin( 0.001f * static_cast<float>( engine.rendered_frames ) ) + 1.f )
-                    * 0.5f;
+                float sin
+                    = std::sin( static_cast<float>( engine.time ) * gui.atms.animate_zenith_speed );
+                float t = ( sin + 1.f ) * 0.5f;
                 atms.sun_zenith = glm::lerp( 0.f, glm::pi<float>(), t );
             }
 
@@ -1349,8 +1349,6 @@ void run( bool use_fullscreen )
         engine.delta = static_cast<double>( duration.count() ) * 0.001;
         engine.time += engine.delta;
         current_tick = new_tick;
-
-        log::info( "time: {}, delta: {}", engine.time, engine.delta );
     }
 
     vkDeviceWaitIdle( ctx.vulkan.device );
