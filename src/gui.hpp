@@ -3,6 +3,8 @@
 #include "atmosphere.hpp"
 #include "context.hpp"
 #include "engine/state.hpp"
+#include "engine/ub_data.hpp"
+#include "engine/uniform_buffer.hpp"
 #include "gui_material.hpp"
 #include "orbit_camera.hpp"
 #include "preset.hpp"
@@ -96,17 +98,26 @@ struct Gui {
     struct PresetData {
         std::vector<Preset> presets = load_presets();
         std::optional<PresetTransition> transition;
+        float transition_duration = 0.2f;
+
+        enum class Easing : int {
+            LINEAR = 0,
+            EASE_OUT_QUINT,
+        } easing = Easing::EASE_OUT_QUINT;
     } preset = {};
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );
-void process_event(
-    Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera );
-void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera );
+void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms,
+    camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers );
+void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers );
 void free();
 
 void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms,
-    camera::OrbitCamera& camera );
+    camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers );
 void reload_presets( gui::Gui& gui );
 
 } // namespace racecar::engine::gui

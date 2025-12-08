@@ -4,35 +4,69 @@
     "sunAzimuth": 2.863,
     "wetness": 0.890,
     "snow": 0.30,
-    "scrollingSpeed": 0.0,
+    "scrollingSpeed": 0.01,
     "bumpiness": 0.0,
     "materials": [
         {
-            "slot": 0,
+            "slot": 18,
             "color": [
-                0.084,
-                0.334,
-                0.858,
+                0.120,
+                0.366,
+                0.0756,
                 1
             ],
-            "roughness": 0.095,
-            "metallic": 0.0,
-            "clearcoatRoughness": 0.851,
-            "clearcoatWeight": 0.266,
-            "glintiness": 0.9,
-            "glintLogDensity": 21.960,
-            "glintRoughness": 0.723,
-            "glintRandomness": 1.53
+            "roughness": 0.076,
+            "metallic": 0.038,
+            "clearcoatRoughness": 0.512,
+            "clearcoatWeight": 0.076,
+            "glintiness": 0.893,
+            "glintLogDensity": 24.500,
+            "glintRoughness": 0.166,
+            "glintRandomness": 0.189
+        },
+        {
+            "slot": 11,
+            "color": [
+                0.000,
+                0.015,
+                0.038,
+                1
+            ],
+            "roughness": 0.006,
+            "metallic": 0.027,
+            "clearcoatRoughness": 0.119,
+            "clearcoatWeight": 0.519,
+            "glintiness": 0.893,
+            "glintLogDensity": 24.500,
+            "glintRoughness": 0.166,
+            "glintRandomness": 0.189
+        },
+        {
+            "slot": 19,
+            "color": [
+                0.120,
+                0.366,
+                0.0756,
+                1
+            ],
+            "roughness": 0.016,
+            "metallic": 0.00,
+            "clearcoatRoughness": 0.975,
+            "clearcoatWeight": 0.323,
+            "glintiness": 0.0,
+            "glintLogDensity": 24.500,
+            "glintRoughness": 0.166,
+            "glintRandomness": 0.189
         }
     ],
     "camera": {
         "center": [
-            1,
-            2,
-            5
+            8.0,
+            3.3,
+            -0.6
         ],
-        "radius": 3,
-        "azimuth": 0.5,
-        "zenith": 1.2
+        "radius": 8.0,
+        "azimuth": 0.0,
+        "zenith": 0.0
     }
 }

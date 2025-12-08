@@ -27,6 +27,11 @@ constexpr std::array AA_OPTIONS = std::to_array<std::string_view>( {
     "TAA",
 } );
 
+constexpr std::array EASING_OPTIONS = std::to_array<std::string_view>( {
+    "Linear",
+    "Ease out quint",
+} );
+
 }
 
 Gui initialize( Context& ctx, const engine::State& engine )
@@ -106,8 +111,9 @@ Gui initialize( Context& ctx, const engine::State& engine )
     return gui;
 }
 
-void process_event(
-    Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera )
+void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms,
+    camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers )
 {
     // We may want to expand this function later. For now, it serves to remove any ImGui header
     // includes in non-GUI related files.
@@ -156,7 +162,7 @@ void process_event(
                 if ( size_t preset_number = preset_number_opt.value();
                     preset_number <= gui.preset.presets.size() ) {
                     const Preset& preset = gui.preset.presets[preset_number - 1];
-                    use_preset( preset, gui, atms, camera );
+                    use_preset( preset, gui, atms, camera, material_buffers );
                 }
             }
         }
@@ -166,7 +172,8 @@ void process_event(
     }
 }
 
-void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera )
+void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers )
 {
     if ( !gui.show_window ) {
         return;
@@ -217,16 +224,36 @@ void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera
             }
 
             if ( ImGui::BeginTabItem( "Presets" ) ) {
-                ImGui::SeparatorText( "Actions" );
                 if ( ImGui::Button( "Reload presets" ) ) {
                     reload_presets( gui );
+                }
+
+                ImGui::SeparatorText( "Transitions" );
+                ImGui::SliderFloat( "Duration", &gui.preset.transition_duration, 0.f, 5.f );
+                size_t selected_index = static_cast<size_t>( gui.preset.easing );
+                std::string_view preview_value = EASING_OPTIONS[selected_index];
+                if ( ImGui::BeginCombo( "Easing", preview_value.data() ) ) {
+                    for ( size_t i = 0; i < EASING_OPTIONS.size(); ++i ) {
+                        bool is_selected = ( selected_index == i );
+
+                        if ( ImGui::Selectable( EASING_OPTIONS[i].data(), is_selected ) ) {
+                            selected_index = i;
+                        }
+
+                        if ( is_selected ) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+
+                    gui.preset.easing = static_cast<Gui::PresetData::Easing>( selected_index );
+                    ImGui::EndCombo();
                 }
 
                 ImGui::SeparatorText( "Loaded presets" );
                 for ( const auto& preset : gui.preset.presets ) {
                     ImGui::PushID( preset.name.c_str() );
                     if ( ImGui::Button( "Use" ) ) {
-                        use_preset( preset, gui, atms, camera );
+                        use_preset( preset, gui, atms, camera, material_buffers );
                     }
                     ImGui::PopID();
 
@@ -376,10 +403,17 @@ void free()
     ImGui::DestroyContext();
 }
 
-void use_preset(
-    const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera )
+void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms,
+    camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers )
 {
-    log::info( "[preset] Using preset \"{}\"", preset.name );
+    if ( gui.preset.transition.has_value() ) {
+        // Can't start another transition when one is currently happening
+        log::warn( "[preset] Currently transitioning!" );
+        return;
+    }
+
+    log::info( "[preset] Transitioning to preset \"{}\"", preset.name );
 
     Preset before = {
         .version = 1,
@@ -399,33 +433,42 @@ void use_preset(
         .camera_zenith = camera.zenith,
     };
 
-    atms.sun_zenith = preset.sun_zenith;
-    atms.sun_azimuth = preset.sun_azimuth;
+    // Only add materials that will be modified by the new preset to the before preset
+    // for transition purposes
+    {
+        std::vector<Preset::MaterialData> before_materials;
 
-    gui.terrain.wetness = preset.wetness;
-    gui.terrain.snow = preset.snow;
-    gui.terrain.scrolling_speed = preset.scrolling_speed;
-    gui.demo.bumpiness = preset.bumpiness;
+        for ( const auto& preset_material : preset.materials ) {
+            size_t material_idx = static_cast<size_t>( preset_material.slot );
+            ub_data::Material material = material_buffers[material_idx].get_data();
 
-    for ( const auto& material : preset.materials ) {
-        gui.debug.current_editing_material = material.slot;
+            Preset::MaterialData before_material = { .slot = preset_material.slot,
+                .data = gui::Material {
+                    .color = material.base_color,
+                    .roughness = material.roughness,
+                    .metallic = material.metallic,
+                    .clearcoat_roughness = material.clearcoat_roughness,
+                    .clearcoat_weight = material.clearcoat,
+                    .glintiness = material.glintiness,
+                    .glint_log_density = material.glint_log_density,
+                    .glint_roughness = material.roughness,
+                    .glint_randomness = material.glint_randomness,
+                } };
 
-        const gui::Material& data = material.data;
-        gui.debug.color = data.color;
-        gui.debug.roughness = data.roughness;
-        gui.debug.metallic = data.metallic;
-        gui.debug.clearcoat_roughness = data.clearcoat_roughness;
-        gui.debug.clearcoat_weight = data.clearcoat_weight;
-        gui.debug.glintiness = data.glintiness;
-        gui.debug.glint_log_density = data.glint_log_density;
-        gui.debug.glint_roughness = data.glint_roughness;
-        gui.debug.glint_randomness = data.glint_randomness;
+            before_materials.push_back( std::move( before_material ) );
+            log::info( "[preset] Transitioning material with ID {}", preset_material.slot );
+        }
+
+        before.materials = std::move( before_materials );
     }
 
-    camera.center = preset.camera_center;
-    camera.radius = preset.camera_radius;
-    camera.azimuth = preset.camera_azimuth;
-    camera.zenith = preset.camera_zenith;
+    // Create transition
+    gui.preset.transition = PresetTransition {
+        .before = std::move( before ),
+        .after = preset,
+        .progress = 0.f,
+        .duration = gui.preset.transition_duration,
+    };
 }
 
 void reload_presets( gui::Gui& gui )

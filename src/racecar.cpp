@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/lamborghini_sesto.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/porsche.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view REFLECTION_PASS_SHADER_MODULE_PATH
@@ -1298,7 +1298,7 @@ void run( bool use_fullscreen )
         current_tick = std::chrono::steady_clock::now();
 
         while ( SDL_PollEvent( &event ) ) {
-            gui::process_event( gui, &event, atms, engine.camera );
+            gui::process_event( gui, &event, atms, engine.camera, material_uniform_buffers );
             camera::process_event( ctx, &event, engine.camera, gui.show_window );
 
             if ( event.type == SDL_EVENT_QUIT ) {
@@ -1312,14 +1312,96 @@ void run( bool use_fullscreen )
             }
         }
 
-        camera::process_input( engine.camera );
-
         // Don't draw if we're minimized
         if ( stop_drawing ) {
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
             continue;
         }
 
+        if ( gui.preset.transition.has_value() ) {
+            PresetTransition& transition = gui.preset.transition.value();
+
+            float t = std::invoke( [&]() -> float {
+                if ( transition.duration == 0.f ) {
+                    // Instantly complete transition if duration is zero
+                    return 1.f;
+                }
+
+                // Have to clamp it because progress might be greater than 1 after
+                // adding the delta time
+                return glm::saturate( transition.progress / transition.duration );
+            } );
+
+            // Initial and final
+            const Preset& i = transition.before;
+            const Preset& f = transition.after;
+
+            {
+                using enum gui::Gui::PresetData::Easing;
+
+                switch ( gui.preset.easing ) {
+                case LINEAR:
+                    break;
+
+                case EASE_OUT_QUINT: {
+                    t = 1.f - std::pow( 1.f - t, 5.f );
+                    break;
+                }
+
+                default:
+                    throw Exception( "[preset] Unhandled easing type" );
+                }
+            }
+
+            atms.sun_zenith = glm::mix( i.sun_zenith, f.sun_zenith, t );
+            atms.sun_azimuth = glm::mix( i.sun_azimuth, f.sun_azimuth, t );
+
+            gui.terrain.wetness = glm::mix( i.wetness, f.wetness, t );
+            gui.terrain.snow = glm::mix( i.snow, f.snow, t );
+            gui.terrain.scrolling_speed = glm::mix( i.scrolling_speed, f.scrolling_speed, t );
+            gui.demo.bumpiness = glm::mix( i.bumpiness, f.bumpiness, t );
+
+            for ( size_t idx = 0; idx < i.materials.size(); ++idx ) {
+                const gui::Material& i_mat = i.materials[idx].data;
+                const gui::Material& f_mat = f.materials[idx].data;
+
+                size_t material_idx = static_cast<size_t>( i.materials[idx].slot );
+                auto mat_data = material_uniform_buffers[material_idx].get_data();
+
+                mat_data.base_color = glm::mix( i_mat.color, f_mat.color, t );
+                mat_data.roughness = glm::mix( i_mat.roughness, f_mat.roughness, t );
+                mat_data.metallic = glm::mix( i_mat.metallic, f_mat.metallic, t );
+                mat_data.clearcoat = glm::mix( i_mat.clearcoat_weight, f_mat.clearcoat_weight, t );
+                mat_data.clearcoat_roughness
+                    = glm::mix( i_mat.clearcoat_roughness, f_mat.clearcoat_roughness, t );
+
+                mat_data.glintiness = glm::mix( i_mat.glintiness, f_mat.glintiness, t );
+                mat_data.glint_log_density
+                    = glm::mix( i_mat.glint_log_density, f_mat.glint_log_density, t );
+                mat_data.glint_roughness
+                    = glm::mix( i_mat.glint_roughness, f_mat.glint_roughness, t );
+                mat_data.glint_randomness
+                    = glm::mix( i_mat.glint_randomness, f_mat.glint_randomness, t );
+
+                material_uniform_buffers[material_idx].set_data( mat_data );
+                material_uniform_buffers[material_idx].update(
+                    ctx.vulkan, engine.get_frame_index() );
+            }
+
+            engine.camera.center = glm::mix( i.camera_center, f.camera_center, t );
+            engine.camera.radius = glm::mix( i.camera_radius, f.camera_radius, t );
+            engine.camera.azimuth = glm::mix( i.camera_azimuth, f.camera_azimuth, t );
+            engine.camera.zenith = glm::mix( i.camera_zenith, f.camera_zenith, t );
+
+            transition.progress += static_cast<float>( engine.delta );
+
+            if ( transition.progress >= 1.f ) {
+                // Finished the transition to the current preset
+                gui.preset.transition = std::nullopt;
+            }
+        }
+
+        camera::process_input( engine.camera );
         camera::OrbitCamera& camera = engine.camera;
 
         if ( scene.demo_scene_nodes.car_parent_id.has_value()
@@ -1553,7 +1635,6 @@ void run( bool use_fullscreen )
             glm::vec3 velocity = {};
 
             if ( gui.demo.enable_translation ) {
-
                 velocity = glm::vec3(
                     0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 1000.0 ), 0,
                     0.025 );
@@ -1614,7 +1695,7 @@ void run( bool use_fullscreen )
             bloom_pass.bloom_ub.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        gui::update( gui, atms, camera );
+        gui::update( gui, atms, camera, material_uniform_buffers );
 
         engine::execute( engine, ctx, task_list, gui );
         engine.rendered_frames = engine.rendered_frames + 1;

@@ -4,7 +4,7 @@
     "sunAzimuth": 2.863,
     "wetness": 0.890,
     "snow": 0.30,
-    "scrollingSpeed": 0.0,
+    "scrollingSpeed": 0.01,
     "bumpiness": 0.0,
     "materials": [
         {
@@ -27,12 +27,12 @@
     ],
     "camera": {
         "center": [
-            1,
-            2,
-            5
+            2.9,
+            2.0,
+            -0.0
         ],
-        "radius": 3,
-        "azimuth": 0.5,
-        "zenith": 1.2
+        "radius": 8.0,
+        "azimuth": 0.0,
+        "zenith": 0.0
     }
 }
