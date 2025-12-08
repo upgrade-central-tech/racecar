@@ -24,8 +24,8 @@ struct Atmosphere {
     engine::DescriptorSet lut_desc_set;
     engine::DescriptorSet sampler_desc_set;
 
-    float sun_azimuth = 0.f; ///< Stored in radians. Bound between [0, 2π].
-    float sun_zenith = 0.f; ///< Stored in radians. Bound between [0, π].
+    float sun_zenith = 0.f; ///< Stored in radians. Bound between [-π/2, π/2].
+    float sun_azimuth = 0.f; ///< Stored in radians. Roughly clamped between [0, 2π].
 };
 
 Atmosphere initialize( vk::Common& vulkan, engine::State& engine );

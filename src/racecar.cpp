@@ -51,7 +51,7 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view GLTF_FILE_PATH = "../assets/smoother_suzanne.glb";
+constexpr std::string_view GLTF_FILE_PATH = "../assets/mclaren.glb";
 constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv";
 constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferred/lighting.spv";
 constexpr std::string_view REFLECTION_PASS_SHADER_MODULE_PATH
@@ -62,6 +62,18 @@ constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
     = "../shaders/deferred/depth_prepass.spv";
 
 }
+
+std::unordered_map<std::string, std::array<glm::vec2, 2>> wheel_centers
+    = { { "../assets/bugatti.glb",
+            { glm::vec2( -0.911506, -2.79548 ), glm::vec2( -0.941506, 4.90197 ) } },
+          { "../assets/mclaren.glb",
+              { glm::vec2( -0.452689, -1.66372 ), glm::vec2( -0.452689, 2.13727 ) } },
+          { "../assets/porsche.glb",
+              { glm::vec2( -1.06206, 1.07582 ), glm::vec2( -1.06206, -3.63708 ) } },
+          { "../assets/ferrari.glb",
+              { glm::vec2( -0.358881, -1.47297 ), glm::vec2( -0.358822, 2.10473 ) } },
+          { "../assets/lamborghini_sesto.glb",
+              { glm::vec2( -0.309112, -1.28 ), glm::vec2( -0.317127, 1.27501 ) } } };
 
 void run( bool use_fullscreen )
 {
@@ -1280,7 +1292,11 @@ void run( bool use_fullscreen )
     bool stop_drawing = false;
     SDL_Event event = {};
 
+    std::chrono::steady_clock::time_point current_tick;
+
     while ( !will_quit ) {
+        current_tick = std::chrono::steady_clock::now();
+
         while ( SDL_PollEvent( &event ) ) {
             gui::process_event( &event );
             camera::process_event( ctx, &event, engine.camera, gui.show_window );
@@ -1331,9 +1347,9 @@ void run( bool use_fullscreen )
         // Update atmosphere uniform buffer
         {
             if ( gui.atms.animate_zenith ) {
-                float t
-                    = ( std::sin( 0.001f * static_cast<float>( engine.rendered_frames ) ) + 1.f )
-                    * 0.5f;
+                float sin
+                    = std::sin( static_cast<float>( engine.time ) * gui.atms.animate_zenith_speed );
+                float t = ( sin + 1.f ) * 0.5f;
                 atms.sun_zenith = glm::lerp( 0.f, glm::pi<float>(), t );
             }
 
@@ -1447,7 +1463,8 @@ void run( bool use_fullscreen )
         {
             ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
 
-            ub_data::Debug debug_ub = { .color = gui.debug.color,
+            ub_data::Debug debug_ub = {
+                .color = gui.debug.color,
                 .packed_data0 = glm::vec4( gui.debug.roughness, gui.debug.metallic,
                     gui.debug.clearcoat_roughness, gui.debug.clearcoat_weight ),
                 .sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f ),
@@ -1459,7 +1476,8 @@ void run( bool use_fullscreen )
                 .albedo_only = gui.debug.albedo_only,
                 .roughness_metal_only = gui.debug.roughness_metal_only,
 
-                .ray_traced_shadows = gui.debug.ray_traced_shadows };
+                .ray_traced_shadows = gui.debug.ray_traced_shadows,
+            };
 
             debug_buffer.set_data( debug_ub );
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
@@ -1500,6 +1518,7 @@ void run( bool use_fullscreen )
             rt_texture_uniform_data.update( ctx.vulkan, engine.get_frame_index() );
         }
 
+        std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
         // Update terrain
         {
             ub_data::TerrainData terrain_ub = test_terrain.terrain_uniform.get_data();
@@ -1542,10 +1561,45 @@ void run( bool use_fullscreen )
 
             glm::mat4 transform = glm::translate( glm::identity<glm::mat4>(), velocity );
 
-            std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
+            if ( gui.demo.enable_translation ) {
+                scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
+                    scene.demo_scene_nodes.car_parent_id.value(), transform, discovered );
+            }
+        }
 
-            scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
-                scene.demo_scene_nodes.car_parent_id.value(), transform, discovered );
+        // wheel rotation
+        {
+            // front wheels
+            glm::vec3 pivot = -glm::vec3( 0.0f, wheel_centers[std::string( GLTF_FILE_PATH )][0] );
+            float angle = gui.terrain.scrolling_speed * 12;
+
+            glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
+            model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
+            model = glm::translate( model, -pivot );
+
+            if ( scene.demo_scene_nodes.wheel_front_left_id.has_value() ) {
+                scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
+                    scene.demo_scene_nodes.wheel_front_left_id.value(), model, discovered );
+            }
+            if ( scene.demo_scene_nodes.wheel_front_right_id.has_value() ) {
+                scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
+                    scene.demo_scene_nodes.wheel_front_right_id.value(), model, discovered );
+            }
+            // back wheels
+            pivot = -glm::vec3( 0.0f, wheel_centers[std::string( GLTF_FILE_PATH )][1] );
+
+            model = glm::translate( glm::identity<glm::mat4>(), pivot );
+            model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
+            model = glm::translate( model, -pivot );
+
+            if ( scene.demo_scene_nodes.wheel_back_left_id.has_value() ) {
+                scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
+                    scene.demo_scene_nodes.wheel_back_left_id.value(), model, discovered );
+            }
+            if ( scene.demo_scene_nodes.wheel_back_right_id.has_value() ) {
+                scene::propagate_transform( ctx.vulkan, engine, scene, model_mat_uniform_buffers,
+                    scene.demo_scene_nodes.wheel_back_right_id.value(), model, discovered );
+            }
         }
 
         // Update bloom settings
@@ -1568,6 +1622,15 @@ void run( bool use_fullscreen )
 
         // Make new screen visible
         SDL_UpdateWindowSurface( ctx.window );
+
+        auto new_tick = std::chrono::steady_clock::now();
+        auto duration
+            = std::chrono::duration_cast<std::chrono::milliseconds>( new_tick - current_tick );
+
+        // Convert milliseconds to seconds
+        engine.delta = static_cast<double>( duration.count() ) * 0.001;
+        engine.time += engine.delta;
+        current_tick = new_tick;
     }
 
     vkDeviceWaitIdle( ctx.vulkan.device );
