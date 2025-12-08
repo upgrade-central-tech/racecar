@@ -8,6 +8,8 @@
 
 #include <SDL3/SDL.h>
 
+#include <chrono>
+
 namespace racecar::engine {
 
 struct FrameData {
@@ -52,6 +54,9 @@ struct State {
 
     std::vector<vk::rt::AccelerationStructure> blas;
     vk::rt::AccelerationStructure tlas;
+
+    std::chrono::steady_clock::time_point current_tick; ///< A steadily increasing tick number.
+    double delta = 0.f; ///< Expressed in seconds.
 };
 
 State initialize( Context& ctx );

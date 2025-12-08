@@ -1061,6 +1061,8 @@ void run( bool use_fullscreen )
     SDL_Event event = {};
 
     while ( !will_quit ) {
+        engine.current_tick = std::chrono::steady_clock::now();
+
         while ( SDL_PollEvent( &event ) ) {
             gui::process_event( &event );
             camera::process_event( ctx, &event, engine.camera, gui.show_window );
@@ -1334,6 +1336,15 @@ void run( bool use_fullscreen )
 
         // Make new screen visible
         SDL_UpdateWindowSurface( ctx.window );
+
+        auto new_tick = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            new_tick - engine.current_tick )
+                            .count();
+
+        // Convert milliseconds to seconds
+        engine.delta = static_cast<double>( duration ) * 0.001;
+        engine.current_tick = new_tick;
     }
 
     vkDeviceWaitIdle( ctx.vulkan.device );
