@@ -98,7 +98,7 @@ struct Gui {
     struct PresetData {
         std::vector<Preset> presets = load_presets();
         std::optional<PresetTransition> transition;
-        float transition_duration = 1.f;
+        float transition_duration = 0.2f;
     } preset = {};
 };
 

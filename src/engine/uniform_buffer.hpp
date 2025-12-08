@@ -39,7 +39,7 @@ template <typename T> struct UniformBuffer : IUniformBuffer {
         dirty = false;
     }
 
-    T get_data() { return data_; }
+    T get_data() const { return data_; }
 
     void set_data( T t )
     {
