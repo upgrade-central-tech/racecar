@@ -1060,8 +1060,10 @@ void run( bool use_fullscreen )
     bool stop_drawing = false;
     SDL_Event event = {};
 
+    std::chrono::steady_clock::time_point current_tick;
+
     while ( !will_quit ) {
-        engine.current_tick = std::chrono::steady_clock::now();
+        current_tick = std::chrono::steady_clock::now();
 
         while ( SDL_PollEvent( &event ) ) {
             gui::process_event( &event );
@@ -1224,7 +1226,8 @@ void run( bool use_fullscreen )
         {
             ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
 
-            ub_data::Debug debug_ub = { .color = gui.debug.color,
+            ub_data::Debug debug_ub = {
+                .color = gui.debug.color,
                 .packed_data0 = glm::vec4( gui.debug.roughness, gui.debug.metallic,
                     gui.debug.clearcoat_roughness, gui.debug.clearcoat_weight ),
                 .sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f ),
@@ -1236,7 +1239,8 @@ void run( bool use_fullscreen )
                 .albedo_only = gui.debug.albedo_only,
                 .roughness_metal_only = gui.debug.roughness_metal_only,
 
-                .ray_traced_shadows = gui.debug.ray_traced_shadows };
+                .ray_traced_shadows = gui.debug.ray_traced_shadows,
+            };
 
             debug_buffer.set_data( debug_ub );
             debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
@@ -1338,13 +1342,15 @@ void run( bool use_fullscreen )
         SDL_UpdateWindowSurface( ctx.window );
 
         auto new_tick = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-            new_tick - engine.current_tick )
-                            .count();
+        auto duration
+            = std::chrono::duration_cast<std::chrono::milliseconds>( new_tick - current_tick );
 
         // Convert milliseconds to seconds
-        engine.delta = static_cast<double>( duration ) * 0.001;
-        engine.current_tick = new_tick;
+        engine.delta = static_cast<double>( duration.count() ) * 0.001;
+        engine.time += engine.delta;
+        current_tick = new_tick;
+
+        log::info( "time: {}, delta: {}", engine.time, engine.delta );
     }
 
     vkDeviceWaitIdle( ctx.vulkan.device );

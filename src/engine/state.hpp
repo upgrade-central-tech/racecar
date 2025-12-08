@@ -55,7 +55,7 @@ struct State {
     std::vector<vk::rt::AccelerationStructure> blas;
     vk::rt::AccelerationStructure tlas;
 
-    std::chrono::steady_clock::time_point current_tick; ///< A steadily increasing tick number.
+    double time = 0.f; ///< Expressed in seconds.
     double delta = 0.f; ///< Expressed in seconds.
 };
 
