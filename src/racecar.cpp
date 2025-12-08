@@ -1298,7 +1298,7 @@ void run( bool use_fullscreen )
         current_tick = std::chrono::steady_clock::now();
 
         while ( SDL_PollEvent( &event ) ) {
-            gui::process_event( gui, &event, atms, engine.camera );
+            gui::process_event( gui, &event, atms, engine.camera, material_uniform_buffers );
             camera::process_event( ctx, &event, engine.camera, gui.show_window );
 
             if ( event.type == SDL_EVENT_QUIT ) {
@@ -1312,14 +1312,67 @@ void run( bool use_fullscreen )
             }
         }
 
-        camera::process_input( engine.camera );
-
         // Don't draw if we're minimized
         if ( stop_drawing ) {
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
             continue;
         }
 
+        if ( gui.preset.transition.has_value() ) {
+            PresetTransition& transition = gui.preset.transition.value();
+
+            float t = std::invoke( [&]() -> float {
+                if ( transition.duration == 0.f ) {
+                    // Instantly complete transition if duration is zero
+                    return 1.f;
+                }
+
+                // Have to clamp it because progress might be greater than 1 after
+                // adding the delta time
+                return glm::saturate( transition.progress / transition.duration );
+            } );
+
+            // Initial and final
+            const Preset& i = transition.before;
+            const Preset& f = transition.after;
+
+            atms.sun_zenith = glm::mix( i.sun_zenith, f.sun_zenith, t );
+            atms.sun_azimuth = glm::mix( i.sun_azimuth, f.sun_azimuth, t );
+
+            gui.terrain.wetness = glm::mix( i.wetness, f.wetness, t );
+            gui.terrain.snow = glm::mix( i.snow, f.snow, t );
+            gui.terrain.scrolling_speed = glm::mix( i.scrolling_speed, f.scrolling_speed, t );
+            gui.demo.bumpiness = glm::mix( i.bumpiness, f.bumpiness, t );
+
+            // for ( const auto& material : preset.materials ) {
+            //     gui.debug.current_editing_material = material.slot;
+
+            //     const gui::Material& data = material.data;
+            //     gui.debug.color = data.color;
+            //     gui.debug.roughness = data.roughness;
+            //     gui.debug.metallic = data.metallic;
+            //     gui.debug.clearcoat_roughness = data.clearcoat_roughness;
+            //     gui.debug.clearcoat_weight = data.clearcoat_weight;
+            //     gui.debug.glintiness = data.glintiness;
+            //     gui.debug.glint_log_density = data.glint_log_density;
+            //     gui.debug.glint_roughness = data.glint_roughness;
+            //     gui.debug.glint_randomness = data.glint_randomness;
+            // }
+
+            engine.camera.center = glm::mix( i.camera_center, f.camera_center, t );
+            engine.camera.radius = glm::mix( i.camera_radius, f.camera_radius, t );
+            engine.camera.azimuth = glm::mix( i.camera_azimuth, f.camera_azimuth, t );
+            engine.camera.zenith = glm::mix( i.camera_zenith, f.camera_zenith, t );
+
+            transition.progress += static_cast<float>( engine.delta );
+
+            if ( transition.progress >= 1.f ) {
+                // Finished the transition to the current preset
+                gui.preset.transition = std::nullopt;
+            }
+        }
+
+        camera::process_input( engine.camera );
         camera::OrbitCamera& camera = engine.camera;
 
         if ( scene.demo_scene_nodes.car_parent_id.has_value()
@@ -1553,7 +1606,6 @@ void run( bool use_fullscreen )
             glm::vec3 velocity = {};
 
             if ( gui.demo.enable_translation ) {
-
                 velocity = glm::vec3(
                     0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 1000.0 ), 0,
                     0.025 );
@@ -1614,7 +1666,7 @@ void run( bool use_fullscreen )
             bloom_pass.bloom_ub.update( ctx.vulkan, engine.get_frame_index() );
         }
 
-        gui::update( gui, atms, camera );
+        gui::update( gui, atms, camera, material_uniform_buffers );
 
         engine::execute( engine, ctx, task_list, gui );
         engine.rendered_frames = engine.rendered_frames + 1;
