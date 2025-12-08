@@ -66,7 +66,6 @@ struct Terrain {
     engine::GfxTask terrain_prepass_task;
 
     UniformBuffer<ub_data::TerrainData> terrain_uniform;
-    
     vk::rt::AccelerationStructure blas;
     vk::rt::AccelerationStructure tlas;
 
@@ -77,6 +76,8 @@ struct Terrain {
     vk::mem::AllocatedImage grass_normal_ao;
     vk::mem::AllocatedImage asphalt_albedo_roughness;
     vk::mem::AllocatedImage asphalt_normal_ao;
+
+    vk::mem::AllocatedImage terrain_noise;
 
     VkVertexInputBindingDescription vertex_binding_description = {
         .binding = vk::binding::VERTEX_BUFFER,

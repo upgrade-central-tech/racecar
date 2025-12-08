@@ -22,6 +22,8 @@ const std::filesystem::path TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH
     = "../assets/terrain/asphalt_albedo_roughness.png";
 const std::filesystem::path TEST_ASPHALT_NORMAL_AO_PATH = "../assets/terrain/asphalt_normal_ao.png";
 
+const std::filesystem::path TERRAIN_NOISE_PAPTH = "../assets/LUT/terrain_noise.jpg";
+
 const float TERRAIN_TILE_WIDTH = 10.0f;
 const size_t TERRAIN_NUM_TILES = 20;
 
@@ -134,6 +136,9 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
 
     terrain.asphalt_normal_ao = engine::load_image(
         TEST_ASPHALT_NORMAL_AO_PATH, vulkan, engine, 4, VK_FORMAT_R16G16B16A16_SFLOAT, true );
+
+    terrain.terrain_noise
+        = engine::load_image( TERRAIN_NOISE_PAPTH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM, true );
 }
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
@@ -206,11 +211,14 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
     terrain.prepass_lut_desc_set = engine::generate_descriptor_set( vulkan, engine,
         {
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Glint noise texture
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Terrain noise texture
         },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.prepass_lut_desc_set, *prepass_info.glint_noise, 0 );
+    engine::update_descriptor_set_image(
+        vulkan, engine, terrain.prepass_lut_desc_set, terrain.terrain_noise, 1 );
 
     engine::Pipeline terrain_prepass_pipeline;
     try {

@@ -52,6 +52,7 @@ layout( binding = 0, set = 2 ) SamplerState linear_sampler;
 
 // LUT descs
 layout( binding = 0, set = 3 ) Texture2D<float4> glint_noise;
+layout( binding = 1, set = 3 ) Texture2D<float> terrain_noise;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -212,10 +213,10 @@ FragmentOutput fs_main( DomainOutput in )
     float world_scale = 0.05f;
 
     // Modify the "UV world position"
-    float2 world_position_uv = world_position.xz + uv_scrolling_offset;
+    float2 world_position_uv = world_position.xz;
     float3 world_position_uvw = float3( world_position_uv.x, 0.0f, world_position_uv.y );
 
-    float2 uv = frac( ( distortion_offset + float2( world_position.x - 18.0f, world_position.y ) )
+    float2 uv = ( ( distortion_offset + float2( world_position.x + 22, world_position.y + 60 ) )
             * layer_map_scale
         + uv_scrolling_offset );
     float2 world_uv_unwrapped = (world_position_uv)*world_scale + uv_scrolling_offset;
@@ -223,16 +224,24 @@ FragmentOutput fs_main( DomainOutput in )
 
     // snow + glint evaluation
     float snowness = terrain_data.terrain_data0.z; // terrain_data.snow;
-    float snow_map = perlin_noise3D( 0.075f * world_position_uvw + 0.23f ) + 0.50f;
+    float snow_map = perlin_noise3D( 0.075f * world_position_uvw + 0.23f
+                         + float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) )
+        + 0.50f;
     snow_map = lerp( clamp_range( snow_map, 0.50f, 0.80f ), 1.0f, snowness );
 
     // Distribute the wetness around da world...
     float puddle_scale = 0.5f;
-    float small_puddle_map = perlin_noise3D( puddle_scale * world_position
-                                 + float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) )
+    float puddle_speed = 13.333f;
+
+    float small_puddle_map
+        = perlin_noise3D( puddle_scale
+              * ( world_position_uvw
+                  + puddle_speed * float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) ) )
         + 0.25f;
-    float big_puddle_map = perlin_noise3D( 0.125f * puddle_scale * world_position
-                               + float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) )
+    float big_puddle_map
+        = perlin_noise3D( 0.125f * puddle_scale
+              * ( world_position_uvw
+                  + puddle_speed * float3( uv_scrolling_offset.x, 0.0f, uv_scrolling_offset.y ) ) )
         + 0.50f;
 
     float wetness = clamp_range( big_puddle_map, 0.35f, 0.75f )
@@ -329,9 +338,10 @@ FragmentOutput fs_main( DomainOutput in )
         float maxNDF = 10000.0f;
         float targetNDF = density;
         density = lerp( density,
-            SampleGlints2023NDF( local_half, targetNDF, maxNDF, world_uv_unwrapped, duvdx, duvdy,
-                glint_log_density, glint_roughness, glint_randomness )
-                .x,
+            2.0f
+                * SampleGlints2023NDF( local_half, targetNDF, maxNDF, world_uv_unwrapped, duvdx,
+                    duvdy, glint_log_density, glint_roughness, glint_randomness )
+                    .x,
             snow_lerp );
     }
 
