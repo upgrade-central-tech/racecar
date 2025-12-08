@@ -9,11 +9,11 @@ Team 6
 
 RACECAR is a Vulkan renderer written in C++. It's inspired by racing games like the _Forza_ and _Gran Turismo_ series. We aim to implement state-of-the-art material, environment, and sky rendering based on recent papers and graphics techniques.
 
-<img width="1894" alt="image" src="images/" />
+<img width="1894" alt="image" src="images/mclaren.png" />
 
 ## Material Rendering
 
-![](images/materials2.png)
+![](images/test_screenshot.png)
 
 Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. Skies, irradiance, and rough glossy mips are encoded as an octahedral map for reflections.
 
@@ -85,11 +85,9 @@ A bloom post-processing pass is added to the final scene color. Our implementati
 
 These steps can also be seen in the screenshots below.
 
-|![](images/bloom_1.png)|![](images/bloom_2.png)|
+|![](images/bloom_none.png)|![](images/bloom_p1.png)|
 |:-:|:-:|
-|Original final color|Filter out color via luminance threshold|
-|![](images/bloom_3.png)|![](images/bloom_4.png)|
-|5-step blur pass|Additive blending|
+|No bloom| With bloom|
 
 Performance is currently 0.4 ms on a RTX 5060 Ti, and 1.3 ms on a RTX 4070 Laptop GPU.
 
