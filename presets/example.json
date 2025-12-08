@@ -5,7 +5,7 @@
     "wetness": 0.5,
     "snow": 0.5,
     "scrollingSpeed": 0.5,
-    "bumpiness": 0.5,
+    "bumpiness": 0.0,
     "materials": [
         {
             "slot": 2,
