@@ -79,6 +79,10 @@ Preset parse_preset_json( fs::path json_path )
         .camera_radius = camera["radius"].get<decltype( Preset::camera_radius )>(),
         .camera_azimuth = camera["azimuth"].get<decltype( Preset::camera_azimuth )>(),
         .camera_zenith = camera["zenith"].get<decltype( Preset::camera_zenith )>(),
+
+        .duration_opt = data.contains( "duration" )
+            ? std::make_optional( data["duration"].get<float>() )
+            : std::nullopt,
     };
 
     for ( const auto& material : data["materials"] ) {

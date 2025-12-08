@@ -498,7 +498,7 @@ void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& at
         .before = std::move( before ),
         .after = preset,
         .progress = 0.f,
-        .duration = gui.preset.transition_duration,
+        .duration = preset.duration_opt.value_or( gui.preset.transition_duration ),
     };
 }
 

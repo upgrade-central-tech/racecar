@@ -3,6 +3,7 @@
 #include "gui_material.hpp"
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,8 @@ struct Preset {
     float camera_radius = 0.f;
     float camera_azimuth = 0.f;
     float camera_zenith = 0.f;
+
+    std::optional<float> duration_opt;
 };
 
 struct PresetTransition {
