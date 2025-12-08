@@ -19,6 +19,10 @@ struct DescriptorSet {
 DescriptorSet generate_descriptor_set( vk::Common& vulkan, const engine::State& engine,
     const std::vector<VkDescriptorType>& types, VkShaderStageFlags shader_stage_flags );
 
+DescriptorSet generate_array_descriptor_set( vk::Common& vulkan, const engine::State& engine,
+    const std::vector<VkDescriptorType>& types, VkShaderStageFlags shader_stage_flags, uint32_t count );
+
+
 template <typename UBData>
 void update_descriptor_set_uniform( vk::Common& vulkan, const State& engine,
     DescriptorSet& desc_set, UniformBuffer<UBData> uniform_buffer, int binding_idx )
@@ -45,8 +49,14 @@ void update_descriptor_set_uniform( vk::Common& vulkan, const State& engine,
     }
 }
 
+void update_descriptor_set_const_storage_buffer( vk::Common& vulkan, const State& engine,
+    DescriptorSet& desc_set, vk::mem::AllocatedBuffer storage_buffer, int binding_idx );
+
 void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     vk::mem::AllocatedImage img, int binding_idx );
+
+void update_descriptor_set_image_array( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
+    std::vector<vk::mem::AllocatedImage> imgs, int binding_idx );
 
 void update_descriptor_set_depth_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
     RWImage depth_img, int binding_idx );

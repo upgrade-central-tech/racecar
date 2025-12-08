@@ -23,6 +23,8 @@ layout( binding = 0, set = 3 ) SamplerState sampler;
 
 layout( binding = 0, set = 4 ) RaytracingAccelerationStructure sceneBVH;
 
+layout( binding = 0, set = 5 ) Texture2D<float4> ReflectionData;
+
 // Misc.
 float3 direct_lighting(
     float3 albedo, float3 normal, float3 light, float NDF, float roughness, float ao, float3 view )
@@ -137,6 +139,8 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     float4 packed_gbuffer_data = gbuffer_packed_data[pixel];
 
+    float4 refl = ReflectionData[pixel].rgba;
+
     // Misc. vectors
     float3 view = normalize( camera_data.camera_pos.rgb - world_position );
 
@@ -165,6 +169,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     float specular_strength = 0.75f;
     float3 specular_irradiance = sample_glossy_ibl( mixed_roughness, oct_refl_uv );
+    specular_irradiance = lerp( specular_irradiance, 2.0f * refl.rgb, refl.a );
 
     float metallic = 0.0f;
     float n_dot_v = max( dot( mixed_normal, view ), 0.0f );

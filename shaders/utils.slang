@@ -9,7 +9,7 @@ public static const float PI = 3.14159265358979323846f;
 // BSDF Stuff
 //=======================================================================================
 
-//
+// why is this in utils
 struct GBuffer {
     float3 in_pos;
     float3 in_nor;

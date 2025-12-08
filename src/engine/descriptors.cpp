@@ -7,12 +7,16 @@ namespace racecar::engine {
 void create_descriptor_system(
     vk::Common& vulkan, uint32_t frame_overlap, DescriptorSystem& descriptor_system )
 {
-    std::vector<DescriptorAllocator::PoolSizeRatio> pool_sizes
-        = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 }, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4 },
-              { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4 }, { VK_DESCRIPTOR_TYPE_SAMPLER, 4 },
-              { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 3 } };
+    std::vector<DescriptorAllocator::PoolSizeRatio> pool_sizes = {
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4 },
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 4 },
+        { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 3 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 },
+    };
 
-    descriptor_allocator::init_pool( vulkan, descriptor_system.global_allocator, 50, pool_sizes );
+    descriptor_allocator::init_pool( vulkan, descriptor_system.global_allocator, 200, pool_sizes );
 
     descriptor_system.frame_allocators = std::vector<DescriptorAllocator>( frame_overlap );
 
@@ -34,6 +38,19 @@ void add_binding(
         .binding = binding,
         .descriptorType = type,
         .descriptorCount = 1,
+    };
+
+    ds_layout_builder.bindings.push_back( std::move( new_binding ) );
+}
+
+void add_array_binding( DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding,
+    VkDescriptorType type, uint32_t count )
+{
+    // Stage flags are not set here, will be later in descriptor_layout_builder::build
+    VkDescriptorSetLayoutBinding new_binding = {
+        .binding = binding,
+        .descriptorType = type,
+        .descriptorCount = count,
     };
 
     ds_layout_builder.bindings.push_back( std::move( new_binding ) );

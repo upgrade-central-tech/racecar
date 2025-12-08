@@ -53,6 +53,10 @@ namespace descriptor_layout_builder {
 void add_binding(
     DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding, VkDescriptorType type );
 
+void add_array_binding(
+    DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding, VkDescriptorType type, uint32_t count );
+
+
 void clear( DescriptorLayoutBuilder& ds_layout_builder );
 
 VkDescriptorSetLayout build( vk::Common& vulkan, VkShaderStageFlags shader_stage_flags,

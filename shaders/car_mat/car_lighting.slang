@@ -1,8 +1,6 @@
 // module car_lighting;
 
 #include "../utils.slang"
-#include "../sh_utils.slang"
-#include "../glint/glint.hlsl"
 
 #define USE_GLINTS 1
 #define USE_SH_IRRADIANCE 0
@@ -20,7 +18,7 @@ float3 sample_glossy_ibl( float roughness, float2 direction )
 }
 
 float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 light, Material pbr,
-    GBuffer g_buffer, float sun_V )
+    GBuffer g_buffer, float sun_V, float4 refl )
 {
     // Essential dot products
     float n_dot_v = ( dot( normal, view ) );
@@ -56,6 +54,9 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float2 encoded_direction = oct_encode( reflect( -view, normal ) );
     float3 precomputed_lo_specular = sample_glossy_ibl( roughness, encoded_direction );
 
+    // reflection value
+    precomputed_lo_specular = lerp( precomputed_lo_specular, refl.rgb, refl.a );
+
     float3 F0 = float3( 0.04f );
     F0 = lerp( F0, base_albedo, pbr.metallic );
     float3 F_indirect = FresnelSchlickRoughness( clamped_n_dot_v, F0, pbr.roughness );
@@ -79,6 +80,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
 #endif
 
     float3 glint_specular = ( NDF * G * F ) / ( 4.0f * clamped_n_dot_v * clamped_n_dot_l + 0.001f );
+
+    // return float3( clamped_n_dot_h );
 
     // Clearcoat evaluation
     // float alpha_cc = clearcoat_roughness * clearcoat_roughness;
