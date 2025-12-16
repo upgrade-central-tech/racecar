@@ -80,6 +80,8 @@ Using hardware raytracing, we also support pure specular reflections to simulate
   <tr>
     <td><img src="images/porsche_photos/p1.png"></td>
     <td><img src="images/porsche_photos/p2.png"></td>
+  </tr>
+  <tr>
     <td><img src="images/porsche_photos/p3.png"></td>
     <td><img src="images/porsche_photos/p4.png"></td>
   </tr>
