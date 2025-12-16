@@ -9,22 +9,17 @@ Team 6
 
 RACECAR is a Vulkan renderer written in C++. It's inspired by racing games like the _Forza_ and _Gran Turismo_ series. We aim to implement state-of-the-art material, environment, and sky rendering based on recent papers and graphics techniques.
 
-<img width="1894" alt="image" src="images/mclaren.png" />
+!["f1 car image"](images/f1.png)
 
-## Material Rendering
+Our project tackled four feature points:
+- Physically-based atmospheric skies
+- Raytraced + IBL reflections + shadowing
+- Specialized car material rendering
+- Camera-based post-processing
 
-![](images/test_screenshot.png)
+## Atmospheric Rendering
 
-Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. Skies, irradiance, and rough glossy mips are encoded as an octahedral map for reflections.
-
-### Glints
-
-<img src="images/spinning_glinty_monkey.gif" width="500px"></img>
-
-Anisotropic pixel-footprint glints using Deliot's 2023 method, used to replace the NDF for direct lighting evaluation.
-
-## Sky and atmosphere
-
+### Skies
 Our sky is based on the [2017 implementation](https://ebruneton.github.io/precomputed_atmospheric_scattering) of [Eric Bruneton's 2008 paper](https://inria.hal.science/inria-00288758/en) on precomputed atmospheric scattering. In essence, by solving for Earth's atmospheric parameters, we can precompute the irradiance, transmittance, and scattering coefficients and store the data in a binary format. This data is then loaded as 2D/3D textures at runtime, and we then perform texture look-ups to resolve the sky color for a given viewing angle.
 
 The precomputation step is what allows for real-time rendering of the sky. We measured rendering to take ~0.3 ms on a RTX 4070 Laptop GPU.
@@ -45,7 +40,28 @@ The sample code in the 2017 codebase could not be used directly for a number of 
   - Also interferes with our sky-to-cubemap conversion, which is used for IBL
 - Removed hardcoded shadows and lightshafts
 
-## Raytracing
+### Volumetric clouds
+The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC. It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts. 
+
+Clouds are rendered at half-resolution for better performance and with minimal visual impact.
+
+<table>
+  <tr>
+    <td><img src="images/clouds/cumulus.png"></td>
+    <td><img src="images/clouds/high_freq.png"></td>
+    <td><img src="images/clouds/low_freq.png"></td>
+  </tr>
+  <tr>
+    <th>Cumulus map</th>
+    <th>With low frequency noise</th>
+    <th>With low + high frequency noise</th>
+  </tr>
+</table>
+
+## Raytraced + IBL Reflections and Shadowing
+
+
+### Raytracing
 Our renderer features fully raytraced shadows, enabling self-shadowing and realistic lighting.
 
 ### Shadows
@@ -58,15 +74,30 @@ Using hardware raytracing, we also support pure specular reflections to simulate
 
 ![](images/rt_refl.png)
 
-## Clouds
+## Material Rendering
 
-The renderer features raymarched clouds based on Gran Turismo’s 2023 sky rendering talk at GDC. It uses 3 layers of noises at different scales - cached into small textures. We account for Beer’s Law and Two Term Henyey-Greenstein for forward and back scattering, and ray origins are jittered to avoid banding artifacts. 
+<table>
+  <tr>
+    <td><img src="images/porsche_photos/p1.png"></td>
+    <td><img src="images/porsche_photos/p2.png"></td>
+    <td><img src="images/porsche_photos/p3.png"></td>
+    <td><img src="images/porsche_photos/p4.png"></td>
+  </tr>
+</table>
 
-Clouds are rendered at half-resolution for better performance and with minimal visual impact.
+Features shown: clearcoat color, glints, PBR microfacet model, IBL reflection. Skies, irradiance, and rough glossy mips are encoded as an octahedral map for reflections.
 
-<img width="682" src="images/clouds2.png" />
+### Glints
+Anisotropic pixel-footprint glints using Deliot's 2023 method, used to replace the NDF for direct lighting evaluation. Glints are further amplified using our bloom post-processing.
 
-## Terrain
+<table>
+  <tr>
+    <td><img src="images/glint/gray.png" height="150px"></td>
+    <td><img src="images/glint/red.png" height="150px"></td>
+  </tr>
+</table>
+
+### Terrain
 The terrain is rendered via a separate deferred pass, using an artist-authored material-mask to determine which types of materials (snow, grass, etc.) exist at a given world position. We blend materials together seamelessly and use UV distortion to break-up harsh transitions.
 
 ![terrain render](images/terrain_render.png)
