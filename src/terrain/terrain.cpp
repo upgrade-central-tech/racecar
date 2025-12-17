@@ -168,13 +168,13 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
     terrain.terrain_prepass_task = {
         .render_target_is_swapchain = false,
         .color_attachments = { 
-            *prepass_info.GBuffer_Position, 
-            *prepass_info.GBuffer_Normal, 
-            *prepass_info.GBuffer_Albedo, 
-            *prepass_info.GBuffer_Packed_Data,
-            *prepass_info.GBuffer_Velocity,
+            prepass_info.gbuffers->GBuffer_Position, 
+            prepass_info.gbuffers->GBuffer_Normal, 
+            prepass_info.gbuffers->GBuffer_Albedo, 
+            prepass_info.gbuffers->GBuffer_Packed_Data,
+            prepass_info.gbuffers->GBuffer_Velocity,
         },
-        .depth_image = { *prepass_info.GBuffer_Depth },
+        .depth_image = { prepass_info.gbuffers->GBuffer_Depth },
         .extent = engine.swapchain.extent,
     };
 
@@ -186,13 +186,17 @@ void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& 
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // ASPHALT ALBEDO + ROUGHNESS
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // ASPHALT NOMRAL + AO
         },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+            | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT
+            | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
 
     terrain.prepass_sampler_desc_set = engine::generate_descriptor_set( vulkan, engine,
         {
             VK_DESCRIPTOR_TYPE_SAMPLER,
         },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+            | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT
+            | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
 
     engine::update_descriptor_set_image(
         vulkan, engine, terrain.prepass_texture_desc_set, terrain.test_layer_mask, 0 );
@@ -316,13 +320,13 @@ void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
 
     // Material image assignments
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
-        *info.GBuffer_Position, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
+        info.gbuffers->GBuffer_Position, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0 );
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
-        *info.GBuffer_Normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
+        info.gbuffers->GBuffer_Normal, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
-        *info.GBuffer_Albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 2 );
+        info.gbuffers->GBuffer_Albedo, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 2 );
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
-        *info.GBuffer_Packed_Data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 3 );
+        info.gbuffers->GBuffer_Packed_Data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 3 );
     engine::update_descriptor_set_rwimage( vulkan, engine, terrain.texture_desc_set,
         *info.color_attachment, VK_IMAGE_LAYOUT_GENERAL, 4 );
 
