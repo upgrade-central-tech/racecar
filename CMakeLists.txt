@@ -21,6 +21,7 @@ add_executable(racecar
     ${SRC_DIR}/atmosphere_baker.cpp
     ${SRC_DIR}/volumetrics.cpp
     ${SRC_DIR}/preset.cpp
+    ${SRC_DIR}/deferred.cpp
 
     ${VK_DIR}/common.cpp
     ${VK_DIR}/create.cpp

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../atmosphere_baker.hpp"
+#include "../deferred.hpp"
 #include "../engine/prepass.hpp"
 #include "../engine/task_list.hpp"
 #include "../engine/ub_data.hpp"
@@ -20,12 +21,12 @@ struct TerrainLightingInfo {
 
     atmosphere::AtmosphereBaker* atmosphere_baker;
 
-    engine::RWImage* GBuffer_Position;
-    engine::RWImage* GBuffer_Normal;
-    engine::RWImage* GBuffer_Albedo;
-    engine::RWImage* GBuffer_Packed_Data;
+    deferred::GBuffers* gbuffers;
+    // engine::RWImage* GBuffer_Position;
+    // engine::RWImage* GBuffer_Normal;
+    // engine::RWImage* GBuffer_Albedo;
+    // engine::RWImage* GBuffer_Packed_Data;
     engine::RWImage* color_attachment;
-
     vk::mem::AllocatedImage* lut_brdf;
 };
 
@@ -33,12 +34,14 @@ struct TerrainPrepassInfo {
     UniformBuffer<ub_data::Camera>* camera_buffer;
     UniformBuffer<ub_data::Debug>* debug_buffer;
 
-    engine::RWImage* GBuffer_Position;
-    engine::RWImage* GBuffer_Normal;
-    engine::RWImage* GBuffer_Albedo;
-    engine::RWImage* GBuffer_Depth;
-    engine::RWImage* GBuffer_Packed_Data;
-    engine::RWImage* GBuffer_Velocity;
+    deferred::GBuffers* gbuffers;
+
+    // engine::RWImage* GBuffer_Position;
+    // engine::RWImage* GBuffer_Normal;
+    // engine::RWImage* GBuffer_Albedo;
+    // engine::RWImage* GBuffer_Depth;
+    // engine::RWImage* GBuffer_Packed_Data;
+    // engine::RWImage* GBuffer_Velocity;
 
     vk::mem::AllocatedImage* glint_noise;
 };

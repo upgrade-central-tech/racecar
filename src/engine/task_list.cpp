@@ -51,6 +51,8 @@ void add_cpu_task( TaskList& task_list, std::function<void()> task )
     task_list.cpu_tasks.push_back( { task } );
 }
 
+/// TODO: Modify this to only add to the pipeline barrier descriptor, since we can run a batch
+/// instead of having multiple pipelines
 void transition_cs_read_to_write( engine::TaskList& task_list, engine::RWImage& image )
 {
     engine::add_pipeline_barrier( task_list,

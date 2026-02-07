@@ -23,4 +23,7 @@ RWImage create_rwimage_mips( vk::Common& vulkan, const engine::State& engine, Vk
     VkFormat format, VkImageType image_type, VkSampleCountFlagBits samples,
     VkImageUsageFlags usage_flags, uint32_t mip_levels );
 
+RWImage create_gbuffer_image( vk::Common& vulkan, const engine::State& engine, VkFormat format,
+    VkSampleCountFlagBits samples );
+
 } // namespace racecar::engine
