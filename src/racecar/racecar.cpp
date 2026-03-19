@@ -358,6 +358,88 @@ void create_raymarch_tex_sets(
     engine::update_descriptor_set_image( ctx.vulkan, engine, *raymarch_tex_sets, test_data_3D, 0 );
 }
 
+void create_lut_sets(
+    Context& ctx,
+    engine::State& engine,
+    engine::DescriptorSet* lut_sets,
+    vk::mem::AllocatedImage* lut_brdf,
+    vk::mem::AllocatedImage* glint_noise
+)
+{
+    *lut_sets = engine::generate_descriptor_set(
+        ctx.vulkan,
+        engine,
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF LUT
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Glint noise
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky irradiance
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky with mips
+        },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
+    );
+
+    *lut_brdf = engine::load_image(
+        BRDF_LUT_PATH,
+        ctx.vulkan,
+        engine,
+        2,
+        VK_FORMAT_R16G16_SFLOAT,
+        false
+    );
+
+    *glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
+
+    engine::update_descriptor_set_image( ctx.vulkan, engine, *lut_sets, *lut_brdf, 0 );
+    engine::update_descriptor_set_image( ctx.vulkan, engine, *lut_sets, *glint_noise, 1 );
+}
+
+void create_depth_ms_prepass(
+    Context& ctx,
+    engine::State& engine,
+    engine::DescriptorSet* depth_uniform_desc_set,
+    engine::Pipeline* depth_ms_pipeline,
+    const UniformBuffer<ub_data::Camera>& camera_buffer,
+    const geometry::scene::Mesh& scene_mesh
+)
+{
+    *depth_uniform_desc_set = engine::generate_descriptor_set(
+        ctx.vulkan,
+        engine,
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+        VK_SHADER_STAGE_VERTEX_BIT
+    );
+
+    engine::update_descriptor_set_uniform(
+        ctx.vulkan,
+        engine,
+        *depth_uniform_desc_set,
+        camera_buffer,
+        0
+    );
+
+    // DEPTH_MS PRE-PASS
+    try {
+        // Pipeline needs to support MSAA
+        size_t frame_index = engine.get_frame_index();
+        *depth_ms_pipeline = create_gfx_pipeline(
+            engine,
+            ctx.vulkan,
+            engine::get_vertex_input_state_create_info( scene_mesh ),
+            { depth_uniform_desc_set->layouts[frame_index] },
+            {},
+            VK_SAMPLE_COUNT_4_BIT,
+            false,
+            true,
+            vk::create::shader_module( ctx.vulkan, DEPTH_PREPASS_SHADER_MODULE_PATH ),
+            false
+        );
+    } catch ( const Exception& ex ) {
+        log::error( "Failed to create depth-MS-prepass pipeline: {}", ex.what() );
+        throw;
+    }
+}
+
 void run( bool use_fullscreen )
 {
     Context ctx = initialize_context( use_fullscreen );
@@ -415,71 +497,18 @@ void run( bool use_fullscreen )
     engine::DescriptorSet lut_sets;
     vk::mem::AllocatedImage lut_brdf;
     vk::mem::AllocatedImage glint_noise;
-    {
-        lut_sets = engine::generate_descriptor_set(
-            ctx.vulkan,
-            engine,
-            {
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF LUT
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Glint noise
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky irradiance
-                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky with mips
-            },
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
-        );
+    create_lut_sets( ctx, engine, &lut_sets, &lut_brdf, &glint_noise );
 
-        lut_brdf = engine::load_image(
-            BRDF_LUT_PATH,
-            ctx.vulkan,
-            engine,
-            2,
-            VK_FORMAT_R16G16_SFLOAT,
-            false
-        );
-
-        glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
-
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, lut_brdf, 0 );
-        engine::update_descriptor_set_image( ctx.vulkan, engine, lut_sets, glint_noise, 1 );
-    }
-
-    engine::DescriptorSet depth_uniform_desc_set = engine::generate_descriptor_set(
-        ctx.vulkan,
-        engine,
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT
-    );
-
-    engine::update_descriptor_set_uniform(
-        ctx.vulkan,
-        engine,
-        depth_uniform_desc_set,
-        camera_buffer,
-        0
-    );
-
-    // DEPTH_MS PRE-PASS
+    engine::DescriptorSet depth_uniform_desc_set;
     engine::Pipeline depth_ms_pipeline;
-    try {
-        // Pipeline needs to support MSAA
-        size_t frame_index = engine.get_frame_index();
-        depth_ms_pipeline = create_gfx_pipeline(
-            engine,
-            ctx.vulkan,
-            engine::get_vertex_input_state_create_info( scene_mesh ),
-            { depth_uniform_desc_set.layouts[frame_index] },
-            {},
-            VK_SAMPLE_COUNT_4_BIT,
-            false,
-            true,
-            vk::create::shader_module( ctx.vulkan, DEPTH_PREPASS_SHADER_MODULE_PATH ),
-            false
-        );
-    } catch ( const Exception& ex ) {
-        log::error( "Failed to create depth-MS-prepass pipeline: {}", ex.what() );
-        throw;
-    }
+    create_depth_ms_prepass(
+        ctx,
+        engine,
+        &depth_uniform_desc_set,
+        &depth_ms_pipeline,
+        camera_buffer,
+        scene_mesh
+    );
 
     engine::Pipeline scene_pipeline;
 
