@@ -343,6 +343,21 @@ void load_model_mat_uniform_buffers(
     }
 }
 
+void create_raymarch_tex_sets(
+    Context& ctx, engine::State& engine, engine::DescriptorSet* raymarch_tex_sets
+)
+{
+    *raymarch_tex_sets = engine::generate_descriptor_set(
+        ctx.vulkan,
+        engine,
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+    );
+
+    vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D( ctx.vulkan, engine );
+    engine::update_descriptor_set_image( ctx.vulkan, engine, *raymarch_tex_sets, test_data_3D, 0 );
+}
+
 void run( bool use_fullscreen )
 {
     Context ctx = initialize_context( use_fullscreen );
@@ -395,23 +410,7 @@ void run( bool use_fullscreen )
     );
 
     engine::DescriptorSet raymarch_tex_sets;
-    {
-        raymarch_tex_sets = engine::generate_descriptor_set(
-            ctx.vulkan,
-            engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
-        );
-
-        vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D( ctx.vulkan, engine );
-        engine::update_descriptor_set_image(
-            ctx.vulkan,
-            engine,
-            raymarch_tex_sets,
-            test_data_3D,
-            0
-        );
-    }
+    create_raymarch_tex_sets( ctx, engine, &raymarch_tex_sets );
 
     engine::DescriptorSet lut_sets;
     vk::mem::AllocatedImage lut_brdf;
