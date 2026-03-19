@@ -17,6 +17,13 @@ SpacesInParensOptions:
   InEmptyParentheses: false
   Other: true
 
+BinPackArguments: false
+BinPackParameters: false
+
+AllowAllArgumentsOnNextLine: false
+PenaltyBreakBeforeFirstCallParameter: 0
+AlignAfterOpenBracket: BlockIndent
+
 # Local includes, then 3rd party libraries, then standard library. volk has to be included
 # before vk-bootstrap because the latter includes Vulkan headers which volk does not like
 IncludeBlocks: Regroup
