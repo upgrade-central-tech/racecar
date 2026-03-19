@@ -440,6 +440,54 @@ void create_depth_ms_prepass(
     }
 }
 
+void create_scene_gfx_pipeline(
+    Context& ctx,
+    engine::State& engine,
+    engine::Pipeline* scene_pipeline,
+    const geometry::scene::Mesh& scene_mesh,
+    engine::DescriptorSet* uniform_desc_set,
+    engine::DescriptorSet* material_desc_sets,
+    engine::DescriptorSet* model_mat_desc_sets,
+    engine::DescriptorSet* lut_sets,
+    engine::DescriptorSet* sampler_desc_set
+)
+{
+    try {
+        size_t frame_index = engine.get_frame_index();
+        *scene_pipeline = create_gfx_pipeline(
+            engine,
+            ctx.vulkan,
+            engine::get_vertex_input_state_create_info( scene_mesh ),
+            {
+                uniform_desc_set->layouts[frame_index],
+                material_desc_sets->layouts[frame_index],
+                model_mat_desc_sets->layouts[frame_index],
+                lut_sets->layouts[frame_index],
+                sampler_desc_set->layouts[frame_index],
+            },
+            {
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // UV
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // ALBEDO
+                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // PACKED DATA (metallic, roughness,
+                                                         // clearcoat roughness, clearcoat
+                                                         // weight)
+                VkFormat::VK_FORMAT_R16G16_SFLOAT, // VELOCITY
+            },
+            VK_SAMPLE_COUNT_1_BIT,
+            false,
+            true,
+            vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ),
+            false
+        );
+    } catch ( const Exception& ex ) {
+        log::error( "Failed to create graphics pipeline: {}", ex.what() );
+        throw;
+    }
+}
+
 void run( bool use_fullscreen )
 {
     Context ctx = initialize_context( use_fullscreen );
@@ -511,41 +559,17 @@ void run( bool use_fullscreen )
     );
 
     engine::Pipeline scene_pipeline;
-
-    try {
-        size_t frame_index = engine.get_frame_index();
-        scene_pipeline = create_gfx_pipeline(
-            engine,
-            ctx.vulkan,
-            engine::get_vertex_input_state_create_info( scene_mesh ),
-            {
-                uniform_desc_set.layouts[frame_index],
-                material_desc_sets[0].layouts[frame_index],
-                model_mat_desc_sets[0].layouts[frame_index],
-                lut_sets.layouts[frame_index],
-                sampler_desc_set.layouts[frame_index],
-            },
-            {
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // NORMAL
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // TANGENT
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // UV
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // ALBEDO
-                VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT, // PACKED DATA (metallic, roughness,
-                                                         // clearcoat roughness, clearcoat
-                                                         // weight)
-                VkFormat::VK_FORMAT_R16G16_SFLOAT, // VELOCITY
-            },
-            VK_SAMPLE_COUNT_1_BIT,
-            false,
-            true,
-            vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ),
-            false
-        );
-    } catch ( const Exception& ex ) {
-        log::error( "Failed to create graphics pipeline: {}", ex.what() );
-        throw;
-    }
+    create_scene_gfx_pipeline(
+        ctx,
+        engine,
+        &scene_pipeline,
+        scene_mesh,
+        &uniform_desc_set,
+        &material_desc_sets[0],
+        &model_mat_desc_sets[0],
+        &lut_sets,
+        &sampler_desc_set
+    );
 
     geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
 
