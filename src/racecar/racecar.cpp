@@ -65,115 +65,116 @@ constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
 }
 
 const std::unordered_map<std::string, std::array<glm::vec2, 2>> wheel_centers = {
-    { "../assets/bugatti.glb",
-        { glm::vec2( -0.658391, -2.35642 ), glm::vec2( -0.667301, 2.57912 ) } },
-    { "../assets/mclaren.glb",
-        { glm::vec2( -0.452689, -1.66372 ), glm::vec2( -0.452689, 2.13727 ) } },
-    { "../assets/porsche.glb", { glm::vec2( -0.669948, -2.32301 ), glm::vec2( -0.669948, 2.39 ) } },
-    { "../assets/ferrari.glb",
-        { glm::vec2( -0.358881, -1.47297 ), glm::vec2( -0.358822, 2.10473 ) } },
-    { "../assets/lamborghini_sesto.glb",
-        { glm::vec2( -0.309112, -1.28 ), glm::vec2( -0.317127, 1.27501 ) } },
-    { "../assets/mclaren_f1.glb",
-        { glm::vec2( -0.470348, -2.05553 ), glm::vec2( -0.510266, 2.74863 ) } }
+    { "../assets/bugatti.glb",                  { glm::vec2( -0.658391, -2.35642 ), glm::vec2( -0.667301,2.57912 ) } },
+    { "../assets/mclaren.glb",                  { glm::vec2( -0.452689, -1.66372 ), glm::vec2( -0.452689,2.13727 ) } },
+    { "../assets/porsche.glb",                  { glm::vec2( -0.669948, -2.32301 ), glm::vec2( -0.669948,2.39    ) } },
+    { "../assets/ferrari.glb",                  { glm::vec2( -0.358881, -1.47297 ), glm::vec2( -0.358822,2.10473 ) } },
+    { "../assets/lamborghini_sesto.glb",        { glm::vec2( -0.309112, -1.28    ), glm::vec2( -0.317127,1.27501 ) } },
+    { "../assets/mclaren_f1.glb",               { glm::vec2( -0.470348, -2.05553 ), glm::vec2( -0.510266,2.74863 ) } }
 };
 
 const std::unordered_map<std::string, float> wheel_radii = {
-    {"../assets/bugatti.glb", 1.28f},
-    {"../assets/mclaren.glb", 0.997f},
-    {"../assets/porsche.glb", 1.32f},
-    {"../assets/ferrari.glb", 0.715f},
-    {"../assets/lamborghini_sesto.glb", 0.649f},
-    {"../assets/mclaren_f1.glb", 1.07f}
+    { "../assets/bugatti.glb",           1.28f  },
+    { "../assets/mclaren.glb",           0.997f },
+    { "../assets/porsche.glb",           1.32f  },
+    { "../assets/ferrari.glb",           0.715f },
+    { "../assets/lamborghini_sesto.glb", 0.649f },
+    { "../assets/mclaren_f1.glb",        1.07f  }
 };
 
-void run( bool use_fullscreen )
+Context initialize_context( bool use_fullscreen )
 {
     Context ctx;
     ctx.window = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, use_fullscreen ),
     ctx.vulkan = vk::initialize( ctx.window );
+    return ctx;
+}
 
-    engine::State engine = engine::initialize( ctx );
-    gui::Gui gui = gui::initialize( ctx, engine );
-
-    // SCENE LOADING/PROCESSING
-    scene::Scene scene;
-    geometry::scene::Mesh scene_mesh;
+void load_scene(
+    Context& ctx, engine::State& engine, scene::Scene* scene, geometry::scene::Mesh* scene_mesh )
+{
     scene::load_gltf(
-        ctx.vulkan, engine, GLTF_FILE_PATH, scene, scene_mesh.vertices, scene_mesh.indices );
-    geometry::scene::generate_tangents( scene_mesh );
-    scene_mesh.mesh_buffers = geometry::scene::upload_mesh(
-        ctx.vulkan, engine, scene_mesh.indices, scene_mesh.vertices );
+        ctx.vulkan, engine, GLTF_FILE_PATH, *scene, scene_mesh->vertices, scene_mesh->indices );
+    geometry::scene::generate_tangents( *scene_mesh );
+    scene_mesh->mesh_buffers = geometry::scene::upload_mesh(
+        ctx.vulkan, engine, scene_mesh->indices, scene_mesh->vertices );
+}
 
-    UniformBuffer camera_buffer = create_uniform_buffer<ub_data::Camera>(
+void load_camera_debug_uniform_buffers( Context& ctx, engine::State& engine,
+    UniformBuffer<ub_data::Camera>* camera_buffer, UniformBuffer<ub_data::Debug>* debug_buffer,
+    engine::DescriptorSet* uniform_desc_set )
+{
+    *camera_buffer = create_uniform_buffer<ub_data::Camera>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
-    UniformBuffer debug_buffer = create_uniform_buffer<ub_data::Debug>(
+    *debug_buffer = create_uniform_buffer<ub_data::Debug>(
         ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
     // UniformBuffer raymarch_buffer = create_uniform_buffer<ub_data::RaymarchBufferData>(
     //     ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
-    engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
+    *uniform_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
             | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT
             | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT );
 
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, camera_buffer, 0 );
-    engine::update_descriptor_set_uniform( ctx.vulkan, engine, uniform_desc_set, debug_buffer, 1 );
+    engine::update_descriptor_set_uniform(
+        ctx.vulkan, engine, *uniform_desc_set, *camera_buffer, 0 );
+    engine::update_descriptor_set_uniform(
+        ctx.vulkan, engine, *uniform_desc_set, *debug_buffer, 1 );
+}
 
+void load_samplers( Context& ctx, engine::State& engine, VkSampler* linear_sampler,
+    VkSampler* point_sampler, engine::DescriptorSet* sampler_desc_set )
+{
     // Simple set up for linear sampler
-    VkSampler linear_sampler = VK_NULL_HANDLE;
-    VkSampler point_sampler = VK_NULL_HANDLE;
-    engine::DescriptorSet sampler_desc_set;
-    {
-        VkSamplerCreateInfo sampler_linear_create_info = {
-            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .magFilter = VK_FILTER_LINEAR,
-            .minFilter = VK_FILTER_LINEAR,
-            .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .maxLod = 100,
-        };
+    VkSamplerCreateInfo sampler_linear_create_info = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = VK_FILTER_LINEAR,
+        .minFilter = VK_FILTER_LINEAR,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .maxLod = 100,
+    };
 
-        vk::check( vkCreateSampler(
-                       ctx.vulkan.device, &sampler_linear_create_info, nullptr, &linear_sampler ),
-            "Failed to create sampler" );
-        ctx.vulkan.destructor_stack.push( ctx.vulkan.device, linear_sampler, vkDestroySampler );
+    vk::check(
+        vkCreateSampler( ctx.vulkan.device, &sampler_linear_create_info, nullptr, linear_sampler ),
+        "Failed to create sampler" );
+    ctx.vulkan.destructor_stack.push( ctx.vulkan.device, *linear_sampler, vkDestroySampler );
 
-        VkSamplerCreateInfo sampler_nearest_create_info = {
-            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .magFilter = VK_FILTER_NEAREST,
-            .minFilter = VK_FILTER_NEAREST,
-            .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .maxLod = 100,
-        };
+    VkSamplerCreateInfo sampler_nearest_create_info = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = VK_FILTER_NEAREST,
+        .minFilter = VK_FILTER_NEAREST,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .maxLod = 100,
+    };
 
-        vk::check( vkCreateSampler(
-                       ctx.vulkan.device, &sampler_nearest_create_info, nullptr, &point_sampler ),
-            "Failed to create nearest smapler!" );
-        ctx.vulkan.destructor_stack.push( ctx.vulkan.device, point_sampler, vkDestroySampler );
+    vk::check(
+        vkCreateSampler( ctx.vulkan.device, &sampler_nearest_create_info, nullptr, point_sampler ),
+        "Failed to create nearest smapler!" );
+    ctx.vulkan.destructor_stack.push( ctx.vulkan.device, *point_sampler, vkDestroySampler );
 
-        sampler_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
-            { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER },
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+    *sampler_desc_set = engine::generate_descriptor_set( ctx.vulkan, engine,
+        { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
 
-        engine::update_descriptor_set_sampler(
-            ctx.vulkan, engine, sampler_desc_set, linear_sampler, 0 );
+    engine::update_descriptor_set_sampler(
+        ctx.vulkan, engine, *sampler_desc_set, *linear_sampler, 0 );
 
-        engine::update_descriptor_set_sampler(
-            ctx.vulkan, engine, sampler_desc_set, point_sampler, 1 );
-    }
+    engine::update_descriptor_set_sampler(
+        ctx.vulkan, engine, *sampler_desc_set, *point_sampler, 1 );
+}
 
-    size_t num_materials = scene.materials.size();
-    std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
-    std::vector<UniformBuffer<ub_data::Material>> material_uniform_buffers( num_materials );
-
+void load_materials( Context& ctx, engine::State& engine, scene::Scene& scene, size_t num_materials,
+    std::vector<engine::DescriptorSet>* material_desc_sets,
+    std::vector<UniformBuffer<ub_data::Material>>* material_uniform_buffers )
+{
     for ( size_t i = 0; i < num_materials; i++ ) {
         // Generate a separate texture descriptor set for each of the materials
-        material_desc_sets[i] = engine::generate_descriptor_set( ctx.vulkan, engine,
+        ( *material_desc_sets )[i] = engine::generate_descriptor_set( ctx.vulkan, engine,
             {
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
@@ -219,19 +220,20 @@ void run( bool use_fullscreen )
         material_buffer.update( ctx.vulkan, engine.get_frame_index() );
 
         engine::update_descriptor_set_uniform(
-            ctx.vulkan, engine, material_desc_sets[i], material_buffer, 3 );
-        material_uniform_buffers[i] = std::move( material_buffer );
+            ctx.vulkan, engine, ( *material_desc_sets )[i], material_buffer, 3 );
+        ( *material_uniform_buffers )[i] = std::move( material_buffer );
     }
+}
 
-    size_t num_nodes = scene.nodes.size();
-    std::vector<engine::DescriptorSet> model_mat_desc_sets( num_nodes );
-    std::vector<UniformBuffer<ub_data::ModelMat>> model_mat_uniform_buffers( num_nodes );
-
+void load_model_mat_uniform_buffers( Context& ctx, engine::State& engine, size_t num_nodes,
+    scene::Scene* scene, std::vector<engine::DescriptorSet>* model_mat_desc_sets,
+    std::vector<UniformBuffer<ub_data::ModelMat>>* model_mat_uniform_buffers )
+{
     for ( size_t i = 0; i < num_nodes; i++ ) {
-        model_mat_desc_sets[i] = engine::generate_descriptor_set(
+        ( *model_mat_desc_sets )[i] = engine::generate_descriptor_set(
             ctx.vulkan, engine, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER }, VK_SHADER_STAGE_VERTEX_BIT );
 
-        scene::Node* node = scene.nodes[i].get();
+        scene::Node* node = scene->nodes[i].get();
         glm::mat4 transform = node->transform;
         while ( node->parent != nullptr ) {
             node = node->parent;
@@ -248,8 +250,53 @@ void run( bool use_fullscreen )
         model_mat_buffer.update( ctx.vulkan, engine.get_frame_index() );
 
         engine::update_descriptor_set_uniform(
-            ctx.vulkan, engine, model_mat_desc_sets[i], model_mat_buffer, 0 );
-        model_mat_uniform_buffers[i] = std::move( model_mat_buffer );
+            ctx.vulkan, engine, ( *model_mat_desc_sets )[i], model_mat_buffer, 0 );
+        (*model_mat_uniform_buffers)[i] = std::move( model_mat_buffer );
+    }
+}
+
+void run( bool use_fullscreen )
+{
+    Context ctx = initialize_context( use_fullscreen );
+    engine::State engine = engine::initialize( ctx );
+    gui::Gui gui = gui::initialize( ctx, engine );
+
+    // SCENE LOADING/PROCESSING
+    scene::Scene scene;
+    geometry::scene::Mesh scene_mesh;
+    load_scene( ctx, engine, &scene, &scene_mesh );
+
+    UniformBuffer<ub_data::Camera> camera_buffer;
+    UniformBuffer<ub_data::Debug> debug_buffer;
+    engine::DescriptorSet uniform_desc_set;
+    load_camera_debug_uniform_buffers(
+        ctx, engine, &camera_buffer, &debug_buffer, &uniform_desc_set );
+
+    VkSampler linear_sampler = VK_NULL_HANDLE;
+    VkSampler point_sampler = VK_NULL_HANDLE;
+    engine::DescriptorSet sampler_desc_set;
+    load_samplers( ctx, engine, &linear_sampler, &point_sampler, &sampler_desc_set );
+
+    size_t num_materials = scene.materials.size();
+    std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
+    std::vector<UniformBuffer<ub_data::Material>> material_uniform_buffers( num_materials );
+    load_materials(
+        ctx, engine, scene, num_materials, &material_desc_sets, &material_uniform_buffers );
+
+    size_t num_nodes = scene.nodes.size();
+    std::vector<engine::DescriptorSet> model_mat_desc_sets( num_nodes );
+    std::vector<UniformBuffer<ub_data::ModelMat>> model_mat_uniform_buffers( num_nodes );
+    load_model_mat_uniform_buffers(ctx, engine, num_nodes, &scene, &model_mat_desc_sets, &model_mat_uniform_buffers);
+
+    engine::DescriptorSet raymarch_tex_sets;
+    {
+        raymarch_tex_sets = engine::generate_descriptor_set( ctx.vulkan, engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT );
+
+        vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D( ctx.vulkan, engine );
+        engine::update_descriptor_set_image(
+            ctx.vulkan, engine, raymarch_tex_sets, test_data_3D, 0 );
     }
 
     engine::DescriptorSet lut_sets;
@@ -1457,8 +1504,10 @@ void run( bool use_fullscreen )
         // wheel rotation
         {
             // front wheels
-            glm::vec3 pivot = -glm::vec3( 0.0f, wheel_centers.at(std::string( GLTF_FILE_PATH ))[0] );
-            float angle = gui.terrain.scrolling_speed * 30 / wheel_radii.at(std::string(GLTF_FILE_PATH));
+            glm::vec3 pivot
+                = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[0] );
+            float angle = gui.terrain.scrolling_speed * 30
+                / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
 
             glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
             model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
@@ -1473,7 +1522,7 @@ void run( bool use_fullscreen )
                     scene.demo_scene_nodes.wheel_front_right_id.value(), model, discovered );
             }
             // back wheels
-            pivot = -glm::vec3( 0.0f, wheel_centers.at(std::string( GLTF_FILE_PATH ))[1] );
+            pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[1] );
 
             model = glm::translate( glm::identity<glm::mat4>(), pivot );
             model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
