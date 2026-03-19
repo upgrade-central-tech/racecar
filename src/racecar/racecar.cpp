@@ -64,27 +64,25 @@ constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
 
 }
 
-const std::unordered_map<std::string, std::array<glm::vec2, 2>> wheel_centers
-    = { { "../assets/bugatti.glb",
-          { glm::vec2( -0.658391, -2.35642 ), glm::vec2( -0.667301, 2.57912 ) } },
-        { "../assets/mclaren.glb",
-          { glm::vec2( -0.452689, -1.66372 ), glm::vec2( -0.452689, 2.13727 ) } },
-        { "../assets/porsche.glb",
-          { glm::vec2( -0.669948, -2.32301 ), glm::vec2( -0.669948, 2.39 ) } },
-        { "../assets/ferrari.glb",
-          { glm::vec2( -0.358881, -1.47297 ), glm::vec2( -0.358822, 2.10473 ) } },
-        { "../assets/lamborghini_sesto.glb",
-          { glm::vec2( -0.309112, -1.28 ), glm::vec2( -0.317127, 1.27501 ) } },
-        { "../assets/mclaren_f1.glb",
-          { glm::vec2( -0.470348, -2.05553 ), glm::vec2( -0.510266, 2.74863 ) } } };
+// clang-format off
+const std::unordered_map<std::string, std::array<glm::vec2, 2>> wheel_centers = {
+    { "../assets/bugatti.glb",                  { glm::vec2( -0.658391, -2.35642 ), glm::vec2( -0.667301,2.57912 ) } },
+    { "../assets/mclaren.glb",                  { glm::vec2( -0.452689, -1.66372 ), glm::vec2( -0.452689,2.13727 ) } },
+    { "../assets/porsche.glb",                  { glm::vec2( -0.669948, -2.32301 ), glm::vec2( -0.669948,2.39    ) } },
+    { "../assets/ferrari.glb",                  { glm::vec2( -0.358881, -1.47297 ), glm::vec2( -0.358822,2.10473 ) } },
+    { "../assets/lamborghini_sesto.glb",        { glm::vec2( -0.309112, -1.28    ), glm::vec2( -0.317127,1.27501 ) } },
+    { "../assets/mclaren_f1.glb",               { glm::vec2( -0.470348, -2.05553 ), glm::vec2( -0.510266,2.74863 ) } }
+};
 
-const std::unordered_map<std::string, float> wheel_radii
-    = { { "../assets/bugatti.glb", 1.28f },
-        { "../assets/mclaren.glb", 0.997f },
-        { "../assets/porsche.glb", 1.32f },
-        { "../assets/ferrari.glb", 0.715f },
-        { "../assets/lamborghini_sesto.glb", 0.649f },
-        { "../assets/mclaren_f1.glb", 1.07f } };
+const std::unordered_map<std::string, float> wheel_radii = {
+    { "../assets/bugatti.glb",           1.28f  },
+    { "../assets/mclaren.glb",           0.997f },
+    { "../assets/porsche.glb",           1.32f  },
+    { "../assets/ferrari.glb",           0.715f },
+    { "../assets/lamborghini_sesto.glb", 0.649f },
+    { "../assets/mclaren_f1.glb",        1.07f  }
+};
+// clang-format on
 
 Context initialize_context( bool use_fullscreen )
 {
