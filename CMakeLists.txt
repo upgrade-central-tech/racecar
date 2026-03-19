@@ -9,10 +9,10 @@ set(POST_DIR "${ENGINE_DIR}/post")
 set(GEOMETRY_DIR "${SRC_DIR}/geometry")
 set(TERRAIN_DIR "${SRC_DIR}/terrain")
 set(SCENE_DIR "${SRC_DIR}/scene")
+set(RACECAR_DIR "${SRC_DIR}/racecar")
 
 add_executable(racecar
     ${SRC_DIR}/main.cpp
-    ${SRC_DIR}/racecar.cpp
     ${SRC_DIR}/sdl.cpp
     ${SRC_DIR}/orbit_camera.cpp
     ${SRC_DIR}/gui.cpp
@@ -60,7 +60,11 @@ add_executable(racecar
     ${TERRAIN_DIR}/terrain.cpp
 
     ${SCENE_DIR}/scene.cpp
+
+    ${RACECAR_DIR}/racecar.cpp
 )
+
+target_include_directories(racecar PRIVATE ${SRC_DIR})
 
 target_compile_features(racecar PRIVATE cxx_std_20)
 set_target_properties(racecar PROPERTIES CXX_EXTENSIONS OFF)

@@ -1,6 +1,6 @@
 #include "exception.hpp"
 #include "log.hpp"
-#include "racecar.hpp"
+#include "racecar/racecar.hpp"
 
 #include <SDL3/SDL_main.h>
 
