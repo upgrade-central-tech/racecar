@@ -7,7 +7,7 @@
 namespace racecar::engine {
 
 struct DepthPrepassMS {
-    engine::GfxTask& depth_ms_gfx_task;
+    engine::GfxTask* depth_ms_gfx_task;
 
     std::vector<DescriptorSet*> descriptor_sets;
     engine::Pipeline pipeline;

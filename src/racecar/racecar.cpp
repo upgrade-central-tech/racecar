@@ -400,7 +400,10 @@ void create_depth_ms_prepass(
     engine::DescriptorSet* depth_uniform_desc_set,
     engine::Pipeline* depth_ms_pipeline,
     const UniformBuffer<ub_data::Camera>& camera_buffer,
-    const geometry::scene::Mesh& scene_mesh
+    const geometry::scene::Mesh& scene_mesh,
+    deferred::GBuffers* gbuffers,
+    engine::GfxTask* depth_ms_gfx_task,
+    engine::DepthPrepassMS* depth_prepass_ms
 )
 {
     *depth_uniform_desc_set = engine::generate_descriptor_set(
@@ -438,6 +441,20 @@ void create_depth_ms_prepass(
         log::error( "Failed to create depth-MS-prepass pipeline: {}", ex.what() );
         throw;
     }
+
+        // Prepass
+    *depth_ms_gfx_task = {
+        .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
+        .clear_depth = 1.f,
+        .render_target_is_swapchain = false,
+        .color_attachments = {},
+        .depth_image = gbuffers->GBuffer_DepthMS,
+        .extent = engine.swapchain.extent,
+    };
+
+    depth_prepass_ms->depth_ms_gfx_task = depth_ms_gfx_task;
+    depth_prepass_ms->descriptor_sets = { depth_uniform_desc_set };
+    depth_prepass_ms->pipeline = *depth_ms_pipeline;
 }
 
 void create_scene_gfx_pipeline(
@@ -547,15 +564,27 @@ void run( bool use_fullscreen )
     vk::mem::AllocatedImage glint_noise;
     create_lut_sets( ctx, engine, &lut_sets, &lut_brdf, &glint_noise );
 
+    geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+
+    log::info( "[main] pre atmo3!" );
+    engine::TaskList task_list;
+
+    deferred::GBuffers gbuffers = deferred::initialize_GBuffers( ctx.vulkan, engine );
+
     engine::DescriptorSet depth_uniform_desc_set;
     engine::Pipeline depth_ms_pipeline;
+    engine::GfxTask depth_ms_gfx_task;
+    engine::DepthPrepassMS depth_prepass_ms;
     create_depth_ms_prepass(
         ctx,
         engine,
         &depth_uniform_desc_set,
         &depth_ms_pipeline,
         camera_buffer,
-        scene_mesh
+        scene_mesh,
+        &gbuffers,
+        &depth_ms_gfx_task,
+        &depth_prepass_ms
     );
 
     engine::Pipeline scene_pipeline;
@@ -570,29 +599,6 @@ void run( bool use_fullscreen )
         &lut_sets,
         &sampler_desc_set
     );
-
-    geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
-
-    log::info( "[main] pre atmo3!" );
-    engine::TaskList task_list;
-
-    deferred::GBuffers gbuffers = deferred::initialize_GBuffers( ctx.vulkan, engine );
-
-    // Prepass
-    engine::GfxTask depth_ms_gfx_task = {
-        .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
-        .clear_depth = 1.f,
-        .render_target_is_swapchain = false,
-        .color_attachments = {},
-        .depth_image = gbuffers.GBuffer_DepthMS,
-        .extent = engine.swapchain.extent,
-    };
-
-    engine::DepthPrepassMS depth_prepass_ms = {
-        depth_ms_gfx_task,
-        { &depth_uniform_desc_set },
-        depth_ms_pipeline,
-    };
 
 #if ENABLE_DEFERRED_AA
     // Render to an offscreen image, this is what we'll present to the swapchain.
