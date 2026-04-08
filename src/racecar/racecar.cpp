@@ -442,7 +442,7 @@ void create_depth_ms_prepass(
         throw;
     }
 
-        // Prepass
+    // Prepass
     *depth_ms_gfx_task = {
         .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
         .clear_depth = 1.f,
@@ -505,6 +505,86 @@ void create_scene_gfx_pipeline(
     }
 }
 
+void create_screen_buffers(
+    Context& ctx,
+    engine::State& engine,
+    engine::RWImage* screen_color,
+    engine::RWImage* screen_buffer,
+    engine::RWImage* screen_history
+)
+{
+    *screen_color = engine::create_rwimage(
+        ctx.vulkan,
+        engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_TYPE_2D,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+            | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+    );
+
+    // Buffer needed, this is what the final compute pass will write to.
+    // We will later copy the results of this back to `screen_color`, and blit it to the swapchain.
+    *screen_buffer = engine::create_rwimage(
+        ctx.vulkan,
+        engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_TYPE_2D,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+    );
+
+    // Stores the last-rendered image. Needed for TAA/motion-vectors
+    *screen_history = engine::create_rwimage(
+        ctx.vulkan,
+        engine,
+        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_TYPE_2D,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
+    );
+}
+
+void create_top_pipeline_barriers(
+    Context& ctx,
+    engine::State& engine,
+    const deferred::GBuffers& gbuffers,
+    const engine::RWImage& screen_color,
+    engine::PipelineBarrierDescriptor* top_pipeline_barrier_desc
+)
+{
+    top_pipeline_barrier_desc->buffer_barriers = {};
+
+    // All GBuffer barriers are for VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+    top_pipeline_barrier_desc->image_barriers = deferred::init_gbuffer_image_barriers( gbuffers );
+
+    // Screen_color is set up for frag shader writing, but subsequent commands must operate after
+    // compute sahder stage This is because we use compute shaders to write to screen_color in the
+    // terrain rendering pass. This is potentially wasteful since we're unable to compute object
+    // lighting until after the compute stage, so an alternative is to either shift the terrain
+    // lighting to GFX (so color attachment output stage can be used instead), or to instead shift
+    // object lighting to compute.
+    top_pipeline_barrier_desc->image_barriers.push_back(
+        {
+            .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+            .src_access = VK_ACCESS_2_NONE,
+            .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+            .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+            .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+            .image = screen_color,
+            .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+        }
+    );
+}
+
+/*
+ * Temporary comment header to separate the refactored functions and the run call.
+ * Goal is to neaten up run() for easier readability, scalability, and customization.
+ */
 void run( bool use_fullscreen )
 {
     Context ctx = initialize_context( use_fullscreen );
@@ -564,6 +644,8 @@ void run( bool use_fullscreen )
     vk::mem::AllocatedImage glint_noise;
     create_lut_sets( ctx, engine, &lut_sets, &lut_brdf, &glint_noise );
 
+    // TODO: It might be beneficial if meshes like these are global; helps avoid rebuilding them for
+    // whatever reason.
     geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
 
     log::info( "[main] pre atmo3!" );
@@ -600,77 +682,27 @@ void run( bool use_fullscreen )
         &sampler_desc_set
     );
 
-#if ENABLE_DEFERRED_AA
-    // Render to an offscreen image, this is what we'll present to the swapchain.
-    engine::RWImage screen_color = engine::create_rwimage(
-        ctx.vulkan,
-        engine,
-        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
-        VK_FORMAT_R16G16B16A16_SFLOAT,
-        VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-            | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-    );
+    engine::RWImage screen_color;
+    engine::RWImage screen_buffer;
+    engine::RWImage screen_history;
+    create_screen_buffers( ctx, engine, &screen_color, &screen_buffer, &screen_history );
 
-    // Buffer needed, this is what the final compute pass will write to.
-    // We will later copy the results of this back to `screen_color`, and blit it to the swapchain.
-    engine::RWImage screen_buffer = engine::create_rwimage(
-        ctx.vulkan,
-        engine,
-        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
-        VK_FORMAT_R16G16B16A16_SFLOAT,
-        VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-    );
-
-    // Store the last-rendered image here!
-    engine::RWImage screen_history = engine::create_rwimage(
-        ctx.vulkan,
-        engine,
-        { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
-        VK_FORMAT_R16G16B16A16_SFLOAT,
-        VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
-    );
-#endif
-
-    // ALL INITIAL SCREEN BUFFERS NEED A PIPELINE BARRIER TO RESET STATE
-    {
-        engine::PipelineBarrierDescriptor initial_pipeline
-            = deferred::initialize_barrier_desc( gbuffers );
-        std::vector<engine::ImageBarrier>& image_barriers = initial_pipeline.image_barriers;
-
-        image_barriers.push_back(
-            {
-                .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                .src_access = VK_ACCESS_2_NONE,
-                .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                .image = screen_color,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-            }
-        );
-
-        engine::add_pipeline_barrier( task_list, initial_pipeline );
-    }
+    engine::PipelineBarrierDescriptor top_pipeline_barriers;
+    create_top_pipeline_barriers( ctx, engine, gbuffers, screen_color, &top_pipeline_barriers );
+    engine::add_pipeline_barrier( task_list, top_pipeline_barriers );
 
     // ATMOSPHERE/SKY DRAW STUFF
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
     atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
 
+    volumetric::Volumetric volumetric;
+
 #if ENABLE_VOLUMETRICS
     // Volumetrics stuff
-    volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
+    volumetric = volumetric::initialize( ctx.vulkan, engine );
 #endif
 
     {
-        geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
-
         engine::GfxTask atmosphere_gfx_task = {
             .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
             .clear_depth = 1.f,
@@ -724,8 +756,11 @@ void run( bool use_fullscreen )
 
         atmosphere::initialize_atmosphere_baker( atms_baker, volumetric, ctx.vulkan, engine );
 
+        // NEW: Killed junk tasks and added this new task for baking radiance.
+        atmosphere::compute_bake_atmosphere( atms_baker, ctx.vulkan, task_list );
+
         // TODO: As shown in Destiny 2 GDC 2018 talk, we can simply substitute the last glossy mip
-        atmosphere::compute_octahedral_sky_irradiance( atms_baker, ctx.vulkan, engine, task_list );
+        atmosphere::compute_octahedral_sky_irradiance( atms_baker, ctx.vulkan, task_list );
 
         // Replace this with a gaussian blur optimization
         atmosphere::compute_octahedral_sky_mips( atms_baker, ctx.vulkan, engine, task_list );
@@ -1541,13 +1576,6 @@ void run( bool use_fullscreen )
 
         engine::add_blit_task( task_list, { screen_buffer } );
     }
-
-    // TERRIBLY EVIL HACK. THIS IS BAD. DON'T BE DOING THIS GANG.
-    task_list.junk_tasks.push_back(
-        [&atms_baker]( engine::State&, Context&, engine::FrameData& frame ) {
-            atmosphere::bake_octahedral_sky_task( atms_baker, frame.render_cmdbuf );
-        }
-    );
 
     bool will_quit = false;
     bool stop_drawing = false;

@@ -36,9 +36,6 @@ struct TaskList {
     std::vector<CPUTask> cpu_tasks;
 
     std::vector<std::pair<int, PipelineBarrierDescriptor>> pipeline_barriers;
-
-    // Very dangerous. DON'T CHECK IN this code!
-    std::vector<std::function<void( State&, Context&, FrameData& )>> junk_tasks;
 };
 
 void add_gfx_task( TaskList& task_list, GfxTask task );
