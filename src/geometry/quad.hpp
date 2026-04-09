@@ -30,6 +30,10 @@ struct Mesh {
     std::array<VkVertexInputAttributeDescription, 1> attribute_descriptions = { {
         { 0, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32_SFLOAT, 0 },
     } };
+
+    static Mesh* instance;
+
+    static Mesh& get_instance() { return *instance; };
 };
 
 Mesh create( vk::Common& vulkan, const engine::State& engine );

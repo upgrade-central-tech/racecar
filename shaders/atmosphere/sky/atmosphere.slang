@@ -11,8 +11,8 @@ public struct SkySample {
 };
 
 /// Computes sky color along a view ray.
-public func get_sky_radiance(
-    in atms: Parameters, camera: float3, view_ray: float3, sun_dir: float3 )
+public func
+get_sky_radiance( in atms: Parameters, camera: float3, view_ray: float3, sun_dir: float3 )
     ->SkySample
 {
     var local_camera = camera;

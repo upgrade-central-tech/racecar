@@ -6,6 +6,8 @@
 
 namespace racecar::geometry::quad {
 
+Mesh* Mesh::instance = nullptr;
+
 Mesh create( vk::Common& vulkan, const engine::State& engine )
 {
     Mesh mesh = {
@@ -23,13 +25,20 @@ Mesh create( vk::Common& vulkan, const engine::State& engine )
 
     try {
         mesh.mesh_buffers = {
-            .index_buffer = vk::mem::create_buffer( vulkan, index_buffer_size,
-                VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                VMA_MEMORY_USAGE_GPU_ONLY ),
-            .vertex_buffer = vk::mem::create_buffer( vulkan, vertex_buffer_size,
+            .index_buffer = vk::mem::create_buffer(
+                vulkan,
+                index_buffer_size,
+                VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+                    | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                VMA_MEMORY_USAGE_GPU_ONLY
+            ),
+            .vertex_buffer = vk::mem::create_buffer(
+                vulkan,
+                vertex_buffer_size,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
                     | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                VMA_MEMORY_USAGE_CPU_TO_GPU ),
+                VMA_MEMORY_USAGE_CPU_TO_GPU
+            ),
 
         };
     } catch ( const Exception& ex ) {
@@ -49,14 +58,20 @@ Mesh create( vk::Common& vulkan, const engine::State& engine )
 
     // Upload index + vertex data to GPU
     {
-        vk::mem::AllocatedBuffer staging
-            = vk::mem::create_buffer( vulkan, vertex_buffer_size + index_buffer_size,
-                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY );
+        vk::mem::AllocatedBuffer staging = vk::mem::create_buffer(
+            vulkan,
+            vertex_buffer_size + index_buffer_size,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VMA_MEMORY_USAGE_CPU_ONLY
+        );
 
         void* data = staging.info.pMappedData;
         std::memcpy( data, mesh.vertices.data(), vertex_buffer_size );
-        std::memcpy( static_cast<char*>( data ) + vertex_buffer_size, mesh.indices.data(),
-            index_buffer_size );
+        std::memcpy(
+            static_cast<char*>( data ) + vertex_buffer_size,
+            mesh.indices.data(),
+            index_buffer_size
+        );
 
         // Copy stitched buffer [ vertex_buffer_data, index_buffer_data ] to respective vertex and
         // index buffer data on GPU Use CmdCopyBuffer to transfer data from CPU to GPU
@@ -67,8 +82,13 @@ Mesh create( vk::Common& vulkan, const engine::State& engine )
                 .size = vertex_buffer_size,
             };
 
-            vkCmdCopyBuffer( cmd_buf, staging.handle, mesh.mesh_buffers.vertex_buffer.handle, 1,
-                &vertex_buf_copy );
+            vkCmdCopyBuffer(
+                cmd_buf,
+                staging.handle,
+                mesh.mesh_buffers.vertex_buffer.handle,
+                1,
+                &vertex_buf_copy
+            );
 
             VkBufferCopy index_buf_copy = {
                 .srcOffset = vertex_buffer_size,
@@ -76,8 +96,13 @@ Mesh create( vk::Common& vulkan, const engine::State& engine )
                 .size = index_buffer_size,
             };
 
-            vkCmdCopyBuffer( cmd_buf, staging.handle, mesh.mesh_buffers.index_buffer.handle, 1,
-                &index_buf_copy );
+            vkCmdCopyBuffer(
+                cmd_buf,
+                staging.handle,
+                mesh.mesh_buffers.index_buffer.handle,
+                1,
+                &index_buf_copy
+            );
         } );
     }
 

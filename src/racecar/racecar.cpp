@@ -358,6 +358,14 @@ void create_raymarch_tex_sets(
     engine::update_descriptor_set_image( ctx.vulkan, engine, *raymarch_tex_sets, test_data_3D, 0 );
 }
 
+enum LUT_INDEX {
+    BRDF = 0,
+    GLINT = 1,
+    OCTAHEDRAL_SKY = 2,
+    OCTAHEDRAL_IRRADIANCE = 3,
+    OCTAHEDRAL_MIPS = 4
+};
+
 void create_lut_sets(
     Context& ctx,
     engine::State& engine,
@@ -366,6 +374,7 @@ void create_lut_sets(
     vk::mem::AllocatedImage* glint_noise
 )
 {
+    // TODO: Add blue noise for future features
     *lut_sets = engine::generate_descriptor_set(
         ctx.vulkan,
         engine,
@@ -390,8 +399,20 @@ void create_lut_sets(
 
     *glint_noise = geometry::generate_glint_noise( ctx.vulkan, engine );
 
-    engine::update_descriptor_set_image( ctx.vulkan, engine, *lut_sets, *lut_brdf, 0 );
-    engine::update_descriptor_set_image( ctx.vulkan, engine, *lut_sets, *glint_noise, 1 );
+    engine::update_descriptor_set_image(
+        ctx.vulkan,
+        engine,
+        *lut_sets,
+        *lut_brdf,
+        LUT_INDEX::BRDF
+    );
+    engine::update_descriptor_set_image(
+        ctx.vulkan,
+        engine,
+        *lut_sets,
+        *glint_noise,
+        LUT_INDEX::GLINT
+    );
 }
 
 void create_depth_ms_prepass(
@@ -581,6 +602,112 @@ void create_top_pipeline_barriers(
     );
 }
 
+void draw_atmosphere(
+    Context& ctx,
+    engine::State& engine,
+    engine::TaskList& task_list,
+    atmosphere::Atmosphere& atms,
+    engine::RWImage& out_color
+)
+{
+    engine::GfxTask atmosphere_gfx_task = {
+        .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
+        .clear_depth = 1.f,
+        .render_target_is_swapchain = false,
+        .color_attachments = { out_color },
+        .extent = engine.swapchain.extent,
+    };
+
+    engine::Pipeline atmosphere_pipeline;
+
+    try {
+        atmosphere_pipeline = engine::create_gfx_pipeline(
+            engine,
+            ctx.vulkan,
+            engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance() ),
+            {
+                atms.uniform_desc_set.layouts[0],
+                atms.lut_desc_set.layouts[0],
+                atms.sampler_desc_set.layouts[0],
+            },
+            {
+                VK_FORMAT_R16G16B16A16_SFLOAT,
+            },
+            VK_SAMPLE_COUNT_1_BIT,
+            false,
+            true,
+            vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ),
+            false
+        );
+    } catch ( const Exception& ex ) {
+        log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
+        throw;
+    }
+
+    atmosphere_gfx_task.draw_tasks.push_back( {
+                .draw_resource_descriptor = {
+                        .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
+                        .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
+                        .vertex_buffer_offsets = { 0 },
+                        .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
+                },
+                .descriptor_sets = {
+                    &atms.uniform_desc_set,
+                    &atms.lut_desc_set,
+                    &atms.sampler_desc_set,
+                },
+                .pipeline = atmosphere_pipeline,
+            } );
+
+    engine::add_gfx_task( task_list, atmosphere_gfx_task );
+}
+
+/// Runs the atmosphere baker, populating the octahedral sky, irradiance, and mip textures
+/// respectively. After population, this function populates their respective LUTS.
+// TODO: the atmosphere baking heavily relies on populated volumetric LUTs, making this tightly
+// coupled. Need some way to skip volumetrics in the atmosphere baker if volumetrics are disabled.
+void dispatch_atmosphere_baker(
+    Context& ctx,
+    engine::State& engine,
+    engine::TaskList& task_list,
+    engine::DescriptorSet& lut_sets,
+    atmosphere::AtmosphereBaker& atms_baker,
+    const volumetric::Volumetric& volumetric
+)
+{
+    atmosphere::initialize_atmosphere_baker( atms_baker, volumetric, ctx.vulkan, engine );
+    atmosphere::compute_octahedral_sky( atms_baker, ctx.vulkan, task_list );
+    atmosphere::compute_octahedral_sky_irradiance( atms_baker, ctx.vulkan, task_list );
+
+    // TODO: As shown in Destiny 2 GDC 2018 talk, we can simply substitute the last glossy mip with
+    // this irradiance. It is also possible to simplify glossy irradiance by naive gaussian blur.
+    atmosphere::compute_octahedral_sky_mips( atms_baker, ctx.vulkan, engine, task_list );
+
+    engine::update_descriptor_set_image(
+        ctx.vulkan,
+        engine,
+        lut_sets,
+        atms_baker.octahedral_sky,
+        LUT_INDEX::OCTAHEDRAL_SKY
+    );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan,
+        engine,
+        lut_sets,
+        atms_baker.octahedral_sky_irradiance,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        LUT_INDEX::OCTAHEDRAL_IRRADIANCE
+    );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan,
+        engine,
+        lut_sets,
+        atms_baker.octahedral_sky_mips,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        LUT_INDEX::OCTAHEDRAL_MIPS
+    );
+}
+
 /*
  * Temporary comment header to separate the refactored functions and the run call.
  * Goal is to neaten up run() for easier readability, scalability, and customization.
@@ -647,6 +774,7 @@ void run( bool use_fullscreen )
     // TODO: It might be beneficial if meshes like these are global; helps avoid rebuilding them for
     // whatever reason.
     geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+    geometry::quad::Mesh::instance = &quad_mesh;
 
     log::info( "[main] pre atmo3!" );
     engine::TaskList task_list;
@@ -682,119 +810,28 @@ void run( bool use_fullscreen )
         &sampler_desc_set
     );
 
+    // Screen buffers setup
     engine::RWImage screen_color;
     engine::RWImage screen_buffer;
     engine::RWImage screen_history;
     create_screen_buffers( ctx, engine, &screen_color, &screen_buffer, &screen_history );
 
+    // Once all of the essential buffers are setup (GBuffer + Screen buffers), we run a pipeline
+    // barrier to ensure sync.
     engine::PipelineBarrierDescriptor top_pipeline_barriers;
     create_top_pipeline_barriers( ctx, engine, gbuffers, screen_color, &top_pipeline_barriers );
     engine::add_pipeline_barrier( task_list, top_pipeline_barriers );
 
-    // ATMOSPHERE/SKY DRAW STUFF
+    // Atmospheres/sky/volumetrics section
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
     atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
 
     volumetric::Volumetric volumetric;
-
-#if ENABLE_VOLUMETRICS
-    // Volumetrics stuff
     volumetric = volumetric::initialize( ctx.vulkan, engine );
-#endif
 
-    {
-        engine::GfxTask atmosphere_gfx_task = {
-            .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
-            .clear_depth = 1.f,
-            .render_target_is_swapchain = false,
-            .color_attachments = { screen_color },
-            .extent = engine.swapchain.extent,
-        };
-
-        engine::Pipeline atmosphere_pipeline;
-
-        try {
-            atmosphere_pipeline = engine::create_gfx_pipeline(
-                engine,
-                ctx.vulkan,
-                engine::get_vertex_input_state_create_info( quad_mesh ),
-                {
-                    atms.uniform_desc_set.layouts[0],
-                    atms.lut_desc_set.layouts[0],
-                    atms.sampler_desc_set.layouts[0],
-                },
-                {
-                    VK_FORMAT_R16G16B16A16_SFLOAT,
-                },
-                VK_SAMPLE_COUNT_1_BIT,
-                false,
-                true,
-                vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ),
-                false
-            );
-        } catch ( const Exception& ex ) {
-            log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
-            throw;
-        }
-
-        atmosphere_gfx_task.draw_tasks.push_back( {
-                .draw_resource_descriptor = {
-                        .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
-                        .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
-                        .vertex_buffer_offsets = { 0 },
-                        .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
-                },
-                .descriptor_sets = {
-                    &atms.uniform_desc_set,
-                    &atms.lut_desc_set,
-                    &atms.sampler_desc_set,
-                },
-                .pipeline = atmosphere_pipeline,
-            } );
-
-        engine::add_gfx_task( task_list, atmosphere_gfx_task );
-
-        atmosphere::initialize_atmosphere_baker( atms_baker, volumetric, ctx.vulkan, engine );
-
-        // NEW: Killed junk tasks and added this new task for baking radiance.
-        atmosphere::compute_bake_atmosphere( atms_baker, ctx.vulkan, task_list );
-
-        // TODO: As shown in Destiny 2 GDC 2018 talk, we can simply substitute the last glossy mip
-        atmosphere::compute_octahedral_sky_irradiance( atms_baker, ctx.vulkan, task_list );
-
-        // Replace this with a gaussian blur optimization
-        atmosphere::compute_octahedral_sky_mips( atms_baker, ctx.vulkan, engine, task_list );
-
-        // LUT setes pt2 assignment
-        engine::update_descriptor_set_image(
-            ctx.vulkan,
-            engine,
-            lut_sets,
-            atms_baker.octahedral_sky,
-            2
-        );
-        engine::update_descriptor_set_rwimage(
-            ctx.vulkan,
-            engine,
-            lut_sets,
-            atms_baker.octahedral_sky_irradiance,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            3
-        );
-        engine::update_descriptor_set_rwimage(
-            ctx.vulkan,
-            engine,
-            lut_sets,
-            atms_baker.octahedral_sky_test,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            4
-        );
-
-#if ENABLE_VOLUMETRICS
-        volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list, screen_color );
-#endif
-    }
-    // END ATMOSPHERE/SKY DRAW STUFF
+    draw_atmosphere( ctx, engine, task_list, atms, screen_color );
+    dispatch_atmosphere_baker( ctx, engine, task_list, lut_sets, atms_baker, volumetric );
+    volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list, screen_color );
 
     // GBUFFER PRE-PASS
     engine::GfxTask prepass_gfx_task = {
@@ -1187,7 +1224,7 @@ void run( bool use_fullscreen )
             ctx.vulkan,
             engine,
             car_descriptor_set,
-            atms_baker.octahedral_sky_test,
+            atms_baker.octahedral_sky_mips,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             5
         );
@@ -1396,6 +1433,7 @@ void run( bool use_fullscreen )
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
         );
 
+        // TODO: Replace with quad_mesh?
         geometry::quad::Mesh lighting_pass_quad_mesh = geometry::quad::create( ctx.vulkan, engine );
 
         engine::GfxTask lighting_pass_gfx_task = {

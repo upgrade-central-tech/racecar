@@ -32,7 +32,9 @@ VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color
             return VK_FORMAT_R32G32B32A32_SFLOAT;
         default:
             log::warn(
-                "[Scene] Texture loading: Unsupported 32-bit channel count: {}", num_channels );
+                "[Scene] Texture loading: Unsupported 32-bit channel count: {}",
+                num_channels
+            );
         }
     } else if ( bits_per_channel == 8 ) {
         switch ( num_channels ) {
@@ -47,22 +49,33 @@ VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color
             return VK_FORMAT_R8G8B8A8_UNORM;
         default:
             log::warn(
-                "[Scene] Texture loading: Unsupported 8-bit channel count: {}", num_channels );
+                "[Scene] Texture loading: Unsupported 8-bit channel count: {}",
+                num_channels
+            );
         }
     }
 
-    log::warn( "[Scene] Texture loading: Unknown texture format. Returning "
-               "VK_FORMAT_R8G8B8A8_UNORM as default" );
+    log::warn(
+        "[Scene] Texture loading: Unknown texture format. Returning "
+        "VK_FORMAT_R8G8B8A8_UNORM as default"
+    );
     return VK_FORMAT_R8G8B8A8_UNORM;
 }
 
-void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,
-    Scene& scene, std::vector<geometry::scene::Vertex>& out_global_vertices,
-    std::vector<uint32_t>& out_global_indices )
+void load_gltf(
+    vk::Common& vulkan,
+    engine::State& engine,
+    std::filesystem::path file_path,
+    Scene& scene,
+    std::vector<geometry::scene::Vertex>& out_global_vertices,
+    std::vector<uint32_t>& out_global_indices
+)
 {
     if ( !std::filesystem::exists( file_path ) ) {
         throw Exception(
-            "[Scene] File \"{}\" does not exist", std::filesystem::absolute( file_path ).string() );
+            "[Scene] File \"{}\" does not exist",
+            std::filesystem::absolute( file_path ).string()
+        );
     }
 
     std::string ext = file_path.extension().string();
@@ -126,19 +139,19 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
         }
         if ( loaded_mat.extensions.count( "KHR_materials_ior" ) != 0 ) {
             new_mat.ior = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_ior" )
-                    ->second.Get( "ior" )
-                    .GetNumberAsDouble() );
+                                                  ->second.Get( "ior" )
+                                                  .GetNumberAsDouble() );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_clearcoat" ) ) {
             new_mat.clearcoat
                 = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_clearcoat" )
-                        ->second.Get( "clearcoatFactor" )
-                        .GetNumberAsDouble() );
+                                          ->second.Get( "clearcoatFactor" )
+                                          .GetNumberAsDouble() );
             new_mat.clearcoat_roughness
                 = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_clearcoat" )
-                        ->second.Get( "clearcoatRoughnessFactor" )
-                        .GetNumberAsDouble() );
+                                          ->second.Get( "clearcoatRoughnessFactor" )
+                                          .GetNumberAsDouble() );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_sheen" ) ) {
@@ -148,9 +161,11 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
             const tinygltf::Value& color_factor = sheen.Get( "sheenColorFactor" );
 
             if ( color_factor.IsArray() && color_factor.Size() == 3 ) {
-                new_mat.sheen_tint = glm::vec3( color_factor.Get( 0 ).GetNumberAsDouble(),
+                new_mat.sheen_tint = glm::vec3(
+                    color_factor.Get( 0 ).GetNumberAsDouble(),
                     color_factor.Get( 1 ).GetNumberAsDouble(),
-                    color_factor.Get( 2 ).GetNumberAsDouble() );
+                    color_factor.Get( 2 ).GetNumberAsDouble()
+                );
             }
             new_mat.sheen_roughness
                 = static_cast<float>( sheen.Get( "sheenRoughnessFactor" ).GetNumberAsDouble() );
@@ -159,8 +174,8 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
         if ( loaded_mat.extensions.count( "KHR_materials_transmission" ) ) {
             new_mat.transmission
                 = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_transmission" )
-                        ->second.Get( "transmissionFactor" )
-                        .GetNumberAsDouble() );
+                                          ->second.Get( "transmissionFactor" )
+                                          .GetNumberAsDouble() );
         }
 
         new_mat.emissive = double_array_to_vec3( loaded_mat.emissiveFactor );
@@ -223,10 +238,16 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
         VkFormat image_format
             = get_vk_format( texture.bits_per_channel, texture.num_channels, texture.color_space );
 
-        texture.data = engine::create_image( vulkan, engine,
+        texture.data = engine::create_image(
+            vulkan,
+            engine,
             static_cast<void*>( loaded_img.image.data() ),
             { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
-            image_format, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+            image_format,
+            VK_IMAGE_TYPE_2D,
+            VK_IMAGE_USAGE_SAMPLED_BIT,
+            false
+        );
         if ( !texture.data ) {
             log::error( "[Scene] GLTF loading: Failed to load texture onto the GPU" );
         }
@@ -258,8 +279,24 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
         // Get node transform
         if ( loaded_node.matrix.size() ) {
             std::vector<double> mat = loaded_node.matrix;
-            new_node->transform = glm::mat4( mat[0], mat[1], mat[2], mat[3], mat[4], mat[5], mat[6],
-                mat[7], mat[8], mat[9], mat[10], mat[11], mat[12], mat[13], mat[14], mat[15] );
+            new_node->transform = glm::mat4(
+                mat[0],
+                mat[1],
+                mat[2],
+                mat[3],
+                mat[4],
+                mat[5],
+                mat[6],
+                mat[7],
+                mat[8],
+                mat[9],
+                mat[10],
+                mat[11],
+                mat[12],
+                mat[13],
+                mat[14],
+                mat[15]
+            );
         } else {
             // Attempt to recover from individual transforms
 
@@ -268,15 +305,20 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
             glm::vec3 scale = glm::vec3( 1.f );
 
             if ( loaded_node.translation.size() ) {
-                translation = glm::vec3( loaded_node.translation[0], loaded_node.translation[1],
-                    loaded_node.translation[2] );
+                translation = glm::vec3(
+                    loaded_node.translation[0],
+                    loaded_node.translation[1],
+                    loaded_node.translation[2]
+                );
             }
             if ( loaded_node.rotation.size() ) {
                 // GLM's quat expects WXYZ order, but GLTF uses XYZW order
-                rotation = glm::quat( static_cast<float>( loaded_node.rotation[3] ),
+                rotation = glm::quat(
+                    static_cast<float>( loaded_node.rotation[3] ),
                     static_cast<float>( loaded_node.rotation[0] ),
                     static_cast<float>( loaded_node.rotation[1] ),
-                    static_cast<float>( loaded_node.rotation[2] ) );
+                    static_cast<float>( loaded_node.rotation[2] )
+                );
             }
             if ( loaded_node.scale.size() ) {
                 scale
@@ -318,9 +360,11 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
                     new_prim.material_id = default_material_id;
                 }
                 if ( loaded_prim.mode != 4 ) {
-                    log::warn( "[Scene] GLTF Loading: Mesh detected that uses a mode other than "
-                               "TRIANGLES. This is "
-                               "currently unsupported." );
+                    log::warn(
+                        "[Scene] GLTF Loading: Mesh detected that uses a mode other than "
+                        "TRIANGLES. This is "
+                        "currently unsupported."
+                    );
                 }
 
                 std::vector<glm::vec3> pos;
@@ -337,12 +381,15 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
                             "[Scene] GLTF Loading: Expected all vertex attributes to be float "
                             "- "
                             "unsupported "
-                            "component type detected" );
+                            "component type detected"
+                        );
                     }
                     if ( accessor.type != TINYGLTF_TYPE_VEC3 ) {
-                        log::warn( "[Scene] GLTF Loading: Expected all positions to be in vec3 - "
-                                   "unsupported type "
-                                   "detected" );
+                        log::warn(
+                            "[Scene] GLTF Loading: Expected all positions to be in vec3 - "
+                            "unsupported type "
+                            "detected"
+                        );
                     }
 
                     tinygltf::BufferView buffer_view
@@ -368,12 +415,15 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
                             "[Scene] GLTF Loading: Expected all vertex attributes to be float "
                             "- "
                             "unsupported "
-                            "component type detected" );
+                            "component type detected"
+                        );
                     }
                     if ( accessor.type != TINYGLTF_TYPE_VEC3 ) {
-                        log::warn( "[Scene] GLTF Loading: Expected all normals to be in vec3 - "
-                                   "unsupported type "
-                                   "detected" );
+                        log::warn(
+                            "[Scene] GLTF Loading: Expected all normals to be in vec3 - "
+                            "unsupported type "
+                            "detected"
+                        );
                     }
 
                     tinygltf::BufferView buffer_view
@@ -400,13 +450,16 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
                             "[Scene] GLTF Loading: Expected all vertex attributes to be float "
                             "- "
                             "unsupported "
-                            "component type detected" );
+                            "component type detected"
+                        );
                     }
                     if ( accessor.type != TINYGLTF_TYPE_VEC2 ) {
-                        log::warn( "[Scene] GLTF Loading: Expected all uvs to be in vec2 - "
-                                   "unsupported "
-                                   "type "
-                                   "detected" );
+                        log::warn(
+                            "[Scene] GLTF Loading: Expected all uvs to be in vec2 - "
+                            "unsupported "
+                            "type "
+                            "detected"
+                        );
                     }
 
                     tinygltf::BufferView buffer_view
@@ -424,9 +477,11 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
 
                 // Assume position data always exists
                 if ( ( pos.size() != nor.size() && nor.size() != 0 )
-                    || ( pos.size() != uv.size() && uv.size() != 0 ) ) {
-                    log::warn( "[Scene] GLTF Loading: nonzero nor or uv count does not match up "
-                               "with pos count" );
+                     || ( pos.size() != uv.size() && uv.size() != 0 ) ) {
+                    log::warn(
+                        "[Scene] GLTF Loading: nonzero nor or uv count does not match up "
+                        "with pos count"
+                    );
                 }
 
                 new_prim.vertex_offset = static_cast<int>( out_global_vertices.size() );
@@ -456,9 +511,11 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
                     int buffer_view_id = accessor.bufferView;
 
                     if ( accessor.type != TINYGLTF_TYPE_SCALAR ) {
-                        log::warn( "[Scene] GLTF Loading: Expected all indices to be scalars - "
-                                   "unsupported type "
-                                   "detected" );
+                        log::warn(
+                            "[Scene] GLTF Loading: Expected all indices to be scalars - "
+                            "unsupported type "
+                            "detected"
+                        );
                     }
 
                     tinygltf::BufferView buffer_view
@@ -483,13 +540,15 @@ void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path
                         size_t byte_length = accessor.count * sizeof( uint32_t );
                         std::vector<uint32_t> ind( new_prim.ind_count );
                         std::memcpy( ind.data(), buffer.data.data() + byte_offset, byte_length );
-                        out_global_indices.insert(
-                            out_global_indices.end(), ind.begin(), ind.end() );
+                        out_global_indices
+                            .insert( out_global_indices.end(), ind.begin(), ind.end() );
                     } else {
-                        log::warn( "[Scene] GLTF Loading: Expected all indices to either be a "
-                                   "unsigned "
-                                   "short or an "
-                                   "unsigned int - unsupported component type detected" );
+                        log::warn(
+                            "[Scene] GLTF Loading: Expected all indices to either be a "
+                            "unsigned "
+                            "short or an "
+                            "unsigned int - unsupported component type detected"
+                        );
                     }
                 } else { // If there are no indices, assume position vector will lay out all
                          // triangles
@@ -539,18 +598,31 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
 
     VkFormat image_format
         = get_vk_format( hdri.bits_per_channel, hdri.num_channels, ColorSpace::SFLOAT );
-    hdri.data = engine::create_image( vulkan, engine, static_cast<void*>( hdriData ),
+    hdri.data = engine::create_image(
+        vulkan,
+        engine,
+        static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
-        image_format, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT, false );
+        image_format,
+        VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_SAMPLED_BIT,
+        false
+    );
 
     scene.textures.push_back( hdri );
     scene.hdri_index = scene.textures.size() - 1;
     return true;
 }
 
-void propagate_transform( vk::Common vulkan, engine::State& engine, Scene& scene,
-    std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers, size_t start_node_id,
-    glm::mat4 transform, std::vector<bool>& discovered )
+void propagate_transform(
+    vk::Common vulkan,
+    engine::State& engine,
+    Scene& scene,
+    std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
+    size_t start_node_id,
+    glm::mat4 transform,
+    std::vector<bool>& discovered
+)
 {
     std::vector<size_t> stack;
     stack.push_back( start_node_id );

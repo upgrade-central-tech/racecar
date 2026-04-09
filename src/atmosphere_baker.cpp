@@ -18,7 +18,7 @@ static constexpr std::string_view BAKE_ATMS_MIPS_SHADER_PATH
 
 void initialize_atmosphere_baker(
     AtmosphereBaker& atms_baker,
-    volumetric::Volumetric& volumetric,
+    const volumetric::Volumetric& volumetric,
     vk::Common& vulkan,
     engine::State& engine
 )
@@ -117,26 +117,9 @@ void initialize_atmosphere_baker(
         volumetric.uniform_buffer,
         3
     );
-
-    // Everything down here should be abstracted away.
-
-    const Atmosphere& atms = *atms_baker.atmosphere;
-
-    atms_baker.compute_pipeline = engine::create_compute_pipeline(
-        vulkan,
-        {
-            atms.uniform_desc_set.layouts[0],
-            atms.lut_desc_set.layouts[0],
-            atms.sampler_desc_set.layouts[0],
-            atms_baker.octahedral_write_desc_set.layouts[0],
-            atms_baker.volumetrics_desc_set.layouts[0],
-        },
-        vk::create::shader_module( vulkan, BAKE_ATMS_SHADER_PATH ),
-        "cs_bake_atmosphere"
-    );
 }
 
-void compute_bake_atmosphere(
+void compute_octahedral_sky(
     AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::TaskList& task_list
 )
 {
@@ -270,7 +253,7 @@ void compute_octahedral_sky_mips(
 
     // TODO: Refactor this mip generation somewhere else.
     // Mip generation itself should be abstracted away.
-    atms_baker.octahedral_sky_test = engine::create_rwimage_mips(
+    atms_baker.octahedral_sky_mips = engine::create_rwimage_mips(
         vulkan,
         engine,
         { mip0_size, mip0_size, 1 },
@@ -309,7 +292,7 @@ void compute_octahedral_sky_mips(
             vulkan,
             engine,
             atms_baker.octahedral_mip_writes[mip],
-            atms_baker.octahedral_sky_test,
+            atms_baker.octahedral_sky_mips,
             VK_IMAGE_LAYOUT_GENERAL,
             2,
             mip
@@ -358,7 +341,7 @@ void compute_octahedral_sky_mips(
                                                 .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                                                 .dst_access = VK_ACCESS_SHADER_WRITE_BIT,
                                                 .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                                .image = atms_baker.octahedral_sky_test,
+                                                .image = atms_baker.octahedral_sky_mips,
                                                 .range = {
                                                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                                                     .baseMipLevel = 0,
@@ -402,7 +385,7 @@ void compute_octahedral_sky_mips(
                                        .dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                       .image = atms_baker.octahedral_sky_test,
+                                       .image = atms_baker.octahedral_sky_mips,
                                        .range = {
                                            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                                            .baseMipLevel = 0,

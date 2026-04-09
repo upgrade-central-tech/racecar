@@ -10,7 +10,7 @@ namespace racecar::atmosphere {
 struct AtmosphereBaker {
     Atmosphere* atmosphere;
 
-    engine::RWImage octahedral_sky_test;
+    engine::RWImage octahedral_sky_mips;
     engine::RWImage octahedral_sky_irradiance;
     vk::mem::AllocatedImage octahedral_sky;
 
@@ -23,9 +23,9 @@ struct AtmosphereBaker {
 
 void initialize_atmosphere_baker(
     AtmosphereBaker& atms_baker,
-    volumetric::Volumetric& volumetric,
+    const volumetric::Volumetric& volumetric,
     vk::Common& vulkan,
-    [[maybe_unused]] engine::State& engine
+    engine::State& engine
 );
 
 // TODO: refactor this later so that it abandons the junk-task system
@@ -33,7 +33,7 @@ void prebake_octahedral_sky(
     const AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::State& engine
 );
 
-void compute_bake_atmosphere(
+void compute_octahedral_sky(
     AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::TaskList& task_list
 );
 
