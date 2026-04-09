@@ -619,6 +619,7 @@ void draw_atmosphere(
     };
 
     engine::Pipeline atmosphere_pipeline;
+    geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
 
     try {
         atmosphere_pipeline = engine::create_gfx_pipeline(
