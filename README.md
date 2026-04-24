@@ -7,6 +7,8 @@ Team 6
 - [Milestone 2 presentation](https://docs.google.com/presentation/d/1SAvpTj8gU0uzmK-C_Fmakty60CFiGGIhXUBPoFP1-iw)
 - [Milestone 3 presentation](https://docs.google.com/presentation/d/15Yk6nuF8lukJmDto_tTPZz7DENXsyRABhGUGP3UAO0Y)
 
+**[Demo video can be found here!](https://www.youtube.com/watch?v=_q5aIwFvUIk)**
+
 RACECAR is a Vulkan renderer written in C++. It's inspired by racing games like the _Forza_ and _Gran Turismo_ series. We aim to implement state-of-the-art material, environment, and sky rendering based on recent papers and graphics techniques.
 
 !["f1 car image"](images/f1.png)
