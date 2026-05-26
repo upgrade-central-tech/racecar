@@ -570,8 +570,6 @@ void create_screen_buffers(
 }
 
 void create_top_pipeline_barriers(
-    Context& ctx,
-    engine::State& engine,
     const deferred::GBuffers& gbuffers,
     const engine::RWImage& screen_color,
     engine::PipelineBarrierDescriptor* top_pipeline_barrier_desc
@@ -820,7 +818,7 @@ void run( bool use_fullscreen )
     // Once all of the essential buffers are setup (GBuffer + Screen buffers), we run a pipeline
     // barrier to ensure sync.
     engine::PipelineBarrierDescriptor top_pipeline_barriers;
-    create_top_pipeline_barriers( ctx, engine, gbuffers, screen_color, &top_pipeline_barriers );
+    create_top_pipeline_barriers( gbuffers, screen_color, &top_pipeline_barriers );
     engine::add_pipeline_barrier( task_list, top_pipeline_barriers );
 
     // Atmospheres/sky/volumetrics section
