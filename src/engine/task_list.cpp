@@ -38,7 +38,8 @@ void add_blit_task( TaskList& task_list, BlitTask task )
 void add_pipeline_barrier( TaskList& task_list, PipelineBarrierDescriptor barrier )
 {
     task_list.pipeline_barriers.push_back(
-        std::pair( static_cast<int>( task_list.tasks.size() ), barrier ) );
+        std::pair( static_cast<int>( task_list.tasks.size() ), barrier )
+    );
 }
 
 void add_cpu_task( TaskList& task_list, std::function<void()> task )
@@ -55,8 +56,10 @@ void add_cpu_task( TaskList& task_list, std::function<void()> task )
 /// instead of having multiple pipelines
 void transition_cs_read_to_write( engine::TaskList& task_list, engine::RWImage& image )
 {
-    engine::add_pipeline_barrier( task_list,
-        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
             .image_barriers = {
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -68,13 +71,16 @@ void transition_cs_read_to_write( engine::TaskList& task_list, engine::RWImage& 
                     .image = image,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
-            } } );
+            } }
+    );
 }
 
 void transition_cs_write_to_read( engine::TaskList& task_list, engine::RWImage& image )
 {
-    engine::add_pipeline_barrier( task_list,
-        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
             .image_barriers = {
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -86,13 +92,16 @@ void transition_cs_write_to_read( engine::TaskList& task_list, engine::RWImage& 
                     .image = image,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
-            } } );
+            } }
+    );
 }
 
 void transition_cs_read_to_rw( engine::TaskList& task_list, engine::RWImage& image )
 {
-    engine::add_pipeline_barrier( task_list,
-        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
             .image_barriers = {
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -104,13 +113,16 @@ void transition_cs_read_to_rw( engine::TaskList& task_list, engine::RWImage& ima
                     .image = image,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
-            } } );
+            } }
+    );
 }
 
 void transition_cs_write_to_rw( engine::TaskList& task_list, engine::RWImage& image )
 {
-    engine::add_pipeline_barrier( task_list,
-        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
             .image_barriers = {
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -122,13 +134,16 @@ void transition_cs_write_to_rw( engine::TaskList& task_list, engine::RWImage& im
                     .image = image,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
-            } } );
+            } }
+    );
 }
 
 void transition_cs_rw_to_read( engine::TaskList& task_list, engine::RWImage& image )
 {
-    engine::add_pipeline_barrier( task_list,
-        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
             .image_barriers = {
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -140,13 +155,16 @@ void transition_cs_rw_to_read( engine::TaskList& task_list, engine::RWImage& ima
                     .image = image,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
-            } } );
+            } }
+    );
 }
 
 void transition_cs_rw_to_write( engine::TaskList& task_list, engine::RWImage& image )
 {
-    engine::add_pipeline_barrier( task_list,
-        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
             .image_barriers = {
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -158,7 +176,8 @@ void transition_cs_rw_to_write( engine::TaskList& task_list, engine::RWImage& im
                     .image = image,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
-            } } );
+            } }
+    );
 }
 
 } // namespace racecar::engine

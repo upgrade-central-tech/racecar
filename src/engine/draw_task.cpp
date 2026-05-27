@@ -4,8 +4,12 @@
 
 namespace racecar::engine {
 
-void draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
-    const VkExtent2D extent )
+void draw(
+    const engine::State& engine,
+    const DrawTask& draw_task,
+    const VkCommandBuffer& cmd_buf,
+    const VkExtent2D extent
+)
 {
     vkCmdBindPipeline( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.handle );
 
@@ -30,26 +34,49 @@ void draw( const engine::State& engine, const DrawTask& draw_task, const VkComma
     for ( size_t i = 0; i < draw_task.descriptor_sets.size(); ++i ) {
         DescriptorSet* descriptor_set = draw_task.descriptor_sets[i];
 
-        vkCmdBindDescriptorSets( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            draw_task.pipeline.layout, static_cast<uint32_t>( i ), 1,
-            &descriptor_set->descriptor_sets[engine.get_frame_index()], 0, nullptr );
+        vkCmdBindDescriptorSets(
+            cmd_buf,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            draw_task.pipeline.layout,
+            static_cast<uint32_t>( i ),
+            1,
+            &descriptor_set->descriptor_sets[engine.get_frame_index()],
+            0,
+            nullptr
+        );
     }
 
-    vkCmdBindVertexBuffers( cmd_buf, vk::binding::VERTEX_BUFFER,
+    vkCmdBindVertexBuffers(
+        cmd_buf,
+        vk::binding::VERTEX_BUFFER,
         static_cast<uint32_t>( draw_task.draw_resource_descriptor.vertex_buffers.size() ),
         draw_task.draw_resource_descriptor.vertex_buffers.data(),
-        draw_task.draw_resource_descriptor.vertex_buffer_offsets.data() );
+        draw_task.draw_resource_descriptor.vertex_buffer_offsets.data()
+    );
 
     vkCmdBindIndexBuffer(
-        cmd_buf, draw_task.draw_resource_descriptor.index_buffer, 0, VK_INDEX_TYPE_UINT32 );
+        cmd_buf,
+        draw_task.draw_resource_descriptor.index_buffer,
+        0,
+        VK_INDEX_TYPE_UINT32
+    );
 
-    vkCmdDrawIndexed( cmd_buf, draw_task.draw_resource_descriptor.index_count, 1,
+    vkCmdDrawIndexed(
+        cmd_buf,
+        draw_task.draw_resource_descriptor.index_count,
+        1,
         uint32_t( draw_task.draw_resource_descriptor.index_offset ),
-        draw_task.draw_resource_descriptor.vertex_offset, 0 );
+        draw_task.draw_resource_descriptor.vertex_offset,
+        0
+    );
 }
 
-DrawResourceDescriptor DrawResourceDescriptor::from_mesh( VkBuffer vertex_buffer,
-    VkBuffer index_buffer, uint32_t num_indices, const std::optional<scene::Primitive>& primitive )
+DrawResourceDescriptor DrawResourceDescriptor::from_mesh(
+    VkBuffer vertex_buffer,
+    VkBuffer index_buffer,
+    uint32_t num_indices,
+    const std::optional<scene::Primitive>& primitive
+)
 {
     engine::DrawResourceDescriptor draw_mesh_desc = {
         .vertex_buffers = { vertex_buffer },

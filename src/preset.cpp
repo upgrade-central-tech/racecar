@@ -48,8 +48,12 @@ Preset parse_preset_json( fs::path json_path )
     std::ifstream file( absolute );
 
     if ( !file.is_open() ) {
-        throw Exception( std::format(
-            "[preset] Could not open preset JSON file \"{}\"", absolute.filename().string() ) );
+        throw Exception(
+            std::format(
+                "[preset] Could not open preset JSON file \"{}\"",
+                absolute.filename().string()
+            )
+        );
     }
 
     json data = json::parse( file );
@@ -57,7 +61,8 @@ Preset parse_preset_json( fs::path json_path )
 
     if ( version != CURRENT_VERSION ) {
         throw Exception(
-            std::format( "[preset] \"version\" key must be set to {}!", CURRENT_VERSION ) );
+            std::format( "[preset] \"version\" key must be set to {}!", CURRENT_VERSION )
+        );
     }
 
     const json& camera = data["camera"];

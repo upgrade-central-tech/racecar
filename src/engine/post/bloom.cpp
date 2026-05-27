@@ -25,7 +25,7 @@ BloomPass add_bloom(
 
     engine::transition_cs_read_to_rw( task_list, inout );
     engine::transition_cs_write_to_rw( task_list, write_only );
-    
+
     {
         VkExtent3D current_extent
             = { engine.swapchain.extent.width / 2, engine.swapchain.extent.height / 2, 1 };
@@ -62,7 +62,7 @@ BloomPass add_bloom(
     }
 
     {
-        pass.bloom_ub = create_uniform_buffer<ub_data::Bloom>( vulkan, {}, engine.frame_overlap );
+        pass.bloom_ub = create_uniform_buffer<ub_data::Bloom>( vulkan, { }, engine.frame_overlap );
 
         engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set(
             vulkan,

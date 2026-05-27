@@ -10,7 +10,7 @@ void initialize_ao_pass( vk::Common& vulkan, engine::State& engine, AoPass& ao_p
 {
     ao_pass.ao_buffer = create_uniform_buffer<ub_data::AOData>(
         vulkan,
-        {},
+        { },
         static_cast<size_t>( engine.frame_overlap )
     );
 

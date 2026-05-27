@@ -128,7 +128,7 @@ void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam
 void process_input( OrbitCamera& cam )
 {
     const bool* key_states = SDL_GetKeyboardState( nullptr );
-    glm::vec3 direction = {};
+    glm::vec3 direction = { };
 
     if ( key_states[SDL_SCANCODE_W] ) {
         direction.z += TRANSLATE_SPEED;

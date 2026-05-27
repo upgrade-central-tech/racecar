@@ -138,7 +138,7 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
     );
 
     terrain.terrain_uniform
-        = create_uniform_buffer<ub_data::TerrainData>( vulkan, {}, engine.frame_overlap );
+        = create_uniform_buffer<ub_data::TerrainData>( vulkan, { }, engine.frame_overlap );
 
     terrain.test_layer_mask = engine::load_image(
         TEST_LAYER_MASK_PATH,

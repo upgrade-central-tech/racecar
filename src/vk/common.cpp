@@ -46,7 +46,9 @@ vkb::Instance create_instance()
 
     if ( !inst_extensions ) {
         throw Exception(
-            "[SDL] Could not get necessary Vulkan instance extensions: {}", SDL_GetError() );
+            "[SDL] Could not get necessary Vulkan instance extensions: {}",
+            SDL_GetError()
+        );
     }
 
     std::vector<std::string_view> extensions;
@@ -59,7 +61,9 @@ vkb::Instance create_instance()
             instance_builder.enable_extension( extension );
         } else {
             throw Exception(
-                "[vkb] Necessary Vulkan instance extension not available: {}", extension );
+                "[vkb] Necessary Vulkan instance extension not available: {}",
+                extension
+            );
         }
     }
 
@@ -83,7 +87,9 @@ vkb::Instance create_instance()
 
     if ( !instance_ret ) {
         throw Exception(
-            "[vkb] Failed to create Vulkan instance. Error: {}", instance_ret.error().message() );
+            "[vkb] Failed to create Vulkan instance. Error: {}",
+            instance_ret.error().message()
+        );
     }
 
     return instance_ret.value();
@@ -95,11 +101,12 @@ vkb::Device pick_and_create_device( const Common& vulkan )
 {
     vkb::PhysicalDeviceSelector phys_selector( vulkan.instance, vulkan.surface );
 
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features { .sType
-        = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
         .pNext = nullptr,
         .accelerationStructure = VK_TRUE,
-        .accelerationStructureCaptureReplay = VK_TRUE };
+        .accelerationStructureCaptureReplay = VK_TRUE
+    };
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_pipeline_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
@@ -109,7 +116,7 @@ vkb::Device pick_and_create_device( const Common& vulkan )
 
     VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features
         = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
-              .rayQuery = VK_TRUE };
+            .rayQuery = VK_TRUE };
 
     VkPhysicalDeviceVulkan11Features required_features_11 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
@@ -163,8 +170,10 @@ vkb::Device pick_and_create_device( const Common& vulkan )
             throw Exception( "[vkb] No physical devices found" );
 
         default:
-            throw Exception( "[vkb] Physical device selection failed because: {}",
-                vkb::to_string( phys_device_error ) );
+            throw Exception(
+                "[vkb] Physical device selection failed because: {}",
+                vkb::to_string( phys_device_error )
+            );
         }
     }
 
@@ -175,7 +184,9 @@ vkb::Device pick_and_create_device( const Common& vulkan )
 
     if ( !device_ret ) {
         throw Exception(
-            "[vkb] Failed to create VkDevice from VkPhysicalDevice named \"{}\"", phys_name );
+            "[vkb] Failed to create VkDevice from VkPhysicalDevice named \"{}\"",
+            phys_name
+        );
     }
 
     vkb::Device& device = device_ret.value();
@@ -183,13 +194,15 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     if ( !device.get_queue( vkb::QueueType::graphics ) ) {
         throw Exception(
             "[vkb] VkDevice created from physical device \"{}\" does not have a graphics queue",
-            phys_name );
+            phys_name
+        );
     }
 
     if ( !device.get_queue( vkb::QueueType::present ) ) {
         throw Exception(
             "[vkb] VkDevice created from physical device \"{}\" does not have a present queue",
-            phys_name );
+            phys_name
+        );
     }
 
     log::info( "[Vulkan] Selected physical device: {}", phys_name );
@@ -214,8 +227,10 @@ void initialize_vmaallocator( vk::Common& vulkan )
 
     allocator_info.pVulkanFunctions = &vulkan_functions;
 
-    check( vmaCreateAllocator( &allocator_info, &vulkan.allocator ),
-        "[VMA] Failed to create global VMA allocator" );
+    check(
+        vmaCreateAllocator( &allocator_info, &vulkan.allocator ),
+        "[VMA] Failed to create global VMA allocator"
+    );
 }
 
 } // namespace
@@ -241,7 +256,9 @@ Common initialize( SDL_Window* window )
 
             if ( !gfx_queue_res ) {
                 throw Exception(
-                    "[vkb] Failed to get graphics queue: {}", gfx_queue_res.error().message() );
+                    "[vkb] Failed to get graphics queue: {}",
+                    gfx_queue_res.error().message()
+                );
             }
 
             vulkan.graphics_queue = std::move( gfx_queue_res.value() );
@@ -252,8 +269,10 @@ Common initialize( SDL_Window* window )
                 = vulkan.device.get_queue_index( vkb::QueueType::graphics );
 
             if ( !gfx_queue_family_res ) {
-                throw Exception( "[vkb] Failed to get graphics queue family: {}",
-                    gfx_queue_family_res.error().message() );
+                throw Exception(
+                    "[vkb] Failed to get graphics queue family: {}",
+                    gfx_queue_family_res.error().message()
+                );
             }
 
             vulkan.graphics_queue_family = gfx_queue_family_res.value();
@@ -262,28 +281,55 @@ Common initialize( SDL_Window* window )
         // Used by a lot of stuff
         {
             VkSamplerCreateInfo linear_sampler_info = vk::create::sampler_info(
-                VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE );
-            vk::check( vkCreateSampler( vulkan.device, &linear_sampler_info, nullptr,
-                           &vulkan.global_samplers.linear_sampler ),
-                "Failed to create global linear sampler" );
-            vulkan.destructor_stack.push(
-                vulkan.device, vulkan.global_samplers.linear_sampler, vkDestroySampler );
+                VK_FILTER_LINEAR,
+                VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+            );
+            vk::check(
+                vkCreateSampler(
+                    vulkan.device,
+                    &linear_sampler_info,
+                    nullptr,
+                    &vulkan.global_samplers.linear_sampler
+                ),
+                "Failed to create global linear sampler"
+            );
+            vulkan.destructor_stack
+                .push( vulkan.device, vulkan.global_samplers.linear_sampler, vkDestroySampler );
 
             VkSamplerCreateInfo nearest_sampler_info = vk::create::sampler_info(
-                VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE );
-            vk::check( vkCreateSampler( vulkan.device, &nearest_sampler_info, nullptr,
-                           &vulkan.global_samplers.nearest_sampler ),
-                "Failed to create global nearest sampler" );
-            vulkan.destructor_stack.push(
-                vulkan.device, vulkan.global_samplers.nearest_sampler, vkDestroySampler );
+                VK_FILTER_NEAREST,
+                VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE
+            );
+            vk::check(
+                vkCreateSampler(
+                    vulkan.device,
+                    &nearest_sampler_info,
+                    nullptr,
+                    &vulkan.global_samplers.nearest_sampler
+                ),
+                "Failed to create global nearest sampler"
+            );
+            vulkan.destructor_stack
+                .push( vulkan.device, vulkan.global_samplers.nearest_sampler, vkDestroySampler );
 
             VkSamplerCreateInfo linear_mirrored_repeat_sampler_info = vk::create::sampler_info(
-                VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT );
-            vk::check( vkCreateSampler( vulkan.device, &linear_mirrored_repeat_sampler_info,
-                           nullptr, &vulkan.global_samplers.linear_mirrored_repeat_sampler ),
-                "Failed to create global linear mirrored repeat sampler" );
-            vulkan.destructor_stack.push( vulkan.device,
-                vulkan.global_samplers.linear_mirrored_repeat_sampler, vkDestroySampler );
+                VK_FILTER_LINEAR,
+                VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT
+            );
+            vk::check(
+                vkCreateSampler(
+                    vulkan.device,
+                    &linear_mirrored_repeat_sampler_info,
+                    nullptr,
+                    &vulkan.global_samplers.linear_mirrored_repeat_sampler
+                ),
+                "Failed to create global linear mirrored repeat sampler"
+            );
+            vulkan.destructor_stack.push(
+                vulkan.device,
+                vulkan.global_samplers.linear_mirrored_repeat_sampler,
+                vkDestroySampler
+            );
         }
         vulkan.ray_tracing_properties = rt::query_rt_properties( vulkan.device.physical_device );
     } catch ( const Exception& ex ) {

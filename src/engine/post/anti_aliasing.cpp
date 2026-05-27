@@ -23,7 +23,7 @@ AAPass add_aa(
 {
     AAPass pass;
     {
-        pass.buffer = create_uniform_buffer<ub_data::AA>( vulkan, {}, engine.frame_overlap );
+        pass.buffer = create_uniform_buffer<ub_data::AA>( vulkan, { }, engine.frame_overlap );
 
         engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set(
             vulkan,

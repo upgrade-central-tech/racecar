@@ -23,12 +23,12 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
     scene_mesh = geometry::quad::create( vulkan, engine );
 
     if ( !generate_noise( volumetric, vulkan, engine ) ) {
-        return {};
+        return { };
     }
 
     volumetric.uniform_buffer = create_uniform_buffer<ub_data::Clouds>(
         vulkan,
-        {},
+        { },
         static_cast<size_t>( engine.frame_overlap )
     );
 
@@ -424,7 +424,7 @@ void draw_volumetric(
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = {},
+            .buffer_barriers = { },
             .image_barriers = { engine::ImageBarrier {
                 .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                 .src_access = VK_ACCESS_2_NONE,
@@ -513,7 +513,7 @@ void draw_volumetric(
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = {},
+            .buffer_barriers = { },
             .image_barriers = { engine::ImageBarrier {
                 .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                 .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,

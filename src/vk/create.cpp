@@ -9,8 +9,8 @@
 
 namespace racecar::vk::create {
 
-VkCommandPoolCreateInfo command_pool_info(
-    uint32_t queue_family_index, VkCommandPoolCreateFlags flags )
+VkCommandPoolCreateInfo
+command_pool_info( uint32_t queue_family_index, VkCommandPoolCreateFlags flags )
 {
     return {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -61,9 +61,15 @@ VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask 
     };
 }
 
-VkImageCreateInfo image_info( VkFormat format, VkImageType image_type, uint32_t mip_levels,
-    uint32_t array_layers, VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags,
-    VkExtent3D extent )
+VkImageCreateInfo image_info(
+    VkFormat format,
+    VkImageType image_type,
+    uint32_t mip_levels,
+    uint32_t array_layers,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags,
+    VkExtent3D extent
+)
 {
     return {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -83,7 +89,8 @@ VkImageCreateInfo image_info( VkFormat format, VkImageType image_type, uint32_t 
 }
 
 VkImageViewCreateInfo image_view_info(
-    VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags )
+    VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags
+)
 {
     VkImageViewCreateInfo info = { .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
@@ -118,8 +125,8 @@ VkSamplerCreateInfo sampler_info( VkFilter filter_type, VkSamplerAddressMode add
     };
 }
 
-VkSemaphoreSubmitInfo semaphore_submit_info(
-    VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore )
+VkSemaphoreSubmitInfo
+semaphore_submit_info( VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore )
 {
     return {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
@@ -139,8 +146,11 @@ VkCommandBufferSubmitInfo command_buffer_submit_info( VkCommandBuffer command_bu
     };
 }
 
-VkSubmitInfo2 submit_info( VkCommandBufferSubmitInfo* command_buffer_info,
-    VkSemaphoreSubmitInfo* signal_semaphore_info, VkSemaphoreSubmitInfo* wait_semaphore_info )
+VkSubmitInfo2 submit_info(
+    VkCommandBufferSubmitInfo* command_buffer_info,
+    VkSemaphoreSubmitInfo* signal_semaphore_info,
+    VkSemaphoreSubmitInfo* wait_semaphore_info
+)
 {
     return {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
@@ -154,7 +164,8 @@ VkSubmitInfo2 submit_info( VkCommandBufferSubmitInfo* command_buffer_info,
 }
 
 VkPipelineShaderStageCreateInfo pipeline_shader_stage_info(
-    VkShaderStageFlagBits flags, VkShaderModule shader_module, std::string_view name )
+    VkShaderStageFlagBits flags, VkShaderModule shader_module, std::string_view name
+)
 {
     return {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -198,8 +209,10 @@ VkShaderModule shader_module( Common& vulkan, std::filesystem::path shader_path 
 
     // We don't immediately add the shader module to the destructor stack because we destroy it at
     // the end of the pipeline creation instead
-    vk::check( vkCreateShaderModule( vulkan.device, &create_info, nullptr, &shader_module ),
-        "[Shader] Failed to create shader module" );
+    vk::check(
+        vkCreateShaderModule( vulkan.device, &create_info, nullptr, &shader_module ),
+        "[Shader] Failed to create shader module"
+    );
     vulkan.destructor_stack.push( vulkan.device, shader_module, vkDestroyShaderModule );
 
     return shader_module;
@@ -209,9 +222,13 @@ AllSubmitInfo all_submit_info( CreateSubmitInfoDescriptor submit_info_descriptor
 {
     // Prepare to submit our command to the graphics queue
     VkSemaphoreSubmitInfo wait_info = vk::create::semaphore_submit_info(
-        submit_info_descriptor.wait_flag_bits, submit_info_descriptor.wait_semaphore );
+        submit_info_descriptor.wait_flag_bits,
+        submit_info_descriptor.wait_semaphore
+    );
     VkSemaphoreSubmitInfo signal_info = vk::create::semaphore_submit_info(
-        submit_info_descriptor.signal_flag_bits, submit_info_descriptor.signal_semaphore );
+        submit_info_descriptor.signal_flag_bits,
+        submit_info_descriptor.signal_semaphore
+    );
     VkCommandBufferSubmitInfo command_info
         = vk::create::command_buffer_submit_info( submit_info_descriptor.command_buffer );
 
@@ -221,7 +238,10 @@ AllSubmitInfo all_submit_info( CreateSubmitInfoDescriptor submit_info_descriptor
 VkSubmitInfo2 submit_info_from_all( AllSubmitInfo& all_submit_info )
 {
     return vk::create::submit_info(
-        &all_submit_info.command_info, &all_submit_info.signal_info, &all_submit_info.wait_info );
+        &all_submit_info.command_info,
+        &all_submit_info.signal_info,
+        &all_submit_info.wait_info
+    );
 }
 
 } // namespace racecar::vk::create

@@ -29,7 +29,8 @@ glm::vec3 cubemap_direction( uint32_t face, float u, float v )
 }
 
 vk::mem::AllocatedImage generate_diffuse_irradiance(
-    std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine )
+    std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine
+)
 {
     // Parse the cubemap for each face individually. Somehow log important info?
     const size_t layer_count = 6;
@@ -47,12 +48,8 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
         // hardcode file paths for now because screw you
         std::string abs_file_path = std::filesystem::absolute( file_path ).string();
         std::vector<std::string> faces = {
-            abs_file_path + "/px.png",
-            abs_file_path + "/nx.png",
-            abs_file_path + "/py.png",
-            abs_file_path + "/ny.png",
-            abs_file_path + "/pz.png",
-            abs_file_path + "/nz.png",
+            abs_file_path + "/px.png", abs_file_path + "/nx.png", abs_file_path + "/py.png",
+            abs_file_path + "/ny.png", abs_file_path + "/pz.png", abs_file_path + "/nz.png",
         };
 
         // Parse the data somehow
@@ -64,15 +61,28 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
         // Need to upload all of these
         // Batched upload necessary. I can't use my brain right now to use our API effectively
         load_cubemap(
-            vulkan, engine, face_data, cubemap_image, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT );
+            vulkan,
+            engine,
+            face_data,
+            cubemap_image,
+            tile_extent,
+            VK_FORMAT_R32G32B32A32_SFLOAT
+        );
     }
     {
-        engine::DescriptorSet prefilter_desc_set = engine::generate_descriptor_set( vulkan, engine,
+        engine::DescriptorSet prefilter_desc_set = engine::generate_descriptor_set(
+            vulkan,
+            engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
-            VK_SHADER_STAGE_COMPUTE_BIT );
+            VK_SHADER_STAGE_COMPUTE_BIT
+        );
 
         engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set(
-            vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_COMPUTE_BIT );
+            vulkan,
+            engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLER },
+            VK_SHADER_STAGE_COMPUTE_BIT
+        );
 
         VkSampler sampler = VK_NULL_HANDLE;
         {
@@ -84,14 +94,21 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
                 .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
                 .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             };
-            vk::check( vkCreateSampler( vulkan.device, &sampler_info, nullptr, &sampler ),
-                "Failed to create irradiance filtering sampler" );
+            vk::check(
+                vkCreateSampler( vulkan.device, &sampler_info, nullptr, &sampler ),
+                "Failed to create irradiance filtering sampler"
+            );
             vulkan.destructor_stack.push( vulkan.device, sampler, vkDestroySampler );
         }
 
         engine::update_descriptor_set_image( vulkan, engine, prefilter_desc_set, cubemap_image, 0 );
         engine::update_descriptor_set_write_image(
-            vulkan, engine, prefilter_desc_set, irradiance_rw_image, 1 );
+            vulkan,
+            engine,
+            prefilter_desc_set,
+            irradiance_rw_image,
+            1
+        );
 
         engine::update_descriptor_set_sampler( vulkan, engine, sampler_desc_set, sampler, 0 );
 
@@ -100,69 +117,132 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
 
         std::vector<engine::DescriptorSet> descs = { prefilter_desc_set, sampler_desc_set };
 
-        engine::Pipeline compute_pipeline
-            = engine::create_compute_pipeline( vulkan, { descs[0].layouts[0], descs[1].layouts[0] },
-                irradiance_module, "cs_compute_irradiance" );
+        engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
+            vulkan,
+            { descs[0].layouts[0], descs[1].layouts[0] },
+            irradiance_module,
+            "cs_compute_irradiance"
+        );
 
         engine::immediate_submit(
-            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            vulkan,
+            engine.immediate_submit,
+            [&]( VkCommandBuffer command_buffer ) {
                 // RW cubemap transition first
-                vk::utility::transition_image( command_buffer, irradiance_rw_image.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_NONE,
-                    VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+                vk::utility::transition_image(
+                    command_buffer,
+                    irradiance_rw_image.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_GENERAL,
+                    VK_ACCESS_NONE,
+                    VK_ACCESS_SHADER_WRITE_BIT,
+                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT
+                );
 
                 vkCmdBindPipeline(
-                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.handle );
+                    command_buffer,
+                    VK_PIPELINE_BIND_POINT_COMPUTE,
+                    compute_pipeline.handle
+                );
 
                 VkDescriptorSet sets[] = { prefilter_desc_set.descriptor_sets[0],
-                    sampler_desc_set.descriptor_sets[0] };
+                                           sampler_desc_set.descriptor_sets[0] };
 
-                vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.layout, 0, 2, sets, 0, nullptr );
+                vkCmdBindDescriptorSets(
+                    command_buffer,
+                    VK_PIPELINE_BIND_POINT_COMPUTE,
+                    compute_pipeline.layout,
+                    0,
+                    2,
+                    sets,
+                    0,
+                    nullptr
+                );
 
                 vkCmdDispatch( command_buffer, tile_width, tile_height, 6 );
 
-                vk::utility::transition_image( command_buffer, irradiance_rw_image.image,
-                    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT );
-            } );
+                vk::utility::transition_image(
+                    command_buffer,
+                    irradiance_rw_image.image,
+                    VK_IMAGE_LAYOUT_GENERAL,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_SHADER_WRITE_BIT,
+                    VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT
+                );
+            }
+        );
     }
 
     return irradiance_rw_image;
 }
 
-vk::mem::AllocatedImage cs_generate_diffuse_sh( vk::mem::AllocatedImage sample_cubemap,
-    VkSampler sampler, vk::Common& vulkan, engine::State& engine )
+vk::mem::AllocatedImage cs_generate_diffuse_sh(
+    vk::mem::AllocatedImage sample_cubemap,
+    VkSampler sampler,
+    vk::Common& vulkan,
+    engine::State& engine
+)
 {
     // Hardcode them to be 9 coefficients for now.
     std::vector<glm::vec3> SH_coefficients( 9, glm::vec3( 0.0f ) );
 
     // Allocate the coefficeints.
-    vk::mem::AllocatedImage sh_coefficients_image = engine::allocate_image( vulkan, { 9, 6, 1 },
-        VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TYPE_2D, 1, 1, VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT, false );
+    vk::mem::AllocatedImage sh_coefficients_image = engine::allocate_image(
+        vulkan,
+        { 9, 6, 1 },
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        VK_IMAGE_TYPE_2D,
+        1,
+        1,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        false
+    );
 
     {
-        engine::DescriptorSet sh_projection_desc0_set = engine::generate_descriptor_set( vulkan,
-            engine, { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
-            VK_SHADER_STAGE_COMPUTE_BIT );
+        engine::DescriptorSet sh_projection_desc0_set = engine::generate_descriptor_set(
+            vulkan,
+            engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            VK_SHADER_STAGE_COMPUTE_BIT
+        );
 
         engine::DescriptorSet sh_projection_desc1_set = engine::generate_descriptor_set(
-            vulkan, engine, { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE }, VK_SHADER_STAGE_COMPUTE_BIT );
+            vulkan,
+            engine,
+            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            VK_SHADER_STAGE_COMPUTE_BIT
+        );
 
         engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set(
-            vulkan, engine, { VK_DESCRIPTOR_TYPE_SAMPLER }, VK_SHADER_STAGE_COMPUTE_BIT );
+            vulkan,
+            engine,
+            { VK_DESCRIPTOR_TYPE_SAMPLER },
+            VK_SHADER_STAGE_COMPUTE_BIT
+        );
 
         engine::update_descriptor_set_image(
-            vulkan, engine, sh_projection_desc0_set, sample_cubemap, 0 );
+            vulkan,
+            engine,
+            sh_projection_desc0_set,
+            sample_cubemap,
+            0
+        );
 
         engine::update_descriptor_set_sampler( vulkan, engine, sampler_desc_set, sampler, 0 );
 
         engine::update_descriptor_set_write_image(
-            vulkan, engine, sh_projection_desc1_set, sh_coefficients_image, 0 );
+            vulkan,
+            engine,
+            sh_projection_desc1_set,
+            sh_coefficients_image,
+            0
+        );
 
         VkShaderModule irradiance_module
             = vk::create::shader_module( vulkan, "../shaders/prefilter/irradiance_sh.spv" );
@@ -176,27 +256,50 @@ vk::mem::AllocatedImage cs_generate_diffuse_sh( vk::mem::AllocatedImage sample_c
             sh_projection_desc1_set.descriptor_sets[0],
         };
 
-        engine::Pipeline compute_pipeline = engine::create_compute_pipeline( vulkan,
-            { descs[0].layouts[0], descs[1].layouts[0], descs[2].layouts[0] }, irradiance_module,
-            "cs_compute_irradiance_sh" );
+        engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
+            vulkan,
+            { descs[0].layouts[0], descs[1].layouts[0], descs[2].layouts[0] },
+            irradiance_module,
+            "cs_compute_irradiance_sh"
+        );
 
         engine::immediate_submit(
-            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            vulkan,
+            engine.immediate_submit,
+            [&]( VkCommandBuffer command_buffer ) {
                 // RW cubemap transition first
-                vk::utility::transition_image( command_buffer, sh_coefficients_image.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_NONE,
-                    VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+                vk::utility::transition_image(
+                    command_buffer,
+                    sh_coefficients_image.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_GENERAL,
+                    VK_ACCESS_NONE,
+                    VK_ACCESS_SHADER_WRITE_BIT,
+                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT
+                );
 
                 vkCmdBindPipeline(
-                    command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline.handle );
+                    command_buffer,
+                    VK_PIPELINE_BIND_POINT_COMPUTE,
+                    compute_pipeline.handle
+                );
 
                 VkDescriptorSet sets[] = { sh_projection_desc0_set.descriptor_sets[0],
-                    sampler_desc_set.descriptor_sets[0],
-                    sh_projection_desc1_set.descriptor_sets[0] };
+                                           sampler_desc_set.descriptor_sets[0],
+                                           sh_projection_desc1_set.descriptor_sets[0] };
 
-                vkCmdBindDescriptorSets( command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.layout, 0, 3, sets, 0, nullptr );
+                vkCmdBindDescriptorSets(
+                    command_buffer,
+                    VK_PIPELINE_BIND_POINT_COMPUTE,
+                    compute_pipeline.layout,
+                    0,
+                    3,
+                    sets,
+                    0,
+                    nullptr
+                );
 
                 // uint32_t x_groups
                 //     = ( static_cast<uint32_t>( sample_cubemap.image_extent.width ) + 7 ) / 8;
@@ -205,12 +308,19 @@ vk::mem::AllocatedImage cs_generate_diffuse_sh( vk::mem::AllocatedImage sample_c
 
                 vkCmdDispatch( command_buffer, 1, 1, 1 );
 
-                vk::utility::transition_image( command_buffer, sh_coefficients_image.image,
-                    VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT );
-            } );
+                vk::utility::transition_image(
+                    command_buffer,
+                    sh_coefficients_image.image,
+                    VK_IMAGE_LAYOUT_GENERAL,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_SHADER_WRITE_BIT,
+                    VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT
+                );
+            }
+        );
     }
 
     return sh_coefficients_image;
@@ -226,12 +336,8 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
     // hardcode file paths for now because screw you
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
     std::vector<std::string> faces = {
-        abs_file_path + "/px.png",
-        abs_file_path + "/nx.png",
-        abs_file_path + "/py.png",
-        abs_file_path + "/ny.png",
-        abs_file_path + "/pz.png",
-        abs_file_path + "/nz.png",
+        abs_file_path + "/px.png", abs_file_path + "/nx.png", abs_file_path + "/py.png",
+        abs_file_path + "/ny.png", abs_file_path + "/pz.png", abs_file_path + "/nz.png",
     };
 
     // Parse the data somehow
@@ -259,8 +365,11 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
     for ( uint32_t face = 0; face < 6; face++ ) {
         for ( uint32_t pixel = 0; pixel < tile_width * tile_height; pixel++ ) {
             // Get color of the cubemap, assume 4 channel data result from face_data parse
-            glm::vec3 color = glm::vec3( face_data[face][pixel * 4], face_data[face][pixel * 4 + 1],
-                face_data[face][pixel * 4 + 2] );
+            glm::vec3 color = glm::vec3(
+                face_data[face][pixel * 4],
+                face_data[face][pixel * 4 + 1],
+                face_data[face][pixel * 4 + 2]
+            );
 
             // Convert cubemap direction
             uint32_t x = pixel % tile_width;
@@ -303,19 +412,24 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
     return sh_coefficients;
 }
 
-vk::mem::AllocatedImage allocate_cube_map(
-    vk::Common& vulkan, VkExtent3D extent, VkFormat format, uint32_t mip_levels )
+vk::mem::AllocatedImage
+allocate_cube_map( vk::Common& vulkan, VkExtent3D extent, VkFormat format, uint32_t mip_levels )
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
         .image_format = format,
     };
 
-    VkImageCreateInfo image_info
-        = vk::create::image_info( format, VK_IMAGE_TYPE_2D, mip_levels, 6, VK_SAMPLE_COUNT_1_BIT,
-            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-            extent );
+    VkImageCreateInfo image_info = vk::create::image_info(
+        format,
+        VK_IMAGE_TYPE_2D,
+        mip_levels,
+        6,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+            | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        extent
+    );
 
     image_info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
@@ -325,9 +439,17 @@ vk::mem::AllocatedImage allocate_cube_map(
             .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ),
         };
 
-        vk::check( vmaCreateImage( vulkan.allocator, &image_info, &allocation_create_info,
-                       &allocated_image.image, &allocated_image.allocation, nullptr ),
-            "[VMA] Failed to create image" );
+        vk::check(
+            vmaCreateImage(
+                vulkan.allocator,
+                &image_info,
+                &allocation_create_info,
+                &allocated_image.image,
+                &allocated_image.allocation,
+                nullptr
+            ),
+            "[VMA] Failed to create image"
+        );
     }
 
     {
@@ -348,12 +470,18 @@ vk::mem::AllocatedImage allocate_cube_map(
         };
         image_view_info.subresourceRange.levelCount = image_info.mipLevels;
 
-        vk::check( vkCreateImageView(
-                       vulkan.device, &image_view_info, nullptr, &allocated_image.image_view ),
-            "Failed to create image view" );
+        vk::check(
+            vkCreateImageView(
+                vulkan.device,
+                &image_view_info,
+                nullptr,
+                &allocated_image.image_view
+            ),
+            "Failed to create image view"
+        );
 
-        vulkan.destructor_stack.push(
-            vulkan.device, allocated_image.image_view, vkDestroyImageView );
+        vulkan.destructor_stack
+            .push( vulkan.device, allocated_image.image_view, vkDestroyImageView );
     }
 
     {
@@ -374,12 +502,18 @@ vk::mem::AllocatedImage allocate_cube_map(
         };
         storage_image_view_info.subresourceRange.levelCount = image_info.mipLevels;
 
-        vk::check( vkCreateImageView( vulkan.device, &storage_image_view_info, nullptr,
-                       &allocated_image.storage_image_view ),
-            "Failed to create storage image view" );
+        vk::check(
+            vkCreateImageView(
+                vulkan.device,
+                &storage_image_view_info,
+                nullptr,
+                &allocated_image.storage_image_view
+            ),
+            "Failed to create storage image view"
+        );
 
-        vulkan.destructor_stack.push(
-            vulkan.device, allocated_image.storage_image_view, vkDestroyImageView );
+        vulkan.destructor_stack
+            .push( vulkan.device, allocated_image.storage_image_view, vkDestroyImageView );
     }
 
     vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, allocated_image );
@@ -387,8 +521,8 @@ vk::mem::AllocatedImage allocate_cube_map(
     return allocated_image;
 }
 
-vk::mem::AllocatedImage create_cubemap(
-    std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine )
+vk::mem::AllocatedImage
+create_cubemap( std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine )
 {
     // Parse the cubemap for each face individually. Somehow log important info?
     const size_t layer_count = 6;
@@ -402,12 +536,8 @@ vk::mem::AllocatedImage create_cubemap(
     // hardcode file paths for now because screw you
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
     std::vector<std::string> faces = {
-        abs_file_path + "/px.png",
-        abs_file_path + "/nx.png",
-        abs_file_path + "/py.png",
-        abs_file_path + "/ny.png",
-        abs_file_path + "/pz.png",
-        abs_file_path + "/nz.png",
+        abs_file_path + "/px.png", abs_file_path + "/nx.png", abs_file_path + "/py.png",
+        abs_file_path + "/ny.png", abs_file_path + "/pz.png", abs_file_path + "/nz.png",
     };
 
     // Parse the data somehow
@@ -419,15 +549,26 @@ vk::mem::AllocatedImage create_cubemap(
     // Need to upload all of these
     // Batched upload necessary. I can't use my brain right now to use our API effectively
     load_cubemap(
-        vulkan, engine, face_data, cubemap_image, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT );
+        vulkan,
+        engine,
+        face_data,
+        cubemap_image,
+        tile_extent,
+        VK_FORMAT_R32G32B32A32_SFLOAT
+    );
 
     return cubemap_image;
 }
 
 template <typename T>
-void load_cubemap( vk::Common& vulkan, engine::State& engine,
-    std::vector<std::vector<T>>& face_data, vk::mem::AllocatedImage& cm_image, VkExtent3D extent,
-    VkFormat format )
+void load_cubemap(
+    vk::Common& vulkan,
+    engine::State& engine,
+    std::vector<std::vector<T>>& face_data,
+    vk::mem::AllocatedImage& cm_image,
+    VkExtent3D extent,
+    VkFormat format
+)
 {
     const size_t layer_count = 6;
     const size_t face_size
@@ -436,7 +577,11 @@ void load_cubemap( vk::Common& vulkan, engine::State& engine,
 
     try {
         vk::mem::AllocatedBuffer upload_buffer = vk::mem::create_buffer(
-            vulkan, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
+            vulkan,
+            data_size,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VMA_MEMORY_USAGE_CPU_TO_GPU
+        );
 
         uint8_t* dst = static_cast<uint8_t*>( upload_buffer.info.pMappedData );
 
@@ -447,10 +592,10 @@ void load_cubemap( vk::Common& vulkan, engine::State& engine,
         std::vector<VkBufferImageCopy> copy_regions( layer_count );
         for ( uint32_t layer = 0; layer < layer_count; layer++ ) {
             copy_regions[layer] = { .bufferOffset = face_size * layer,
-                .bufferRowLength = 0,
-                .bufferImageHeight = 0,
-                .imageOffset = { 0, 0, 0 },
-                .imageExtent = extent };
+                                    .bufferRowLength = 0,
+                                    .bufferImageHeight = 0,
+                                    .imageOffset = { 0, 0, 0 },
+                                    .imageExtent = extent };
 
             copy_regions[layer].imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             copy_regions[layer].imageSubresource.mipLevel = 0;
@@ -459,21 +604,43 @@ void load_cubemap( vk::Common& vulkan, engine::State& engine,
         }
 
         engine::immediate_submit(
-            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
-                vk::utility::transition_image( command_buffer, cm_image.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
-                    VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_IMAGE_ASPECT_COLOR_BIT );
+            vulkan,
+            engine.immediate_submit,
+            [&]( VkCommandBuffer command_buffer ) {
+                vk::utility::transition_image(
+                    command_buffer,
+                    cm_image.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    0,
+                    VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT
+                );
 
-                vkCmdCopyBufferToImage( command_buffer, upload_buffer.handle, cm_image.image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layer_count, copy_regions.data() );
+                vkCmdCopyBufferToImage(
+                    command_buffer,
+                    upload_buffer.handle,
+                    cm_image.image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    layer_count,
+                    copy_regions.data()
+                );
 
-                vk::utility::transition_image( command_buffer, cm_image.image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT );
-            } );
+                vk::utility::transition_image(
+                    command_buffer,
+                    cm_image.image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_TRANSFER_WRITE_BIT,
+                    VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT
+                );
+            }
+        );
 
     } catch ( const Exception& ex ) {
         log::error( "[AllocatedImage] Error occurred: {}", ex.what() );

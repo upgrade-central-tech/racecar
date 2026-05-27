@@ -9,19 +9,20 @@
 namespace racecar::engine {
 
 void generate_mipmaps(
-    VkImage image, VkExtent3D extent, uint32_t mip_levels, VkCommandBuffer cmd_buffer )
+    VkImage image, VkExtent3D extent, uint32_t mip_levels, VkCommandBuffer cmd_buffer
+)
 {
     VkImageMemoryBarrier barrier = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = image,
+                                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                     .image = image,
 
-        .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        } };
+                                     .subresourceRange = {
+                                         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                         .levelCount = 1,
+                                         .baseArrayLayer = 0,
+                                         .layerCount = 1,
+                                     } };
 
     int32_t width = static_cast<int32_t>( extent.width );
     int32_t height = static_cast<int32_t>( extent.height );
@@ -33,8 +34,18 @@ void generate_mipmaps(
         barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
 
-        vkCmdPipelineBarrier( cmd_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+        vkCmdPipelineBarrier(
+            cmd_buffer,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            0,
+            0,
+            nullptr,
+            0,
+            nullptr,
+            1,
+            &barrier
+        );
 
         VkImageBlit blit = { .srcSubresource = {
                                  .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -55,16 +66,34 @@ void generate_mipmaps(
         blit.dstOffsets[0] = { 0, 0, 0 };
         blit.dstOffsets[1] = { width > 1 ? width / 2 : 1, height > 1 ? height / 2 : 1, 1 };
 
-        vkCmdBlitImage( cmd_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR );
+        vkCmdBlitImage(
+            cmd_buffer,
+            image,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1,
+            &blit,
+            VK_FILTER_LINEAR
+        );
 
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
 
-        vkCmdPipelineBarrier( cmd_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+        vkCmdPipelineBarrier(
+            cmd_buffer,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            0,
+            0,
+            nullptr,
+            0,
+            nullptr,
+            1,
+            &barrier
+        );
 
         if ( width > 1 ) {
             width /= 2;
@@ -80,13 +109,30 @@ void generate_mipmaps(
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-    vkCmdPipelineBarrier( cmd_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+    vkCmdPipelineBarrier(
+        cmd_buffer,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        0,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        1,
+        &barrier
+    );
 }
 
-vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine, void* data,
-    VkExtent3D extent, VkFormat format, VkImageType image_type, VkImageUsageFlags usage_flags,
-    bool mipmapped )
+vk::mem::AllocatedImage create_image(
+    vk::Common& vulkan,
+    engine::State& engine,
+    void* data,
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    VkImageUsageFlags usage_flags,
+    bool mipmapped
+)
 {
     const size_t data_size
         = extent.depth * extent.width * extent.height * vk::utility::bytes_from_format( format );
@@ -97,31 +143,53 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
     if ( mipmapped ) {
         // Auto generate the miplevels
         mip_levels = static_cast<uint32_t>(
-                         std::floor( std::log2( std::max( extent.width, extent.height ) ) ) )
+                         std::floor( std::log2( std::max( extent.width, extent.height ) ) )
+                     )
             + 1;
     }
 
     try {
         vk::mem::AllocatedBuffer upload_buffer = vk::mem::create_buffer(
-            vulkan, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU );
+            vulkan,
+            data_size,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VMA_MEMORY_USAGE_CPU_TO_GPU
+        );
 
         std::memcpy( upload_buffer.info.pMappedData, data, data_size );
 
-        new_image = allocate_image( vulkan, extent, format, image_type, mip_levels, 1,
+        new_image = allocate_image(
+            vulkan,
+            extent,
+            format,
+            image_type,
+            mip_levels,
+            1,
             VK_SAMPLE_COUNT_1_BIT,
             usage_flags | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-            mipmapped );
+            mipmapped
+        );
 
         engine::immediate_submit(
-            vulkan, engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            vulkan,
+            engine.immediate_submit,
+            [&]( VkCommandBuffer command_buffer ) {
                 VkImageAspectFlags aspect_flags = format == VK_FORMAT_D32_SFLOAT
                     ? VK_IMAGE_ASPECT_DEPTH_BIT
                     : VK_IMAGE_ASPECT_COLOR_BIT;
 
-                vk::utility::transition_image_mips( command_buffer, new_image.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
-                    VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, aspect_flags, mip_levels );
+                vk::utility::transition_image_mips(
+                    command_buffer,
+                    new_image.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    0,
+                    VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    aspect_flags,
+                    mip_levels
+                );
 
                 VkBufferImageCopy copy_region = {
                     .bufferOffset = 0,
@@ -135,20 +203,38 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
                 copy_region.imageSubresource.layerCount = mip_levels;
                 copy_region.imageExtent = extent;
 
-                vkCmdCopyBufferToImage( command_buffer, upload_buffer.handle, new_image.image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region );
+                vkCmdCopyBufferToImage(
+                    command_buffer,
+                    upload_buffer.handle,
+                    new_image.image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    1,
+                    &copy_region
+                );
 
-                vk::utility::transition_image_mips( command_buffer, new_image.image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    aspect_flags, mip_levels );
+                vk::utility::transition_image_mips(
+                    command_buffer,
+                    new_image.image,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    VK_ACCESS_TRANSFER_WRITE_BIT,
+                    VK_ACCESS_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    aspect_flags,
+                    mip_levels
+                );
 
                 if ( mipmapped ) {
                     generate_mipmaps(
-                        new_image.image, new_image.image_extent, mip_levels, command_buffer );
+                        new_image.image,
+                        new_image.image_extent,
+                        mip_levels,
+                        command_buffer
+                    );
                 }
-            } );
+            }
+        );
     } catch ( const Exception& ex ) {
         log::error( "[AllocatedImage] Error occurred: {}", ex.what() );
         throw;
@@ -157,9 +243,16 @@ vk::mem::AllocatedImage create_image( vk::Common& vulkan, engine::State& engine,
     return new_image;
 };
 
-vk::mem::AllocatedImage allocate_vma_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
-    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers,
-    VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags )
+vk::mem::AllocatedImage allocate_vma_image(
+    vk::Common& vulkan,
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    uint32_t mip_levels,
+    uint32_t array_layers,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags
+)
 {
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
@@ -167,16 +260,31 @@ vk::mem::AllocatedImage allocate_vma_image( vk::Common& vulkan, VkExtent3D exten
     };
 
     VkImageCreateInfo image_info = vk::create::image_info(
-        format, image_type, mip_levels, array_layers, samples, usage_flags, extent );
+        format,
+        image_type,
+        mip_levels,
+        array_layers,
+        samples,
+        usage_flags,
+        extent
+    );
 
     {
         VmaAllocationCreateInfo allocation_create_info = {
             .usage = VMA_MEMORY_USAGE_GPU_ONLY,
             .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ),
         };
-        vk::check( vmaCreateImage( vulkan.allocator, &image_info, &allocation_create_info,
-                       &allocated_image.image, &allocated_image.allocation, nullptr ),
-            "[VMA] Failed to create image" );
+        vk::check(
+            vmaCreateImage(
+                vulkan.allocator,
+                &image_info,
+                &allocation_create_info,
+                &allocated_image.image,
+                &allocated_image.allocation,
+                nullptr
+            ),
+            "[VMA] Failed to create image"
+        );
         vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, allocated_image );
     }
 
@@ -185,14 +293,22 @@ vk::mem::AllocatedImage allocate_vma_image( vk::Common& vulkan, VkExtent3D exten
         VkImageViewType image_view_type
             = ( image_type == VK_IMAGE_TYPE_2D ) ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
 
-        VkImageViewCreateInfo image_view_info
-            = vk::create::image_view_info( format, allocated_image.image, image_view_type,
-                format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                               : VK_IMAGE_ASPECT_COLOR_BIT );
+        VkImageViewCreateInfo image_view_info = vk::create::image_view_info(
+            format,
+            allocated_image.image,
+            image_view_type,
+            format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT
+        );
         image_view_info.subresourceRange.levelCount = image_info.mipLevels;
-        vk::check( vkCreateImageView(
-                       vulkan.device, &image_view_info, nullptr, &allocated_image.image_view ),
-            "Failed to create image view" );
+        vk::check(
+            vkCreateImageView(
+                vulkan.device,
+                &image_view_info,
+                nullptr,
+                &allocated_image.image_view
+            ),
+            "Failed to create image view"
+        );
 
         // They can be the same, as long as VK_IMAGE_USAGE_STORAGE_BIT is used. The views are
         // different, however, for writing to cubemaps.
@@ -205,33 +321,46 @@ vk::mem::AllocatedImage allocate_vma_image( vk::Common& vulkan, VkExtent3D exten
                     ? VK_IMAGE_VIEW_TYPE_2D
                     : VK_IMAGE_VIEW_TYPE_3D;
 
-                VkImageViewCreateInfo image_view_info
-                    = vk::create::image_view_info( format, allocated_image.image, image_view_type,
-                        format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                                       : VK_IMAGE_ASPECT_COLOR_BIT );
+                VkImageViewCreateInfo image_view_info = vk::create::image_view_info(
+                    format,
+                    allocated_image.image,
+                    image_view_type,
+                    format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                                   : VK_IMAGE_ASPECT_COLOR_BIT
+                );
 
                 image_view_info.subresourceRange.baseMipLevel = mip;
                 image_view_info.subresourceRange.levelCount = 1;
 
                 VkImageView mip_view;
-                vk::check( vkCreateImageView( vulkan.device, &image_view_info, nullptr, &mip_view ),
-                    "Failed to create image view" );
+                vk::check(
+                    vkCreateImageView( vulkan.device, &image_view_info, nullptr, &mip_view ),
+                    "Failed to create image view"
+                );
 
                 allocated_image.mip_levels.push_back( mip_view );
                 vulkan.destructor_stack.push( vulkan.device, mip_view, vkDestroyImageView );
             }
         }
 
-        vulkan.destructor_stack.push(
-            vulkan.device, allocated_image.image_view, vkDestroyImageView );
+        vulkan.destructor_stack
+            .push( vulkan.device, allocated_image.image_view, vkDestroyImageView );
     }
 
     return allocated_image;
 }
 
-vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, VkFormat format,
-    VkImageType image_type, uint32_t mip_levels, uint32_t array_layers,
-    VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags, bool mipmapped )
+vk::mem::AllocatedImage allocate_image(
+    vk::Common& vulkan,
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    uint32_t mip_levels,
+    uint32_t array_layers,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags,
+    bool mipmapped
+)
 {
     uint32_t sent_mips = mip_levels;
 
@@ -239,12 +368,21 @@ vk::mem::AllocatedImage allocate_image( vk::Common& vulkan, VkExtent3D extent, V
     // if you ARE enabling mipmapping, and you pass in 0 mip_levels, then we'll just auto-generate.
     if ( mipmapped && mip_levels == static_cast<uint32_t>( MIP_TYPE::AUTO_GENERATE ) ) {
         sent_mips = static_cast<uint32_t>(
-                        std::floor( std::log2( std::max( extent.width, extent.height ) ) ) )
+                        std::floor( std::log2( std::max( extent.width, extent.height ) ) )
+                    )
             + 1;
     }
 
     return allocate_vma_image(
-        vulkan, extent, format, image_type, sent_mips, array_layers, samples, usage_flags );
+        vulkan,
+        extent,
+        format,
+        image_type,
+        sent_mips,
+        array_layers,
+        samples,
+        usage_flags
+    );
 }
 
 std::vector<float> load_image_to_float( const std::string& global_path )
@@ -253,7 +391,8 @@ std::vector<float> load_image_to_float( const std::string& global_path )
     float* pixels = stbi_loadf( global_path.c_str(), &width, &height, &channels, 4 );
 
     std::vector<float> float_data(
-        static_cast<uint32_t>( width ) * static_cast<uint32_t>( height ) * 4U );
+        static_cast<uint32_t>( width ) * static_cast<uint32_t>( height ) * 4U
+    );
     for ( size_t i = 0; i < static_cast<size_t>( width * height * 4 ); i++ ) {
         float_data[i] = pixels[i];
     }
@@ -269,7 +408,8 @@ std::vector<uint16_t> load_image_to_float16( const std::string& global_path )
 
     /// TODO: error checking
     std::vector<uint16_t> half_data(
-        static_cast<uint32_t>( width ) * static_cast<uint32_t>( height ) * 4U );
+        static_cast<uint32_t>( width ) * static_cast<uint32_t>( height ) * 4U
+    );
     for ( size_t i = 0; i < static_cast<size_t>( width * height * 4 ); i++ ) {
         half_data[i] = vk::utility::float_to_half( pixels[i] );
     }
@@ -278,8 +418,14 @@ std::vector<uint16_t> load_image_to_float16( const std::string& global_path )
     return half_data;
 }
 
-vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common& vulkan,
-    engine::State& engine, size_t desired_channels, VkFormat image_format, bool is_mipmapped )
+vk::mem::AllocatedImage load_image(
+    std::filesystem::path file_path,
+    vk::Common& vulkan,
+    engine::State& engine,
+    size_t desired_channels,
+    VkFormat image_format,
+    bool is_mipmapped
+)
 {
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
 
@@ -323,10 +469,16 @@ vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common&
 
         stbi_image_free( pixels );
 
-        return engine::create_image( vulkan, engine, byte_data.data(),
-            { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 }, image_format,
-            VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-            is_mipmapped );
+        return engine::create_image(
+            vulkan,
+            engine,
+            byte_data.data(),
+            { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 },
+            image_format,
+            VK_IMAGE_TYPE_2D,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            is_mipmapped
+        );
     }
 
     if ( type == FormatType::FLOAT16 ) {
@@ -341,14 +493,20 @@ vk::mem::AllocatedImage load_image( std::filesystem::path file_path, vk::Common&
 
         stbi_image_free( pixels );
 
-        return engine::create_image( vulkan, engine, half_data.data(),
-            { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 }, image_format,
-            VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-            is_mipmapped );
+        return engine::create_image(
+            vulkan,
+            engine,
+            half_data.data(),
+            { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 },
+            image_format,
+            VK_IMAGE_TYPE_2D,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            is_mipmapped
+        );
     }
 
     log::warn( "[IMAGE LOADER] Desired format currently not supported!" );
-    return {};
+    return { };
 }
 
 } // namespace racecar::engine

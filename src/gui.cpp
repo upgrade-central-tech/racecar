@@ -55,11 +55,17 @@ Gui initialize( Context& ctx, const engine::State& engine )
             .pPoolSizes = &pool_size,
         };
 
-        vk::check( vkCreateDescriptorPool(
-                       ctx.vulkan.device, &descriptor_pool_info, nullptr, &gui.descriptor_pool ),
-            "[gui] Failed to create descriptor pool" );
-        ctx.vulkan.destructor_stack.push(
-            ctx.vulkan.device, gui.descriptor_pool, vkDestroyDescriptorPool );
+        vk::check(
+            vkCreateDescriptorPool(
+                ctx.vulkan.device,
+                &descriptor_pool_info,
+                nullptr,
+                &gui.descriptor_pool
+            ),
+            "[gui] Failed to create descriptor pool"
+        );
+        ctx.vulkan.destructor_stack
+            .push( ctx.vulkan.device, gui.descriptor_pool, vkDestroyDescriptorPool );
     }
 
     IMGUI_CHECKVERSION();
@@ -114,9 +120,13 @@ Gui initialize( Context& ctx, const engine::State& engine )
     return gui;
 }
 
-void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms,
+void process_event(
+    Gui& gui,
+    const SDL_Event* event,
+    atmosphere::Atmosphere& atms,
     camera::OrbitCamera& camera,
-    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers )
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers
+)
 {
     // We may want to expand this function later. For now, it serves to remove any ImGui header
     // includes in non-GUI related files.
@@ -164,8 +174,13 @@ void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& at
 
                 if ( new_number != gui.preset.number ) {
                     log::info( "[preset] Decreased preset number to {}", new_number );
-                    use_preset( gui.preset.presets[static_cast<size_t>( new_number - 1 )], gui,
-                        atms, camera, material_buffers );
+                    use_preset(
+                        gui.preset.presets[static_cast<size_t>( new_number - 1 )],
+                        gui,
+                        atms,
+                        camera,
+                        material_buffers
+                    );
                 }
 
                 gui.preset.number = new_number;
@@ -178,8 +193,13 @@ void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& at
 
                 if ( new_number != gui.preset.number ) {
                     log::info( "[preset] Increased preset number to {}", new_number );
-                    use_preset( gui.preset.presets[static_cast<size_t>( new_number - 1 )], gui,
-                        atms, camera, material_buffers );
+                    use_preset(
+                        gui.preset.presets[static_cast<size_t>( new_number - 1 )],
+                        gui,
+                        atms,
+                        camera,
+                        material_buffers
+                    );
                 }
 
                 gui.preset.number = new_number;
@@ -190,7 +210,7 @@ void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& at
             if ( preset_number_opt.has_value() ) {
                 // Switch to preset number, if it exists
                 if ( size_t preset_number = preset_number_opt.value();
-                    preset_number <= gui.preset.presets.size() ) {
+                     preset_number <= gui.preset.presets.size() ) {
                     const Preset& preset = gui.preset.presets[preset_number - 1];
                     use_preset( preset, gui, atms, camera, material_buffers );
                     gui.preset.number = static_cast<int>( preset_number );
@@ -203,8 +223,12 @@ void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& at
     }
 }
 
-void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera,
-    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers )
+void update(
+    Gui& gui,
+    atmosphere::Atmosphere& atms,
+    camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers
+)
 {
     if ( !gui.show_window ) {
         return;
@@ -223,7 +247,11 @@ void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera
             ImGui::SeparatorText( "Camera" );
             glm::vec3 cam_pos = camera::calculate_eye_position( camera );
             ImGui::Text(
-                "Center: [%.1f, %.1f, %.1f]", camera.center.x, camera.center.y, camera.center.z );
+                "Center: [%.1f, %.1f, %.1f]",
+                camera.center.x,
+                camera.center.y,
+                camera.center.z
+            );
             ImGui::SameLine();
             ImGui::Text( "Position: [%.1f, %.1f, %1.f]", cam_pos.x, cam_pos.y, cam_pos.z );
 
@@ -242,7 +270,11 @@ void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera
                 ImGui::SliderFloat( "Roughness", &gui.debug.roughness, 0, 1.0f );
                 ImGui::SliderFloat( "Metallic", &gui.debug.metallic, 0, 1.0f );
                 ImGui::SliderFloat(
-                    "Clearcoat Roughness", &gui.debug.clearcoat_roughness, 0, 1.0f );
+                    "Clearcoat Roughness",
+                    &gui.debug.clearcoat_roughness,
+                    0,
+                    1.0f
+                );
                 ImGui::SliderFloat( "Clearcoat Weight", &gui.debug.clearcoat_weight, 0, 1.0f );
 
                 ImGui::SeparatorText( "Glint Params" );
@@ -300,12 +332,16 @@ void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera
                 ImGui::Checkbox( "Enable albedo map", &gui.debug.enable_albedo_map );
                 ImGui::Checkbox( "Enable normal map", &gui.debug.enable_normal_map );
                 ImGui::Checkbox(
-                    "Enable roughness + metallic map", &gui.debug.enable_roughness_metal_map );
+                    "Enable roughness + metallic map",
+                    &gui.debug.enable_roughness_metal_map
+                );
 
                 ImGui::Checkbox( "Turn on albedo only", &gui.debug.albedo_only );
                 ImGui::Checkbox( "Turn on normals only", &gui.debug.normals_only );
                 ImGui::Checkbox(
-                    "Turn on roughness + metallic only", &gui.debug.roughness_metal_only );
+                    "Turn on roughness + metallic only",
+                    &gui.debug.roughness_metal_only
+                );
                 ImGui::Checkbox( "Ray Traced Shadows", &gui.debug.ray_traced_shadows );
 
                 ImGui::SeparatorText( "Demo Settings" );
@@ -328,7 +364,11 @@ void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera
 
                 ImGui::SeparatorText( "Toggles" );
                 ImGui::SliderFloat(
-                    "Local shadow strength", &gui.terrain.gt7_local_shadow_strength, 0.0f, 1.0f );
+                    "Local shadow strength",
+                    &gui.terrain.gt7_local_shadow_strength,
+                    0.0f,
+                    1.0f
+                );
                 ImGui::SliderFloat( "Debug wetness", &gui.terrain.wetness, 0.0f, 1.0f );
                 ImGui::SliderFloat( "Debug snow", &gui.terrain.snow, 0.0f, 1.0f );
                 ImGui::SliderFloat( "Scrolling speed", &gui.terrain.scrolling_speed, 0.0f, 0.1f );
@@ -341,8 +381,12 @@ void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera
                 ImGui::SliderFloat( "Animation speed", &gui.atms.animate_zenith_speed, 0.f, 2.f );
 
                 ImGui::SeparatorText( "Settings" );
-                ImGui::SliderFloat( "Sun zenith", &atms.sun_zenith,
-                    -( glm::half_pi<float>() + 0.1f ), glm::half_pi<float>() + 0.1f );
+                ImGui::SliderFloat(
+                    "Sun zenith",
+                    &atms.sun_zenith,
+                    -( glm::half_pi<float>() + 0.1f ),
+                    glm::half_pi<float>() + 0.1f
+                );
                 ImGui::SliderFloat( "Sun azimuth", &atms.sun_azimuth, 0.f, glm::two_pi<float>() );
                 ImGui::SliderFloat( "Radiance exposure", &gui.atms.radiance_exposure, 0.f, 20.f );
 
@@ -411,7 +455,11 @@ void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera
                     ImGui::BeginDisabled();
                 }
                 ImGui::SliderFloat(
-                    "HDR luminance target", &gui.tonemapping.hdr_target_luminance, 0.f, 10'000.f );
+                    "HDR luminance target",
+                    &gui.tonemapping.hdr_target_luminance,
+                    0.f,
+                    10'000.f
+                );
                 if ( is_not_gt7_hdr ) {
                     ImGui::EndDisabled();
                 }
@@ -434,9 +482,13 @@ void free()
     ImGui::DestroyContext();
 }
 
-void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms,
+void use_preset(
+    const Preset& preset,
+    gui::Gui& gui,
+    atmosphere::Atmosphere& atms,
     camera::OrbitCamera& camera,
-    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers )
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers
+)
 {
     if ( gui.preset.transition.has_value() ) {
         // Can't start another transition when one is currently happening
@@ -473,18 +525,19 @@ void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& at
             size_t material_idx = static_cast<size_t>( preset_material.slot );
             ub_data::Material material = material_buffers[material_idx].get_data();
 
-            Preset::MaterialData before_material = { .slot = preset_material.slot,
-                .data = gui::Material {
-                    .color = material.base_color,
-                    .roughness = material.roughness,
-                    .metallic = material.metallic,
-                    .clearcoat_roughness = material.clearcoat_roughness,
-                    .clearcoat_weight = material.clearcoat,
-                    .glintiness = material.glintiness,
-                    .glint_log_density = material.glint_log_density,
-                    .glint_roughness = material.roughness,
-                    .glint_randomness = material.glint_randomness,
-                } };
+            Preset::MaterialData before_material
+                = { .slot = preset_material.slot,
+                    .data = gui::Material {
+                        .color = material.base_color,
+                        .roughness = material.roughness,
+                        .metallic = material.metallic,
+                        .clearcoat_roughness = material.clearcoat_roughness,
+                        .clearcoat_weight = material.clearcoat,
+                        .glintiness = material.glintiness,
+                        .glint_log_density = material.glint_log_density,
+                        .glint_roughness = material.roughness,
+                        .glint_randomness = material.glint_randomness,
+                    } };
 
             before_materials.push_back( std::move( before_material ) );
             log::info( "[preset] Transitioning material with ID {}", preset_material.slot );

@@ -1,8 +1,8 @@
 #include "pipeline.hpp"
 
+#include "../log.hpp"
 #include "../vk/create.hpp"
 #include "state.hpp"
-#include "../log.hpp"
 
 #include <array>
 
@@ -13,27 +13,38 @@ constexpr std::string_view TESS_CONTROL_ENTRY_NAME = "ts_control_main";
 constexpr std::string_view TESS_EVAL_ENTRY_NAME = "ts_eval_main";
 constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
-Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
+Pipeline create_gfx_pipeline(
+    const engine::State& engine,
+    vk::Common& vulkan,
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
     const std::vector<VkDescriptorSetLayout>& layouts,
-    const std::vector<VkFormat> color_attachment_formats, VkSampleCountFlagBits samples, bool blend,
-    bool depth_test, VkShaderModule shader_module, bool enable_tessellation_shaders )
+    const std::vector<VkFormat> color_attachment_formats,
+    VkSampleCountFlagBits samples,
+    bool blend,
+    bool depth_test,
+    VkShaderModule shader_module,
+    bool enable_tessellation_shaders
+)
 {
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info
-        = vertex_input_state_create_info.value_or( VkPipelineVertexInputStateCreateInfo {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO } );
+        = vertex_input_state_create_info.value_or(
+            VkPipelineVertexInputStateCreateInfo {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO }
+        );
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = enable_tessellation_shaders ? VK_PRIMITIVE_TOPOLOGY_PATCH_LIST : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .topology = enable_tessellation_shaders ? VK_PRIMITIVE_TOPOLOGY_PATCH_LIST
+                                                : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         .primitiveRestartEnable = VK_FALSE,
     };
 
     // hardcoding this for now
-    VkPipelineTessellationStateCreateInfo tessellationInfo{};
+    VkPipelineTessellationStateCreateInfo tessellationInfo { };
     tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-    tessellationInfo.patchControlPoints = 4;  // this should be dynamic, but for now we're only using it for quads
+    tessellationInfo.patchControlPoints
+        = 4; // this should be dynamic, but for now we're only using it for quads
 
     std::array<VkDynamicState, 2> dynamic_states = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -92,7 +103,9 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     };
 
     std::vector<VkPipelineColorBlendAttachmentState> color_attachment_infos(
-        color_attachment_formats.size(), color_blend_attachment_info );
+        color_attachment_formats.size(),
+        color_blend_attachment_info
+    );
 
     VkPipelineColorBlendStateCreateInfo color_blend_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
@@ -113,32 +126,55 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
             pipeline_layout_info.pSetLayouts = layouts.data();
         }
 
-        vk::check( vkCreatePipelineLayout(
-                       vulkan.device, &pipeline_layout_info, nullptr, &gfx_pipeline.layout ),
-            "Failed to create graphics pipeline layout" );
+        vk::check(
+            vkCreatePipelineLayout(
+                vulkan.device,
+                &pipeline_layout_info,
+                nullptr,
+                &gfx_pipeline.layout
+            ),
+            "Failed to create graphics pipeline layout"
+        );
         vulkan.destructor_stack.push( vulkan.device, gfx_pipeline.layout, vkDestroyPipelineLayout );
     }
 
     std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
 
-    if (!enable_tessellation_shaders) {   
+    if ( !enable_tessellation_shaders ) {
         shader_stages = {
             vk::create::pipeline_shader_stage_info(
-                VK_SHADER_STAGE_VERTEX_BIT, shader_module, VERTEX_ENTRY_NAME ),
+                VK_SHADER_STAGE_VERTEX_BIT,
+                shader_module,
+                VERTEX_ENTRY_NAME
+            ),
             vk::create::pipeline_shader_stage_info(
-                VK_SHADER_STAGE_FRAGMENT_BIT, shader_module, FRAGMENT_ENTRY_NAME ),
+                VK_SHADER_STAGE_FRAGMENT_BIT,
+                shader_module,
+                FRAGMENT_ENTRY_NAME
+            ),
         };
-    }
-    else {
+    } else {
         shader_stages = {
             vk::create::pipeline_shader_stage_info(
-                VK_SHADER_STAGE_VERTEX_BIT, shader_module, VERTEX_ENTRY_NAME ),
+                VK_SHADER_STAGE_VERTEX_BIT,
+                shader_module,
+                VERTEX_ENTRY_NAME
+            ),
             vk::create::pipeline_shader_stage_info(
-                VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, shader_module, TESS_CONTROL_ENTRY_NAME ),
+                VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
+                shader_module,
+                TESS_CONTROL_ENTRY_NAME
+            ),
             vk::create::pipeline_shader_stage_info(
-                VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, shader_module, TESS_EVAL_ENTRY_NAME ),
+                VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+                shader_module,
+                TESS_EVAL_ENTRY_NAME
+            ),
             vk::create::pipeline_shader_stage_info(
-                VK_SHADER_STAGE_FRAGMENT_BIT, shader_module, FRAGMENT_ENTRY_NAME ),
+                VK_SHADER_STAGE_FRAGMENT_BIT,
+                shader_module,
+                FRAGMENT_ENTRY_NAME
+            ),
         };
     }
 
@@ -147,13 +183,14 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = uint32_t( color_attachment_formats.size() ),
         .pColorAttachmentFormats = color_attachment_formats.data(),
-        .depthAttachmentFormat = depth_test ? engine.depth_images[0].image_format : VK_FORMAT_UNDEFINED,
+        .depthAttachmentFormat
+        = depth_test ? engine.depth_images[0].image_format : VK_FORMAT_UNDEFINED,
     };
 
     VkGraphicsPipelineCreateInfo gfx_pipeline_info = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext = &pipeline_rendering_info,
-        .stageCount = enable_tessellation_shaders ? uint32_t(4) : 2,
+        .stageCount = enable_tessellation_shaders ? uint32_t( 4 ) : 2,
         .pStages = shader_stages.data(),
         .pVertexInputState = &vertex_input_info,
         .pInputAssemblyState = &input_assembly_info,
@@ -168,29 +205,40 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
         .renderPass = nullptr,
     };
 
-    vk::check( vkCreateGraphicsPipelines(
-                   vulkan.device, nullptr, 1, &gfx_pipeline_info, nullptr, &gfx_pipeline.handle ),
-        "Failed to create graphics pipeline" );
+    vk::check(
+        vkCreateGraphicsPipelines(
+            vulkan.device,
+            nullptr,
+            1,
+            &gfx_pipeline_info,
+            nullptr,
+            &gfx_pipeline.handle
+        ),
+        "Failed to create graphics pipeline"
+    );
     vulkan.destructor_stack.push( vulkan.device, gfx_pipeline.handle, vkDestroyPipeline );
 
     return gfx_pipeline;
 }
 
-Pipeline create_compute_pipeline( vk::Common& vulkan,
-    const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module,
-    std::string_view entry_name )
+Pipeline create_compute_pipeline(
+    vk::Common& vulkan,
+    const std::vector<VkDescriptorSetLayout>& layouts,
+    VkShaderModule shader_module,
+    std::string_view entry_name
+)
 {
     Pipeline compute_pipeline;
 
     {
         VkPipelineLayoutCreateInfo pipeline_info
             = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-                  .setLayoutCount = static_cast<uint32_t>( layouts.size() ),
-                  .pSetLayouts = layouts.data() };
+                .setLayoutCount = static_cast<uint32_t>( layouts.size() ),
+                .pSetLayouts = layouts.data() };
 
         vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &compute_pipeline.layout );
-        vulkan.destructor_stack.push(
-            vulkan.device, compute_pipeline.layout, vkDestroyPipelineLayout );
+        vulkan.destructor_stack
+            .push( vulkan.device, compute_pipeline.layout, vkDestroyPipelineLayout );
     }
 
     VkPipelineLayoutCreateInfo pipeline_info = {
@@ -210,13 +258,26 @@ Pipeline create_compute_pipeline( vk::Common& vulkan,
         .layout = pipeline_layout,
     };
 
-    create_pipeline_info.stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0,
-        VK_SHADER_STAGE_COMPUTE_BIT, shader_module, entry_name.data(), nullptr };
+    create_pipeline_info.stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                                   nullptr,
+                                   0,
+                                   VK_SHADER_STAGE_COMPUTE_BIT,
+                                   shader_module,
+                                   entry_name.data(),
+                                   nullptr };
 
     VkPipeline compute_pipeline_handle;
-    vk::check( vkCreateComputePipelines( vulkan.device, VK_NULL_HANDLE, 1, &create_pipeline_info,
-                   nullptr, &compute_pipeline_handle ),
-        "Failed to create compute pipeline" );
+    vk::check(
+        vkCreateComputePipelines(
+            vulkan.device,
+            VK_NULL_HANDLE,
+            1,
+            &create_pipeline_info,
+            nullptr,
+            &compute_pipeline_handle
+        ),
+        "Failed to create compute pipeline"
+    );
 
     vulkan.destructor_stack.push( vulkan.device, pipeline_layout, vkDestroyPipelineLayout );
     vulkan.destructor_stack.push( vulkan.device, compute_pipeline_handle, vkDestroyPipeline );

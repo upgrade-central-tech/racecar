@@ -4,10 +4,18 @@
 
 namespace racecar::vk::utility {
 
-void transition_image_mips( VkCommandBuffer command_buffer, VkImage image, VkImageLayout old_layout,
-    VkImageLayout new_layout, VkAccessFlags2 src_access_mask, VkAccessFlags2 dst_access_mask,
-    VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask,
-    VkImageAspectFlags aspect_flags, uint32_t mip_levels )
+void transition_image_mips(
+    VkCommandBuffer command_buffer,
+    VkImage image,
+    VkImageLayout old_layout,
+    VkImageLayout new_layout,
+    VkAccessFlags2 src_access_mask,
+    VkAccessFlags2 dst_access_mask,
+    VkPipelineStageFlags2 src_stage_mask,
+    VkPipelineStageFlags2 dst_stage_mask,
+    VkImageAspectFlags aspect_flags,
+    uint32_t mip_levels
+)
 {
     VkImageMemoryBarrier2 image_barrier {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -34,10 +42,17 @@ void transition_image_mips( VkCommandBuffer command_buffer, VkImage image, VkIma
     vkCmdPipelineBarrier2( command_buffer, &dependency_info );
 }
 
-void transition_image( VkCommandBuffer command_buffer, VkImage image, VkImageLayout old_layout,
-    VkImageLayout new_layout, VkAccessFlags2 src_access_mask, VkAccessFlags2 dst_access_mask,
-    VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask,
-    VkImageAspectFlags aspect_flags )
+void transition_image(
+    VkCommandBuffer command_buffer,
+    VkImage image,
+    VkImageLayout old_layout,
+    VkImageLayout new_layout,
+    VkAccessFlags2 src_access_mask,
+    VkAccessFlags2 dst_access_mask,
+    VkPipelineStageFlags2 src_stage_mask,
+    VkPipelineStageFlags2 dst_stage_mask,
+    VkImageAspectFlags aspect_flags
+)
 {
     VkImageMemoryBarrier2 image_barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,

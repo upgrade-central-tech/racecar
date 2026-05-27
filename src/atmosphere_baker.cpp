@@ -157,7 +157,7 @@ void compute_octahedral_sky(
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = {},
+            .buffer_barriers = { },
             .image_barriers = { engine::ImageBarrier {
                 .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
                 .src_access = VK_ACCESS_2_NONE,
@@ -210,7 +210,7 @@ void compute_octahedral_sky_irradiance(
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = {},
+            .buffer_barriers = { },
             .image_barriers = { engine::ImageBarrier {
                 .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
                 .src_access = VK_ACCESS_2_NONE,
@@ -228,7 +228,7 @@ void compute_octahedral_sky_irradiance(
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = {},
+            .buffer_barriers = { },
             .image_barriers = { engine::ImageBarrier {
                 .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                 .src_access = VK_ACCESS_SHADER_WRITE_BIT,
@@ -299,7 +299,7 @@ void compute_octahedral_sky_mips(
         );
 
         UniformBuffer mip_data
-            = create_uniform_buffer<ub_data::OctahedralData>( vulkan, {}, engine.frame_overlap );
+            = create_uniform_buffer<ub_data::OctahedralData>( vulkan, { }, engine.frame_overlap );
         float roughness = (float)mip / (float)( mip_levels - 1 );
         mip_data.set_data( { glm::vec4( mip, roughness, 0.0f, 0.0f ) } );
 
@@ -333,7 +333,7 @@ void compute_octahedral_sky_mips(
 
     engine::add_pipeline_barrier(
         task_list,
-        engine::PipelineBarrierDescriptor { .buffer_barriers = {},
+        engine::PipelineBarrierDescriptor { .buffer_barriers = { },
                                             .image_barriers = { engine::ImageBarrier {
                                                 .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
                                                 .src_access = VK_ACCESS_2_NONE,
@@ -377,7 +377,7 @@ void compute_octahedral_sky_mips(
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = {},
+            .buffer_barriers = { },
             .image_barriers
             = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                                        .src_access = VK_ACCESS_SHADER_WRITE_BIT,

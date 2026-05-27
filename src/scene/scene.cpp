@@ -113,7 +113,7 @@ void load_gltf(
     }
 
     for ( tinygltf::Material& loaded_mat : model.materials ) {
-        Material new_mat = {};
+        Material new_mat = { };
 
         new_mat.base_color
             = double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );

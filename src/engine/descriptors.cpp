@@ -5,7 +5,8 @@
 namespace racecar::engine {
 
 void create_descriptor_system(
-    vk::Common& vulkan, uint32_t frame_overlap, DescriptorSystem& descriptor_system )
+    vk::Common& vulkan, uint32_t frame_overlap, DescriptorSystem& descriptor_system
+)
 {
     std::vector<DescriptorAllocator::PoolSizeRatio> pool_sizes = {
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 },
@@ -22,7 +23,11 @@ void create_descriptor_system(
 
     for ( uint32_t i = 0; i < frame_overlap; i++ ) {
         descriptor_allocator::init_pool(
-            vulkan, descriptor_system.frame_allocators[i], 500, pool_sizes );
+            vulkan,
+            descriptor_system.frame_allocators[i],
+            500,
+            pool_sizes
+        );
     }
 
     log::info( "[engine] Created descriptor system" );
@@ -31,7 +36,8 @@ void create_descriptor_system(
 namespace descriptor_layout_builder {
 
 void add_binding(
-    DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding, VkDescriptorType type )
+    DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding, VkDescriptorType type
+)
 {
     // Stage flags are not set here, will be later in descriptor_layout_builder::build
     VkDescriptorSetLayoutBinding new_binding = {
@@ -43,8 +49,12 @@ void add_binding(
     ds_layout_builder.bindings.push_back( std::move( new_binding ) );
 }
 
-void add_array_binding( DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding,
-    VkDescriptorType type, uint32_t count )
+void add_array_binding(
+    DescriptorLayoutBuilder& ds_layout_builder,
+    uint32_t binding,
+    VkDescriptorType type,
+    uint32_t count
+)
 {
     // Stage flags are not set here, will be later in descriptor_layout_builder::build
     VkDescriptorSetLayoutBinding new_binding = {
@@ -58,8 +68,12 @@ void add_array_binding( DescriptorLayoutBuilder& ds_layout_builder, uint32_t bin
 
 void clear( DescriptorLayoutBuilder& ds_layout_builder ) { ds_layout_builder.bindings.clear(); }
 
-VkDescriptorSetLayout build( vk::Common& vulkan, VkShaderStageFlags shader_stage_flags,
-    DescriptorLayoutBuilder& ds_layout_builder, VkDescriptorSetLayoutCreateFlags ds_layout_flags )
+VkDescriptorSetLayout build(
+    vk::Common& vulkan,
+    VkShaderStageFlags shader_stage_flags,
+    DescriptorLayoutBuilder& ds_layout_builder,
+    VkDescriptorSetLayoutCreateFlags ds_layout_flags
+)
 {
     for ( auto& binding : ds_layout_builder.bindings ) {
         binding.stageFlags |= shader_stage_flags;
@@ -75,7 +89,8 @@ VkDescriptorSetLayout build( vk::Common& vulkan, VkShaderStageFlags shader_stage
     VkDescriptorSetLayout ds_layout = VK_NULL_HANDLE;
     vk::check(
         vkCreateDescriptorSetLayout( vulkan.device, &ds_layout_create_info, nullptr, &ds_layout ),
-        "Failed to create descriptor set layout" );
+        "Failed to create descriptor set layout"
+    );
     vulkan.destructor_stack.push( vulkan.device, ds_layout, vkDestroyDescriptorSetLayout );
 
     return ds_layout;
@@ -85,15 +100,21 @@ VkDescriptorSetLayout build( vk::Common& vulkan, VkShaderStageFlags shader_stage
 
 namespace descriptor_allocator {
 
-void init_pool( vk::Common& vulkan, DescriptorAllocator& ds_allocator, uint32_t max_sets,
-    std::span<DescriptorAllocator::PoolSizeRatio> pool_ratios )
+void init_pool(
+    vk::Common& vulkan,
+    DescriptorAllocator& ds_allocator,
+    uint32_t max_sets,
+    std::span<DescriptorAllocator::PoolSizeRatio> pool_ratios
+)
 {
     std::vector<VkDescriptorPoolSize> pool_sizes;
     for ( DescriptorAllocator::PoolSizeRatio ratio : pool_ratios ) {
-        pool_sizes.push_back( VkDescriptorPoolSize {
-            .type = ratio.type,
-            .descriptorCount = static_cast<uint32_t>( ratio.ratio * max_sets ),
-        } );
+        pool_sizes.push_back(
+            VkDescriptorPoolSize {
+                .type = ratio.type,
+                .descriptorCount = static_cast<uint32_t>( ratio.ratio * max_sets ),
+            }
+        );
     }
 
     VkDescriptorPoolCreateInfo pool_info = {
@@ -104,8 +125,10 @@ void init_pool( vk::Common& vulkan, DescriptorAllocator& ds_allocator, uint32_t 
         .pPoolSizes = pool_sizes.data(),
     };
 
-    vk::check( vkCreateDescriptorPool( vulkan.device, &pool_info, nullptr, &ds_allocator.pool ),
-        "Failed to create descriptor pool" );
+    vk::check(
+        vkCreateDescriptorPool( vulkan.device, &pool_info, nullptr, &ds_allocator.pool ),
+        "Failed to create descriptor pool"
+    );
     vulkan.destructor_stack.push( vulkan.device, ds_allocator.pool, vkDestroyDescriptorPool );
 }
 
@@ -115,7 +138,8 @@ void clear_descriptors( const vk::Common& vulkan, DescriptorAllocator& ds_alloca
 }
 
 VkDescriptorSet allocate(
-    vk::Common& vulkan, const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout )
+    vk::Common& vulkan, const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout
+)
 {
     VkDescriptorSetAllocateInfo allocate_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -125,8 +149,10 @@ VkDescriptorSet allocate(
     };
 
     VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
-    vk::check( vkAllocateDescriptorSets( vulkan.device, &allocate_info, &descriptor_set ),
-        "Failed to allocate descriptor set" );
+    vk::check(
+        vkAllocateDescriptorSets( vulkan.device, &allocate_info, &descriptor_set ),
+        "Failed to allocate descriptor set"
+    );
     /// TODO: destroy descriptor set
     // vulkan.destructor_stack.destructors.push( [=]() {
     //     VkDescriptorSet descriptor_set_copy = descriptor_set;
@@ -138,14 +164,22 @@ VkDescriptorSet allocate(
 
 } // namespace descriptor_allocator
 
-void write_image( DescriptorWriter& writer, int binding, VkImageView image, VkSampler sampler,
-    VkImageLayout layout, VkDescriptorType type )
+void write_image(
+    DescriptorWriter& writer,
+    int binding,
+    VkImageView image,
+    VkSampler sampler,
+    VkImageLayout layout,
+    VkDescriptorType type
+)
 {
-    VkDescriptorImageInfo& info = writer.image_infos.emplace_back( VkDescriptorImageInfo {
-        .sampler = sampler,
-        .imageView = image,
-        .imageLayout = layout,
-    } );
+    VkDescriptorImageInfo& info = writer.image_infos.emplace_back(
+        VkDescriptorImageInfo {
+            .sampler = sampler,
+            .imageView = image,
+            .imageLayout = layout,
+        }
+    );
 
     VkWriteDescriptorSet write = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -159,11 +193,18 @@ void write_image( DescriptorWriter& writer, int binding, VkImageView image, VkSa
     writer.writes.push_back( write );
 }
 
-void write_buffer( DescriptorWriter& writer, int binding, VkBuffer buffer, size_t size,
-    size_t offset, VkDescriptorType type )
+void write_buffer(
+    DescriptorWriter& writer,
+    int binding,
+    VkBuffer buffer,
+    size_t size,
+    size_t offset,
+    VkDescriptorType type
+)
 {
     VkDescriptorBufferInfo& info = writer.buffer_infos.emplace_back(
-        VkDescriptorBufferInfo { .buffer = buffer, .offset = offset, .range = size } );
+        VkDescriptorBufferInfo { .buffer = buffer, .offset = offset, .range = size }
+    );
 
     VkWriteDescriptorSet write = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -183,7 +224,12 @@ void update_set( DescriptorWriter& writer, VkDevice device, VkDescriptorSet set 
     }
 
     vkUpdateDescriptorSets(
-        device, static_cast<uint32_t>( writer.writes.size() ), writer.writes.data(), 0, nullptr );
+        device,
+        static_cast<uint32_t>( writer.writes.size() ),
+        writer.writes.data(),
+        0,
+        nullptr
+    );
 }
 
 } // namespace racecar::engine
