@@ -713,6 +713,11 @@ void dispatch_atmosphere_baker(
  */
 void run( bool use_fullscreen )
 {
+    // ================================================================================================================
+    // GLOBAL RESOURCE INITIALIZATION
+    // ================================================================================================================
+    
+    // INITIALIZE VULKAN CONTEXT + ENGINE CONTEXT
     Context ctx = initialize_context( use_fullscreen );
     engine::State engine = engine::initialize( ctx );
     gui::Gui gui = gui::initialize( ctx, engine );
@@ -722,6 +727,7 @@ void run( bool use_fullscreen )
     geometry::scene::Mesh scene_mesh;
     load_scene( ctx, engine, &scene, &scene_mesh );
 
+    // GLOBAL UNIFORM BUFFER SETUP
     UniformBuffer<ub_data::Camera> camera_buffer;
     UniformBuffer<ub_data::Debug> debug_buffer;
     engine::DescriptorSet uniform_desc_set;
@@ -733,11 +739,13 @@ void run( bool use_fullscreen )
         &uniform_desc_set
     );
 
+    // GLOBAL TEXTURE SAMPLER SETUP
     VkSampler linear_sampler = VK_NULL_HANDLE;
     VkSampler point_sampler = VK_NULL_HANDLE;
     engine::DescriptorSet sampler_desc_set;
     load_samplers( ctx, engine, &linear_sampler, &point_sampler, &sampler_desc_set );
 
+    // LOAD MATERIAL DATA AND BUFFERS
     size_t num_materials = scene.materials.size();
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
     std::vector<UniformBuffer<ub_data::Material>> material_uniform_buffers( num_materials );
@@ -750,6 +758,7 @@ void run( bool use_fullscreen )
         &material_uniform_buffers
     );
 
+    // LOAD MODEL MATRIX UNIFORM BUFFERS
     size_t num_nodes = scene.nodes.size();
     std::vector<engine::DescriptorSet> model_mat_desc_sets( num_nodes );
     std::vector<UniformBuffer<ub_data::ModelMat>> model_mat_uniform_buffers( num_nodes );
@@ -762,23 +771,30 @@ void run( bool use_fullscreen )
         &model_mat_uniform_buffers
     );
 
+    // LOAD RAYMARCHING TEXTURE SETS
     engine::DescriptorSet raymarch_tex_sets;
     create_raymarch_tex_sets( ctx, engine, &raymarch_tex_sets );
 
+    // LOAD MATERIAL LOOKUP TABLES
     engine::DescriptorSet lut_sets;
     vk::mem::AllocatedImage lut_brdf;
     vk::mem::AllocatedImage glint_noise;
     create_lut_sets( ctx, engine, &lut_sets, &lut_brdf, &glint_noise );
 
+    // LOAD GLOBAL QUAD MESH
     // TODO: It might be beneficial if meshes like these are global; helps avoid rebuilding them for
     // whatever reason.
     geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
     geometry::quad::Mesh::instance = &quad_mesh;
 
-    engine::TaskList task_list;
+    // ================================================================================================================
+    // TASK RESOURCE INITIALIZATION
+    // ================================================================================================================
 
+    // INITIALIZE GBUFFER
     deferred::GBuffers gbuffers = deferred::initialize_GBuffers( ctx.vulkan, engine );
 
+    // CREATE DEPTH PREPASS PIPELINE
     engine::DescriptorSet depth_uniform_desc_set;
     engine::Pipeline depth_ms_pipeline;
     engine::GfxTask depth_ms_gfx_task;
@@ -795,6 +811,7 @@ void run( bool use_fullscreen )
         &depth_prepass_ms
     );
 
+    // CREATE MAIN SCENE DRAW PIPELINE
     engine::Pipeline scene_pipeline;
     create_scene_gfx_pipeline(
         ctx,
@@ -808,11 +825,19 @@ void run( bool use_fullscreen )
         &sampler_desc_set
     );
 
-    // Screen buffers setup
+    // CREATE SCREEN BUFFERS
     engine::RWImage screen_color;
     engine::RWImage screen_buffer;
     engine::RWImage screen_history;
     create_screen_buffers( ctx, engine, &screen_color, &screen_buffer, &screen_history );
+
+    // SETUP ATMOSPHERIC/VOLUMETRIC RESOURCES
+    atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
+    atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
+    volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
+
+    // INITIALIZE TASK LIST
+    engine::TaskList task_list;
 
     // Once all of the essential buffers are setup (GBuffer + Screen buffers), we run a pipeline
     // barrier to ensure sync.
@@ -820,12 +845,9 @@ void run( bool use_fullscreen )
     create_top_pipeline_barriers( gbuffers, screen_color, &top_pipeline_barriers );
     engine::add_pipeline_barrier( task_list, top_pipeline_barriers );
 
-    // Atmospheres/sky/volumetrics section
-    atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
-    atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
-
-    volumetric::Volumetric volumetric;
-    volumetric = volumetric::initialize( ctx.vulkan, engine );
+    // ================================================================================================================
+    // TASK LIST POPULATION
+    // ================================================================================================================
 
     draw_atmosphere( ctx, engine, task_list, atms, screen_color );
     dispatch_atmosphere_baker( ctx, engine, task_list, lut_sets, atms_baker, volumetric );
