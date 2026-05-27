@@ -124,12 +124,6 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
         terrain.tri_indices.data()
     );
 
-    log::info(
-        "Terrain: {} verts, {} indices",
-        terrain.vertices.size(),
-        terrain.tri_indices.size()
-    );
-
     // Build descriptors
     terrain.prepass_uniform_desc_set = engine::generate_descriptor_set(
         vulkan,
@@ -374,8 +368,6 @@ void draw_terrain_prepass(
         log::error( "Failed to create terrain prepass graphics pipeline: {}", ex.what() );
         throw;
     }
-
-    log::info( "[Terrain] In the process of doing something funny. Passed pipeline point" );
 
     engine::DrawResourceDescriptor draw_descriptor = {
         .vertex_buffers = { terrain.mesh_buffers.vertex_buffer.handle },

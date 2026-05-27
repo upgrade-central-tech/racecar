@@ -26,8 +26,6 @@ std::vector<Preset> load_presets()
         const fs::path entry_path = entry.path();
 
         if ( entry_path.has_extension() && entry_path.extension() == ".json" ) {
-            log::info( "[preset] Found preset: {}", entry_path.filename().string() );
-
             try {
                 presets.push_back( parse_preset_json( entry_path ) );
             } catch ( const std::exception& ex ) {
@@ -36,6 +34,8 @@ std::vector<Preset> load_presets()
             }
         }
     }
+
+    log::info( "[preset] Loaded {} presets", presets.size() );
 
     return presets;
 }

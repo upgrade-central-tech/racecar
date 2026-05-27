@@ -19,11 +19,6 @@ Pipeline create_gfx_pipeline( const engine::State& engine, vk::Common& vulkan,
     const std::vector<VkFormat> color_attachment_formats, VkSampleCountFlagBits samples, bool blend,
     bool depth_test, VkShaderModule shader_module, bool enable_tessellation_shaders )
 {
-    if ( enable_tessellation_shaders ) {
-        log::info("[TESSELLATION] Creating pipeline with tessellation shaders enabled");
-    } else {
-        log::info("[GRAPHICS] Creating pipeline WITHOUT tessellation shaders enabled");
-    }
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info
         = vertex_input_state_create_info.value_or( VkPipelineVertexInputStateCreateInfo {

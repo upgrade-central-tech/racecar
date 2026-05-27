@@ -44,8 +44,7 @@ void create_immediate_commands( ImmediateSubmit& immediate_submit, vk::Common& v
         "Failed to create immediate command pool" );
     vulkan.destructor_stack.push( vulkan.device, immediate_submit.cmd_pool, vkDestroyCommandPool );
 
-    log::info( "[engine] Created immediate command pool {}",
-        static_cast<void*>( immediate_submit.cmd_pool ) );
+    log::info( "[engine] Created immediate command pool" );
 
     VkCommandBufferAllocateInfo command_buffer_allocate_info
         = vk::create::command_buffer_allocate_info( immediate_submit.cmd_pool, 1 );
@@ -55,8 +54,7 @@ void create_immediate_commands( ImmediateSubmit& immediate_submit, vk::Common& v
     vulkan.destructor_stack.push_free_cmd_bufs(
         vulkan.device, immediate_submit.cmd_pool, { immediate_submit.cmd_buf } );
 
-    log::info( "[engine] Created immediate command buffer {}",
-        static_cast<void*>( immediate_submit.cmd_buf ) );
+    log::info( "[engine] Created immediate command buffer");
 };
 
 void create_immediate_sync_structures( ImmediateSubmit& immediate_submit, vk::Common& vulkan )

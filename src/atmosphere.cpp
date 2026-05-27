@@ -70,7 +70,6 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
             atms.irradiance = engine::create_image( vulkan, engine,
                 static_cast<void*>( irradiance.data() ), { .width = 64, .height = 16, .depth = 1 },
                 format, VK_IMAGE_TYPE_2D, usage_flags, false );
-            log::info( "[atmosphere] Created irradiance image" );
         }
 
         {
@@ -79,7 +78,6 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
                 = engine::create_image( vulkan, engine, static_cast<void*>( scattering.data() ),
                     { .width = 256, .height = 128, .depth = 32 }, format, VK_IMAGE_TYPE_3D,
                     usage_flags, false );
-            log::info( "[atmosphere] Created scattering image" );
         }
 
         {
@@ -88,7 +86,6 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
                 = engine::create_image( vulkan, engine, static_cast<void*>( transmittance.data() ),
                     { .width = 256, .height = 64, .depth = 1 }, format, VK_IMAGE_TYPE_2D,
                     usage_flags, false );
-            log::info( "[atmosphere] Created irradiance image" );
         }
     } catch ( const Exception& ex ) {
         log::error( "[atmosphere] Failed to create LUTs: {}", ex.what() );

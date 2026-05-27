@@ -123,12 +123,12 @@ void load_camera_debug_uniform_buffers(
 {
     *camera_buffer = create_uniform_buffer<ub_data::Camera>(
         ctx.vulkan,
-        {},
+        { },
         static_cast<size_t>( engine.frame_overlap )
     );
     *debug_buffer = create_uniform_buffer<ub_data::Debug>(
         ctx.vulkan,
-        {},
+        { },
         static_cast<size_t>( engine.frame_overlap )
     );
     // UniformBuffer raymarch_buffer = create_uniform_buffer<ub_data::RaymarchBufferData>(
@@ -250,7 +250,7 @@ void load_materials(
 
         UniformBuffer material_buffer = create_uniform_buffer<ub_data::Material>(
             ctx.vulkan,
-            {},
+            { },
             static_cast<size_t>( engine.frame_overlap )
         );
         ub_data::Material material_ub = {
@@ -322,7 +322,7 @@ void load_model_mat_uniform_buffers(
 
         UniformBuffer model_mat_buffer = create_uniform_buffer<ub_data::ModelMat>(
             ctx.vulkan,
-            {},
+            { },
             static_cast<size_t>( engine.frame_overlap )
         );
 
@@ -451,7 +451,7 @@ void create_depth_ms_prepass(
             ctx.vulkan,
             engine::get_vertex_input_state_create_info( scene_mesh ),
             { depth_uniform_desc_set->layouts[frame_index] },
-            {},
+            { },
             VK_SAMPLE_COUNT_4_BIT,
             false,
             true,
@@ -468,7 +468,7 @@ void create_depth_ms_prepass(
         .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
         .clear_depth = 1.f,
         .render_target_is_swapchain = false,
-        .color_attachments = {},
+        .color_attachments = { },
         .depth_image = gbuffers->GBuffer_DepthMS,
         .extent = engine.swapchain.extent,
     };
@@ -575,7 +575,7 @@ void create_top_pipeline_barriers(
     engine::PipelineBarrierDescriptor* top_pipeline_barrier_desc
 )
 {
-    top_pipeline_barrier_desc->buffer_barriers = {};
+    top_pipeline_barrier_desc->buffer_barriers = { };
 
     // All GBuffer barriers are for VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
     top_pipeline_barrier_desc->image_barriers = deferred::init_gbuffer_image_barriers( gbuffers );
@@ -775,7 +775,6 @@ void run( bool use_fullscreen )
     geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
     geometry::quad::Mesh::instance = &quad_mesh;
 
-    log::info( "[main] pre atmo3!" );
     engine::TaskList task_list;
 
     deferred::GBuffers gbuffers = deferred::initialize_GBuffers( ctx.vulkan, engine );
@@ -856,7 +855,7 @@ void run( bool use_fullscreen )
     vkBeginCommandBuffer( engine.frames[0].start_cmdbuf, &command_buffer_begin_info );
 
     int num_blas = 0;
-    ub_data::BLASOffsets blas_offsets {};
+    ub_data::BLASOffsets blas_offsets { };
 
     std::vector<vk::mem::AllocatedImage> albedo_textures;
     std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
@@ -1112,7 +1111,7 @@ void run( bool use_fullscreen )
     );
 
     vkEndCommandBuffer( engine.frames[0].start_cmdbuf );
-    VkSubmitInfo submit_info = {};
+    VkSubmitInfo submit_info = { };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &engine.frames[0].start_cmdbuf;
@@ -1137,7 +1136,7 @@ void run( bool use_fullscreen )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
-    std::vector<ub_data::PaddedVertex> padded_vertex_data {};
+    std::vector<ub_data::PaddedVertex> padded_vertex_data { };
     for ( geometry::scene::Vertex& v : scene_mesh.vertices ) {
         padded_vertex_data.push_back(
             { .position = v.position, .normal = v.normal, .tangent = v.tangent, .uv = v.uv }
@@ -1291,7 +1290,7 @@ void run( bool use_fullscreen )
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = {},
+            .buffer_barriers = { },
             .image_barriers = {
                 deferred::color_write_to_frag_read( gbuffers.GBuffer_Position ),
                 deferred::color_write_to_frag_read( gbuffers.GBuffer_Velocity ),
@@ -1365,7 +1364,7 @@ void run( bool use_fullscreen )
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = {},
+            .buffer_barriers = { },
             .image_barriers = {
                 deferred::color_write_to_frag_read( gbuffers.GBuffer_Tangent ),
                 deferred::color_write_to_frag_read( gbuffers.GBuffer_UV ),
@@ -1398,8 +1397,6 @@ void run( bool use_fullscreen )
             } }
     );
 
-    log::info( "end reflection data" );
-
     // Terrain lighting pass
     {
         geometry::TerrainLightingInfo terrain_lighting_info = {
@@ -1420,7 +1417,7 @@ void run( bool use_fullscreen )
         engine::add_pipeline_barrier(
             task_list,
             engine::PipelineBarrierDescriptor {
-                .buffer_barriers = {},
+                .buffer_barriers = { },
                 .image_barriers = { engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
@@ -1529,7 +1526,7 @@ void run( bool use_fullscreen )
         engine::add_pipeline_barrier(
             task_list,
             engine::PipelineBarrierDescriptor {
-                .buffer_barriers = {},
+                .buffer_barriers = { },
                 .image_barriers = {
                     engine::ImageBarrier {
                         .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -1596,7 +1593,7 @@ void run( bool use_fullscreen )
         engine::add_pipeline_barrier(
             task_list,
             engine::PipelineBarrierDescriptor {
-                .buffer_barriers = {},
+                .buffer_barriers = { },
                 .image_barriers = {
                     engine::ImageBarrier {
                         .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -1616,7 +1613,7 @@ void run( bool use_fullscreen )
 
     bool will_quit = false;
     bool stop_drawing = false;
-    SDL_Event event = {};
+    SDL_Event event = { };
 
     std::chrono::steady_clock::time_point current_tick;
 
@@ -2021,7 +2018,7 @@ void run( bool use_fullscreen )
         }
 
         if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
-            glm::vec3 velocity = {};
+            glm::vec3 velocity = { };
 
             if ( gui.demo.enable_translation ) {
                 velocity = glm::vec3(

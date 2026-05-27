@@ -196,8 +196,6 @@ VkShaderModule shader_module( Common& vulkan, std::filesystem::path shader_path 
 
     VkShaderModule shader_module;
 
-    log::info( "[Shader] Creating shader module \"{}\"", shader_path.filename().string() );
-
     // We don't immediately add the shader module to the destructor stack because we destroy it at
     // the end of the pipeline creation instead
     vk::check( vkCreateShaderModule( vulkan.device, &create_info, nullptr, &shader_module ),

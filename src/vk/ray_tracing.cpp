@@ -61,8 +61,6 @@ VkAccelerationStructureGeometryKHR create_acceleration_structure_from_geometry(
 AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
     RayTracingProperties& rt_props, MeshData mesh, VkCommandBuffer cmd_buf, [[maybe_unused]] DestructorStack& destructor_stack )
 {
-    log::info("Building BLAS with vertex stride {}", mesh.vertex_stride);
-
     if ( mesh.vertex_buffer == VK_NULL_HANDLE ) {
         throw Exception("[Build BLAS] MeshData vertex buffer is null");
     }

@@ -154,8 +154,6 @@ void create_depth_images( State& engine, vk::Common& vulkan )
                        &depth_image.image, &depth_image.allocation, nullptr ),
             "[VMA] Failed to create depth image" );
 
-        log::info( "[VMA] Allocated depth image {}", static_cast<void*>( depth_image.image ) );
-
         VkImageViewCreateInfo depth_view_create_info
             = vk::create::image_view_info( depth_image.image_format, depth_image.image,
                 VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_ASPECT_DEPTH_BIT );

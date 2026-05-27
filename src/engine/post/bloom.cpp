@@ -25,9 +25,7 @@ BloomPass add_bloom(
 
     engine::transition_cs_read_to_rw( task_list, inout );
     engine::transition_cs_write_to_rw( task_list, write_only );
-
-    log::info( "[Post] [Bloom] Number of passes: {}", BloomPass::NUM_PASSES );
-
+    
     {
         VkExtent3D current_extent
             = { engine.swapchain.extent.width / 2, engine.swapchain.extent.height / 2, 1 };
@@ -59,11 +57,6 @@ BloomPass add_bloom(
             );
 
             // Each progressive image has half resolution
-            log::info(
-                "[Post] [Bloom] Created intermediate image of size {}×{}",
-                current_extent.width,
-                current_extent.height
-            );
             current_extent = { current_extent.width / 2, current_extent.height / 2, 1 };
         }
     }

@@ -87,8 +87,6 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
         1
     );
 
-    log::info( "[Volumetrics] Descriptors should be made by this point." );
-
     return volumetric;
 }
 
@@ -138,8 +136,6 @@ bool generate_noise(
             generate_cumulus_module,
             "cs_generate_cumulus"
         );
-
-        log::info( "[VOLUMETRIC] Compute pipeline for cumulus made" );
 
         engine::immediate_submit(
             vulkan,
@@ -192,8 +188,6 @@ bool generate_noise(
                 );
             }
         );
-
-        log::info( "[VOLUMETRIC] Ran awesome submit for the cumulus noise map generation." );
     }
 
     // Low frequency noise map generation
@@ -238,8 +232,6 @@ bool generate_noise(
             generate_low_freq_module,
             "cs_generate_low_frequency"
         );
-
-        log::info( "[VOLUMETRIC] Compute pipeline for low frequency noise made" );
 
         engine::immediate_submit(
             vulkan,
@@ -293,8 +285,6 @@ bool generate_noise(
                 );
             }
         );
-
-        log::info( "[VOLUMETRIC] Ran submit for low frequency noise map generation" );
     }
 
     // high frequency noise map generation
@@ -339,8 +329,6 @@ bool generate_noise(
             generate_high_freq_module,
             "cs_generate_high_frequency"
         );
-
-        log::info( "[VOLUMETRIC] Compute pipeline for high frequency noise made" );
 
         engine::immediate_submit(
             vulkan,
@@ -394,8 +382,6 @@ bool generate_noise(
                 );
             }
         );
-
-        log::info( "[VOLUMETRIC] Ran submit for high frequency noise map generation" );
     }
 
     return true;
@@ -596,8 +582,6 @@ void draw_volumetric(
         } );
 
     engine::add_gfx_task( task_list, volumetric_composite_task );
-
-    log::info( "[VOLUMETRIC] Volumetric gfx task added" );
 }
 
 }
