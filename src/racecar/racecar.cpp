@@ -707,6 +707,17 @@ void dispatch_atmosphere_baker(
     );
 }
 
+VkFence create_fence( const Context& ctx )
+{
+    VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
+    VkFence precompute_fence;
+    vk::check(
+        vkCreateFence( ctx.vulkan.device, &fence_info, nullptr, &precompute_fence ),
+        "Failed to create precompute fence"
+    );
+    return precompute_fence;
+}
+
 /*
  * Temporary comment header to separate the refactored functions and the run call.
  * Goal is to neaten up run() for easier readability, scalability, and customization.
@@ -716,7 +727,7 @@ void run( bool use_fullscreen )
     // ================================================================================================================
     // GLOBAL RESOURCE INITIALIZATION
     // ================================================================================================================
-    
+
     // INITIALIZE VULKAN CONTEXT + ENGINE CONTEXT
     Context ctx = initialize_context( use_fullscreen );
     engine::State engine = engine::initialize( ctx );
@@ -836,6 +847,9 @@ void run( bool use_fullscreen )
     atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
     volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
 
+    // CREATE PRECOMPUTE FENCE
+    VkFence precompute_fence = create_fence( ctx );
+
     // INITIALIZE TASK LIST
     engine::TaskList task_list;
 
@@ -863,18 +877,15 @@ void run( bool use_fullscreen )
         .extent = engine.swapchain.extent,
     };
 
+    // Use any existing cmdbuf temporarily for precompute
+    VkCommandBuffer& precompute_cmdbuf = engine.frames[0].start_cmdbuf;
+
     // INITIAL PRECOMPUTE CMDBUFFER
-    VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
-    VkFence precompute_fence;
-    vk::check(
-        vkCreateFence( ctx.vulkan.device, &fence_info, nullptr, &precompute_fence ),
-        "Failed to create precompute fence"
-    );
     VkCommandBufferBeginInfo command_buffer_begin_info
         = vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
-    vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
+    vkResetCommandBuffer( precompute_cmdbuf, 0 );
     vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
-    vkBeginCommandBuffer( engine.frames[0].start_cmdbuf, &command_buffer_begin_info );
+    vkBeginCommandBuffer( precompute_cmdbuf, &command_buffer_begin_info );
 
     int num_blas = 0;
     ub_data::BLASOffsets blas_offsets { };
@@ -1032,7 +1043,7 @@ void run( bool use_fullscreen )
                           .vertex_offset = uint32_t( draw_descriptor.vertex_offset ),
                           .index_offset = uint32_t( draw_descriptor.index_offset ),
                           .vertex_stride = sizeof( geometry::scene::Vertex ) },
-                        engine.frames[0].start_cmdbuf,
+                        precompute_cmdbuf,
                         ctx.vulkan.destructor_stack
                     )
                 );
@@ -1058,7 +1069,7 @@ void run( bool use_fullscreen )
         ctx.vulkan.allocator,
         ctx.vulkan.ray_tracing_properties,
         objects,
-        engine.frames[0].start_cmdbuf,
+        precompute_cmdbuf,
         ctx.vulkan.destructor_stack
     );
 
@@ -1104,7 +1115,7 @@ void run( bool use_fullscreen )
           .vertex_offset = uint32_t( 0 ),
           .index_offset = uint32_t( 0 ),
           .vertex_stride = sizeof( geometry::TerrainVertex ) },
-        engine.frames[0].start_cmdbuf,
+        precompute_cmdbuf,
         ctx.vulkan.destructor_stack
     );
 
@@ -1113,7 +1124,7 @@ void run( bool use_fullscreen )
         ctx.vulkan.allocator,
         ctx.vulkan.ray_tracing_properties,
         { vk::rt::Object { .blas = &test_terrain.blas, .transform = glm::identity<glm::mat4>() } },
-        engine.frames[0].start_cmdbuf,
+        precompute_cmdbuf,
         ctx.vulkan.destructor_stack
     );
 
@@ -1132,16 +1143,16 @@ void run( bool use_fullscreen )
         0
     );
 
-    vkEndCommandBuffer( engine.frames[0].start_cmdbuf );
+    vkEndCommandBuffer( precompute_cmdbuf );
     VkSubmitInfo submit_info = { };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &engine.frames[0].start_cmdbuf;
+    submit_info.pCommandBuffers = &precompute_cmdbuf;
     vkQueueSubmit( ctx.vulkan.graphics_queue, 1, &submit_info, precompute_fence );
     vkWaitForFences( ctx.vulkan.device, 1, &precompute_fence, VK_TRUE, UINT64_MAX );
     vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
     vkDestroyFence( ctx.vulkan.device, precompute_fence, VK_NULL_HANDLE );
-    vkResetCommandBuffer( engine.frames[0].start_cmdbuf, 0 );
+    vkResetCommandBuffer( precompute_cmdbuf, 0 );
 
     engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set(
         ctx.vulkan,
