@@ -710,18 +710,265 @@ void dispatch_atmosphere_baker(
 VkFence create_fence( const Context& ctx )
 {
     VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
-    VkFence precompute_fence;
+    VkFence fence;
     vk::check(
-        vkCreateFence( ctx.vulkan.device, &fence_info, nullptr, &precompute_fence ),
+        vkCreateFence( ctx.vulkan.device, &fence_info, nullptr, &fence ),
         "Failed to create precompute fence"
     );
-    return precompute_fence;
+    return fence;
 }
 
+void setup_precompute_commandbuffer(
+    const Context& ctx, VkCommandBuffer* precompute_cmdbuf, const VkFence& precompute_fence
+)
+{
+    VkCommandBufferBeginInfo command_buffer_begin_info
+        = vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
+    vkResetCommandBuffer( *precompute_cmdbuf, 0 );
+    vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
+    vkBeginCommandBuffer( *precompute_cmdbuf, &command_buffer_begin_info );
+}
+
+engine::GfxTask create_prepass_gfx_task( const engine::State& engine, deferred::GBuffers& gbuffers )
+{
+    return {
+        .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
+        .clear_depth = 1.f,
+        .render_target_is_swapchain = false,
+        .color_attachments = deferred::get_color_attachments( gbuffers ),
+        .depth_image = deferred::get_depth_image( gbuffers ),
+        .extent = engine.swapchain.extent,
+    };
+}
+
+void load_model_primitive_material_data(
+    Context& ctx,
+    engine::State& engine,
+    const scene::Scene& scene,
+    const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
+    std::vector<glm::mat4>& transforms,
+    std::vector<const scene::Primitive*>& prims,
+    ub_data::RTTextureUniform& rt_texture_uniform,
+    std::vector<vk::mem::AllocatedImage>& albedo_textures,
+    std::vector<vk::mem::AllocatedImage>& metallic_roughness_textures,
+    std::vector<engine::DescriptorSet>& material_desc_sets
+)
+{
+    int tex_count = 0;
+    for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
+        if ( node->mesh.has_value() ) {
+            const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
+
+            for ( const scene::Primitive& prim : mesh->primitives ) {
+                const scene::Material& current_material
+                    = scene.materials[static_cast<size_t>( prim.material_id )];
+                std::vector<std::optional<scene::Texture>> textures_needed;
+
+                switch ( current_material.type ) {
+                case scene::MaterialType::PBR_ALBEDO_MAP: {
+                    std::optional<int> albedo_index = current_material.base_color_texture_index;
+                    std::optional<int> normal_index = current_material.normal_texture_index;
+                    std::optional<int> metallic_roughness_index
+                        = current_material.metallic_roughness_texture_index;
+
+                    textures_needed.push_back(
+                        albedo_index
+                            ? std::optional { (
+                                  scene.textures[static_cast<size_t>( albedo_index.value() )]
+                              ) }
+                            : std::nullopt
+                    );
+                    textures_needed.push_back(
+                        normal_index
+                            ? std::optional { (
+                                  scene.textures[static_cast<size_t>( normal_index.value() )]
+                              ) }
+                            : std::nullopt
+                    );
+                    textures_needed.push_back(
+                        metallic_roughness_index
+                            ? std::optional { ( scene.textures[static_cast<
+                                  size_t>( metallic_roughness_index.value() )] ) }
+                            : std::nullopt
+                    );
+
+                    if ( albedo_index ) {
+                        albedo_textures.push_back(
+                            scene.textures[static_cast<size_t>( albedo_index.value() )].data.value()
+                        );
+                        rt_texture_uniform.albedo_texture_index[tex_count]
+                            = int( albedo_textures.size() - 1 );
+                    } else {
+                        rt_texture_uniform.albedo_texture_index[tex_count] = -1;
+                        rt_texture_uniform.base_color[tex_count]
+                            = glm::vec4( current_material.base_color, 1.0 );
+                    }
+
+                    if ( metallic_roughness_index ) {
+                        metallic_roughness_textures.push_back(
+                            scene.textures[static_cast<size_t>( metallic_roughness_index.value() )]
+                                .data.value()
+                        );
+                        rt_texture_uniform.metallic_roughness_texture_index[tex_count]
+                            = int( metallic_roughness_textures.size() - 1 );
+                    } else {
+                        rt_texture_uniform.metallic_roughness_texture_index[tex_count] = -1;
+                        rt_texture_uniform.metallic[tex_count] = current_material.metallic;
+                        rt_texture_uniform.roughness[tex_count] = current_material.roughness;
+                    }
+
+                    break;
+                }
+
+                default:
+                    throw Exception( "[main_gfx_task] Unhandled material type" );
+                }
+
+                // TODO: Not yet connected with a layout
+                if ( scene.hdri_index.has_value() ) {
+                    textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
+                } else {
+                    textures_needed.push_back( std::nullopt );
+                }
+
+                std::vector<vk::mem::AllocatedImage> textures_sent;
+
+                for ( std::optional<scene::Texture>& texture : textures_needed ) {
+                    if ( texture && ( textures_sent.size() < vk::binding::MAX_IMAGES_BINDED ) ) {
+                        textures_sent.push_back( texture->data.value() );
+                    }
+                }
+
+                // Actually bind the texture handle to the descriptorset
+                for ( size_t i = 0; i < textures_sent.size(); i++ ) {
+                    engine::update_descriptor_set_image(
+                        ctx.vulkan,
+                        engine,
+                        material_desc_sets[static_cast<size_t>( prim.material_id )],
+                        textures_sent[i],
+                        static_cast<int>( i )
+                    );
+                }
+
+                transforms.push_back(
+                    model_mat_uniform_buffers[static_cast<size_t>( prim.node_id )]
+                        .get_data()
+                        .model_mat
+                );
+
+                prims.push_back( &prim );
+                tex_count++;
+            }
+        }
+    }
+}
+
+void construct_blases(
+    Context& ctx,
+    engine::State& engine,
+    VkCommandBuffer& precompute_cmdbuf,
+    const std::vector<const scene::Primitive*>& prims,
+    const geometry::scene::Mesh& scene_mesh,
+    ub_data::BLASOffsets* ret_blas_offsets
+)
+{
+    int blas_count = 0;
+    ub_data::BLASOffsets blas_offsets { };
+    for ( const scene::Primitive* prim : prims ) {
+        uint32_t max_idx = 0;
+        for ( size_t x = 0; x < prim->ind_count; x++ ) {
+            size_t offset_x = x + size_t( prim->ind_offset );
+            uint32_t idx = scene_mesh.indices[offset_x];
+            max_idx = glm::max( max_idx, idx );
+        }
+        engine.blas.push_back(
+            vk::rt::build_blas(
+                ctx.vulkan.device,
+                ctx.vulkan.allocator,
+                ctx.vulkan.ray_tracing_properties,
+                { .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
+                  .index_buffer = scene_mesh.mesh_buffers.index_buffer.handle,
+                  .max_vertex = uint32_t( max_idx ) - 1,
+                  .index_count = uint32_t( prim == nullptr ? 0 : prim->ind_count ),
+                  .vertex_offset = uint32_t( prim == nullptr ? 0 : prim->vertex_offset ),
+                  .index_offset = uint32_t( prim == nullptr ? 0 : prim->ind_offset ),
+                  .vertex_stride = sizeof( geometry::scene::Vertex ) },
+                precompute_cmdbuf,
+                ctx.vulkan.destructor_stack
+            )
+        );
+
+        blas_offsets.vertex_buffer_offset[blas_count]
+            = uint32_t( prim == nullptr ? 0 : prim->vertex_offset );
+        blas_offsets.index_buffer_offset[blas_count]
+            = uint32_t( prim == nullptr ? 0 : prim->ind_offset );
+
+        blas_count++;
+    }
+
+    *ret_blas_offsets = blas_offsets;
+}
+
+// One pipeline writing into one GfxTask, with the descriptor sets
+// that apply to every prim drawn into it.
+struct ScenePassTarget {
+    engine::Pipeline& pipeline;
+    engine::GfxTask& gfx_task;
+    engine::DescriptorSet& uniform_desc_set;
+    engine::DescriptorSet& sampler_desc_set;
+    engine::DescriptorSet& lut_sets;
+    std::vector<engine::DescriptorSet>& material_desc_sets;  // index prim->material_id
+    std::vector<engine::DescriptorSet>& model_mat_desc_sets; // index prim->node_id
+};
+
+struct DepthPassTarget {
+    engine::Pipeline& pipeline;
+    engine::GfxTask& gfx_task;
+    engine::DescriptorSet& uniform_desc_set;
+};
+
 /*
- * Temporary comment header to separate the refactored functions and the run call.
- * Goal is to neaten up run() for easier readability, scalability, and customization.
+ * Create a draw task for each prim and add it to the scene pass gfx task and the depth
+ * ms gfx task, including all the necessary descriptor sets.
  */
+void add_prim_draw_tasks(
+    geometry::scene::Mesh& scene_mesh,
+    const std::vector<const scene::Primitive*>& prims,
+    ScenePassTarget scene_pass,
+    DepthPassTarget depth_pass
+)
+{
+    for ( const scene::Primitive* prim : prims ) {
+        // Create a new draw resource descriptor for this primitive
+        engine::DrawResourceDescriptor draw_descriptor = engine::DrawResourceDescriptor::from_mesh(
+            scene_mesh.mesh_buffers.vertex_buffer.handle,
+            scene_mesh.mesh_buffers.index_buffer.handle,
+            static_cast<uint32_t>( scene_mesh.indices.size() ),
+            *prim
+        );
+
+        // Give the material descriptor set to the draw task
+        scene_pass.gfx_task.draw_tasks.push_back( {
+                .draw_resource_descriptor = draw_descriptor,
+                .descriptor_sets = {
+                    &scene_pass.uniform_desc_set,
+                    &scene_pass.material_desc_sets[static_cast<size_t>( prim->material_id )],
+                    &scene_pass.model_mat_desc_sets[static_cast<size_t>( prim->node_id )],
+                    &scene_pass.lut_sets,
+                    &scene_pass.sampler_desc_set,
+                },
+                .pipeline = scene_pass.pipeline,
+            } );
+        depth_pass.gfx_task.draw_tasks.push_back(
+            {
+                .draw_resource_descriptor = draw_descriptor,
+                .descriptor_sets = { &depth_pass.uniform_desc_set },
+                .pipeline = depth_pass.pipeline,
+            }
+        );
+    }
+}
+
 void run( bool use_fullscreen )
 {
     // ================================================================================================================
@@ -850,6 +1097,41 @@ void run( bool use_fullscreen )
     // CREATE PRECOMPUTE FENCE
     VkFence precompute_fence = create_fence( ctx );
 
+    // Use any existing cmdbuf temporarily for precompute
+    VkCommandBuffer& precompute_cmdbuf = engine.frames[0].start_cmdbuf;
+    setup_precompute_commandbuffer( ctx, &precompute_cmdbuf, precompute_fence );
+
+    // ================================================================================================================
+    // MODEL LOADING
+    // ================================================================================================================
+
+    // Load data for each primitive
+    std::vector<glm::mat4> transforms;
+    std::vector<const scene::Primitive*> prims;
+    ub_data::RTTextureUniform rt_texture_uniform;
+    std::vector<vk::mem::AllocatedImage> albedo_textures;
+    std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
+    load_model_primitive_material_data(
+        ctx,
+        engine,
+        scene,
+        model_mat_uniform_buffers,
+        transforms,
+        prims,
+        rt_texture_uniform,
+        albedo_textures,
+        metallic_roughness_textures,
+        material_desc_sets
+    );
+
+    // CONSTRUCT BLASES
+    ub_data::BLASOffsets blas_offsets;
+    construct_blases( ctx, engine, precompute_cmdbuf, prims, scene_mesh, &blas_offsets );
+
+    // ================================================================================================================
+    // BARRIER CREATION
+    // ================================================================================================================
+
     // INITIALIZE TASK LIST
     engine::TaskList task_list;
 
@@ -863,200 +1145,36 @@ void run( bool use_fullscreen )
     // TASK LIST POPULATION
     // ================================================================================================================
 
+    // Draw the atmosphere
     draw_atmosphere( ctx, engine, task_list, atms, screen_color );
-    dispatch_atmosphere_baker( ctx, engine, task_list, lut_sets, atms_baker, volumetric );
+
+    // Draw the volumetric clouds
     volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list, screen_color );
 
-    // GBUFFER PRE-PASS
-    engine::GfxTask prepass_gfx_task = {
-        .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
-        .clear_depth = 1.f,
-        .render_target_is_swapchain = false,
-        .color_attachments = deferred::get_color_attachments( gbuffers ),
-        .depth_image = deferred::get_depth_image( gbuffers ),
-        .extent = engine.swapchain.extent,
-    };
+    // Running the atmosphere baker
+    dispatch_atmosphere_baker( ctx, engine, task_list, lut_sets, atms_baker, volumetric );
 
-    // Use any existing cmdbuf temporarily for precompute
-    VkCommandBuffer& precompute_cmdbuf = engine.frames[0].start_cmdbuf;
+    // Initialize prepass (draw to the GBuffers)
+    engine::GfxTask prepass_gfx_task = create_prepass_gfx_task( engine, gbuffers );
 
-    // INITIAL PRECOMPUTE CMDBUFFER
-    VkCommandBufferBeginInfo command_buffer_begin_info
-        = vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
-    vkResetCommandBuffer( precompute_cmdbuf, 0 );
-    vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
-    vkBeginCommandBuffer( precompute_cmdbuf, &command_buffer_begin_info );
-
-    int num_blas = 0;
-    ub_data::BLASOffsets blas_offsets { };
-
-    std::vector<vk::mem::AllocatedImage> albedo_textures;
-    std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
-
-    ub_data::RTTextureUniform rt_texture_uniform;
-
-    std::vector<glm::mat4> transforms;
-
-    for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
-        if ( node->mesh.has_value() ) {
-            const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
-
-            for ( const scene::Primitive& prim : mesh->primitives ) {
-                const scene::Material& current_material
-                    = scene.materials[static_cast<size_t>( prim.material_id )];
-                std::vector<std::optional<scene::Texture>> textures_needed;
-
-                switch ( current_material.type ) {
-                case scene::MaterialType::PBR_ALBEDO_MAP: {
-                    std::optional<int> albedo_index = current_material.base_color_texture_index;
-                    std::optional<int> normal_index = current_material.normal_texture_index;
-                    std::optional<int> metallic_roughness_index
-                        = current_material.metallic_roughness_texture_index;
-
-                    textures_needed.push_back(
-                        albedo_index
-                            ? std::optional { (
-                                  scene.textures[static_cast<size_t>( albedo_index.value() )]
-                              ) }
-                            : std::nullopt
-                    );
-                    textures_needed.push_back(
-                        normal_index
-                            ? std::optional { (
-                                  scene.textures[static_cast<size_t>( normal_index.value() )]
-                              ) }
-                            : std::nullopt
-                    );
-                    textures_needed.push_back(
-                        metallic_roughness_index
-                            ? std::optional { ( scene.textures[static_cast<
-                                  size_t>( metallic_roughness_index.value() )] ) }
-                            : std::nullopt
-                    );
-
-                    if ( albedo_index ) {
-                        albedo_textures.push_back(
-                            scene.textures[static_cast<size_t>( albedo_index.value() )].data.value()
-                        );
-                        rt_texture_uniform.albedo_texture_index[num_blas]
-                            = int( albedo_textures.size() - 1 );
-                    } else {
-                        rt_texture_uniform.albedo_texture_index[num_blas] = -1;
-                        rt_texture_uniform.base_color[num_blas]
-                            = glm::vec4( current_material.base_color, 1.0 );
-                    }
-
-                    if ( metallic_roughness_index ) {
-                        metallic_roughness_textures.push_back(
-                            scene.textures[static_cast<size_t>( metallic_roughness_index.value() )]
-                                .data.value()
-                        );
-                        rt_texture_uniform.metallic_roughness_texture_index[num_blas]
-                            = int( metallic_roughness_textures.size() - 1 );
-                    } else {
-                        rt_texture_uniform.metallic_roughness_texture_index[num_blas] = -1;
-                        rt_texture_uniform.metallic[num_blas] = current_material.metallic;
-                        rt_texture_uniform.roughness[num_blas] = current_material.roughness;
-                    }
-
-                    break;
-                }
-
-                default:
-                    throw Exception( "[main_gfx_task] Unhandled material type" );
-                }
-
-                // TODO: Not yet connected with a layout
-                if ( scene.hdri_index.has_value() ) {
-                    textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
-                } else {
-                    textures_needed.push_back( std::nullopt );
-                }
-
-                std::vector<vk::mem::AllocatedImage> textures_sent;
-
-                for ( std::optional<scene::Texture>& texture : textures_needed ) {
-                    if ( texture && ( textures_sent.size() < vk::binding::MAX_IMAGES_BINDED ) ) {
-                        textures_sent.push_back( texture->data.value() );
-                    }
-                }
-
-                // Actually bind the texture handle to the descriptorset
-                for ( size_t i = 0; i < textures_sent.size(); i++ ) {
-                    engine::update_descriptor_set_image(
-                        ctx.vulkan,
-                        engine,
-                        material_desc_sets[static_cast<size_t>( prim.material_id )],
-                        textures_sent[i],
-                        static_cast<int>( i )
-                    );
-                }
-
-                engine::DrawResourceDescriptor draw_descriptor
-                    = engine::DrawResourceDescriptor::from_mesh(
-                        scene_mesh.mesh_buffers.vertex_buffer.handle,
-                        scene_mesh.mesh_buffers.index_buffer.handle,
-                        static_cast<uint32_t>( scene_mesh.indices.size() ),
-                        prim
-                    );
-
-                // give the material descriptor set to the draw task
-                prepass_gfx_task.draw_tasks.push_back( {
-                        .draw_resource_descriptor = draw_descriptor,
-                        .descriptor_sets = {
-                            &uniform_desc_set,
-                            &material_desc_sets[static_cast<size_t>( prim.material_id )],
-                            &model_mat_desc_sets[static_cast<size_t>(prim.node_id)],
-                            &lut_sets,
-                            &sampler_desc_set,
-                        },
-                        .pipeline = scene_pipeline,
-                    } );
-                depth_ms_gfx_task.draw_tasks.push_back(
-                    {
-                        .draw_resource_descriptor = draw_descriptor,
-                        .descriptor_sets = { &depth_uniform_desc_set },
-                        .pipeline = depth_ms_pipeline,
-                    }
-                );
-
-                uint32_t max_idx = 0;
-                for ( size_t x = 0; x < prim.ind_count; x++ ) {
-                    size_t offset_x = x + size_t( prim.ind_offset );
-                    uint32_t idx = scene_mesh.indices[offset_x];
-                    max_idx = glm::max( max_idx, idx );
-                }
-                transforms.push_back(
-                    model_mat_uniform_buffers[static_cast<size_t>( prim.node_id )]
-                        .get_data()
-                        .model_mat
-                );
-                engine.blas.push_back(
-                    vk::rt::build_blas(
-                        ctx.vulkan.device,
-                        ctx.vulkan.allocator,
-                        ctx.vulkan.ray_tracing_properties,
-                        { .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
-                          .index_buffer = scene_mesh.mesh_buffers.index_buffer.handle,
-                          .max_vertex = uint32_t( max_idx ) - 1,
-                          .index_count = uint32_t( draw_descriptor.index_count ),
-                          .vertex_offset = uint32_t( draw_descriptor.vertex_offset ),
-                          .index_offset = uint32_t( draw_descriptor.index_offset ),
-                          .vertex_stride = sizeof( geometry::scene::Vertex ) },
-                        precompute_cmdbuf,
-                        ctx.vulkan.destructor_stack
-                    )
-                );
-
-                blas_offsets.vertex_buffer_offset[num_blas]
-                    = uint32_t( draw_descriptor.vertex_offset );
-                blas_offsets.index_buffer_offset[num_blas]
-                    = uint32_t( draw_descriptor.index_offset );
-
-                num_blas++;
-            }
+    add_prim_draw_tasks(
+        scene_mesh,
+        prims,
+        ScenePassTarget {
+            .pipeline = scene_pipeline,
+            .gfx_task = prepass_gfx_task,
+            .uniform_desc_set = uniform_desc_set,
+            .sampler_desc_set = sampler_desc_set,
+            .lut_sets = lut_sets,
+            .material_desc_sets = material_desc_sets,
+            .model_mat_desc_sets = model_mat_desc_sets,
+        },
+        DepthPassTarget {
+            .pipeline = depth_ms_pipeline,
+            .gfx_task = depth_ms_gfx_task,
+            .uniform_desc_set = depth_uniform_desc_set,
         }
-    }
+    );
 
     std::vector<vk::rt::Object> objects;
     for ( size_t i = 0; i < engine.blas.size(); i++ ) {
