@@ -979,6 +979,16 @@ void create_objects(
     }
 }
 
+engine::DescriptorSet create_accel_structure_desc_set( vk::Common& vulkan, const engine::State& engine )
+{
+    return engine::generate_descriptor_set(
+        vulkan,
+        engine,
+        { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR },
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
+    );
+}
+
 void run( bool use_fullscreen )
 {
     // ================================================================================================================
@@ -1198,12 +1208,7 @@ void run( bool use_fullscreen )
         ctx.vulkan.destructor_stack
     );
 
-    engine::DescriptorSet as_desc_set = engine::generate_descriptor_set(
-        ctx.vulkan,
-        engine,
-        { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR },
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
-    );
+    engine::DescriptorSet as_desc_set = create_accel_structure_desc_set( ctx.vulkan, engine );
 
     engine::add_gfx_task( task_list, prepass_gfx_task );
 
