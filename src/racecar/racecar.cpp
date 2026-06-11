@@ -969,6 +969,16 @@ void add_prim_draw_tasks(
     }
 }
 
+void create_objects(
+    engine::State& engine, std::vector<glm::mat4>& transforms, std::vector<vk::rt::Object>& objects
+)
+{
+    for ( size_t i = 0; i < engine.blas.size(); i++ ) {
+        auto& blas = engine.blas[i];
+        objects.push_back( vk::rt::Object { .blas = &blas, .transform = transforms[i] } );
+    }
+}
+
 void run( bool use_fullscreen )
 {
     // ================================================================================================================
@@ -1177,10 +1187,7 @@ void run( bool use_fullscreen )
     );
 
     std::vector<vk::rt::Object> objects;
-    for ( size_t i = 0; i < engine.blas.size(); i++ ) {
-        auto& blas = engine.blas[i];
-        objects.push_back( vk::rt::Object { .blas = &blas, .transform = transforms[i] } );
-    }
+    create_objects( engine, transforms, objects );
 
     engine.tlas = vk::rt::build_tlas(
         ctx.vulkan.device,
