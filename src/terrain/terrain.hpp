@@ -98,7 +98,9 @@ struct Terrain {
     } };
 };
 
-void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain, engine::DescriptorSet& car_tlas_desc_set, VkCommandBuffer& precompute_cmdbuf );
+void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain, engine::DescriptorSet& car_tlas_desc_set );
+
+void terrain_precompute( Terrain& terrain, VkCommandBuffer precompute_cmdbuf );
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     const TerrainPrepassInfo& prepass_info,

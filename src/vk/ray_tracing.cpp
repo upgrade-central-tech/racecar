@@ -204,19 +204,8 @@ void alloc_blas(
     blas.type = AccelerationStructure::Type::BLAS;
 }
 
-void build_blas(
-    VkDevice device,
-    VmaAllocator allocator,
-    AccelerationStructure& blas,
-    RayTracingProperties& rt_props,
-    MeshData mesh,
-    VkCommandBuffer cmd_buf,
-    DestructorStack& destructor_stack
-)
+void build_blas( VkCommandBuffer cmd_buf, AccelerationStructure& blas )
 {
-    // TODO: separate this out
-    alloc_blas( device, allocator, blas, rt_props, mesh, destructor_stack );
-
     // re-point since this points to an internal struct
     blas.build_info.pGeometries = &blas.geometry;
 
@@ -473,19 +462,8 @@ void alloc_tlas(
     tlas.type = AccelerationStructure::Type::TLAS;
 }
 
-void build_tlas(
-    VkDevice device,
-    VmaAllocator allocator,
-    AccelerationStructure& tlas,
-    RayTracingProperties& rt_props,
-    const std::vector<Object>& objects,
-    VkCommandBuffer cmd_buf,
-    DestructorStack& destructor_stack
-)
+void build_tlas( VkCommandBuffer cmd_buf, AccelerationStructure& tlas )
 {
-    // TODO: separate this out; for now build_tlas allocates then records.
-    alloc_tlas( device, allocator, tlas, rt_props, objects, destructor_stack );
-
     if ( tlas.handle == VK_NULL_HANDLE ) {
         return;
     }

@@ -898,7 +898,7 @@ void construct_blases(
             max_idx = glm::max( max_idx, idx );
         }
         vk::rt::AccelerationStructure as;
-        vk::rt::build_blas(
+        vk::rt::alloc_blas(
             ctx.vulkan.device,
             ctx.vulkan.allocator,
             as,
@@ -910,9 +910,9 @@ void construct_blases(
               .vertex_offset = uint32_t( prim == nullptr ? 0 : prim->vertex_offset ),
               .index_offset = uint32_t( prim == nullptr ? 0 : prim->ind_offset ),
               .vertex_stride = sizeof( geometry::scene::Vertex ) },
-            precompute_cmdbuf,
             ctx.vulkan.destructor_stack
         );
+        vk::rt::build_blas( precompute_cmdbuf, as );
         engine.blas.push_back( as );
 
         blas_offsets.vertex_buffer_offset[blas_count]
@@ -1014,15 +1014,15 @@ void build_car_tlas(
     VkCommandBuffer cmd_buf
 )
 {
-    vk::rt::build_tlas(
+    vk::rt::alloc_tlas(
         vulkan.device,
         vulkan.allocator,
         engine.tlas,
         vulkan.ray_tracing_properties,
         objects,
-        cmd_buf,
         vulkan.destructor_stack
     );
+    vk::rt::build_tlas( cmd_buf, engine.tlas );
 }
 
 void run( bool use_fullscreen )
@@ -1150,6 +1150,21 @@ void run( bool use_fullscreen )
     atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
     volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
 
+    // ================================================================================================================
+    // TERRAIN init
+    // ================================================================================================================
+    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set( ctx.vulkan, engine );
+
+    geometry::TerrainPrepassInfo prepass_terrain_info = {
+        &camera_buffer,
+        &debug_buffer,
+        &gbuffers,
+        &glint_noise,
+    };
+
+    geometry::Terrain test_terrain;
+    geometry::initialize_terrain( ctx.vulkan, engine, test_terrain, car_tlas_desc_set );
+
     // CREATE PRECOMPUTE FENCE
     VkFence precompute_fence = create_fence( ctx );
 
@@ -1240,10 +1255,6 @@ void run( bool use_fullscreen )
     // Build car TLAS
     build_car_tlas( ctx.vulkan, engine, objects, precompute_cmdbuf );
 
-    // Create the car acceleration structure descriptor set
-    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set( ctx.vulkan, engine );
-
-    // Write the car TLAS handle into the descriptor set
     engine::update_descriptor_set_acceleration_structure(
         ctx.vulkan,
         engine,
@@ -1256,25 +1267,12 @@ void run( bool use_fullscreen )
     engine::add_gfx_task( task_list, prepass_gfx_task );
 
     // ================================================================================================================
-    // TERRAIN
+    // TERRAIN precompute
     // ================================================================================================================
 
-    // TODO: INSERT TERRAIN PRE-PASS DRAW HERE
-    geometry::TerrainPrepassInfo prepass_terrain_info = {
-        &camera_buffer,
-        &debug_buffer,
-        &gbuffers,
-        &glint_noise,
-    };
+    geometry::terrain_precompute( test_terrain, precompute_cmdbuf );
 
-    geometry::Terrain test_terrain;
-    geometry::initialize_terrain(
-        ctx.vulkan,
-        engine,
-        test_terrain,
-        car_tlas_desc_set,
-        precompute_cmdbuf
-    );
+    // TODO: INSERT TERRAIN PRE-PASS DRAW HERE
     geometry::draw_terrain_prepass(
         test_terrain,
         ctx.vulkan,

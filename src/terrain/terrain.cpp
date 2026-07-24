@@ -33,8 +33,7 @@ void initialize_terrain(
     vk::Common& vulkan,
     engine::State& engine,
     Terrain& terrain,
-    engine::DescriptorSet& car_tlas_desc_set,
-    VkCommandBuffer& precompute_cmdbuf
+    engine::DescriptorSet& car_tlas_desc_set
 )
 {
     // Generate enough information for just one planar quad. Expand it later on arbitrarily
@@ -196,7 +195,7 @@ void initialize_terrain(
 
     terrain.car_tlas_desc_set = &car_tlas_desc_set;
 
-    vk::rt::build_blas(
+    vk::rt::alloc_blas(
         vulkan.device,
         vulkan.allocator,
         terrain.blas,
@@ -208,17 +207,15 @@ void initialize_terrain(
           .vertex_offset = uint32_t( 0 ),
           .index_offset = uint32_t( 0 ),
           .vertex_stride = sizeof( geometry::TerrainVertex ) },
-        precompute_cmdbuf,
         vulkan.destructor_stack
     );
 
-    vk::rt::build_tlas(
+    vk::rt::alloc_tlas(
         vulkan.device,
         vulkan.allocator,
         terrain.tlas,
         vulkan.ray_tracing_properties,
         { vk::rt::Object { .blas = &terrain.blas, .transform = glm::identity<glm::mat4>() } },
-        precompute_cmdbuf,
         vulkan.destructor_stack
     );
 
@@ -236,6 +233,12 @@ void initialize_terrain(
         terrain.tlas.handle,
         0
     );
+}
+
+void terrain_precompute( Terrain& terrain, VkCommandBuffer precompute_cmdbuf )
+{
+    vk::rt::build_blas( precompute_cmdbuf, terrain.blas );
+    vk::rt::build_tlas( precompute_cmdbuf, terrain.tlas );
 }
 
 void draw_terrain_prepass(

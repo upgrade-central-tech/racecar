@@ -61,15 +61,7 @@ void alloc_blas(
     DestructorStack& destructor_stack
 );
 
-void build_blas(
-    VkDevice device,
-    VmaAllocator allocator,
-    AccelerationStructure& blas,
-    RayTracingProperties& rt_props,
-    MeshData mesh,
-    VkCommandBuffer cmd_buf,
-    DestructorStack& destructor_stack
-);
+void build_blas( VkCommandBuffer cmd_buf, AccelerationStructure& blas );
 
 struct Object {
     AccelerationStructure* blas;
@@ -85,14 +77,6 @@ void alloc_tlas(
     DestructorStack& destructor_stack
 );
 
-void build_tlas(
-    VkDevice device,
-    VmaAllocator allocator,
-    AccelerationStructure& tlas,
-    RayTracingProperties& rt_props,
-    const std::vector<Object>& objects,
-    VkCommandBuffer cmd_buf,
-    DestructorStack& destructor_stack
-);
+void build_tlas( VkCommandBuffer cmd_buf, AccelerationStructure& tlas );
 
 }
