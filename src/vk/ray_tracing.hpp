@@ -1,12 +1,11 @@
 #pragma once
 
-#include "vma.hpp"
 #include "../engine/destructor_stack.hpp"
+#include "vma.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <volk.h>
-
 
 namespace racecar::vk::rt {
 
@@ -31,6 +30,11 @@ struct AccelerationStructure {
     VkBuffer buffer = VK_NULL_HANDLE;
     VmaAllocation allocation = VK_NULL_HANDLE;
     VkDeviceAddress device_address = 0;
+
+    // Build descriptors filled in by alloc_blas/alloc_tlas and consumed by build_blas/build_tlas
+    VkAccelerationStructureGeometryKHR geometry {};
+    VkAccelerationStructureBuildGeometryInfoKHR build_info {};
+    VkAccelerationStructureBuildRangeInfoKHR range_info {};
 };
 
 struct MeshData {
@@ -45,11 +49,27 @@ struct MeshData {
     uint32_t vertex_stride;
 };
 
-VkAccelerationStructureGeometryKHR create_acceleration_structure_from_geometry(
-    const MeshData& mesh );
+VkAccelerationStructureGeometryKHR
+create_acceleration_structure_from_geometry( const MeshData& mesh );
 
-AccelerationStructure build_blas( VkDevice device, VmaAllocator allocator,
-    RayTracingProperties& rt_props, MeshData mesh, VkCommandBuffer cmd_buf, DestructorStack& destructor_stack );
+void alloc_blas(
+    VkDevice device,
+    VmaAllocator allocator,
+    AccelerationStructure& blas,
+    RayTracingProperties& rt_props,
+    MeshData mesh,
+    DestructorStack& destructor_stack
+);
+
+void build_blas(
+    VkDevice device,
+    VmaAllocator allocator,
+    AccelerationStructure& blas,
+    RayTracingProperties& rt_props,
+    MeshData mesh,
+    VkCommandBuffer cmd_buf,
+    DestructorStack& destructor_stack
+);
 
 struct Object {
     AccelerationStructure* blas;
@@ -57,8 +77,12 @@ struct Object {
 };
 
 AccelerationStructure build_tlas(
-    VkDevice device, VmaAllocator allocator,
-    const RayTracingProperties& rt_props, const std::vector<Object>& objects, 
-    VkCommandBuffer cmd_buf, DestructorStack& destructor_stack );
+    VkDevice device,
+    VmaAllocator allocator,
+    const RayTracingProperties& rt_props,
+    const std::vector<Object>& objects,
+    VkCommandBuffer cmd_buf,
+    DestructorStack& destructor_stack
+);
 
 }

@@ -61,20 +61,20 @@ create_acceleration_structure_from_geometry( const MeshData& mesh )
     return geometry;
 }
 
-AccelerationStructure build_blas(
+void alloc_blas(
     VkDevice device,
     VmaAllocator allocator,
+    AccelerationStructure& blas,
     RayTracingProperties& rt_props,
     MeshData mesh,
-    VkCommandBuffer cmd_buf,
-    [[maybe_unused]] DestructorStack& destructor_stack
+    DestructorStack& destructor_stack
 )
 {
     if ( mesh.vertex_buffer == VK_NULL_HANDLE ) {
-        throw Exception( "[Build BLAS] MeshData vertex buffer is null" );
+        throw Exception( "[Alloc BLAS] MeshData vertex buffer is null" );
     }
     if ( mesh.index_buffer == VK_NULL_HANDLE ) {
-        throw Exception( "[Build BLAS] MeshData index buffer is null" );
+        throw Exception( "[Alloc BLAS] MeshData index buffer is null" );
     }
 
     VkBufferDeviceAddressInfo vertex_info { .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
@@ -85,39 +85,38 @@ AccelerationStructure build_blas(
                                            .buffer = mesh.index_buffer };
     mesh.index_buffer_address = vkGetBufferDeviceAddress( device, &index_info );
 
-    VkAccelerationStructureGeometryKHR geometry
-        = create_acceleration_structure_from_geometry( mesh );
+    blas.geometry = create_acceleration_structure_from_geometry( mesh );
 
     uint32_t max_primitive_count = mesh.index_count / 3;
 
-    VkAccelerationStructureBuildGeometryInfoKHR buildInfo = {
+    blas.build_info = {
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
         .pNext = nullptr,
         .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
         .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
         .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
         .geometryCount = 1,
-        .pGeometries = &geometry,
+        
+        // Since this points to an internal struct, this must be repointed in build_blas
+        .pGeometries = &blas.geometry,
         .scratchData = { .deviceAddress = 0 },
     };
 
     VkAccelerationStructureBuildSizesInfoKHR sizeInfo
         = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
 
-    VkAccelerationStructureBuildRangeInfoKHR rangeInfo = { .primitiveCount = max_primitive_count,
-                                                           .primitiveOffset = 0,
-                                                           .firstVertex = 0,
-                                                           .transformOffset = 0 };
+    blas.range_info = { .primitiveCount = max_primitive_count,
+                        .primitiveOffset = 0,
+                        .firstVertex = 0,
+                        .transformOffset = 0 };
 
     vkGetAccelerationStructureBuildSizesKHR(
         device,
         VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-        &buildInfo,
+        &blas.build_info,
         &max_primitive_count,
         &sizeInfo
     );
-
-    AccelerationStructure blas = { };
 
     VkBufferCreateInfo blas_buffer_create_info = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -196,16 +195,33 @@ AccelerationStructure build_blas(
     );
     destructor_stack.push( device, blas.handle, vkDestroyAccelerationStructureKHR );
 
-    buildInfo.dstAccelerationStructure = blas.handle;
-    buildInfo.scratchData.deviceAddress = alignedScratchAddress; // The aligned address
-
-    const VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = &rangeInfo;
-    vkCmdBuildAccelerationStructuresKHR( cmd_buf, 1, &buildInfo, &pRangeInfo );
+    blas.build_info.dstAccelerationStructure = blas.handle;
+    blas.build_info.scratchData.deviceAddress = alignedScratchAddress; // The aligned address
 
     // vmaDestroyBuffer( allocator, scratchBuffer, scratchAllocation );
     // scratchbuffer NEEDS to be destroyed
 
     blas.type = AccelerationStructure::Type::BLAS;
+}
+
+void build_blas(
+    VkDevice device,
+    VmaAllocator allocator,
+    AccelerationStructure& blas,
+    RayTracingProperties& rt_props,
+    MeshData mesh,
+    VkCommandBuffer cmd_buf,
+    DestructorStack& destructor_stack
+)
+{
+    // TODO: separate this out
+    alloc_blas( device, allocator, blas, rt_props, mesh, destructor_stack );
+
+    // re-point since this points to an internal struct
+    blas.build_info.pGeometries = &blas.geometry;
+
+    const VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = &blas.range_info;
+    vkCmdBuildAccelerationStructuresKHR( cmd_buf, 1, &blas.build_info, &pRangeInfo );
 
     // this makes it static
     VkMemoryBarrier barrier = {
@@ -229,8 +245,6 @@ AccelerationStructure build_blas(
         0,
         nullptr
     );
-
-    return blas;
 }
 
 AccelerationStructure build_tlas(

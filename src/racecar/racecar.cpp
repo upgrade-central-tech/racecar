@@ -897,22 +897,23 @@ void construct_blases(
             uint32_t idx = scene_mesh.indices[offset_x];
             max_idx = glm::max( max_idx, idx );
         }
-        engine.blas.push_back(
-            vk::rt::build_blas(
-                ctx.vulkan.device,
-                ctx.vulkan.allocator,
-                ctx.vulkan.ray_tracing_properties,
-                { .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
-                  .index_buffer = scene_mesh.mesh_buffers.index_buffer.handle,
-                  .max_vertex = uint32_t( max_idx ) - 1,
-                  .index_count = uint32_t( prim == nullptr ? 0 : prim->ind_count ),
-                  .vertex_offset = uint32_t( prim == nullptr ? 0 : prim->vertex_offset ),
-                  .index_offset = uint32_t( prim == nullptr ? 0 : prim->ind_offset ),
-                  .vertex_stride = sizeof( geometry::scene::Vertex ) },
-                precompute_cmdbuf,
-                ctx.vulkan.destructor_stack
-            )
+        vk::rt::AccelerationStructure as;
+        vk::rt::build_blas(
+            ctx.vulkan.device,
+            ctx.vulkan.allocator,
+            as,
+            ctx.vulkan.ray_tracing_properties,
+            { .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
+              .index_buffer = scene_mesh.mesh_buffers.index_buffer.handle,
+              .max_vertex = uint32_t( max_idx ) - 1,
+              .index_count = uint32_t( prim == nullptr ? 0 : prim->ind_count ),
+              .vertex_offset = uint32_t( prim == nullptr ? 0 : prim->vertex_offset ),
+              .index_offset = uint32_t( prim == nullptr ? 0 : prim->ind_offset ),
+              .vertex_stride = sizeof( geometry::scene::Vertex ) },
+            precompute_cmdbuf,
+            ctx.vulkan.destructor_stack
         );
+        engine.blas.push_back( as );
 
         blas_offsets.vertex_buffer_offset[blas_count]
             = uint32_t( prim == nullptr ? 0 : prim->vertex_offset );

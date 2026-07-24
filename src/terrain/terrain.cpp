@@ -196,9 +196,10 @@ void initialize_terrain(
 
     terrain.car_tlas_desc_set = &car_tlas_desc_set;
 
-    terrain.blas = vk::rt::build_blas(
+    vk::rt::build_blas(
         vulkan.device,
         vulkan.allocator,
+        terrain.blas,
         vulkan.ray_tracing_properties,
         { .vertex_buffer = terrain.tri_buffers.vertex_buffer.handle,
           .index_buffer = terrain.tri_buffers.index_buffer.handle,
