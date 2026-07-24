@@ -29,7 +29,13 @@ const size_t TERRAIN_NUM_TILES = 50;
 
 namespace racecar::geometry {
 
-void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain )
+void initialize_terrain(
+    vk::Common& vulkan,
+    engine::State& engine,
+    Terrain& terrain,
+    engine::DescriptorSet& as_desc_set,
+    VkCommandBuffer& precompute_cmdbuf
+)
 {
     // Generate enough information for just one planar quad. Expand it later on arbitrarily
     [[maybe_unused]] int32_t size = 1;
@@ -187,6 +193,32 @@ void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& ter
 
     terrain.terrain_noise
         = engine::load_image( TERRAIN_NOISE_PAPTH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM, true );
+
+    terrain.accel_structure_desc_set = &as_desc_set;
+
+    terrain.blas = vk::rt::build_blas(
+        vulkan.device,
+        vulkan.allocator,
+        vulkan.ray_tracing_properties,
+        { .vertex_buffer = terrain.tri_buffers.vertex_buffer.handle,
+          .index_buffer = terrain.tri_buffers.index_buffer.handle,
+          .max_vertex = uint32_t( terrain.vertices.size() ) - 1,
+          .index_count = uint32_t( terrain.tri_indices.size() ),
+          .vertex_offset = uint32_t( 0 ),
+          .index_offset = uint32_t( 0 ),
+          .vertex_stride = sizeof( geometry::TerrainVertex ) },
+        precompute_cmdbuf,
+        vulkan.destructor_stack
+    );
+
+    terrain.tlas = vk::rt::build_tlas(
+        vulkan.device,
+        vulkan.allocator,
+        vulkan.ray_tracing_properties,
+        { vk::rt::Object { .blas = &terrain.blas, .transform = glm::identity<glm::mat4>() } },
+        precompute_cmdbuf,
+        vulkan.destructor_stack
+    );
 }
 
 void draw_terrain_prepass(

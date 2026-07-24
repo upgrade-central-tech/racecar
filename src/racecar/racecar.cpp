@@ -917,7 +917,7 @@ struct ScenePassTarget {
     engine::DescriptorSet& uniform_desc_set;
     engine::DescriptorSet& sampler_desc_set;
     engine::DescriptorSet& lut_sets;
-    std::vector<engine::DescriptorSet>& material_desc_sets;  // index prim->material_id
+    std::vector<engine::DescriptorSet>& material_desc_sets; // index prim->material_id
     std::vector<engine::DescriptorSet>& model_mat_desc_sets; // index prim->node_id
 };
 
@@ -979,13 +979,31 @@ void create_objects(
     }
 }
 
-engine::DescriptorSet create_accel_structure_desc_set( vk::Common& vulkan, const engine::State& engine )
+engine::DescriptorSet
+create_accel_structure_desc_set( vk::Common& vulkan, const engine::State& engine )
 {
     return engine::generate_descriptor_set(
         vulkan,
         engine,
         { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR },
         VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
+    );
+}
+
+void build_car_tlas(
+    vk::Common& vulkan,
+    engine::State& engine,
+    const std::vector<vk::rt::Object>& objects,
+    VkCommandBuffer cmd_buf
+)
+{
+    engine.tlas = vk::rt::build_tlas(
+        vulkan.device,
+        vulkan.allocator,
+        vulkan.ray_tracing_properties,
+        objects,
+        cmd_buf,
+        vulkan.destructor_stack
     );
 }
 
@@ -1199,14 +1217,7 @@ void run( bool use_fullscreen )
     std::vector<vk::rt::Object> objects;
     create_objects( engine, transforms, objects );
 
-    engine.tlas = vk::rt::build_tlas(
-        ctx.vulkan.device,
-        ctx.vulkan.allocator,
-        ctx.vulkan.ray_tracing_properties,
-        objects,
-        precompute_cmdbuf,
-        ctx.vulkan.destructor_stack
-    );
+    build_car_tlas( ctx.vulkan, engine, objects, precompute_cmdbuf );
 
     engine::DescriptorSet as_desc_set = create_accel_structure_desc_set( ctx.vulkan, engine );
 
@@ -1222,7 +1233,13 @@ void run( bool use_fullscreen )
     };
 
     geometry::Terrain test_terrain;
-    geometry::initialize_terrain( ctx.vulkan, engine, test_terrain );
+    geometry::initialize_terrain(
+        ctx.vulkan,
+        engine,
+        test_terrain,
+        as_desc_set,
+        precompute_cmdbuf
+    );
     geometry::draw_terrain_prepass(
         test_terrain,
         ctx.vulkan,
@@ -1231,32 +1248,7 @@ void run( bool use_fullscreen )
         depth_prepass_ms,
         task_list
     );
-    test_terrain.accel_structure_desc_set = &as_desc_set;
 #endif
-
-    test_terrain.blas = vk::rt::build_blas(
-        ctx.vulkan.device,
-        ctx.vulkan.allocator,
-        ctx.vulkan.ray_tracing_properties,
-        { .vertex_buffer = test_terrain.tri_buffers.vertex_buffer.handle,
-          .index_buffer = test_terrain.tri_buffers.index_buffer.handle,
-          .max_vertex = uint32_t( test_terrain.vertices.size() ) - 1,
-          .index_count = uint32_t( test_terrain.tri_indices.size() ),
-          .vertex_offset = uint32_t( 0 ),
-          .index_offset = uint32_t( 0 ),
-          .vertex_stride = sizeof( geometry::TerrainVertex ) },
-        precompute_cmdbuf,
-        ctx.vulkan.destructor_stack
-    );
-
-    test_terrain.tlas = vk::rt::build_tlas(
-        ctx.vulkan.device,
-        ctx.vulkan.allocator,
-        ctx.vulkan.ray_tracing_properties,
-        { vk::rt::Object { .blas = &test_terrain.blas, .transform = glm::identity<glm::mat4>() } },
-        precompute_cmdbuf,
-        ctx.vulkan.destructor_stack
-    );
 
     engine::DescriptorSet terrain_as_desc_set = engine::generate_descriptor_set(
         ctx.vulkan,
