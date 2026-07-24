@@ -33,7 +33,7 @@ void initialize_terrain(
     vk::Common& vulkan,
     engine::State& engine,
     Terrain& terrain,
-    engine::DescriptorSet& as_desc_set,
+    engine::DescriptorSet& car_tlas_desc_set,
     VkCommandBuffer& precompute_cmdbuf
 )
 {
@@ -194,7 +194,7 @@ void initialize_terrain(
     terrain.terrain_noise
         = engine::load_image( TERRAIN_NOISE_PAPTH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM, true );
 
-    terrain.accel_structure_desc_set = &as_desc_set;
+    terrain.car_tlas_desc_set = &car_tlas_desc_set;
 
     terrain.blas = vk::rt::build_blas(
         vulkan.device,
@@ -218,6 +218,21 @@ void initialize_terrain(
         { vk::rt::Object { .blas = &terrain.blas, .transform = glm::identity<glm::mat4>() } },
         precompute_cmdbuf,
         vulkan.destructor_stack
+    );
+
+    terrain.terrain_tlas_desc_set = engine::generate_descriptor_set(
+        vulkan,
+        engine,
+        { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR },
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
+    );
+
+    engine::update_descriptor_set_acceleration_structure(
+        vulkan,
+        engine,
+        terrain.terrain_tlas_desc_set,
+        terrain.tlas.handle,
+        0
     );
 }
 
@@ -584,7 +599,7 @@ void draw_terrain(
           terrain.texture_desc_set.layouts[0],
           terrain.lut_desc_set.layouts[0],
           terrain.sampler_desc_set.layouts[0],
-          terrain.accel_structure_desc_set->layouts[0],
+          terrain.car_tlas_desc_set->layouts[0],
           terrain.reflection_texture_desc_set->layouts[0] },
         vk::create::shader_module( vulkan, TERRAIN_SHADER_LIGHTING_MODULE_PATH ),
         "cs_terrain_draw"
@@ -602,7 +617,7 @@ void draw_terrain(
           &terrain.texture_desc_set,
           &terrain.lut_desc_set,
           &terrain.sampler_desc_set,
-          terrain.accel_structure_desc_set,
+          terrain.car_tlas_desc_set,
           terrain.reflection_texture_desc_set },
         dispatch_dims,
     };

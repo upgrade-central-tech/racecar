@@ -59,11 +59,13 @@ struct Terrain {
     engine::DescriptorSet prepass_sampler_desc_set;
     engine::DescriptorSet prepass_lut_desc_set;
 
+    engine::DescriptorSet terrain_tlas_desc_set;
+
     engine::DescriptorSet uniform_desc_set;
     engine::DescriptorSet texture_desc_set;
     engine::DescriptorSet lut_desc_set;
     engine::DescriptorSet sampler_desc_set;
-    engine::DescriptorSet* accel_structure_desc_set;
+    engine::DescriptorSet* car_tlas_desc_set;
     engine::DescriptorSet* reflection_texture_desc_set;
 
     engine::GfxTask terrain_prepass_task;
@@ -96,7 +98,7 @@ struct Terrain {
     } };
 };
 
-void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain, engine::DescriptorSet& as_desc_set, VkCommandBuffer& precompute_cmdbuf );
+void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain, engine::DescriptorSet& car_tlas_desc_set, VkCommandBuffer& precompute_cmdbuf );
 
 void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
     const TerrainPrepassInfo& prepass_info,

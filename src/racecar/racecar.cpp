@@ -718,7 +718,7 @@ VkFence create_fence( const Context& ctx )
     return fence;
 }
 
-void setup_precompute_commandbuffer(
+void begin_precompute_commandbuffer(
     const Context& ctx, VkCommandBuffer* precompute_cmdbuf, const VkFence& precompute_fence
 )
 {
@@ -727,6 +727,22 @@ void setup_precompute_commandbuffer(
     vkResetCommandBuffer( *precompute_cmdbuf, 0 );
     vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
     vkBeginCommandBuffer( *precompute_cmdbuf, &command_buffer_begin_info );
+}
+
+void submit_precompute_cmdbuf(
+    vk::Common& vulkan, VkFence& precompute_fence, VkCommandBuffer& precompute_cmdbuf
+)
+{
+    vkEndCommandBuffer( precompute_cmdbuf );
+    VkSubmitInfo submit_info = { };
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &precompute_cmdbuf;
+    vkQueueSubmit( vulkan.graphics_queue, 1, &submit_info, precompute_fence );
+    vkWaitForFences( vulkan.device, 1, &precompute_fence, VK_TRUE, UINT64_MAX );
+    vkResetFences( vulkan.device, 1, &precompute_fence );
+    vkDestroyFence( vulkan.device, precompute_fence, VK_NULL_HANDLE );
+    vkResetCommandBuffer( precompute_cmdbuf, 0 );
 }
 
 engine::GfxTask create_prepass_gfx_task( const engine::State& engine, deferred::GBuffers& gbuffers )
@@ -1137,7 +1153,7 @@ void run( bool use_fullscreen )
 
     // Use any existing cmdbuf temporarily for precompute
     VkCommandBuffer& precompute_cmdbuf = engine.frames[0].start_cmdbuf;
-    setup_precompute_commandbuffer( ctx, &precompute_cmdbuf, precompute_fence );
+    begin_precompute_commandbuffer( ctx, &precompute_cmdbuf, precompute_fence );
 
     // ================================================================================================================
     // MODEL LOADING
@@ -1195,6 +1211,7 @@ void run( bool use_fullscreen )
     // Initialize prepass (draw to the GBuffers)
     engine::GfxTask prepass_gfx_task = create_prepass_gfx_task( engine, gbuffers );
 
+    // Add draw tasks for each primitive to the Prepass Gfx Task and Depth Gfx Task
     add_prim_draw_tasks(
         scene_mesh,
         prims,
@@ -1214,16 +1231,32 @@ void run( bool use_fullscreen )
         }
     );
 
+    // Create raytracing objects for scene
     std::vector<vk::rt::Object> objects;
     create_objects( engine, transforms, objects );
 
+    // Build car TLAS
     build_car_tlas( ctx.vulkan, engine, objects, precompute_cmdbuf );
 
-    engine::DescriptorSet as_desc_set = create_accel_structure_desc_set( ctx.vulkan, engine );
+    // Create the car acceleration structure descriptor set
+    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set( ctx.vulkan, engine );
 
+    // Write the car TLAS handle into the descriptor set
+    engine::update_descriptor_set_acceleration_structure(
+        ctx.vulkan,
+        engine,
+        car_tlas_desc_set,
+        engine.tlas.handle,
+        0
+    );
+
+    // Add our prepass into the task list
     engine::add_gfx_task( task_list, prepass_gfx_task );
 
-#if ENABLE_TERRAIN
+    // ================================================================================================================
+    // TERRAIN
+    // ================================================================================================================
+
     // TODO: INSERT TERRAIN PRE-PASS DRAW HERE
     geometry::TerrainPrepassInfo prepass_terrain_info = {
         &camera_buffer,
@@ -1237,7 +1270,7 @@ void run( bool use_fullscreen )
         ctx.vulkan,
         engine,
         test_terrain,
-        as_desc_set,
+        car_tlas_desc_set,
         precompute_cmdbuf
     );
     geometry::draw_terrain_prepass(
@@ -1248,33 +1281,8 @@ void run( bool use_fullscreen )
         depth_prepass_ms,
         task_list
     );
-#endif
 
-    engine::DescriptorSet terrain_as_desc_set = engine::generate_descriptor_set(
-        ctx.vulkan,
-        engine,
-        { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR },
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
-    );
-
-    engine::update_descriptor_set_acceleration_structure(
-        ctx.vulkan,
-        engine,
-        terrain_as_desc_set,
-        test_terrain.tlas.handle,
-        0
-    );
-
-    vkEndCommandBuffer( precompute_cmdbuf );
-    VkSubmitInfo submit_info = { };
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &precompute_cmdbuf;
-    vkQueueSubmit( ctx.vulkan.graphics_queue, 1, &submit_info, precompute_fence );
-    vkWaitForFences( ctx.vulkan.device, 1, &precompute_fence, VK_TRUE, UINT64_MAX );
-    vkResetFences( ctx.vulkan.device, 1, &precompute_fence );
-    vkDestroyFence( ctx.vulkan.device, precompute_fence, VK_NULL_HANDLE );
-    vkResetCommandBuffer( precompute_cmdbuf, 0 );
+    submit_precompute_cmdbuf( ctx.vulkan, precompute_fence, precompute_cmdbuf );
 
     engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set(
         ctx.vulkan,
@@ -1472,8 +1480,8 @@ void run( bool use_fullscreen )
         { uniform_desc_set.layouts[0],
           sampler_desc_set.layouts[0],
           gbuffers.desc_set.layouts[0],
-          as_desc_set.layouts[0],
-          terrain_as_desc_set.layouts[0],
+          car_tlas_desc_set.layouts[0],
+          test_terrain.terrain_tlas_desc_set.layouts[0],
           car_descriptor_set.layouts[0],
           combined_textures_desc_set.layouts[0] },
         { VK_FORMAT_R16G16B16A16_SFLOAT },
@@ -1492,13 +1500,14 @@ void run( bool use_fullscreen )
     };
 
     engine::DrawTask reflection_prepass_task { .draw_resource_descriptor = reflection_prepass_desc,
-                                               .descriptor_sets = { &uniform_desc_set,
-                                                                    &sampler_desc_set,
-                                                                    &gbuffers.desc_set,
-                                                                    &as_desc_set,
-                                                                    &terrain_as_desc_set,
-                                                                    &car_descriptor_set,
-                                                                    &combined_textures_desc_set },
+                                               .descriptor_sets
+                                               = { &uniform_desc_set,
+                                                   &sampler_desc_set,
+                                                   &gbuffers.desc_set,
+                                                   &car_tlas_desc_set,
+                                                   &test_terrain.terrain_tlas_desc_set,
+                                                   &car_descriptor_set,
+                                                   &combined_textures_desc_set },
                                                .pipeline = reflection_pipeline };
 
     reflection_gfx_task.draw_tasks.push_back( reflection_prepass_task );
@@ -1608,7 +1617,7 @@ void run( bool use_fullscreen )
                   lut_sets.layouts[frame_index],
                   sampler_desc_set.layouts[frame_index],
                   gbuffers.desc_set.layouts[frame_index],
-                  as_desc_set.layouts[frame_index],
+                  car_tlas_desc_set.layouts[frame_index],
                   reflection_buffer_desc_set.layouts[0] },
                 {
                     VK_FORMAT_R16G16B16A16_SFLOAT,
@@ -1634,14 +1643,6 @@ void run( bool use_fullscreen )
             0
         );
 
-        engine::update_descriptor_set_acceleration_structure(
-            ctx.vulkan,
-            engine,
-            as_desc_set,
-            engine.tlas.handle,
-            0
-        );
-
         lighting_pass_gfx_task.draw_tasks.push_back({
                 .draw_resource_descriptor = {
                     .vertex_buffers = { lighting_pass_quad_mesh.mesh_buffers.vertex_buffer.handle },
@@ -1655,7 +1656,7 @@ void run( bool use_fullscreen )
                     &lut_sets,
                     &sampler_desc_set,
                     &gbuffers.desc_set,
-                    &as_desc_set,
+                    &car_tlas_desc_set,
                     &reflection_buffer_desc_set
                 },
                 .pipeline = lighting_pass_gfx_pipeline,
