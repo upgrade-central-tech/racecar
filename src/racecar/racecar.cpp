@@ -879,10 +879,9 @@ void load_model_primitive_material_data(
     }
 }
 
-void construct_blases(
+void alloc_blases(
     Context& ctx,
     engine::State& engine,
-    VkCommandBuffer& precompute_cmdbuf,
     const std::vector<const scene::Primitive*>& prims,
     const geometry::scene::Mesh& scene_mesh,
     ub_data::BLASOffsets* ret_blas_offsets
@@ -912,7 +911,6 @@ void construct_blases(
               .vertex_stride = sizeof( geometry::scene::Vertex ) },
             ctx.vulkan.destructor_stack
         );
-        vk::rt::build_blas( precompute_cmdbuf, as );
         engine.blas.push_back( as );
 
         blas_offsets.vertex_buffer_offset[blas_count]
@@ -1007,11 +1005,8 @@ create_accel_structure_desc_set( vk::Common& vulkan, const engine::State& engine
     );
 }
 
-void build_car_tlas(
-    vk::Common& vulkan,
-    engine::State& engine,
-    const std::vector<vk::rt::Object>& objects,
-    VkCommandBuffer cmd_buf
+void alloc_car_tlas(
+    vk::Common& vulkan, engine::State& engine, const std::vector<vk::rt::Object>& objects
 )
 {
     vk::rt::alloc_tlas(
@@ -1022,7 +1017,18 @@ void build_car_tlas(
         objects,
         vulkan.destructor_stack
     );
-    vk::rt::build_tlas( cmd_buf, engine.tlas );
+}
+
+void build_car_blases( engine::State& engine, VkCommandBuffer& precompute_cmdbuf )
+{
+    for ( vk::rt::AccelerationStructure& blas : engine.blas ) {
+        vk::rt::build_blas( precompute_cmdbuf, blas );
+    }
+}
+
+void build_car_tlas( engine::State& engine, VkCommandBuffer& precompute_cmdbuf )
+{
+    vk::rt::build_tlas( precompute_cmdbuf, engine.tlas );
 }
 
 void run( bool use_fullscreen )
@@ -1151,28 +1157,6 @@ void run( bool use_fullscreen )
     volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
 
     // ================================================================================================================
-    // TERRAIN init
-    // ================================================================================================================
-    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set( ctx.vulkan, engine );
-
-    geometry::TerrainPrepassInfo prepass_terrain_info = {
-        &camera_buffer,
-        &debug_buffer,
-        &gbuffers,
-        &glint_noise,
-    };
-
-    geometry::Terrain test_terrain;
-    geometry::initialize_terrain( ctx.vulkan, engine, test_terrain, car_tlas_desc_set );
-
-    // CREATE PRECOMPUTE FENCE
-    VkFence precompute_fence = create_fence( ctx );
-
-    // Use any existing cmdbuf temporarily for precompute
-    VkCommandBuffer& precompute_cmdbuf = engine.frames[0].start_cmdbuf;
-    begin_precompute_commandbuffer( ctx, &precompute_cmdbuf, precompute_fence );
-
-    // ================================================================================================================
     // MODEL LOADING
     // ================================================================================================================
 
@@ -1195,15 +1179,59 @@ void run( bool use_fullscreen )
         material_desc_sets
     );
 
-    // CONSTRUCT BLASES
+    // BLAS allocation
     ub_data::BLASOffsets blas_offsets;
-    construct_blases( ctx, engine, precompute_cmdbuf, prims, scene_mesh, &blas_offsets );
+    alloc_blases( ctx, engine, prims, scene_mesh, &blas_offsets );
+
+    // TLAS allocation
+    std::vector<vk::rt::Object> objects;
+    create_objects( engine, transforms, objects );
+    alloc_car_tlas( ctx.vulkan, engine, objects );
+
+    // Create car acceleration structure descriptor set
+    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set( ctx.vulkan, engine );
+    engine::update_descriptor_set_acceleration_structure(
+        ctx.vulkan,
+        engine,
+        car_tlas_desc_set,
+        engine.tlas.handle,
+        0
+    );
 
     // ================================================================================================================
-    // BARRIER CREATION
+    // TERRAIN init
     // ================================================================================================================
 
-    // INITIALIZE TASK LIST
+    geometry::TerrainPrepassInfo prepass_terrain_info = {
+        &camera_buffer,
+        &debug_buffer,
+        &gbuffers,
+        &glint_noise,
+    };
+
+    geometry::Terrain test_terrain;
+    geometry::initialize_terrain( ctx.vulkan, engine, test_terrain, car_tlas_desc_set );
+
+    // ================================================================================================================
+    // PRECOMPUTE
+    // ================================================================================================================
+
+    VkFence precompute_fence = create_fence( ctx );
+
+    VkCommandBuffer& precompute_cmdbuf = engine.frames[0].start_cmdbuf;
+    begin_precompute_commandbuffer( ctx, &precompute_cmdbuf, precompute_fence );
+
+    build_car_blases( engine, precompute_cmdbuf );
+    build_car_tlas( engine, precompute_cmdbuf );
+
+    geometry::terrain_precompute( test_terrain, precompute_cmdbuf );
+
+    submit_precompute_cmdbuf( ctx.vulkan, precompute_fence, precompute_cmdbuf );
+
+    // ================================================================================================================
+    // TASK LIST POPULATION
+    // ================================================================================================================
+
     engine::TaskList task_list;
 
     // Once all of the essential buffers are setup (GBuffer + Screen buffers), we run a pipeline
@@ -1211,10 +1239,6 @@ void run( bool use_fullscreen )
     engine::PipelineBarrierDescriptor top_pipeline_barriers;
     create_top_pipeline_barriers( gbuffers, screen_color, &top_pipeline_barriers );
     engine::add_pipeline_barrier( task_list, top_pipeline_barriers );
-
-    // ================================================================================================================
-    // TASK LIST POPULATION
-    // ================================================================================================================
 
     // Draw the atmosphere
     draw_atmosphere( ctx, engine, task_list, atms, screen_color );
@@ -1248,29 +1272,8 @@ void run( bool use_fullscreen )
         }
     );
 
-    // Create raytracing objects for scene
-    std::vector<vk::rt::Object> objects;
-    create_objects( engine, transforms, objects );
-
-    // Build car TLAS
-    build_car_tlas( ctx.vulkan, engine, objects, precompute_cmdbuf );
-
-    engine::update_descriptor_set_acceleration_structure(
-        ctx.vulkan,
-        engine,
-        car_tlas_desc_set,
-        engine.tlas.handle,
-        0
-    );
-
     // Add our prepass into the task list
     engine::add_gfx_task( task_list, prepass_gfx_task );
-
-    // ================================================================================================================
-    // TERRAIN precompute
-    // ================================================================================================================
-
-    geometry::terrain_precompute( test_terrain, precompute_cmdbuf );
 
     // TODO: INSERT TERRAIN PRE-PASS DRAW HERE
     geometry::draw_terrain_prepass(
@@ -1281,8 +1284,6 @@ void run( bool use_fullscreen )
         depth_prepass_ms,
         task_list
     );
-
-    submit_precompute_cmdbuf( ctx.vulkan, precompute_fence, precompute_cmdbuf );
 
     engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set(
         ctx.vulkan,
