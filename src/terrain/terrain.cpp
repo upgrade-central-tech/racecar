@@ -212,9 +212,10 @@ void initialize_terrain(
         vulkan.destructor_stack
     );
 
-    terrain.tlas = vk::rt::build_tlas(
+    vk::rt::build_tlas(
         vulkan.device,
         vulkan.allocator,
+        terrain.tlas,
         vulkan.ray_tracing_properties,
         { vk::rt::Object { .blas = &terrain.blas, .transform = glm::identity<glm::mat4>() } },
         precompute_cmdbuf,

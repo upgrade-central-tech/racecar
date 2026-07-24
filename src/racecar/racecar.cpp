@@ -1014,9 +1014,10 @@ void build_car_tlas(
     VkCommandBuffer cmd_buf
 )
 {
-    engine.tlas = vk::rt::build_tlas(
+    vk::rt::build_tlas(
         vulkan.device,
         vulkan.allocator,
+        engine.tlas,
         vulkan.ray_tracing_properties,
         objects,
         cmd_buf,

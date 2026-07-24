@@ -76,10 +76,20 @@ struct Object {
     glm::mat4 transform;
 };
 
-AccelerationStructure build_tlas(
+void alloc_tlas(
     VkDevice device,
     VmaAllocator allocator,
-    const RayTracingProperties& rt_props,
+    AccelerationStructure& tlas,
+    RayTracingProperties& rt_props,
+    const std::vector<Object>& objects,
+    DestructorStack& destructor_stack
+);
+
+void build_tlas(
+    VkDevice device,
+    VmaAllocator allocator,
+    AccelerationStructure& tlas,
+    RayTracingProperties& rt_props,
     const std::vector<Object>& objects,
     VkCommandBuffer cmd_buf,
     DestructorStack& destructor_stack

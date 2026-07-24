@@ -96,7 +96,7 @@ void alloc_blas(
         .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
         .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
         .geometryCount = 1,
-        
+
         // Since this points to an internal struct, this must be repointed in build_blas
         .pGeometries = &blas.geometry,
         .scratchData = { .deviceAddress = 0 },
@@ -247,12 +247,12 @@ void build_blas(
     );
 }
 
-AccelerationStructure build_tlas(
+void alloc_tlas(
     VkDevice device,
     VmaAllocator allocator,
-    const RayTracingProperties& rt_props,
+    AccelerationStructure& tlas,
+    RayTracingProperties& rt_props,
     const std::vector<Object>& objects,
-    VkCommandBuffer cmd_buf,
     DestructorStack& destructor_stack
 )
 {
@@ -274,7 +274,7 @@ AccelerationStructure build_tlas(
 
         if ( !nonzero ) {
             log::warn(
-                "[Build TLAS] The provided object at index {} has a zeroed transform matrix. This "
+                "[Alloc TLAS] The provided object at index {} has a zeroed transform matrix. This "
                 "will cause the BLAS to completely not appear in the TLAS",
                 i
             );
@@ -300,7 +300,7 @@ AccelerationStructure build_tlas(
     uint32_t instance_count = static_cast<uint32_t>( instances.size() );
 
     if ( instance_count == 0 ) {
-        return { };
+        return;
     }
 
     VkBuffer instance_buffer = VK_NULL_HANDLE;
@@ -339,7 +339,7 @@ AccelerationStructure build_tlas(
     VkDeviceAddress instance_buffer_address
         = vkGetBufferDeviceAddress( device, &instanceAddressInfo );
 
-    VkAccelerationStructureGeometryKHR tlas_geometry = {
+    tlas.geometry = {
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
         .pNext = nullptr,
         .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
@@ -352,29 +352,34 @@ AccelerationStructure build_tlas(
         .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
     };
 
-    VkAccelerationStructureBuildGeometryInfoKHR buildInfo = {
+    tlas.build_info = {
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
         .pNext = nullptr,
         .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
         .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
         .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
         .geometryCount = 1,
-        .pGeometries = &tlas_geometry,
+
+        // Points to an internal struct, must be re-pointed in build_tlas
+        .pGeometries = &tlas.geometry,
         .scratchData = { .deviceAddress = 0 }, // Placeholder
     };
 
     VkAccelerationStructureBuildSizesInfoKHR sizeInfo
         = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
 
+    tlas.range_info = { .primitiveCount = instance_count,
+                        .primitiveOffset = 0,
+                        .firstVertex = 0,
+                        .transformOffset = 0 };
+
     vkGetAccelerationStructureBuildSizesKHR(
         device,
         VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
-        &buildInfo,
+        &tlas.build_info,
         &instance_count, // Use instance_count here, not primitive_count
         &sizeInfo
     );
-
-    AccelerationStructure tlas = { };
 
     // Allocate TLAS Result Buffer
     VkBufferCreateInfo tlasBufferCI
@@ -447,9 +452,6 @@ AccelerationStructure build_tlas(
         static_cast<uint64_t>( rt_props.min_acceleration_structure_scratch_offset_alignment )
     );
 
-    // must cleanup these buffers later
-    // 6. The aligned address is now ready to be used in the buildInfo:
-
     VkAccelerationStructureCreateInfoKHR asCI
         = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
             .createFlags = VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR,
@@ -463,20 +465,36 @@ AccelerationStructure build_tlas(
     );
     destructor_stack.push( device, tlas.handle, vkDestroyAccelerationStructureKHR );
 
-    // 7. Update Build Info and Execute Build Command
-    buildInfo.dstAccelerationStructure = tlas.handle;
-    buildInfo.scratchData.deviceAddress = alignedScratchAddress;
+    tlas.build_info.dstAccelerationStructure = tlas.handle;
+    tlas.build_info.scratchData.deviceAddress = alignedScratchAddress;
 
-    VkAccelerationStructureBuildRangeInfoKHR rangeInfo
-        = { .primitiveCount = instance_count, // Primitive count is instance count for TLAS
-            .primitiveOffset = 0,
-            .firstVertex = 0,
-            .transformOffset = 0 };
+    // Instance buffer and scratch buffer live on the destructor stack
 
-    const VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = &rangeInfo;
-    vkCmdBuildAccelerationStructuresKHR( cmd_buf, 1, &buildInfo, &pRangeInfo );
+    tlas.type = AccelerationStructure::Type::TLAS;
+}
 
-    // 8. Synchronization and Cleanup
+void build_tlas(
+    VkDevice device,
+    VmaAllocator allocator,
+    AccelerationStructure& tlas,
+    RayTracingProperties& rt_props,
+    const std::vector<Object>& objects,
+    VkCommandBuffer cmd_buf,
+    DestructorStack& destructor_stack
+)
+{
+    // TODO: separate this out; for now build_tlas allocates then records.
+    alloc_tlas( device, allocator, tlas, rt_props, objects, destructor_stack );
+
+    if ( tlas.handle == VK_NULL_HANDLE ) {
+        return;
+    }
+
+    // re-point since this points to an internal struct
+    tlas.build_info.pGeometries = &tlas.geometry;
+
+    const VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = &tlas.range_info;
+    vkCmdBuildAccelerationStructuresKHR( cmd_buf, 1, &tlas.build_info, &pRangeInfo );
 
     // Memory Barrier: Ensure TLAS build output is readable by Ray Tracing Shaders
     VkMemoryBarrier barrier = { .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
@@ -495,14 +513,6 @@ AccelerationStructure build_tlas(
         0,
         nullptr
     );
-
-    // Instance buffer and scratch buffer cleanup must be deferred until the command buffer
-    // execution completes You should store instance_buffer, instance_allocation, scratchBuffer, and
-    // scratchAllocation and destroy them after synchronization.
-
-    tlas.type = AccelerationStructure::Type::TLAS;
-
-    return tlas;
 }
 
 }
