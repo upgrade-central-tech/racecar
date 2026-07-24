@@ -1269,9 +1269,11 @@ void run( bool use_fullscreen )
         }
     );
 
-    // Add our prepass into the task list
+    // Add our car prepass into the task list
     engine::add_gfx_task( task_list, prepass_gfx_task );
 
+    // Add draw tasks for terrain to its own terrain_prepass_task (submitted internally), and to
+    // depth_prepass_ms
     geometry::draw_terrain_prepass(
         test_terrain,
         ctx.vulkan,
@@ -1280,6 +1282,9 @@ void run( bool use_fullscreen )
         depth_prepass_ms,
         task_list
     );
+
+    // Submit depth prepass (car primitives + terrain)
+    engine::add_gfx_task( task_list, depth_prepass_ms.depth_ms_gfx_task );
 
     engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set(
         ctx.vulkan,
@@ -1395,8 +1400,6 @@ void run( bool use_fullscreen )
             6
         );
     }
-
-    engine::add_gfx_task( task_list, depth_prepass_ms.depth_ms_gfx_task );
 
     // number of albedo textures to bind
     engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(
