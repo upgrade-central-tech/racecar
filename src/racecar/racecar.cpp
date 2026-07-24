@@ -415,6 +415,18 @@ void create_lut_sets(
     );
 }
 
+engine::GfxTask create_depth_ms_gfx_task( engine::State& engine, deferred::GBuffers* gbuffers )
+{
+    return {
+        .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
+        .clear_depth = 1.f,
+        .render_target_is_swapchain = false,
+        .color_attachments = { },
+        .depth_image = gbuffers->GBuffer_DepthMS,
+        .extent = engine.swapchain.extent,
+    };
+}
+
 void create_depth_ms_prepass(
     Context& ctx,
     engine::State& engine,
@@ -423,7 +435,6 @@ void create_depth_ms_prepass(
     const UniformBuffer<ub_data::Camera>& camera_buffer,
     const geometry::scene::Mesh& scene_mesh,
     deferred::GBuffers* gbuffers,
-    engine::GfxTask* depth_ms_gfx_task,
     engine::DepthPrepassMS* depth_prepass_ms
 )
 {
@@ -463,17 +474,7 @@ void create_depth_ms_prepass(
         throw;
     }
 
-    // Prepass
-    *depth_ms_gfx_task = {
-        .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
-        .clear_depth = 1.f,
-        .render_target_is_swapchain = false,
-        .color_attachments = { },
-        .depth_image = gbuffers->GBuffer_DepthMS,
-        .extent = engine.swapchain.extent,
-    };
-
-    depth_prepass_ms->depth_ms_gfx_task = depth_ms_gfx_task;
+    depth_prepass_ms->depth_ms_gfx_task = create_depth_ms_gfx_task( engine, gbuffers );
     depth_prepass_ms->descriptor_sets = { depth_uniform_desc_set };
     depth_prepass_ms->pipeline = *depth_ms_pipeline;
 }
@@ -1117,7 +1118,6 @@ void run( bool use_fullscreen )
     // CREATE DEPTH PREPASS PIPELINE
     engine::DescriptorSet depth_uniform_desc_set;
     engine::Pipeline depth_ms_pipeline;
-    engine::GfxTask depth_ms_gfx_task;
     engine::DepthPrepassMS depth_prepass_ms;
     create_depth_ms_prepass(
         ctx,
@@ -1127,11 +1127,11 @@ void run( bool use_fullscreen )
         camera_buffer,
         scene_mesh,
         &gbuffers,
-        &depth_ms_gfx_task,
         &depth_prepass_ms
     );
 
     // CREATE MAIN SCENE DRAW PIPELINE
+    engine::GfxTask prepass_gfx_task = create_prepass_gfx_task( engine, gbuffers );
     engine::Pipeline scene_pipeline;
     create_scene_gfx_pipeline(
         ctx,
@@ -1249,9 +1249,6 @@ void run( bool use_fullscreen )
     // Running the atmosphere baker
     dispatch_atmosphere_baker( ctx, engine, task_list, lut_sets, atms_baker, volumetric );
 
-    // Initialize prepass (draw to the GBuffers)
-    engine::GfxTask prepass_gfx_task = create_prepass_gfx_task( engine, gbuffers );
-
     // Add draw tasks for each primitive to the Prepass Gfx Task and Depth Gfx Task
     add_prim_draw_tasks(
         scene_mesh,
@@ -1267,7 +1264,7 @@ void run( bool use_fullscreen )
         },
         DepthPassTarget {
             .pipeline = depth_ms_pipeline,
-            .gfx_task = depth_ms_gfx_task,
+            .gfx_task = depth_prepass_ms.depth_ms_gfx_task,
             .uniform_desc_set = depth_uniform_desc_set,
         }
     );
@@ -1275,7 +1272,6 @@ void run( bool use_fullscreen )
     // Add our prepass into the task list
     engine::add_gfx_task( task_list, prepass_gfx_task );
 
-    // TODO: INSERT TERRAIN PRE-PASS DRAW HERE
     geometry::draw_terrain_prepass(
         test_terrain,
         ctx.vulkan,
@@ -1400,7 +1396,7 @@ void run( bool use_fullscreen )
         );
     }
 
-    engine::add_gfx_task( task_list, depth_ms_gfx_task );
+    engine::add_gfx_task( task_list, depth_prepass_ms.depth_ms_gfx_task );
 
     // number of albedo textures to bind
     engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(
