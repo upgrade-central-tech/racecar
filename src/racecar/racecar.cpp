@@ -1083,6 +1083,79 @@ vk::mem::AllocatedBuffer create_padded_vertex_data_buffer(
     return padded_vertex_data_buffer;
 }
 
+engine::DescriptorSet generate_car_desc_set(
+    Context& ctx,
+    engine::State& engine,
+    geometry::scene::Mesh& scene_mesh,
+    vk::mem::AllocatedBuffer padded_vertex_data_buffer,
+    UniformBuffer<ub_data::BLASOffsets> offset_data,
+    vk::mem::AllocatedImage lut_brdf,
+    atmosphere::AtmosphereBaker atms_baker,
+    UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data
+)
+{
+    engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set(
+        ctx.vulkan,
+        engine,
+        {
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // vertex_data
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // index_data
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // blas_offsets
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // rt_texture_uniform,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF_LUT
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // octahedral_sky_mips
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // octahedral_sky_irradiance
+        },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+    );
+
+    engine::update_descriptor_set_const_storage_buffer(
+        ctx.vulkan,
+        engine,
+        car_descriptor_set,
+        padded_vertex_data_buffer,
+        0
+    );
+
+    engine::update_descriptor_set_const_storage_buffer(
+        ctx.vulkan,
+        engine,
+        car_descriptor_set,
+        scene_mesh.mesh_buffers.index_buffer,
+        1
+    );
+
+    engine::update_descriptor_set_uniform( ctx.vulkan, engine, car_descriptor_set, offset_data, 2 );
+
+    engine::update_descriptor_set_image( ctx.vulkan, engine, car_descriptor_set, lut_brdf, 4 );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan,
+        engine,
+        car_descriptor_set,
+        atms_baker.octahedral_sky_mips,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        5
+    );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan,
+        engine,
+        car_descriptor_set,
+        atms_baker.octahedral_sky_irradiance,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        6
+    );
+
+    engine::update_descriptor_set_uniform(
+        ctx.vulkan,
+        engine,
+        car_descriptor_set,
+        rt_texture_uniform_data,
+        3
+    );
+
+    return car_descriptor_set;
+}
+
 void run( bool use_fullscreen )
 {
     // ================================================================================================================
@@ -1249,6 +1322,23 @@ void run( bool use_fullscreen )
         0
     );
 
+    // Initialize RT texture data uniform buffer
+    UniformBuffer<ub_data::RTTextureUniform> rt_texture_uniform_data
+        = create_uniform_buffer( ctx.vulkan, rt_texture_uniform, engine.frame_overlap );
+    rt_texture_uniform_data.set_data( rt_texture_uniform );
+
+    // Create uniform buffer for BLAS offsets
+    UniformBuffer<ub_data::BLASOffsets> offset_data = create_uniform_buffer(
+        ctx.vulkan,
+        blas_offsets,
+        static_cast<size_t>( engine.frame_overlap )
+    );
+    offset_data.set_data( blas_offsets );
+
+    // Initialize RT vertex data buffer
+    vk::mem::AllocatedBuffer padded_vertex_data_buffer
+        = create_padded_vertex_data_buffer( ctx, engine, scene_mesh );
+
     // ================================================================================================================
     // TERRAIN init
     // ================================================================================================================
@@ -1337,82 +1427,15 @@ void run( bool use_fullscreen )
     // Submit depth prepass (car primitives + terrain)
     engine::add_gfx_task( task_list, depth_prepass_ms.depth_ms_gfx_task );
 
-    engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set(
-        ctx.vulkan,
+    engine::DescriptorSet car_descriptor_set = generate_car_desc_set(
+        ctx,
         engine,
-        {
-            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // vertex_data
-            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // index_data
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // blas_offsets
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // rt_texture_uniform,
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF_LUT
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // octahedral_sky_mips
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // octahedral_sky_irradiance
-        },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
-    );
-
-    vk::mem::AllocatedBuffer padded_vertex_data_buffer = create_padded_vertex_data_buffer(ctx, engine, scene_mesh);
-
-    engine::update_descriptor_set_const_storage_buffer(
-        ctx.vulkan,
-        engine,
-        car_descriptor_set,
+        scene_mesh,
         padded_vertex_data_buffer,
-        0
-    );
-
-    engine::update_descriptor_set_const_storage_buffer(
-        ctx.vulkan,
-        engine,
-        car_descriptor_set,
-        scene_mesh.mesh_buffers.index_buffer,
-        1
-    );
-
-    UniformBuffer<ub_data::BLASOffsets> offset_data = create_uniform_buffer(
-        ctx.vulkan,
-        blas_offsets,
-        static_cast<size_t>( engine.frame_overlap )
-    );
-    {
-        offset_data.set_data( blas_offsets );
-        engine::update_descriptor_set_uniform(
-            ctx.vulkan,
-            engine,
-            car_descriptor_set,
-            offset_data,
-            2
-        );
-
-        engine::update_descriptor_set_image( ctx.vulkan, engine, car_descriptor_set, lut_brdf, 4 );
-        engine::update_descriptor_set_rwimage(
-            ctx.vulkan,
-            engine,
-            car_descriptor_set,
-            atms_baker.octahedral_sky_mips,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            5
-        );
-        engine::update_descriptor_set_rwimage(
-            ctx.vulkan,
-            engine,
-            car_descriptor_set,
-            atms_baker.octahedral_sky_irradiance,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            6
-        );
-    }
-
-    UniformBuffer<ub_data::RTTextureUniform> rt_texture_uniform_data
-        = create_uniform_buffer( ctx.vulkan, rt_texture_uniform, engine.frame_overlap );
-    rt_texture_uniform_data.set_data( rt_texture_uniform );
-    engine::update_descriptor_set_uniform(
-        ctx.vulkan,
-        engine,
-        car_descriptor_set,
-        rt_texture_uniform_data,
-        3
+        offset_data,
+        lut_brdf,
+        atms_baker,
+        rt_texture_uniform_data
     );
 
     // number of albedo textures to bind
