@@ -1081,14 +1081,14 @@ vk::mem::AllocatedBuffer create_padded_vertex_data_buffer(
     return padded_vertex_data_buffer;
 }
 
-engine::DescriptorSet generate_car_desc_set(
+engine::DescriptorSet create_car_desc_set(
     Context& ctx,
     engine::State& engine,
     geometry::scene::Mesh& scene_mesh,
-    vk::mem::AllocatedBuffer padded_vertex_data_buffer,
-    UniformBuffer<ub_data::BLASOffsets> offset_data,
-    vk::mem::AllocatedImage lut_brdf,
-    atmosphere::AtmosphereBaker atms_baker,
+    vk::mem::AllocatedBuffer& padded_vertex_data_buffer,
+    UniformBuffer<ub_data::BLASOffsets>& offset_data,
+    vk::mem::AllocatedImage& lut_brdf,
+    atmosphere::AtmosphereBaker& atms_baker,
     UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data
 )
 {
@@ -1152,6 +1152,42 @@ engine::DescriptorSet generate_car_desc_set(
     );
 
     return car_descriptor_set;
+}
+
+engine::DescriptorSet create_combined_textures_desc_set(
+    Context& ctx,
+    engine::State& engine,
+    std::vector<vk::mem::AllocatedImage>& albedo_textures,
+    std::vector<vk::mem::AllocatedImage>& metallic_roughness_textures
+)
+{
+    engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(
+        ctx.vulkan,
+        engine,
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // albedo_textures array
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // metallic_roughness_textures array
+        },
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        uint32_t( albedo_textures.size() )
+    );
+
+    engine::update_descriptor_set_image_array(
+        ctx.vulkan,
+        engine,
+        combined_textures_desc_set,
+        albedo_textures,
+        0
+    );
+    engine::update_descriptor_set_image_array(
+        ctx.vulkan,
+        engine,
+        combined_textures_desc_set,
+        metallic_roughness_textures,
+        1
+    );
+
+    return combined_textures_desc_set;
 }
 
 void run( bool use_fullscreen )
@@ -1253,7 +1289,6 @@ void run( bool use_fullscreen )
     );
 
     // CREATE MAIN SCENE DRAW PIPELINE
-    engine::GfxTask prepass_gfx_task = create_prepass_gfx_task( engine, gbuffers );
     engine::Pipeline scene_pipeline;
     create_scene_gfx_pipeline(
         ctx,
@@ -1338,6 +1373,26 @@ void run( bool use_fullscreen )
     vk::mem::AllocatedBuffer padded_vertex_data_buffer
         = create_padded_vertex_data_buffer( ctx, engine, scene_mesh );
 
+    // Create car descriptor set
+    engine::DescriptorSet car_descriptor_set = create_car_desc_set(
+        ctx,
+        engine,
+        scene_mesh,
+        padded_vertex_data_buffer,
+        offset_data,
+        lut_brdf,
+        atms_baker,
+        rt_texture_uniform_data
+    );
+
+    // Create combined textures descriptor set
+    engine::DescriptorSet combined_textures_desc_set = create_combined_textures_desc_set(
+        ctx,
+        engine,
+        albedo_textures,
+        metallic_roughness_textures
+    );
+
     // ================================================================================================================
     // TERRAIN init
     // ================================================================================================================
@@ -1390,6 +1445,7 @@ void run( bool use_fullscreen )
     dispatch_atmosphere_baker( ctx, engine, task_list, lut_sets, atms_baker );
 
     // Add draw tasks for each primitive to the Prepass Gfx Task and Depth Gfx Task
+    engine::GfxTask prepass_gfx_task = create_prepass_gfx_task( engine, gbuffers );
     add_prim_draw_tasks(
         scene_mesh,
         prims,
@@ -1425,44 +1481,6 @@ void run( bool use_fullscreen )
 
     // Submit depth prepass (car primitives + terrain)
     engine::add_gfx_task( task_list, depth_prepass_ms.depth_ms_gfx_task );
-
-    engine::DescriptorSet car_descriptor_set = generate_car_desc_set(
-        ctx,
-        engine,
-        scene_mesh,
-        padded_vertex_data_buffer,
-        offset_data,
-        lut_brdf,
-        atms_baker,
-        rt_texture_uniform_data
-    );
-
-    // number of albedo textures to bind
-    engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(
-        ctx.vulkan,
-        engine,
-        {
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // albedo_textures array
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // metallic_roughness_textures array
-        },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        uint32_t( albedo_textures.size() )
-    );
-
-    engine::update_descriptor_set_image_array(
-        ctx.vulkan,
-        engine,
-        combined_textures_desc_set,
-        albedo_textures,
-        0
-    );
-    engine::update_descriptor_set_image_array(
-        ctx.vulkan,
-        engine,
-        combined_textures_desc_set,
-        metallic_roughness_textures,
-        1
-    );
 
     // reflection data pass
     engine::RWImage reflection_data = engine::create_rwimage(
