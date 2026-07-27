@@ -19,6 +19,11 @@ struct AtmosphereBaker {
     std::vector<engine::DescriptorSet> octahedral_mip_writes;
 
     engine::Pipeline compute_pipeline;
+    engine::Pipeline cs_bake_atmosphere_pipeline;
+    engine::Pipeline cs_sky_irradiance_pipeline;
+    engine::Pipeline cs_octahedral_mip_pipeline;
+
+    std::vector<UniformBuffer<ub_data::OctahedralData>> mip_data;
 };
 
 void initialize_atmosphere_baker(
@@ -30,15 +35,15 @@ void initialize_atmosphere_baker(
 
 // TODO: refactor this later so that it abandons the junk-task system
 void prebake_octahedral_sky(
-    const AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::State& engine
+    const AtmosphereBaker& atms_baker, engine::State& engine
 );
 
 void compute_octahedral_sky(
-    AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::TaskList& task_list
+    AtmosphereBaker& atms_baker, engine::TaskList& task_list
 );
 
 void compute_octahedral_sky_irradiance(
-    AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::TaskList& task_list
+    AtmosphereBaker& atms_baker, engine::TaskList& task_list
 );
 
 void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffer command_buffer );

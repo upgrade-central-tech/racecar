@@ -671,13 +671,11 @@ void dispatch_atmosphere_baker(
     engine::State& engine,
     engine::TaskList& task_list,
     engine::DescriptorSet& lut_sets,
-    atmosphere::AtmosphereBaker& atms_baker,
-    const volumetric::Volumetric& volumetric
+    atmosphere::AtmosphereBaker& atms_baker
 )
 {
-    atmosphere::initialize_atmosphere_baker( atms_baker, volumetric, ctx.vulkan, engine );
-    atmosphere::compute_octahedral_sky( atms_baker, ctx.vulkan, task_list );
-    atmosphere::compute_octahedral_sky_irradiance( atms_baker, ctx.vulkan, task_list );
+    atmosphere::compute_octahedral_sky( atms_baker, task_list );
+    atmosphere::compute_octahedral_sky_irradiance( atms_baker, task_list );
 
     // TODO: As shown in Destiny 2 GDC 2018 talk, we can simply substitute the last glossy mip with
     // this irradiance. It is also possible to simplify glossy irradiance by naive gaussian blur.
@@ -1279,6 +1277,7 @@ void run( bool use_fullscreen )
     atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
     atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
     volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
+    atmosphere::initialize_atmosphere_baker( atms_baker, volumetric, ctx.vulkan, engine );
 
     // ================================================================================================================
     // MODEL LOADING
@@ -1388,7 +1387,7 @@ void run( bool use_fullscreen )
     volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list, screen_color );
 
     // Running the atmosphere baker
-    dispatch_atmosphere_baker( ctx, engine, task_list, lut_sets, atms_baker, volumetric );
+    dispatch_atmosphere_baker( ctx, engine, task_list, lut_sets, atms_baker );
 
     // Add draw tasks for each primitive to the Prepass Gfx Task and Depth Gfx Task
     add_prim_draw_tasks(

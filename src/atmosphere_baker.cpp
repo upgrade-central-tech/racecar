@@ -16,6 +16,9 @@ static constexpr std::string_view BAKE_ATMS_IRR_SHADER_PATH
 static constexpr std::string_view BAKE_ATMS_MIPS_SHADER_PATH
     = "../shaders/atmosphere/sky/bake_atmosphere_mips.spv";
 
+static const uint32_t mip0_size = 512;
+static const uint32_t mip_levels = 5;
+
 void initialize_atmosphere_baker(
     AtmosphereBaker& atms_baker,
     const volumetric::Volumetric& volumetric,
@@ -117,21 +120,13 @@ void initialize_atmosphere_baker(
         volumetric.uniform_buffer,
         3
     );
-}
 
-void compute_octahedral_sky(
-    AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::TaskList& task_list
-)
-{
-    Atmosphere& atms = *atms_baker.atmosphere;
-    const vk::mem::AllocatedImage& octahedral_sky = atms_baker.octahedral_sky;
-
-    engine::Pipeline cs_bake_atmosphere_pipeline = engine::create_compute_pipeline(
+    atms_baker.cs_bake_atmosphere_pipeline = engine::create_compute_pipeline(
         vulkan,
         {
-            atms.uniform_desc_set.layouts[0],
-            atms.lut_desc_set.layouts[0],
-            atms.sampler_desc_set.layouts[0],
+            atms_baker.atmosphere->uniform_desc_set.layouts[0],
+            atms_baker.atmosphere->lut_desc_set.layouts[0],
+            atms_baker.atmosphere->sampler_desc_set.layouts[0],
             atms_baker.octahedral_write_desc_set.layouts[0],
             atms_baker.volumetrics_desc_set.layouts[0],
         },
@@ -139,11 +134,63 @@ void compute_octahedral_sky(
         "cs_bake_atmosphere"
     );
 
+    atms_baker.cs_sky_irradiance_pipeline = engine::create_compute_pipeline(
+        vulkan,
+        {
+            atms_baker.atmosphere->uniform_desc_set.layouts[0],
+            atms_baker.atmosphere->lut_desc_set.layouts[0],
+            atms_baker.atmosphere->sampler_desc_set.layouts[0],
+            atms_baker.octahedral_write_desc_set.layouts[0],
+            atms_baker.volumetrics_desc_set.layouts[0],
+        },
+        vk::create::shader_module( vulkan, BAKE_ATMS_IRR_SHADER_PATH ),
+        "cs_bake_atmosphere_irradiance"
+    );
+
+    atms_baker.cs_octahedral_mip_pipeline = engine::create_compute_pipeline(
+        vulkan,
+        {
+            // Repeated code everywhere, is there a way to cache this vector?
+            atms_baker.atmosphere->uniform_desc_set.layouts[0],
+            atms_baker.atmosphere->lut_desc_set.layouts[0],
+            atms_baker.atmosphere->sampler_desc_set.layouts[0],
+            atms_baker.octahedral_write_desc_set.layouts[0],
+            atms_baker.volumetrics_desc_set.layouts[0],
+        },
+        vk::create::shader_module( vulkan, BAKE_ATMS_MIPS_SHADER_PATH ),
+        "cs_bake_atmosphere_mips"
+    );
+
+    // TODO: Refactor this mip generation somewhere else.
+    // Mip generation itself should be abstracted away.
+    atms_baker.octahedral_sky_mips = engine::create_rwimage_mips(
+        vulkan,
+        engine,
+        { mip0_size, mip0_size, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_TYPE_2D,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+        mip_levels
+    );
+
+    atms_baker.mip_data.resize( mip_levels );
+    for ( size_t mip = 0; mip < mip_levels; mip++ ) {
+        atms_baker.mip_data[mip]
+            = create_uniform_buffer<ub_data::OctahedralData>( vulkan, { }, engine.frame_overlap );
+    }
+}
+
+void compute_octahedral_sky( AtmosphereBaker& atms_baker, engine::TaskList& task_list )
+{
+    Atmosphere& atms = *atms_baker.atmosphere;
+    const vk::mem::AllocatedImage& octahedral_sky = atms_baker.octahedral_sky;
+
     uint32_t x_groups = ( static_cast<uint32_t>( octahedral_sky.image_extent.width ) + 7 ) / 8;
     uint32_t y_groups = ( static_cast<uint32_t>( octahedral_sky.image_extent.width ) + 7 ) / 8;
 
     engine::ComputeTask cs_bake_atmosphere_task = {
-        cs_bake_atmosphere_pipeline,
+        atms_baker.cs_bake_atmosphere_pipeline,
         {
             &atms.uniform_desc_set,
             &atms.lut_desc_set,
@@ -172,31 +219,16 @@ void compute_octahedral_sky(
     engine::add_cs_task( task_list, cs_bake_atmosphere_task );
 }
 
-void compute_octahedral_sky_irradiance(
-    AtmosphereBaker& atms_baker, vk::Common& vulkan, engine::TaskList& task_list
-)
+void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, engine::TaskList& task_list )
 {
     Atmosphere& atms = *atms_baker.atmosphere;
     const vk::mem::AllocatedImage& irradiance = atms_baker.octahedral_sky_irradiance.images[0];
-
-    engine::Pipeline cs_sky_irradiance_pipeline = engine::create_compute_pipeline(
-        vulkan,
-        {
-            atms.uniform_desc_set.layouts[0],
-            atms.lut_desc_set.layouts[0],
-            atms.sampler_desc_set.layouts[0],
-            atms_baker.octahedral_write_desc_set.layouts[0],
-            atms_baker.volumetrics_desc_set.layouts[0],
-        },
-        vk::create::shader_module( vulkan, BAKE_ATMS_IRR_SHADER_PATH ),
-        "cs_bake_atmosphere_irradiance"
-    );
 
     uint32_t x_groups = ( static_cast<uint32_t>( irradiance.image_extent.width ) + 7 ) / 8;
     uint32_t y_groups = ( static_cast<uint32_t>( irradiance.image_extent.width ) + 7 ) / 8;
 
     engine::ComputeTask cs_sky_irradiance_task = {
-        cs_sky_irradiance_pipeline,
+        atms_baker.cs_sky_irradiance_pipeline,
         {
             &atms.uniform_desc_set,
             &atms.lut_desc_set,
@@ -248,22 +280,6 @@ void compute_octahedral_sky_mips(
     engine::TaskList& task_list
 )
 {
-    uint32_t mip0_size = 512;
-    uint32_t mip_levels = 5;
-
-    // TODO: Refactor this mip generation somewhere else.
-    // Mip generation itself should be abstracted away.
-    atms_baker.octahedral_sky_mips = engine::create_rwimage_mips(
-        vulkan,
-        engine,
-        { mip0_size, mip0_size, 1 },
-        VK_FORMAT_R16G16B16A16_SFLOAT,
-        VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        mip_levels
-    );
-
     Atmosphere& atms = *atms_baker.atmosphere;
 
     for ( size_t mip = 0; mip < mip_levels; mip++ ) {
@@ -298,38 +314,22 @@ void compute_octahedral_sky_mips(
             mip
         );
 
-        UniformBuffer mip_data
-            = create_uniform_buffer<ub_data::OctahedralData>( vulkan, { }, engine.frame_overlap );
         float roughness = (float)mip / (float)( mip_levels - 1 );
-        mip_data.set_data( { glm::vec4( mip, roughness, 0.0f, 0.0f ) } );
+        atms_baker.mip_data[mip].set_data( { glm::vec4( mip, roughness, 0.0f, 0.0f ) } );
 
         // Set this only once per frame.
         for ( uint32_t frame_index = 0; frame_index < engine.frame_overlap; frame_index++ ) {
-            mip_data.update( vulkan, frame_index );
+            atms_baker.mip_data[mip].update( vulkan, frame_index );
         }
 
         engine::update_descriptor_set_uniform(
             vulkan,
             engine,
             atms_baker.octahedral_mip_writes[mip],
-            mip_data,
+            atms_baker.mip_data[mip],
             3
         );
     }
-
-    engine::Pipeline cs_octahedral_mip_pipeline = engine::create_compute_pipeline(
-        vulkan,
-        {
-            // Repeated code everywhere, is there a way to cache this vector?
-            atms.uniform_desc_set.layouts[0],
-            atms.lut_desc_set.layouts[0],
-            atms.sampler_desc_set.layouts[0],
-            atms_baker.octahedral_write_desc_set.layouts[0],
-            atms_baker.volumetrics_desc_set.layouts[0],
-        },
-        vk::create::shader_module( vulkan, BAKE_ATMS_MIPS_SHADER_PATH ),
-        "cs_bake_atmosphere_mips"
-    );
 
     engine::add_pipeline_barrier(
         task_list,
@@ -361,7 +361,7 @@ void compute_octahedral_sky_mips(
             ( mip_size + 7 ) / 8,
         };
 
-        engine::ComputeTask cs_mip_task = { cs_octahedral_mip_pipeline,
+        engine::ComputeTask cs_mip_task = { atms_baker.cs_octahedral_mip_pipeline,
                                             {
                                                 &atms.uniform_desc_set,
                                                 &atms.lut_desc_set,
