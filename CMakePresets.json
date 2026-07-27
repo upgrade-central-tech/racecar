@@ -28,6 +28,20 @@
             }
         },
         {
+            "name": "DebugASan",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_CXX_COMPILER": "clang-cl",
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_MAKE_PROGRAM": "ninja",
+                "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "RACECAR_ENABLE_ASAN": "ON"
+            }
+        },
+        {
             "name": "DebugVS",
             "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/build",

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 4.0)
 
 project(racecar VERSION 1.0.0 LANGUAGES CXX)
 
+option(RACECAR_ENABLE_ASAN "Build racecar with AddressSanitizer" OFF)
+
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(VK_DIR "${SRC_DIR}/vk")
 set(ENGINE_DIR "${SRC_DIR}/engine")
@@ -93,6 +95,40 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(racecar PRIVATE /EHsc /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
 else()
     target_compile_options(racecar PRIVATE)
+endif()
+
+if (RACECAR_ENABLE_ASAN)
+    target_compile_options(racecar PRIVATE /fsanitize=address /Od)
+
+    target_compile_definitions(racecar PRIVATE
+        _DISABLE_STRING_ANNOTATION=1
+        _DISABLE_VECTOR_ANNOTATION=1
+    )
+
+    execute_process(
+        COMMAND "${CMAKE_CXX_COMPILER}" --print-resource-dir
+        OUTPUT_VARIABLE RACECAR_CLANG_RESOURCE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    target_link_directories(racecar PRIVATE
+        "${RACECAR_CLANG_RESOURCE_DIR}/lib/windows"
+    )
+    target_link_libraries(racecar PRIVATE
+        clang_rt.asan_dynamic-x86_64
+        clang_rt.asan_dynamic_runtime_thunk-x86_64
+    )
+    target_link_options(racecar PRIVATE
+        "/wholearchive:clang_rt.asan_dynamic_runtime_thunk-x86_64.lib"
+        "/INCLUDE:__asan_seh_interceptor"
+    )
+
+    add_custom_command(TARGET racecar POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${RACECAR_CLANG_RESOURCE_DIR}/lib/windows/clang_rt.asan_dynamic-x86_64.dll"
+            "$<TARGET_FILE_DIR:racecar>"
+        COMMENT "Copying AddressSanitizer runtime DLL next to racecar.exe"
+    )
+    message(STATUS "AddressSanitizer enabled for racecar (runtime: ${RACECAR_CLANG_RESOURCE_DIR}/lib/windows)")
 endif()
 
 find_package(volk CONFIG REQUIRED)
