@@ -1191,9 +1191,7 @@ engine::DescriptorSet create_combined_textures_desc_set(
 }
 
 void create_deferred_reflection_pipeline_barrier(
-    engine::TaskList& task_list,
-    deferred::GBuffers& gbuffers,
-    engine::RWImage& reflection_data
+    engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::RWImage& reflection_data
 )
 {
     engine::add_pipeline_barrier(
@@ -1274,17 +1272,16 @@ void create_reflection_pass_resources(
         .index_count = uint32_t( quad_mesh.indices.size() ),
     };
 
-    engine::DrawTask reflection_prepass_task {
-        .draw_resource_descriptor = reflection_prepass_desc,
-        .descriptor_sets = { &desc_sets.uniform_desc_set,
-                             &desc_sets.sampler_desc_set,
-                             &desc_sets.gbuffer_desc_set,
-                             &desc_sets.car_tlas_desc_set,
-                             &desc_sets.terrain_tlas_desc_set,
-                             &desc_sets.car_desc_set,
-                             &desc_sets.combined_textures_desc_set },
-        .pipeline = *reflection_pipeline
-    };
+    engine::DrawTask reflection_prepass_task { .draw_resource_descriptor = reflection_prepass_desc,
+                                               .descriptor_sets
+                                               = { &desc_sets.uniform_desc_set,
+                                                   &desc_sets.sampler_desc_set,
+                                                   &desc_sets.gbuffer_desc_set,
+                                                   &desc_sets.car_tlas_desc_set,
+                                                   &desc_sets.terrain_tlas_desc_set,
+                                                   &desc_sets.car_desc_set,
+                                                   &desc_sets.combined_textures_desc_set },
+                                               .pipeline = *reflection_pipeline };
 
     *reflection_buffer_desc_set = engine::generate_descriptor_set(
         ctx.vulkan,
@@ -1298,6 +1295,47 @@ void create_reflection_pass_resources(
                              .extent = engine.swapchain.extent };
 
     reflection_gfx_task->draw_tasks.push_back( reflection_prepass_task );
+}
+
+void create_deferred_lighting_pipeline_barrier(
+    engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::RWImage& reflection_data
+)
+{
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers = {
+                deferred::color_write_to_frag_read( gbuffers.GBuffer_Tangent ),
+                deferred::color_write_to_frag_read( gbuffers.GBuffer_UV ),
+                deferred::color_write_to_frag_read( gbuffers.GBuffer_Albedo ),
+                deferred::color_write_to_frag_read( gbuffers.GBuffer_Packed_Data ),
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                                       .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                                       .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                                       .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                                       .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                                       .image = gbuffers.GBuffer_Depth,
+                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                                       .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                                       .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                                       .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                                       .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                                       .image = gbuffers.GBuffer_DepthMS,
+                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                       .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                                       .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                       .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                                       .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                                       .image = reflection_data,
+                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+            } }
+    );
 }
 
 void run( bool use_fullscreen )
@@ -1552,7 +1590,7 @@ void run( bool use_fullscreen )
         &reflection_data,
         &reflection_pipeline,
         &reflection_buffer_desc_set,
-        & reflection_gfx_task
+        &reflection_gfx_task
     );
 
     geometry::initialize_terrain_draw_pipeline(
@@ -1636,42 +1674,8 @@ void run( bool use_fullscreen )
     // Add reflection task
     engine::add_gfx_task( task_list, reflection_gfx_task );
 
-    // Lighting pass
-    engine::add_pipeline_barrier(
-        task_list,
-        engine::PipelineBarrierDescriptor {
-            .buffer_barriers = { },
-            .image_barriers = {
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Tangent ),
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_UV ),
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Albedo ),
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Packed_Data ),
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                                       .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                                       .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                                       .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-                                       .image = gbuffers.GBuffer_Depth,
-                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                                       .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                                       .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                                       .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-                                       .image = gbuffers.GBuffer_DepthMS,
-                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                       .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                                       .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                       .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                                       .image = reflection_data,
-                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-            } }
-    );
+    // Lighting
+    create_deferred_lighting_pipeline_barrier( task_list, gbuffers, reflection_data );
 
     // Terrain lighting pass
     geometry::draw_terrain( test_terrain, engine, task_list );
