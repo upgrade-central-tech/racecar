@@ -168,3 +168,40 @@ target_include_directories(racecar PRIVATE
     ${TINYGLTF_INCLUDE_DIRS}
     ${Stb_INCLUDE_DIR}
 )
+
+set(SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
+
+if (WIN32)
+    find_program(RACECAR_POWERSHELL NAMES powershell pwsh)
+
+    if (RACECAR_POWERSHELL)
+        file(GLOB_RECURSE RACECAR_SHADER_SOURCES CONFIGURE_DEPENDS
+            "${SHADER_DIR}/*.slang"
+            "${SHADER_DIR}/*.hlsl"
+        )
+        file(GLOB_RECURSE RACECAR_SHADER_SCRIPTS CONFIGURE_DEPENDS
+            "${SHADER_DIR}/*.ps1"
+        )
+
+        set(RACECAR_SHADER_STAMP "${CMAKE_CURRENT_BINARY_DIR}/shaders.stamp")
+
+        add_custom_command(
+            OUTPUT ${RACECAR_SHADER_STAMP}
+            COMMAND "${RACECAR_POWERSHELL}" -NoProfile -ExecutionPolicy Bypass
+                    -File "${SHADER_DIR}/compile_all.ps1"
+            COMMAND ${CMAKE_COMMAND} -E touch "${RACECAR_SHADER_STAMP}"
+            DEPENDS ${RACECAR_SHADER_SOURCES} ${RACECAR_SHADER_SCRIPTS}
+            WORKING_DIRECTORY "${SHADER_DIR}"
+            COMMENT "Compiling shaders (shaders/compile_all.ps1)"
+            USES_TERMINAL
+            VERBATIM
+        )
+
+        add_custom_target(shaders DEPENDS ${RACECAR_SHADER_STAMP})
+        add_dependencies(racecar shaders)
+    else()
+        message(WARNING "PowerShell not found; shaders will not be compiled automatically")
+    endif()
+else()
+    message(STATUS "Automatic shader compilation is Windows-only; run shaders/compile_all.ps1 manually")
+endif()
