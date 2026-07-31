@@ -1514,8 +1514,18 @@ void run( bool use_fullscreen )
         &glint_noise,
     };
 
+    geometry::TerrainLightingInfo terrain_lighting_info = {
+        &camera_buffer, &debug_buffer, &atms_baker, &gbuffers, &screen_color, &lut_brdf,
+    };
+
     geometry::Terrain test_terrain;
-    geometry::initialize_terrain( ctx.vulkan, engine, test_terrain, car_tlas_desc_set );
+    geometry::initialize_terrain(
+        ctx.vulkan,
+        engine,
+        test_terrain,
+        prepass_terrain_info,
+        terrain_lighting_info
+    );
 
     // ================================================================================================================
     // Additional Resource Creation
@@ -1543,6 +1553,13 @@ void run( bool use_fullscreen )
         &reflection_pipeline,
         &reflection_buffer_desc_set,
         & reflection_gfx_task
+    );
+
+    geometry::initialize_terrain_draw_pipeline(
+        test_terrain,
+        ctx.vulkan,
+        car_tlas_desc_set,
+        reflection_buffer_desc_set
     );
 
     // ================================================================================================================
@@ -1608,23 +1625,16 @@ void run( bool use_fullscreen )
 
     // Add draw tasks for terrain to its own terrain_prepass_task (submitted internally), and to
     // depth_prepass_ms
-    geometry::draw_terrain_prepass(
-        test_terrain,
-        ctx.vulkan,
-        engine,
-        prepass_terrain_info,
-        depth_prepass_ms,
-        task_list
-    );
+    geometry::draw_terrain_prepass( test_terrain, depth_prepass_ms, task_list );
 
     // Submit depth prepass (car primitives + terrain)
     engine::add_gfx_task( task_list, depth_prepass_ms.depth_ms_gfx_task );
 
+    // Pipeline barrier (gbuffer dependency for reflection compute)
     create_deferred_reflection_pipeline_barrier( task_list, gbuffers, reflection_data );
 
+    // Add reflection task
     engine::add_gfx_task( task_list, reflection_gfx_task );
-
-    test_terrain.reflection_texture_desc_set = &reflection_buffer_desc_set;
 
     // Lighting pass
     engine::add_pipeline_barrier(
@@ -1664,19 +1674,7 @@ void run( bool use_fullscreen )
     );
 
     // Terrain lighting pass
-    {
-        geometry::TerrainLightingInfo terrain_lighting_info = {
-            &camera_buffer, &debug_buffer, &atms_baker, &gbuffers, &screen_color, &lut_brdf,
-        };
-
-        geometry::draw_terrain(
-            test_terrain,
-            ctx.vulkan,
-            engine,
-            task_list,
-            terrain_lighting_info
-        );
-    }
+    geometry::draw_terrain( test_terrain, engine, task_list );
 
     // Object lighting pass, writes to screen_color
     {

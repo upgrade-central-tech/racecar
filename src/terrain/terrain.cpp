@@ -33,7 +33,8 @@ void initialize_terrain(
     vk::Common& vulkan,
     engine::State& engine,
     Terrain& terrain,
-    engine::DescriptorSet& car_tlas_desc_set
+    const TerrainPrepassInfo& prepass_info,
+    const TerrainLightingInfo& lighting_info
 )
 {
     // Generate enough information for just one planar quad. Expand it later on arbitrarily
@@ -193,8 +194,6 @@ void initialize_terrain(
     terrain.terrain_noise
         = engine::load_image( TERRAIN_NOISE_PAPTH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM, true );
 
-    terrain.car_tlas_desc_set = &car_tlas_desc_set;
-
     vk::rt::alloc_blas(
         vulkan.device,
         vulkan.allocator,
@@ -233,35 +232,10 @@ void initialize_terrain(
         terrain.tlas.handle,
         0
     );
-}
 
-void terrain_precompute( Terrain& terrain, VkCommandBuffer precompute_cmdbuf )
-{
-    vk::rt::build_blas( precompute_cmdbuf, terrain.blas );
-    vk::rt::build_tlas( precompute_cmdbuf, terrain.tlas );
-}
-
-void draw_terrain_prepass(
-    Terrain& terrain,
-    vk::Common& vulkan,
-    engine::State& engine,
-    const TerrainPrepassInfo& prepass_info,
-    [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task,
-    engine::TaskList& task_list
-)
-{
-    // The deferred set-up makes this really complicated, because this means that
-    // the rendering for this can't be done in its own shader.
-    //
-    // https://advances.realtimerendering.com/s2023/Etienne(ATVI)-Large%20Scale%20Terrain%20Rendering%20with%20notes%20(Advances%202023).pdf
-    // Slide 24 notes that terrain writes to the depth buffer
-    // Geometric normal is also written to a g-buffer
-    // We write to the GBuffer_Position, but we need to specifically modify the stencil bit s.t it
-    // it has ID 2 for terrain. In the opaque pass, "terrain is deferred rendered"
-
-    // For now, since we don't have a stencil setup, I think it's possible to use the alpha channel
-    // in the position GBuffer to store an ID, s.t 0 is nothing, 1 is car shading, and 2 is terrain.
-    // Writes to the GBuffer depth and GBuffer normals for now
+    // ============================================================================================
+    // Prepass resources
+    // ============================================================================================
 
     engine::update_descriptor_set_uniform(
         vulkan,
@@ -287,10 +261,10 @@ void draw_terrain_prepass(
 
     terrain.terrain_prepass_task = {
         .render_target_is_swapchain = false,
-        .color_attachments = { 
-            prepass_info.gbuffers->GBuffer_Position, 
-            prepass_info.gbuffers->GBuffer_Normal, 
-            prepass_info.gbuffers->GBuffer_Albedo, 
+        .color_attachments = {
+            prepass_info.gbuffers->GBuffer_Position,
+            prepass_info.gbuffers->GBuffer_Normal,
+            prepass_info.gbuffers->GBuffer_Albedo,
             prepass_info.gbuffers->GBuffer_Packed_Data,
             prepass_info.gbuffers->GBuffer_Velocity,
         },
@@ -391,9 +365,8 @@ void draw_terrain_prepass(
         1
     );
 
-    engine::Pipeline terrain_prepass_pipeline;
     try {
-        terrain_prepass_pipeline = engine::create_gfx_pipeline(
+        terrain.terrain_prepass_pipeline = engine::create_gfx_pipeline(
             engine,
             vulkan,
             engine::get_vertex_input_state_create_info( terrain ),
@@ -421,37 +394,9 @@ void draw_terrain_prepass(
         throw;
     }
 
-    engine::DrawResourceDescriptor draw_descriptor = {
-        .vertex_buffers = { terrain.mesh_buffers.vertex_buffer.handle },
-        .index_buffer = terrain.mesh_buffers.index_buffer.handle,
-        .vertex_buffer_offsets = { 0 },
-        .index_count = static_cast<uint32_t>( terrain.indices.size() ),
-    };
-
-    terrain.terrain_prepass_task.draw_tasks.push_back( {
-        .draw_resource_descriptor = draw_descriptor,
-        .descriptor_sets = {
-            &terrain.prepass_uniform_desc_set,
-            &terrain.prepass_texture_desc_set,
-            &terrain.prepass_sampler_desc_set,
-            &terrain.prepass_lut_desc_set,
-        },
-        .pipeline = terrain_prepass_pipeline,
-    } );
-
-    engine::add_gfx_task( task_list, terrain.terrain_prepass_task );
-    // PushDepthPrepassMS( depth_prepass_ms_task, draw_descriptor );
-}
-
-void draw_terrain(
-    Terrain& terrain,
-    vk::Common& vulkan,
-    engine::State& engine,
-    engine::TaskList& task_list,
-    TerrainLightingInfo& info
-)
-{
-    // Can we assume the color_attachment, by this point, is in a write-only state?
+    // ============================================================================================
+    // Lighting pass resources
+    // ============================================================================================
 
     terrain.uniform_desc_set = engine::generate_descriptor_set(
         vulkan,
@@ -503,14 +448,14 @@ void draw_terrain(
         vulkan,
         engine,
         terrain.uniform_desc_set,
-        *info.camera_buffer,
+        *lighting_info.camera_buffer,
         0
     );
     engine::update_descriptor_set_uniform(
         vulkan,
         engine,
         terrain.uniform_desc_set,
-        *info.debug_buffer,
+        *lighting_info.debug_buffer,
         1
     );
     engine::update_descriptor_set_uniform(
@@ -526,7 +471,7 @@ void draw_terrain(
         vulkan,
         engine,
         terrain.texture_desc_set,
-        info.gbuffers->GBuffer_Position,
+        lighting_info.gbuffers->GBuffer_Position,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
@@ -534,7 +479,7 @@ void draw_terrain(
         vulkan,
         engine,
         terrain.texture_desc_set,
-        info.gbuffers->GBuffer_Normal,
+        lighting_info.gbuffers->GBuffer_Normal,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
@@ -542,7 +487,7 @@ void draw_terrain(
         vulkan,
         engine,
         terrain.texture_desc_set,
-        info.gbuffers->GBuffer_Albedo,
+        lighting_info.gbuffers->GBuffer_Albedo,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         2
     );
@@ -550,7 +495,7 @@ void draw_terrain(
         vulkan,
         engine,
         terrain.texture_desc_set,
-        info.gbuffers->GBuffer_Packed_Data,
+        lighting_info.gbuffers->GBuffer_Packed_Data,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         3
     );
@@ -558,7 +503,7 @@ void draw_terrain(
         vulkan,
         engine,
         terrain.texture_desc_set,
-        *info.color_attachment,
+        *lighting_info.color_attachment,
         VK_IMAGE_LAYOUT_GENERAL,
         4
     );
@@ -568,14 +513,14 @@ void draw_terrain(
         vulkan,
         engine,
         terrain.lut_desc_set,
-        info.atmosphere_baker->octahedral_sky,
+        lighting_info.atmosphere_baker->octahedral_sky,
         0
     );
     engine::update_descriptor_set_rwimage(
         vulkan,
         engine,
         terrain.lut_desc_set,
-        info.atmosphere_baker->octahedral_sky_irradiance,
+        lighting_info.atmosphere_baker->octahedral_sky_irradiance,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
@@ -583,11 +528,17 @@ void draw_terrain(
         vulkan,
         engine,
         terrain.lut_desc_set,
-        info.atmosphere_baker->octahedral_sky_mips,
+        lighting_info.atmosphere_baker->octahedral_sky_mips,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         2
     );
-    engine::update_descriptor_set_image( vulkan, engine, terrain.lut_desc_set, *info.lut_brdf, 3 );
+    engine::update_descriptor_set_image(
+        vulkan,
+        engine,
+        terrain.lut_desc_set,
+        *lighting_info.lut_brdf,
+        3
+    );
 
     // Sampler assignments
     engine::update_descriptor_set_sampler(
@@ -597,8 +548,19 @@ void draw_terrain(
         vulkan.global_samplers.linear_sampler,
         0
     );
+}
 
-    engine::Pipeline cs_terrain_lighting_pipeline = engine::create_compute_pipeline(
+void initialize_terrain_draw_pipeline(
+    Terrain& terrain,
+    vk::Common& vulkan,
+    engine::DescriptorSet& car_tlas_desc_set,
+    engine::DescriptorSet& reflection_texture_desc_set
+)
+{
+    terrain.car_tlas_desc_set = &car_tlas_desc_set;
+    terrain.reflection_texture_desc_set = &reflection_texture_desc_set;
+
+    terrain.terrain_lighting_pipeline = engine::create_compute_pipeline(
         vulkan,
         { terrain.uniform_desc_set.layouts[0],
           terrain.texture_desc_set.layouts[0],
@@ -609,6 +571,60 @@ void draw_terrain(
         vk::create::shader_module( vulkan, TERRAIN_SHADER_LIGHTING_MODULE_PATH ),
         "cs_terrain_draw"
     );
+}
+
+void terrain_precompute( Terrain& terrain, VkCommandBuffer precompute_cmdbuf )
+{
+    vk::rt::build_blas( precompute_cmdbuf, terrain.blas );
+    vk::rt::build_tlas( precompute_cmdbuf, terrain.tlas );
+}
+
+void draw_terrain_prepass(
+    Terrain& terrain,
+    [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task,
+    engine::TaskList& task_list
+)
+{
+    // The deferred set-up makes this really complicated, because this means that
+    // the rendering for this can't be done in its own shader.
+    //
+    // https://advances.realtimerendering.com/s2023/Etienne(ATVI)-Large%20Scale%20Terrain%20Rendering%20with%20notes%20(Advances%202023).pdf
+    // Slide 24 notes that terrain writes to the depth buffer
+    // Geometric normal is also written to a g-buffer
+    // We write to the GBuffer_Position, but we need to specifically modify the stencil bit s.t it
+    // it has ID 2 for terrain. In the opaque pass, "terrain is deferred rendered"
+
+    // For now, since we don't have a stencil setup, I think it's possible to use the alpha channel
+    // in the position GBuffer to store an ID, s.t 0 is nothing, 1 is car shading, and 2 is terrain.
+    // Writes to the GBuffer depth and GBuffer normals for now
+
+    engine::DrawResourceDescriptor draw_descriptor = {
+        .vertex_buffers = { terrain.mesh_buffers.vertex_buffer.handle },
+        .index_buffer = terrain.mesh_buffers.index_buffer.handle,
+        .vertex_buffer_offsets = { 0 },
+        .index_count = static_cast<uint32_t>( terrain.indices.size() ),
+    };
+
+    terrain.terrain_prepass_task.draw_tasks.push_back( {
+        .draw_resource_descriptor = draw_descriptor,
+        .descriptor_sets = {
+            &terrain.prepass_uniform_desc_set,
+            &terrain.prepass_texture_desc_set,
+            &terrain.prepass_sampler_desc_set,
+            &terrain.prepass_lut_desc_set,
+        },
+        .pipeline = terrain.terrain_prepass_pipeline,
+    } );
+
+    engine::add_gfx_task( task_list, terrain.terrain_prepass_task );
+
+    // ATM the terrain does not draw to the depth multisampled prepass
+    // PushDepthPrepassMS( depth_prepass_ms_task, draw_descriptor );
+}
+
+void draw_terrain( Terrain& terrain, engine::State& engine, engine::TaskList& task_list )
+{
+    // Can we assume the color_attachment, by this point, is in a write-only state?
 
     uint32_t dispatch_x = ( engine.swapchain.extent.width + 7 ) / 8;
     uint32_t dispatch_y = ( engine.swapchain.extent.width + 7 ) / 8;
@@ -617,7 +633,7 @@ void draw_terrain(
 
     // Full-screen quad draw.
     engine::ComputeTask cs_terrain_draw_task = {
-        cs_terrain_lighting_pipeline,
+        terrain.terrain_lighting_pipeline,
         { &terrain.uniform_desc_set,
           &terrain.texture_desc_set,
           &terrain.lut_desc_set,

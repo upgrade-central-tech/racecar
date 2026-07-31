@@ -69,6 +69,8 @@ struct Terrain {
     engine::DescriptorSet* reflection_texture_desc_set;
 
     engine::GfxTask terrain_prepass_task;
+    engine::Pipeline terrain_prepass_pipeline;
+    engine::Pipeline terrain_lighting_pipeline;
 
     UniformBuffer<ub_data::TerrainData> terrain_uniform;
     vk::rt::AccelerationStructure blas;
@@ -98,15 +100,18 @@ struct Terrain {
     } };
 };
 
-void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain, engine::DescriptorSet& car_tlas_desc_set );
+void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain,
+    const TerrainPrepassInfo& prepass_info, const TerrainLightingInfo& lighting_info );
+
+void initialize_terrain_draw_pipeline( Terrain& terrain, vk::Common& vulkan,
+    engine::DescriptorSet& car_tlas_desc_set,
+    engine::DescriptorSet& reflection_texture_desc_set );
 
 void terrain_precompute( Terrain& terrain, VkCommandBuffer precompute_cmdbuf );
 
-void draw_terrain_prepass( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    const TerrainPrepassInfo& prepass_info,
+void draw_terrain_prepass( Terrain& terrain,
     [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
 
-void draw_terrain( Terrain& terrain, vk::Common& vulkan, engine::State& engine,
-    engine::TaskList& task_list, TerrainLightingInfo& info );
+void draw_terrain( Terrain& terrain, engine::State& engine, engine::TaskList& task_list );
 
 }
