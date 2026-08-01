@@ -44,7 +44,7 @@ struct Gui {
         bool enable_camera_lock_on_car = false;
         bool rotate_on = false;
         float rotate_speed = 0.005f;
-        float bumpiness = 0.001f;
+        float bumpiness = 0.0f;
     } demo = {};
 
     struct AtmosphereData {
@@ -114,16 +114,28 @@ struct Gui {
 };
 
 Gui initialize( Context& ctx, const engine::State& engine );
-void process_event( Gui& gui, const SDL_Event* event, atmosphere::Atmosphere& atms,
+void process_event(
+    Gui& gui,
+    const SDL_Event* event,
+    atmosphere::Atmosphere& atms,
     camera::OrbitCamera& camera,
-    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers );
-void update( Gui& gui, atmosphere::Atmosphere& atms, camera::OrbitCamera& camera,
-    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers );
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers
+);
+void update(
+    Gui& gui,
+    atmosphere::Atmosphere& atms,
+    camera::OrbitCamera& camera,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers
+);
 void free();
 
-void use_preset( const Preset& preset, gui::Gui& gui, atmosphere::Atmosphere& atms,
+void use_preset(
+    const Preset& preset,
+    gui::Gui& gui,
+    atmosphere::Atmosphere& atms,
     camera::OrbitCamera& camera,
-    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers );
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers
+);
 void reload_presets( gui::Gui& gui );
 
 } // namespace racecar::engine::gui
