@@ -200,7 +200,7 @@ vk::mem::AllocatedImage create_image(
                 copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                 copy_region.imageSubresource.mipLevel = 0;
                 copy_region.imageSubresource.baseArrayLayer = 0;
-                copy_region.imageSubresource.layerCount = mip_levels;
+                copy_region.imageSubresource.layerCount = 1;
                 copy_region.imageExtent = extent;
 
                 vkCmdCopyBufferToImage(
