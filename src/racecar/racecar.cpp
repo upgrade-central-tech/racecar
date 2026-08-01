@@ -1585,6 +1585,558 @@ void handle_sdl_window_events(
     }
 }
 
+void update_preset_transition(
+    Context& ctx,
+    engine::State& engine,
+    gui::Gui& gui,
+    std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
+    atmosphere::Atmosphere& atms
+)
+{
+    PresetTransition& transition = gui.preset.transition.value();
+
+    float t = std::invoke( [&]() -> float {
+        if ( transition.duration == 0.f ) {
+            // Instantly complete transition if duration is zero
+            return 1.f;
+        }
+
+        // Have to clamp it because progress might be greater than 1 after
+        // adding the delta time
+        return glm::saturate( transition.progress / transition.duration );
+    } );
+
+    {
+        using enum gui::Gui::PresetData::Easing;
+
+        switch ( gui.preset.easing ) {
+        case LINEAR:
+            break;
+
+        case EASE_OUT_QUAD:
+            t = glm::saturate( 1.f - ( 1.f - t ) * ( 1.f - t ) );
+            break;
+
+        case EASE_OUT_QUINT:
+            t = glm::saturate( 1.f - std::pow( 1.f - t, 5.f ) );
+            break;
+
+        case EASE_IN_OUT_QUAD:
+            t = glm::saturate(
+                t < 0.5f ? 2.f * t * t : 1.f - std::pow( -2.f * t + 2.f, 2.f ) * 0.5f
+            );
+            break;
+
+        case EASE_IN_OUT_QUINT:
+            t = glm::saturate(
+                t < 0.5f ? 16.f * t * t * t * t * t : 1.f - std::pow( -2.f * t + 2.f, 5.f ) * 0.5f
+            );
+            break;
+
+        default:
+            throw Exception( "[preset] Unhandled easing type" );
+        }
+    }
+
+    // Initial and final
+    const Preset& i = transition.before;
+    const Preset& f = transition.after;
+
+    atms.sun_zenith = glm::mix( i.sun_zenith, f.sun_zenith, t );
+    atms.sun_azimuth = glm::mix( i.sun_azimuth, f.sun_azimuth, t );
+
+    gui.terrain.wetness = glm::mix( i.wetness, f.wetness, t );
+    gui.terrain.snow = glm::mix( i.snow, f.snow, t );
+    gui.terrain.scrolling_speed = glm::mix( i.scrolling_speed, f.scrolling_speed, t );
+    gui.demo.bumpiness = glm::mix( i.bumpiness, f.bumpiness, t );
+
+    for ( size_t idx = 0; idx < i.materials.size(); ++idx ) {
+        const gui::Material& i_mat = i.materials[idx].data;
+        const gui::Material& f_mat = f.materials[idx].data;
+
+        glm::vec4 color = glm::mix( i_mat.color, f_mat.color, t );
+        float roughness = glm::mix( i_mat.roughness, f_mat.roughness, t );
+        float metallic = glm::mix( i_mat.metallic, f_mat.metallic, t );
+        float clearcoat = glm::mix( i_mat.clearcoat_weight, f_mat.clearcoat_weight, t );
+        float clearcoat_roughness
+            = glm::mix( i_mat.clearcoat_roughness, f_mat.clearcoat_roughness, t );
+        float glintiness = glm::mix( i_mat.glintiness, f_mat.glintiness, t );
+        float glint_log_density = glm::mix( i_mat.glint_log_density, f_mat.glint_log_density, t );
+        float glint_roughness = glm::mix( i_mat.glint_roughness, f_mat.glint_roughness, t );
+        float glint_randomness = glm::mix( i_mat.glint_randomness, f_mat.glint_randomness, t );
+
+        size_t material_idx = static_cast<size_t>( i.materials[idx].slot );
+        auto mat_data = material_uniform_buffers[material_idx].get_data();
+
+        mat_data.base_color = color;
+        mat_data.roughness = roughness;
+        mat_data.metallic = metallic;
+        mat_data.clearcoat = clearcoat;
+        mat_data.clearcoat_roughness = clearcoat_roughness;
+        mat_data.glintiness = glintiness;
+        mat_data.glint_log_density = glint_log_density;
+        mat_data.glint_roughness = glint_roughness;
+        mat_data.glint_randomness = glint_randomness;
+
+        gui.debug.color = color;
+        gui.debug.roughness = roughness;
+        gui.debug.metallic = metallic;
+        gui.debug.clearcoat_weight = clearcoat;
+        gui.debug.clearcoat_roughness = clearcoat_roughness;
+        gui.debug.glintiness = glintiness;
+        gui.debug.glint_log_density = glint_log_density;
+        gui.debug.glint_roughness = glint_roughness;
+        gui.debug.glint_randomness = glint_randomness;
+
+        material_uniform_buffers[material_idx].set_data( mat_data );
+        material_uniform_buffers[material_idx].update( ctx.vulkan, engine.get_frame_index() );
+    }
+
+    engine.camera.center = glm::mix( i.camera_center, f.camera_center, t );
+    engine.camera.radius = glm::mix( i.camera_radius, f.camera_radius, t );
+    engine.camera.azimuth = glm::mix( i.camera_azimuth, f.camera_azimuth, t );
+    engine.camera.zenith = glm::mix( i.camera_zenith, f.camera_zenith, t );
+
+    transition.progress += static_cast<float>( engine.delta );
+
+    if ( transition.progress >= transition.duration ) {
+        // Finished the transition to the current preset
+        gui.preset.transition = std::nullopt;
+    }
+}
+
+struct CameraData {
+    glm::mat4 view;
+    glm::mat4 projection;
+    glm::vec3 position;
+};
+
+/*
+ * Applies this frame's camera input and demo-driven camera motion to engine.camera, then derives
+ * the view/projection matrices and eye position from it.
+ */
+CameraData get_camera_data(
+    engine::State& engine,
+    gui::Gui& gui,
+    const scene::Scene& scene,
+    const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
+    const volumetric::Volumetric& volumetric
+)
+{
+    camera::process_input( engine.camera );
+    camera::OrbitCamera& camera = engine.camera;
+
+    if ( scene.demo_scene_nodes.car_parent_id.has_value()
+         && gui.demo.enable_camera_lock_on_car ) {
+        camera.center = model_mat_uniform_buffers.at( scene.demo_scene_nodes.car_parent_id.value() )
+                            .get_data()
+                            .model_mat[3];
+    }
+
+    camera.center.y += gui.demo.bumpiness
+        * static_cast<float>( sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 6000.0 ) );
+
+    glm::mat4 view = camera::calculate_view_matrix( camera );
+    glm::mat4 projection = glm::perspective(
+        camera.fov_y,
+        camera.aspect_ratio,
+        camera.near_plane,
+        camera.far_plane
+    );
+
+    // This cursed piece of code flips the positive y-axis down because Vulkan's clip space +y
+    // points down (whereas in OpenGL/WebGPU it points up).
+    projection[1][1] *= -1;
+
+    return {
+        .view = view,
+        .projection = projection,
+        .position = camera::calculate_eye_position( camera ),
+    };
+}
+
+void update_camera_uniform_buffer(
+    Context& ctx,
+    engine::State& engine,
+    gui::Gui& gui,
+    UniformBuffer<ub_data::Camera>& camera_buffer,
+    const CameraData& camera_data
+)
+{
+    const camera::OrbitCamera& camera = engine.camera;
+
+    ub_data::Camera camera_ub = camera_buffer.get_data();
+
+    glm::mat4 model = glm::identity<glm::mat4>();
+
+    glm::mat4 jittered_projection = camera_data.projection;
+
+    if ( gui.aa.mode == gui::Gui::AAData::Mode::TAA ) {
+        glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
+
+        jittered_projection[2][0] += offset.x / static_cast<float>( engine.swapchain.extent.width );
+        jittered_projection[2][1] += offset.y / static_cast<float>( engine.swapchain.extent.height );
+    }
+
+    camera_ub.prev_mvp = camera_ub.mvp;
+    camera_ub.mvp = jittered_projection * camera_data.view * model;
+    camera_ub.model = model;
+    camera_ub.view_mat = camera_data.view;
+    camera_ub.inv_model = glm::inverse( model );
+    camera_ub.inv_vp = glm::inverse( jittered_projection * camera_data.view );
+
+    camera_ub.proj_mat = jittered_projection;
+    camera_ub.inv_proj = glm::inverse( jittered_projection );
+
+    camera_ub.camera_pos = glm::vec4( camera_data.position, 1.0f );
+    camera_ub.camera_constants
+        = glm::vec4( camera.near_plane, camera.far_plane, camera.aspect_ratio, camera.fov_y );
+
+    // Store modded frame index, used for the jitter
+    camera_ub.camera_constants1 = glm::vec4( engine.get_frame_index() % 16, 0.0f, 0.0f, 0.0f );
+
+    camera_buffer.set_data( camera_ub );
+    camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
+}
+
+void update_atmosphere_uniform_buffer(
+    Context& ctx,
+    engine::State& engine,
+    gui::Gui& gui,
+    atmosphere::Atmosphere& atms,
+    const CameraData& camera_data
+)
+{
+    if ( gui.atms.animate_zenith ) {
+        float sin = std::sin( static_cast<float>( engine.time ) * gui.atms.animate_zenith_speed );
+        float t = ( sin + 1.f ) * 0.5f;
+        atms.sun_zenith = glm::lerp( -glm::half_pi<float>(), glm::half_pi<float>(), t );
+    }
+
+    glm::vec3 atmosphere_position = {
+        camera_data.position.x,
+        // A y-value of 9 means the camera is 9 km above the surface. This is pretty
+        // ridiculous so we manually adjust it here. Now y needs to be 900.
+        camera_data.position.y * 0.01f,
+        camera_data.position.z,
+    };
+
+    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+    atms_ub.inverse_proj = glm::inverse( camera_data.projection );
+    atms_ub.inverse_view = glm::inverse( camera_data.view );
+    atms_ub.camera_position = atmosphere_position;
+    atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
+    atms_ub.radiance_exposure = gui.atms.radiance_exposure;
+
+    atms.uniform_buffer.set_data( atms_ub );
+    atms.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
+}
+
+void update_ao_uniform_buffer(
+    Context& ctx, engine::State& engine, gui::Gui& gui, engine::post::AoPass& ao_pass
+)
+{
+    ub_data::AOData ao_ub = ao_pass.ao_buffer.get_data();
+
+    ao_ub.packed_floats0 = glm::vec4(
+        gui.ao.thickness,
+        gui.ao.radius,
+        gui.ao.offset,
+        gui.ao.enable_debug ? 1.0f : 0.0f
+    );
+    ao_ub.packed_floats1 = glm::vec4( gui.ao.enable_ao ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f );
+
+    ao_pass.ao_buffer.set_data( ao_ub );
+    ao_pass.ao_buffer.update( ctx.vulkan, engine.get_frame_index() );
+}
+
+void update_tonemapping_uniform_buffer(
+    Context& ctx, engine::State& engine, gui::Gui& gui, engine::post::TonemappingPass& tm_pass
+)
+{
+    ub_data::Tonemapping tm_ub = tm_pass.buffer.get_data();
+    tm_ub.mode = static_cast<int>( gui.tonemapping.mode );
+    tm_ub.hdr_target_luminance = gui.tonemapping.hdr_target_luminance;
+
+    tm_pass.buffer.set_data( tm_ub );
+    tm_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
+}
+
+void update_aa_uniform_buffer(
+    Context& ctx, engine::State& engine, gui::Gui& gui, engine::post::AAPass& aa_pass
+)
+{
+    ub_data::AA aa_ub = aa_pass.buffer.get_data();
+    aa_ub.mode = static_cast<int>( gui.aa.mode );
+    aa_pass.buffer.set_data( aa_ub );
+    aa_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
+}
+
+void update_volumetric_uniform_buffer(
+    Context& ctx,
+    engine::State& engine,
+    atmosphere::Atmosphere& atms,
+    volumetric::Volumetric& volumetric,
+    const CameraData& camera_data
+)
+{
+    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+
+    ub_data::Clouds cloud_ub = volumetric.uniform_buffer.get_data();
+    cloud_ub.inverse_proj = glm::inverse( camera_data.projection );
+    cloud_ub.inverse_view = glm::inverse( camera_data.view );
+    cloud_ub.camera_position = camera::calculate_eye_position( engine.camera );
+    cloud_ub.cloud_offset_x += 0.0001f;
+    cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
+    cloud_ub.cloud_offset_y += 0.0001f;
+
+    volumetric.uniform_buffer.set_data( cloud_ub );
+    volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
+}
+
+void update_debug_uniform_buffer(
+    Context& ctx,
+    engine::State& engine,
+    gui::Gui& gui,
+    atmosphere::Atmosphere& atms,
+    UniformBuffer<ub_data::Debug>& debug_buffer
+)
+{
+    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+
+    ub_data::Debug debug_ub = {
+        .color = gui.debug.color,
+        .packed_data0 = glm::vec4(
+            gui.debug.roughness,
+            gui.debug.metallic,
+            gui.debug.clearcoat_roughness,
+            gui.debug.clearcoat_weight
+        ),
+        .sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f ),
+
+        .enable_albedo_map = gui.debug.enable_albedo_map,
+        .enable_normal_map = gui.debug.enable_normal_map,
+        .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
+        .normals_only = gui.debug.normals_only,
+        .albedo_only = gui.debug.albedo_only,
+        .roughness_metal_only = gui.debug.roughness_metal_only,
+
+        .ray_traced_shadows = gui.debug.ray_traced_shadows,
+    };
+
+    debug_buffer.set_data( debug_ub );
+    debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
+}
+
+void update_material_uniform_buffers(
+    Context& ctx,
+    engine::State& engine,
+    gui::Gui& gui,
+    std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
+    size_t num_materials
+)
+{
+    gui.debug.current_editing_material
+        = glm::clamp( gui.debug.current_editing_material, 0, int( num_materials ) );
+    int mat_idx = gui.debug.current_editing_material;
+    auto mat_data = material_uniform_buffers[size_t( mat_idx )].get_data();
+    if ( gui.debug.load_material_into_gui ) {
+        gui.debug.color = mat_data.base_color;
+        gui.debug.roughness = mat_data.roughness;
+        gui.debug.metallic = mat_data.metallic;
+        gui.debug.clearcoat_weight = mat_data.clearcoat;
+        gui.debug.clearcoat_roughness = mat_data.clearcoat_roughness;
+        gui.debug.load_material_into_gui = false;
+    }
+    mat_data.base_color = gui.debug.color;
+    mat_data.roughness = gui.debug.roughness;
+    mat_data.metallic = gui.debug.metallic;
+    mat_data.clearcoat = gui.debug.clearcoat_weight;
+    mat_data.clearcoat_roughness = gui.debug.clearcoat_roughness;
+
+    mat_data.glintiness = gui.debug.glintiness;
+    mat_data.glint_log_density = gui.debug.glint_log_density;
+    mat_data.glint_roughness = gui.debug.glint_roughness;
+    mat_data.glint_randomness = gui.debug.glint_randomness;
+
+    material_uniform_buffers[size_t( mat_idx )].set_data( mat_data );
+    material_uniform_buffers[size_t( mat_idx )].update( ctx.vulkan, engine.get_frame_index() );
+}
+
+void update_rt_uniform_buffers(
+    Context& ctx,
+    engine::State& engine,
+    UniformBuffer<ub_data::BLASOffsets>& offset_data,
+    UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data
+)
+{
+    offset_data.update( ctx.vulkan, engine.get_frame_index() );
+    rt_texture_uniform_data.update( ctx.vulkan, engine.get_frame_index() );
+}
+
+void update_terrain_uniform_buffer(
+    Context& ctx, engine::State& engine, gui::Gui& gui, geometry::Terrain& terrain
+)
+{
+    ub_data::TerrainData terrain_ub = terrain.terrain_uniform.get_data();
+
+    // Final param packs the offset
+
+    terrain_ub.packed_data0 = glm::vec4(
+        gui.terrain.enable_gt7_ao ? 1.0f : 0.0f,
+        gui.terrain.shadowing_only ? 1.0f : 0.0f,
+        gui.terrain.roughness_only ? 1.0f : 0.0f,
+        0.0f
+    );
+
+    terrain_ub.terrain_data0 = glm::vec4(
+        gui.terrain.gt7_local_shadow_strength,
+        gui.terrain.wetness,
+        gui.terrain.snow,
+        0.0f
+    );
+
+    // TODO: Add time-delta here to ensure consistent visuals across-frames
+    glm::vec2 scroll_direction
+        = glm::normalize( glm::vec2( terrain_ub.terrain_data1.z, terrain_ub.terrain_data1.w ) );
+
+    //  for now, temp hard-code the UV scrolling direction
+    scroll_direction.x = 0.0f;
+    scroll_direction.y = 1.0f;
+
+    glm::vec2 offset_XY = gui.terrain.scrolling_speed * scroll_direction
+        + glm::vec2( terrain_ub.terrain_data1.x, terrain_ub.terrain_data1.y );
+
+    terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );
+
+    terrain.terrain_uniform.set_data( terrain_ub );
+    terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
+}
+
+void update_car_transform(
+    Context& ctx,
+    engine::State& engine,
+    gui::Gui& gui,
+    scene::Scene& scene,
+    std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
+    const volumetric::Volumetric& volumetric,
+    std::vector<bool>& discovered
+)
+{
+    if ( !scene.demo_scene_nodes.car_parent_id.has_value() ) {
+        return;
+    }
+
+    glm::vec3 velocity = { };
+
+    if ( gui.demo.enable_translation ) {
+        velocity = glm::vec3(
+            0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 1000.0 ),
+            0,
+            0.025
+        );
+    }
+
+    glm::mat4 transform = glm::translate( glm::identity<glm::mat4>(), velocity );
+
+    if ( gui.demo.enable_translation ) {
+        scene::propagate_transform(
+            ctx.vulkan,
+            engine,
+            scene,
+            model_mat_uniform_buffers,
+            scene.demo_scene_nodes.car_parent_id.value(),
+            transform,
+            discovered
+        );
+    }
+}
+
+void update_wheel_transforms(
+    Context& ctx,
+    engine::State& engine,
+    gui::Gui& gui,
+    scene::Scene& scene,
+    std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
+    std::vector<bool>& discovered
+)
+{
+    // front wheels
+    glm::vec3 pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[0] );
+    float angle
+        = gui.terrain.scrolling_speed * 30 / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
+
+    glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
+    model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
+    model = glm::translate( model, -pivot );
+
+    if ( scene.demo_scene_nodes.wheel_front_left_id.has_value() ) {
+        scene::propagate_transform(
+            ctx.vulkan,
+            engine,
+            scene,
+            model_mat_uniform_buffers,
+            scene.demo_scene_nodes.wheel_front_left_id.value(),
+            model,
+            discovered
+        );
+    }
+    if ( scene.demo_scene_nodes.wheel_front_right_id.has_value() ) {
+        scene::propagate_transform(
+            ctx.vulkan,
+            engine,
+            scene,
+            model_mat_uniform_buffers,
+            scene.demo_scene_nodes.wheel_front_right_id.value(),
+            model,
+            discovered
+        );
+    }
+    // back wheels
+    pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[1] );
+
+    model = glm::translate( glm::identity<glm::mat4>(), pivot );
+    model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
+    model = glm::translate( model, -pivot );
+
+    if ( scene.demo_scene_nodes.wheel_back_left_id.has_value() ) {
+        scene::propagate_transform(
+            ctx.vulkan,
+            engine,
+            scene,
+            model_mat_uniform_buffers,
+            scene.demo_scene_nodes.wheel_back_left_id.value(),
+            model,
+            discovered
+        );
+    }
+    if ( scene.demo_scene_nodes.wheel_back_right_id.has_value() ) {
+        scene::propagate_transform(
+            ctx.vulkan,
+            engine,
+            scene,
+            model_mat_uniform_buffers,
+            scene.demo_scene_nodes.wheel_back_right_id.value(),
+            model,
+            discovered
+        );
+    }
+}
+
+void update_bloom_uniform_buffer(
+    Context& ctx, engine::State& engine, gui::Gui& gui, engine::post::BloomPass& bloom_pass
+)
+{
+    ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();
+
+    bloom_ub.enable = gui.bloom.enable ? 1 : 0;
+    bloom_ub.threshold = gui.bloom.threshold;
+    bloom_ub.filter_radius = gui.bloom.filter_radius;
+
+    bloom_pass.bloom_ub.set_data( bloom_ub );
+    bloom_pass.bloom_ub.update( ctx.vulkan, engine.get_frame_index() );
+}
+
 void run( bool use_fullscreen )
 {
     // ================================================================================================================
@@ -2013,484 +2565,67 @@ void run( bool use_fullscreen )
             continue;
         }
 
+        // Handle preset transitioning
         if ( gui.preset.transition.has_value() ) {
-            PresetTransition& transition = gui.preset.transition.value();
-
-            float t = std::invoke( [&]() -> float {
-                if ( transition.duration == 0.f ) {
-                    // Instantly complete transition if duration is zero
-                    return 1.f;
-                }
-
-                // Have to clamp it because progress might be greater than 1 after
-                // adding the delta time
-                return glm::saturate( transition.progress / transition.duration );
-            } );
-
-            {
-                using enum gui::Gui::PresetData::Easing;
-
-                switch ( gui.preset.easing ) {
-                case LINEAR:
-                    break;
-
-                case EASE_OUT_QUAD:
-                    t = glm::saturate( 1.f - ( 1.f - t ) * ( 1.f - t ) );
-                    break;
-
-                case EASE_OUT_QUINT:
-                    t = glm::saturate( 1.f - std::pow( 1.f - t, 5.f ) );
-                    break;
-
-                case EASE_IN_OUT_QUAD:
-                    t = glm::saturate(
-                        t < 0.5f ? 2.f * t * t : 1.f - std::pow( -2.f * t + 2.f, 2.f ) * 0.5f
-                    );
-                    break;
-
-                case EASE_IN_OUT_QUINT:
-                    t = glm::saturate(
-                        t < 0.5f ? 16.f * t * t * t * t * t
-                                 : 1.f - std::pow( -2.f * t + 2.f, 5.f ) * 0.5f
-                    );
-                    break;
-
-                default:
-                    throw Exception( "[preset] Unhandled easing type" );
-                }
-            }
-
-            // Initial and final
-            const Preset& i = transition.before;
-            const Preset& f = transition.after;
-
-            atms.sun_zenith = glm::mix( i.sun_zenith, f.sun_zenith, t );
-            atms.sun_azimuth = glm::mix( i.sun_azimuth, f.sun_azimuth, t );
-
-            gui.terrain.wetness = glm::mix( i.wetness, f.wetness, t );
-            gui.terrain.snow = glm::mix( i.snow, f.snow, t );
-            gui.terrain.scrolling_speed = glm::mix( i.scrolling_speed, f.scrolling_speed, t );
-            gui.demo.bumpiness = glm::mix( i.bumpiness, f.bumpiness, t );
-
-            for ( size_t idx = 0; idx < i.materials.size(); ++idx ) {
-                const gui::Material& i_mat = i.materials[idx].data;
-                const gui::Material& f_mat = f.materials[idx].data;
-
-                glm::vec4 color = glm::mix( i_mat.color, f_mat.color, t );
-                float roughness = glm::mix( i_mat.roughness, f_mat.roughness, t );
-                float metallic = glm::mix( i_mat.metallic, f_mat.metallic, t );
-                float clearcoat = glm::mix( i_mat.clearcoat_weight, f_mat.clearcoat_weight, t );
-                float clearcoat_roughness
-                    = glm::mix( i_mat.clearcoat_roughness, f_mat.clearcoat_roughness, t );
-                float glintiness = glm::mix( i_mat.glintiness, f_mat.glintiness, t );
-                float glint_log_density
-                    = glm::mix( i_mat.glint_log_density, f_mat.glint_log_density, t );
-                float glint_roughness = glm::mix( i_mat.glint_roughness, f_mat.glint_roughness, t );
-                float glint_randomness
-                    = glm::mix( i_mat.glint_randomness, f_mat.glint_randomness, t );
-
-                size_t material_idx = static_cast<size_t>( i.materials[idx].slot );
-                auto mat_data = material_uniform_buffers[material_idx].get_data();
-
-                mat_data.base_color = color;
-                mat_data.roughness = roughness;
-                mat_data.metallic = metallic;
-                mat_data.clearcoat = clearcoat;
-                mat_data.clearcoat_roughness = clearcoat_roughness;
-                mat_data.glintiness = glintiness;
-                mat_data.glint_log_density = glint_log_density;
-                mat_data.glint_roughness = glint_roughness;
-                mat_data.glint_randomness = glint_randomness;
-
-                gui.debug.color = color;
-                gui.debug.roughness = roughness;
-                gui.debug.metallic = metallic;
-                gui.debug.clearcoat_weight = clearcoat;
-                gui.debug.clearcoat_roughness = clearcoat_roughness;
-                gui.debug.glintiness = glintiness;
-                gui.debug.glint_log_density = glint_log_density;
-                gui.debug.glint_roughness = glint_roughness;
-                gui.debug.glint_randomness = glint_randomness;
-
-                material_uniform_buffers[material_idx].set_data( mat_data );
-                material_uniform_buffers[material_idx].update(
-                    ctx.vulkan,
-                    engine.get_frame_index()
-                );
-            }
-
-            engine.camera.center = glm::mix( i.camera_center, f.camera_center, t );
-            engine.camera.radius = glm::mix( i.camera_radius, f.camera_radius, t );
-            engine.camera.azimuth = glm::mix( i.camera_azimuth, f.camera_azimuth, t );
-            engine.camera.zenith = glm::mix( i.camera_zenith, f.camera_zenith, t );
-
-            transition.progress += static_cast<float>( engine.delta );
-
-            if ( transition.progress >= transition.duration ) {
-                // Finished the transition to the current preset
-                gui.preset.transition = std::nullopt;
-            }
+            update_preset_transition( ctx, engine, gui, material_uniform_buffers, atms );
         }
 
-        camera::process_input( engine.camera );
+        // Calculate camera data
+        CameraData camera_data
+            = get_camera_data( engine, gui, scene, model_mat_uniform_buffers, volumetric );
+
         camera::OrbitCamera& camera = engine.camera;
 
-        if ( scene.demo_scene_nodes.car_parent_id.has_value()
-             && gui.demo.enable_camera_lock_on_car ) {
-            camera.center
-                = model_mat_uniform_buffers.at( scene.demo_scene_nodes.car_parent_id.value() )
-                      .get_data()
-                      .model_mat[3];
-        }
-
-        camera.center.y += gui.demo.bumpiness
-            * static_cast<float>(
-                               sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 6000.0 )
-            );
-
-        glm::mat4 view = camera::calculate_view_matrix( camera );
-        glm::mat4 projection = glm::perspective(
-            camera.fov_y,
-            camera.aspect_ratio,
-            camera.near_plane,
-            camera.far_plane
-        );
-
-        // This cursed piece of code flips the positive y-axis down because Vulkan's clip space +y
-        // points down (whereas in OpenGL/WebGPU it points up).
-        projection[1][1] *= -1;
-
-        glm::vec3 camera_position = camera::calculate_eye_position( camera );
+        // Update camera uniform buffer
+        update_camera_uniform_buffer( ctx, engine, gui, camera_buffer, camera_data );
 
         // Update atmosphere uniform buffer
-        {
-            if ( gui.atms.animate_zenith ) {
-                float sin
-                    = std::sin( static_cast<float>( engine.time ) * gui.atms.animate_zenith_speed );
-                float t = ( sin + 1.f ) * 0.5f;
-                atms.sun_zenith = glm::lerp( -glm::half_pi<float>(), glm::half_pi<float>(), t );
-            }
-
-            glm::vec3 atmosphere_position = {
-                camera_position.x,
-                // A y-value of 9 means the camera is 9 km above the surface. This is pretty
-                // ridiculous so we manually adjust it here. Now y needs to be 900.
-                camera_position.y * 0.01f,
-                camera_position.z,
-            };
-
-            ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
-            atms_ub.inverse_proj = glm::inverse( projection );
-            atms_ub.inverse_view = glm::inverse( view );
-            atms_ub.camera_position = atmosphere_position;
-            atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
-            atms_ub.radiance_exposure = gui.atms.radiance_exposure;
-
-            atms.uniform_buffer.set_data( atms_ub );
-            atms.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        }
-
-        // Update camera uniform buffer
-        {
-            ub_data::Camera camera_ub = camera_buffer.get_data();
-
-            glm::mat4 model = glm::identity<glm::mat4>();
-
-            glm::mat4 jittered_projection = projection;
-
-            if ( gui.aa.mode == gui::Gui::AAData::Mode::TAA ) {
-                glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
-
-                jittered_projection[2][0]
-                    += offset.x / static_cast<float>( engine.swapchain.extent.width );
-                jittered_projection[2][1]
-                    += offset.y / static_cast<float>( engine.swapchain.extent.height );
-            }
-
-            camera_ub.prev_mvp = camera_ub.mvp;
-            camera_ub.mvp = jittered_projection * view * model;
-            camera_ub.model = model;
-            camera_ub.view_mat = view;
-            camera_ub.inv_model = glm::inverse( model );
-            camera_ub.inv_vp = glm::inverse( jittered_projection * view );
-
-            camera_ub.proj_mat = jittered_projection;
-            camera_ub.inv_proj = glm::inverse( jittered_projection );
-
-            camera_ub.camera_pos = glm::vec4( camera_position, 1.0f );
-            camera_ub.camera_constants = glm::vec4(
-                camera.near_plane,
-                camera.far_plane,
-                camera.aspect_ratio,
-                camera.fov_y
-            );
-
-            // Store modded frame index, used for the jitter
-            camera_ub.camera_constants1
-                = glm::vec4( engine.get_frame_index() % 16, 0.0f, 0.0f, 0.0f );
-
-            camera_buffer.set_data( camera_ub );
-            camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        }
+        update_atmosphere_uniform_buffer( ctx, engine, gui, atms, camera_data );
 
         // AO update
-        {
-            ub_data::AOData ao_ub = ao_pass.ao_buffer.get_data();
-
-            ao_ub.packed_floats0 = glm::vec4(
-                gui.ao.thickness,
-                gui.ao.radius,
-                gui.ao.offset,
-                gui.ao.enable_debug ? 1.0f : 0.0f
-            );
-            ao_ub.packed_floats1 = glm::vec4( gui.ao.enable_ao ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f );
-
-            ao_pass.ao_buffer.set_data( ao_ub );
-            ao_pass.ao_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        }
+        update_ao_uniform_buffer( ctx, engine, gui, ao_pass );
 
         // Tonemapping update
-        {
-            ub_data::Tonemapping tm_ub = tm_pass.buffer.get_data();
-            tm_ub.mode = static_cast<int>( gui.tonemapping.mode );
-            tm_ub.hdr_target_luminance = gui.tonemapping.hdr_target_luminance;
-
-            tm_pass.buffer.set_data( tm_ub );
-            tm_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
-        }
+        update_tonemapping_uniform_buffer( ctx, engine, gui, tm_pass );
 
         // AA update
-        {
-            ub_data::AA aa_ub = aa_pass.buffer.get_data();
-            aa_ub.mode = static_cast<int>( gui.aa.mode );
-            aa_pass.buffer.set_data( aa_ub );
-            aa_pass.buffer.update( ctx.vulkan, engine.get_frame_index() );
-        }
+        update_aa_uniform_buffer( ctx, engine, gui, aa_pass );
 
 #if ENABLE_VOLUMETRICS
         // Update volumetric camera buffer
-        {
-            ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
-
-            ub_data::Clouds cloud_ub = volumetric.uniform_buffer.get_data();
-            cloud_ub.inverse_proj = glm::inverse( projection );
-            cloud_ub.inverse_view = glm::inverse( view );
-            cloud_ub.camera_position = camera::calculate_eye_position( camera );
-            cloud_ub.cloud_offset_x += 0.0001f;
-            cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
-            cloud_ub.cloud_offset_y += 0.0001f;
-
-            volumetric.uniform_buffer.set_data( cloud_ub );
-            volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        }
+        update_volumetric_uniform_buffer( ctx, engine, atms, volumetric, camera_data );
 #endif
 
         // Update debug uniform buffer
-        {
-            ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
-
-            ub_data::Debug debug_ub = {
-                .color = gui.debug.color,
-                .packed_data0 = glm::vec4(
-                    gui.debug.roughness,
-                    gui.debug.metallic,
-                    gui.debug.clearcoat_roughness,
-                    gui.debug.clearcoat_weight
-                ),
-                .sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f ),
-
-                .enable_albedo_map = gui.debug.enable_albedo_map,
-                .enable_normal_map = gui.debug.enable_normal_map,
-                .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
-                .normals_only = gui.debug.normals_only,
-                .albedo_only = gui.debug.albedo_only,
-                .roughness_metal_only = gui.debug.roughness_metal_only,
-
-                .ray_traced_shadows = gui.debug.ray_traced_shadows,
-            };
-
-            debug_buffer.set_data( debug_ub );
-            debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
-        }
+        update_debug_uniform_buffer( ctx, engine, gui, atms, debug_buffer );
 
         // update materials
-        {
-            gui.debug.current_editing_material
-                = glm::clamp( gui.debug.current_editing_material, 0, int( num_materials ) );
-            int mat_idx = gui.debug.current_editing_material;
-            auto mat_data = material_uniform_buffers[size_t( mat_idx )].get_data();
-            if ( gui.debug.load_material_into_gui ) {
-                gui.debug.color = mat_data.base_color;
-                gui.debug.roughness = mat_data.roughness;
-                gui.debug.metallic = mat_data.metallic;
-                gui.debug.clearcoat_weight = mat_data.clearcoat;
-                gui.debug.clearcoat_roughness = mat_data.clearcoat_roughness;
-                gui.debug.load_material_into_gui = false;
-            }
-            mat_data.base_color = gui.debug.color;
-            mat_data.roughness = gui.debug.roughness;
-            mat_data.metallic = gui.debug.metallic;
-            mat_data.clearcoat = gui.debug.clearcoat_weight;
-            mat_data.clearcoat_roughness = gui.debug.clearcoat_roughness;
+        update_material_uniform_buffers( ctx, engine, gui, material_uniform_buffers, num_materials );
 
-            mat_data.glintiness = gui.debug.glintiness;
-            mat_data.glint_log_density = gui.debug.glint_log_density;
-            mat_data.glint_roughness = gui.debug.glint_roughness;
-            mat_data.glint_randomness = gui.debug.glint_randomness;
+        // Update ray tracing uniform buffers
+        update_rt_uniform_buffers( ctx, engine, offset_data, rt_texture_uniform_data );
 
-            material_uniform_buffers[size_t( mat_idx )].set_data( mat_data );
-            material_uniform_buffers[size_t( mat_idx )].update(
-                ctx.vulkan,
-                engine.get_frame_index()
-            );
-        }
-
-        {
-            offset_data.update( ctx.vulkan, engine.get_frame_index() );
-            rt_texture_uniform_data.update( ctx.vulkan, engine.get_frame_index() );
-        }
-
-        std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
         // Update terrain
-        {
-            ub_data::TerrainData terrain_ub = test_terrain.terrain_uniform.get_data();
+        update_terrain_uniform_buffer( ctx, engine, gui, test_terrain );
 
-            // Final param packs the offset
+        // Scene node transforms, sharing one `discovered` set so a node is only propagated once
+        std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
 
-            terrain_ub.packed_data0 = glm::vec4(
-                gui.terrain.enable_gt7_ao ? 1.0f : 0.0f,
-                gui.terrain.shadowing_only ? 1.0f : 0.0f,
-                gui.terrain.roughness_only ? 1.0f : 0.0f,
-                0.0f
-            );
-
-            terrain_ub.terrain_data0 = glm::vec4(
-                gui.terrain.gt7_local_shadow_strength,
-                gui.terrain.wetness,
-                gui.terrain.snow,
-                0.0f
-            );
-
-            // TODO: Add time-delta here to ensure consistent visuals across-frames
-            glm::vec2 scroll_direction = glm::normalize(
-                glm::vec2( terrain_ub.terrain_data1.z, terrain_ub.terrain_data1.w )
-            );
-
-            //  for now, temp hard-code the UV scrolling direction
-            scroll_direction.x = 0.0f;
-            scroll_direction.y = 1.0f;
-
-            glm::vec2 offset_XY = gui.terrain.scrolling_speed * scroll_direction
-                + glm::vec2( terrain_ub.terrain_data1.x, terrain_ub.terrain_data1.y );
-
-            terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );
-
-            test_terrain.terrain_uniform.set_data( terrain_ub );
-            test_terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
-        }
-
-        if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
-            glm::vec3 velocity = { };
-
-            if ( gui.demo.enable_translation ) {
-                velocity = glm::vec3(
-                    0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 1000.0 ),
-                    0,
-                    0.025
-                );
-            }
-
-            glm::mat4 transform = glm::translate( glm::identity<glm::mat4>(), velocity );
-
-            if ( gui.demo.enable_translation ) {
-                scene::propagate_transform(
-                    ctx.vulkan,
-                    engine,
-                    scene,
-                    model_mat_uniform_buffers,
-                    scene.demo_scene_nodes.car_parent_id.value(),
-                    transform,
-                    discovered
-                );
-            }
-        }
+        update_car_transform(
+            ctx,
+            engine,
+            gui,
+            scene,
+            model_mat_uniform_buffers,
+            volumetric,
+            discovered
+        );
 
         // wheel rotation
-        {
-            // front wheels
-            glm::vec3 pivot
-                = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[0] );
-            float angle = gui.terrain.scrolling_speed * 30
-                / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
-
-            glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
-            model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
-            model = glm::translate( model, -pivot );
-
-            if ( scene.demo_scene_nodes.wheel_front_left_id.has_value() ) {
-                scene::propagate_transform(
-                    ctx.vulkan,
-                    engine,
-                    scene,
-                    model_mat_uniform_buffers,
-                    scene.demo_scene_nodes.wheel_front_left_id.value(),
-                    model,
-                    discovered
-                );
-            }
-            if ( scene.demo_scene_nodes.wheel_front_right_id.has_value() ) {
-                scene::propagate_transform(
-                    ctx.vulkan,
-                    engine,
-                    scene,
-                    model_mat_uniform_buffers,
-                    scene.demo_scene_nodes.wheel_front_right_id.value(),
-                    model,
-                    discovered
-                );
-            }
-            // back wheels
-            pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[1] );
-
-            model = glm::translate( glm::identity<glm::mat4>(), pivot );
-            model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
-            model = glm::translate( model, -pivot );
-
-            if ( scene.demo_scene_nodes.wheel_back_left_id.has_value() ) {
-                scene::propagate_transform(
-                    ctx.vulkan,
-                    engine,
-                    scene,
-                    model_mat_uniform_buffers,
-                    scene.demo_scene_nodes.wheel_back_left_id.value(),
-                    model,
-                    discovered
-                );
-            }
-            if ( scene.demo_scene_nodes.wheel_back_right_id.has_value() ) {
-                scene::propagate_transform(
-                    ctx.vulkan,
-                    engine,
-                    scene,
-                    model_mat_uniform_buffers,
-                    scene.demo_scene_nodes.wheel_back_right_id.value(),
-                    model,
-                    discovered
-                );
-            }
-        }
+        update_wheel_transforms( ctx, engine, gui, scene, model_mat_uniform_buffers, discovered );
 
         // Update bloom settings
-        {
-            ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();
-
-            bloom_ub.enable = gui.bloom.enable ? 1 : 0;
-            bloom_ub.threshold = gui.bloom.threshold;
-            bloom_ub.filter_radius = gui.bloom.filter_radius;
-
-            bloom_pass.bloom_ub.set_data( bloom_ub );
-            bloom_pass.bloom_ub.update( ctx.vulkan, engine.get_frame_index() );
-        }
+        update_bloom_uniform_buffer( ctx, engine, gui, bloom_pass );
 
         gui::update( gui, atms, camera, material_uniform_buffers );
 
