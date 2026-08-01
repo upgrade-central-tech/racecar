@@ -1443,6 +1443,128 @@ void car_lighting_pass(
     engine::add_gfx_task( task_list, lighting_pass_gfx_task );
 }
 
+// Convert the screen_color/rendered image to read-only.
+// Output screen buffer must be converted to write-only.
+// These are special pipeline barriers, since it is assumed that
+// the scene color was rendered to via gfx draw calls, hence the attachment.
+// We may need future helpers to convert from attachment to cs write, etc. and vice versa.
+//
+// Current limitation assumes that all post-processing calls are done via compute shader
+// hence the VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT stage.
+void create_screen_buffer_pipeline_barrier(
+    engine::RWImage& screen_color, engine::RWImage& screen_buffer, engine::TaskList& task_list
+)
+{
+    {
+        engine::add_pipeline_barrier(
+            task_list,
+            engine::PipelineBarrierDescriptor {
+                .buffer_barriers = { },
+                .image_barriers = {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                        .image = screen_color,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .image = screen_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                } }
+        );
+    }
+}
+
+void create_screen_buffer_present_pipeline_barrier( engine::RWImage& screen_buffer, engine::TaskList& task_list )
+{
+    {
+        engine::add_pipeline_barrier(
+            task_list,
+            engine::PipelineBarrierDescriptor {
+                .buffer_barriers = { },
+                .image_barriers = {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                        .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        .image = screen_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                } }
+        );
+    }
+}
+
+void post_processing_passes(
+    Context& ctx,
+    engine::State& engine,
+    UniformBuffer<ub_data::Camera>& camera_buffer,
+    deferred::GBuffers& gbuffers,
+    engine::RWImage& screen_color,
+    engine::RWImage& screen_buffer,
+    engine::RWImage& screen_history,
+    engine::TaskList& task_list,
+    engine::post::AAPass& aa_pass,
+    engine::post::AoPass& ao_pass,
+    engine::post::BloomPass& bloom_pass,
+    engine::post::TonemappingPass& tm_pass
+)
+{
+    {
+
+        bloom_pass
+            = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
+
+        ao_pass = {
+            .camera_buffer = &camera_buffer,
+            .GBuffer_Normal = &gbuffers.GBuffer_Normal,
+            .GBuffer_Depth = &gbuffers.GBuffer_Depth,
+            .in_color = &screen_color,
+            .out_color = &screen_buffer,
+        };
+        add_ao( ao_pass, ctx.vulkan, engine, task_list );
+
+        engine::transition_cs_read_to_write( task_list, screen_color );
+        engine::transition_cs_write_to_read( task_list, screen_buffer );
+        tm_pass = engine::post::add_tonemapping(
+            ctx.vulkan,
+            engine,
+            screen_buffer,
+            screen_color,
+            task_list
+        );
+
+        // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
+        engine::transition_cs_read_to_write( task_list, screen_buffer );
+        engine::transition_cs_write_to_read( task_list, screen_color );
+        aa_pass = engine::post::add_aa(
+            ctx.vulkan,
+            engine,
+            screen_color,
+            gbuffers.GBuffer_Depth,
+            gbuffers.GBuffer_Velocity,
+            screen_buffer,
+            screen_history,
+            task_list,
+            camera_buffer
+        );
+    }
+}
+
 void run( bool use_fullscreen )
 {
     // ================================================================================================================
@@ -1679,7 +1801,6 @@ void run( bool use_fullscreen )
     engine::Pipeline reflection_pipeline;
     engine::DescriptorSet reflection_buffer_desc_set;
     engine::GfxTask reflection_gfx_task;
-
     create_reflection_pass_resources(
         ctx,
         engine,
@@ -1709,9 +1830,11 @@ void run( bool use_fullscreen )
         .reflection_buffer_desc_set = reflection_buffer_desc_set,
     };
 
+    // Create car lighting pass pipeline
     engine::Pipeline lighting_pass_pipeline;
     create_lighting_pass_resources( ctx, engine, lighting_pass_desc_sets, &lighting_pass_pipeline );
 
+    // Create terrain draw pipeline
     geometry::initialize_terrain_draw_pipeline(
         test_terrain,
         ctx.vulkan,
@@ -1811,107 +1934,34 @@ void run( bool use_fullscreen )
         task_list
     );
 
+    // Transition screen color and screen buffer for post processing
+    create_screen_buffer_pipeline_barrier( screen_color, screen_buffer, task_list );
+
     // Post-processing
     engine::post::AAPass aa_pass;
     engine::post::AoPass ao_pass;
     engine::post::BloomPass bloom_pass;
     engine::post::TonemappingPass tm_pass;
-    {
-        // Convert the screen_color/rendered image to read-only.
-        // Output screen buffer must be converted to write-only.
-        // These are special pipeline barriers, since it is assumed that
-        // the scene color was rendered to via gfx draw calls, hence the attachment.
-        // We may need future helpers to convert from attachment to cs write, etc. and vice versa.
-        //
-        // Current limitation assumes that all post-processing calls are done via compute shader
-        // hence the VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT stage.
-        engine::add_pipeline_barrier(
-            task_list,
-            engine::PipelineBarrierDescriptor {
-                .buffer_barriers = { },
-                .image_barriers = {
-                    engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                        .image = screen_color,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                    },
-                    engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .src_access = VK_ACCESS_2_NONE,
-                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                        .image = screen_buffer,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                    },
-                } }
-        );
+    post_processing_passes(
+        ctx,
+        engine,
+        camera_buffer,
+        gbuffers,
+        screen_color,
+        screen_buffer,
+        screen_history,
+        task_list,
+        aa_pass,
+        ao_pass,
+        bloom_pass,
+        tm_pass
+    );
 
-        bloom_pass
-            = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
+    // Transition screen buffer to be ready for swapchain blit
+    create_screen_buffer_present_pipeline_barrier( screen_buffer, task_list );
 
-        ao_pass = {
-            .camera_buffer = &camera_buffer,
-            .GBuffer_Normal = &gbuffers.GBuffer_Normal,
-            .GBuffer_Depth = &gbuffers.GBuffer_Depth,
-            .in_color = &screen_color,
-            .out_color = &screen_buffer,
-        };
-        add_ao( ao_pass, ctx.vulkan, engine, task_list );
-
-        engine::transition_cs_read_to_write( task_list, screen_color );
-        engine::transition_cs_write_to_read( task_list, screen_buffer );
-        tm_pass = engine::post::add_tonemapping(
-            ctx.vulkan,
-            engine,
-            screen_buffer,
-            screen_color,
-            task_list
-        );
-
-        // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
-        engine::transition_cs_read_to_write( task_list, screen_buffer );
-        engine::transition_cs_write_to_read( task_list, screen_color );
-        aa_pass = engine::post::add_aa(
-            ctx.vulkan,
-            engine,
-            screen_color,
-            gbuffers.GBuffer_Depth,
-            gbuffers.GBuffer_Velocity,
-            screen_buffer,
-            screen_history,
-            task_list,
-            camera_buffer
-        );
-
-        // This is the final pipeline barrier necessary for transitioning the chosen out_color to
-        // the screen.
-        engine::add_pipeline_barrier(
-            task_list,
-            engine::PipelineBarrierDescriptor {
-                .buffer_barriers = { },
-                .image_barriers = {
-                    engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                        .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                        .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                        .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        .image = screen_buffer,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                    },
-                } }
-        );
-
-        engine::add_blit_task( task_list, { screen_buffer } );
-    }
+    // Blit screen buffer to the swapchain, ready for presentation
+    engine::add_blit_task( task_list, { screen_buffer } );
 
     bool will_quit = false;
     bool stop_drawing = false;
