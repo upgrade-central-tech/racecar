@@ -101,7 +101,7 @@ BloomPass add_bloom(
         engine::DescriptorSet threshold_desc_set = engine::generate_descriptor_set(
             vulkan,
             engine,
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
         engine::update_descriptor_set_rwimage(
@@ -117,7 +117,7 @@ BloomPass add_bloom(
             engine,
             threshold_desc_set,
             write_only,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_IMAGE_LAYOUT_GENERAL,
             1
         );
 
