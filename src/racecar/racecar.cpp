@@ -1455,58 +1455,54 @@ void create_screen_buffer_pipeline_barrier(
     engine::RWImage& screen_color, engine::RWImage& screen_buffer, engine::TaskList& task_list
 )
 {
-    {
-        engine::add_pipeline_barrier(
-            task_list,
-            engine::PipelineBarrierDescriptor {
-                .buffer_barriers = { },
-                .image_barriers = {
-                    engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                        .image = screen_color,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                    },
-                    engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .src_access = VK_ACCESS_2_NONE,
-                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                        .image = screen_buffer,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                    },
-                } }
-        );
-    }
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers = {
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .image = screen_color,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_NONE,
+                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .image = screen_buffer,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+            } }
+    );
 }
 
 void create_screen_buffer_present_pipeline_barrier( engine::RWImage& screen_buffer, engine::TaskList& task_list )
 {
-    {
-        engine::add_pipeline_barrier(
-            task_list,
-            engine::PipelineBarrierDescriptor {
-                .buffer_barriers = { },
-                .image_barriers = {
-                    engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                        .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                        .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                        .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
-                        .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                        .image = screen_buffer,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                    },
-                } }
-        );
-    }
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers = {
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                    .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    .image = screen_buffer,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+            } }
+    );
 }
 
 void post_processing_passes(
@@ -1524,44 +1520,68 @@ void post_processing_passes(
     engine::post::TonemappingPass& tm_pass
 )
 {
-    {
+    bloom_pass
+        = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
 
-        bloom_pass
-            = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
+    ao_pass = {
+        .camera_buffer = &camera_buffer,
+        .GBuffer_Normal = &gbuffers.GBuffer_Normal,
+        .GBuffer_Depth = &gbuffers.GBuffer_Depth,
+        .in_color = &screen_color,
+        .out_color = &screen_buffer,
+    };
+    add_ao( ao_pass, ctx.vulkan, engine, task_list );
 
-        ao_pass = {
-            .camera_buffer = &camera_buffer,
-            .GBuffer_Normal = &gbuffers.GBuffer_Normal,
-            .GBuffer_Depth = &gbuffers.GBuffer_Depth,
-            .in_color = &screen_color,
-            .out_color = &screen_buffer,
-        };
-        add_ao( ao_pass, ctx.vulkan, engine, task_list );
+    engine::transition_cs_read_to_write( task_list, screen_color );
+    engine::transition_cs_write_to_read( task_list, screen_buffer );
+    tm_pass = engine::post::add_tonemapping(
+        ctx.vulkan,
+        engine,
+        screen_buffer,
+        screen_color,
+        task_list
+    );
 
-        engine::transition_cs_read_to_write( task_list, screen_color );
-        engine::transition_cs_write_to_read( task_list, screen_buffer );
-        tm_pass = engine::post::add_tonemapping(
-            ctx.vulkan,
-            engine,
-            screen_buffer,
-            screen_color,
-            task_list
-        );
+    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
+    engine::transition_cs_read_to_write( task_list, screen_buffer );
+    engine::transition_cs_write_to_read( task_list, screen_color );
+    aa_pass = engine::post::add_aa(
+        ctx.vulkan,
+        engine,
+        screen_color,
+        gbuffers.GBuffer_Depth,
+        gbuffers.GBuffer_Velocity,
+        screen_buffer,
+        screen_history,
+        task_list,
+        camera_buffer
+    );
+}
 
-        // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
-        engine::transition_cs_read_to_write( task_list, screen_buffer );
-        engine::transition_cs_write_to_read( task_list, screen_color );
-        aa_pass = engine::post::add_aa(
-            ctx.vulkan,
-            engine,
-            screen_color,
-            gbuffers.GBuffer_Depth,
-            gbuffers.GBuffer_Velocity,
-            screen_buffer,
-            screen_history,
-            task_list,
-            camera_buffer
-        );
+void handle_sdl_window_events(
+    Context& ctx,
+    engine::State& engine,
+    gui::Gui& gui,
+    std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
+    atmosphere::Atmosphere& atms,
+    bool& will_quit,
+    bool& stop_drawing,
+    SDL_Event& event
+)
+{
+    while ( SDL_PollEvent( &event ) ) {
+        gui::process_event( gui, &event, atms, engine.camera, material_uniform_buffers );
+        camera::process_event( ctx, &event, engine.camera, gui.show_window );
+
+        if ( event.type == SDL_EVENT_QUIT ) {
+            will_quit = true;
+        }
+
+        if ( event.type == SDL_EVENT_WINDOW_MINIMIZED ) {
+            stop_drawing = true;
+        } else if ( event.type == SDL_EVENT_WINDOW_RESTORED ) {
+            stop_drawing = false;
+        }
     }
 }
 
@@ -1963,29 +1983,29 @@ void run( bool use_fullscreen )
     // Blit screen buffer to the swapchain, ready for presentation
     engine::add_blit_task( task_list, { screen_buffer } );
 
+    // ================================================================================================================
+    // MAIN RUNNER LOOP
+    // ================================================================================================================
+
     bool will_quit = false;
     bool stop_drawing = false;
     SDL_Event event = { };
-
     std::chrono::steady_clock::time_point current_tick;
 
     while ( !will_quit ) {
         current_tick = std::chrono::steady_clock::now();
 
-        while ( SDL_PollEvent( &event ) ) {
-            gui::process_event( gui, &event, atms, engine.camera, material_uniform_buffers );
-            camera::process_event( ctx, &event, engine.camera, gui.show_window );
-
-            if ( event.type == SDL_EVENT_QUIT ) {
-                will_quit = true;
-            }
-
-            if ( event.type == SDL_EVENT_WINDOW_MINIMIZED ) {
-                stop_drawing = true;
-            } else if ( event.type == SDL_EVENT_WINDOW_RESTORED ) {
-                stop_drawing = false;
-            }
-        }
+        // Handle QUIT, MINIMIZED, RESTORED events
+        handle_sdl_window_events(
+            ctx,
+            engine,
+            gui,
+            material_uniform_buffers,
+            atms,
+            will_quit,
+            stop_drawing,
+            event
+        );
 
         // Don't draw if we're minimized
         if ( stop_drawing ) {
@@ -2490,6 +2510,10 @@ void run( bool use_fullscreen )
         engine.time += engine.delta;
         current_tick = new_tick;
     }
+
+    // ================================================================================================================
+    // RESOURCE CLEANUP
+    // ================================================================================================================
 
     vkDeviceWaitIdle( ctx.vulkan.device );
     gui::free();
