@@ -12,6 +12,8 @@ set(GEOMETRY_DIR "${SRC_DIR}/geometry")
 set(TERRAIN_DIR "${SRC_DIR}/terrain")
 set(SCENE_DIR "${SRC_DIR}/scene")
 set(RACECAR_DIR "${SRC_DIR}/racecar")
+set(PASSES_DIR "${SRC_DIR}/passes")
+set(DEMO_DIR "${SRC_DIR}/demo")
 
 add_executable(racecar
     ${SRC_DIR}/main.cpp
@@ -24,6 +26,18 @@ add_executable(racecar
     ${SRC_DIR}/volumetrics.cpp
     ${SRC_DIR}/preset.cpp
     ${SRC_DIR}/deferred.cpp
+    ${SRC_DIR}/app_setup.cpp
+    ${SRC_DIR}/camera_data.cpp
+    ${SRC_DIR}/gui_uniforms.cpp
+    ${SRC_DIR}/lut_sets.cpp
+    ${SRC_DIR}/window_events.cpp
+
+    ${PASSES_DIR}/scene_pass.cpp
+    ${PASSES_DIR}/reflection_pass.cpp
+    ${PASSES_DIR}/lighting_pass.cpp
+    ${PASSES_DIR}/post_processing.cpp
+
+    ${DEMO_DIR}/car_animation.cpp
 
     ${VK_DIR}/common.cpp
     ${VK_DIR}/create.cpp
@@ -47,6 +61,8 @@ add_executable(racecar
     ${ENGINE_DIR}/descriptor_set.cpp
     ${ENGINE_DIR}/compute_task.cpp
     ${ENGINE_DIR}/blit_task.cpp
+    ${ENGINE_DIR}/precompute.cpp
+    ${ENGINE_DIR}/prepass.cpp
 
     ${POST_DIR}/bloom.cpp
     ${POST_DIR}/ao.cpp
@@ -62,6 +78,7 @@ add_executable(racecar
     ${TERRAIN_DIR}/terrain.cpp
 
     ${SCENE_DIR}/scene.cpp
+    ${SCENE_DIR}/car_rt.cpp
 
     ${RACECAR_DIR}/racecar.cpp
 )

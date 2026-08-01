@@ -10,6 +10,10 @@
 
 #include <memory>
 
+namespace racecar::gui {
+struct Gui;
+}
+
 namespace racecar::engine::post {
 
 struct TonemappingPass {
@@ -19,5 +23,8 @@ struct TonemappingPass {
 
 TonemappingPass add_tonemapping( vk::Common& vulkan, const State& engine, const RWImage& input,
     const RWImage& output, TaskList& task_list );
+
+void update_tonemapping_uniform_buffer(
+    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::TonemappingPass& tm_pass );
 
 }

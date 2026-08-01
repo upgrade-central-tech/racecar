@@ -1,5 +1,7 @@
 #include "anti_aliasing.hpp"
 
+#include "../../gui.hpp"
+
 #include "../../vk/create.hpp"
 
 #include <string_view>
@@ -174,6 +176,16 @@ AAPass add_aa(
     transition_cs_write_to_read( task_list, history );
 
     return pass;
+}
+
+void update_aa_uniform_buffer(
+    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::AAPass& aa_pass
+)
+{
+    ub_data::AA aa_ub = aa_pass.buffer.get_data();
+    aa_ub.mode = static_cast<int>( gui.aa.mode );
+    aa_pass.buffer.set_data( aa_ub );
+    aa_pass.buffer.update( vulkan, engine.get_frame_index() );
 }
 
 }

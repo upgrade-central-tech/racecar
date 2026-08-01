@@ -3,6 +3,15 @@
 #include "engine/ub_data.hpp"
 #include "geometry/quad.hpp"
 
+namespace racecar {
+struct CameraData;
+struct Context;
+}
+
+namespace racecar::atmosphere {
+struct Atmosphere;
+}
+
 namespace racecar::volumetric {
 
 struct Volumetric {
@@ -33,5 +42,9 @@ bool generate_noise(
 void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan,
     engine::State& engine, [[maybe_unused]] engine::TaskList& task_list,
     engine::RWImage& color_attachment );
+
+void update_volumetric_uniform_buffer( Context& ctx, engine::State& engine,
+    atmosphere::Atmosphere& atms, volumetric::Volumetric& volumetric,
+    const CameraData& camera_data );
 
 }

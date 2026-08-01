@@ -1,5 +1,7 @@
 #include "terrain.hpp"
 
+#include "../gui.hpp"
+
 #include "../engine/gfx_task.hpp"
 #include "../engine/images.hpp"
 #include "../engine/task_list.hpp"
@@ -644,6 +646,45 @@ void draw_terrain( Terrain& terrain, engine::State& engine, engine::TaskList& ta
     };
 
     engine::add_cs_task( task_list, cs_terrain_draw_task );
+}
+
+void update_terrain_uniform_buffer(
+    Context& ctx, engine::State& engine, gui::Gui& gui, geometry::Terrain& terrain
+)
+{
+    ub_data::TerrainData terrain_ub = terrain.terrain_uniform.get_data();
+
+    // Final param packs the offset
+
+    terrain_ub.packed_data0 = glm::vec4(
+        gui.terrain.enable_gt7_ao ? 1.0f : 0.0f,
+        gui.terrain.shadowing_only ? 1.0f : 0.0f,
+        gui.terrain.roughness_only ? 1.0f : 0.0f,
+        0.0f
+    );
+
+    terrain_ub.terrain_data0 = glm::vec4(
+        gui.terrain.gt7_local_shadow_strength,
+        gui.terrain.wetness,
+        gui.terrain.snow,
+        0.0f
+    );
+
+    // TODO: Add time-delta here to ensure consistent visuals across-frames
+    glm::vec2 scroll_direction
+        = glm::normalize( glm::vec2( terrain_ub.terrain_data1.z, terrain_ub.terrain_data1.w ) );
+
+    //  for now, temp hard-code the UV scrolling direction
+    scroll_direction.x = 0.0f;
+    scroll_direction.y = 1.0f;
+
+    glm::vec2 offset_XY = gui.terrain.scrolling_speed * scroll_direction
+        + glm::vec2( terrain_ub.terrain_data1.x, terrain_ub.terrain_data1.y );
+
+    terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );
+
+    terrain.terrain_uniform.set_data( terrain_ub );
+    terrain.terrain_uniform.update( ctx.vulkan, engine.get_frame_index() );
 }
 
 }

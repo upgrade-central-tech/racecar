@@ -3,6 +3,10 @@
 #include "../task_list.hpp"
 #include "../ub_data.hpp"
 
+namespace racecar::gui {
+struct Gui;
+}
+
 namespace racecar::engine::post {
 
 struct AoPass {
@@ -19,5 +23,8 @@ struct AoPass {
 };
 
 void add_ao( AoPass& ao_pass, vk::Common& vulkan, engine::State& engine, TaskList& task_list );
+
+void update_ao_uniform_buffer(
+    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::AoPass& ao_pass );
 
 }

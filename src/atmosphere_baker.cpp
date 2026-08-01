@@ -1,5 +1,7 @@
 #include "atmosphere_baker.hpp"
 
+#include "lut_sets.hpp"
+
 #include "engine/images.hpp"
 #include "engine/pipeline.hpp"
 #include "vk/create.hpp"
@@ -393,6 +395,50 @@ void compute_octahedral_sky_mips(
                                            .baseArrayLayer = 0,
                                            .layerCount = 1,
                                        } } } }
+    );
+}
+
+/// Runs the atmosphere baker, populating the octahedral sky, irradiance, and mip textures
+/// respectively. After population, this function populates their respective LUTS.
+// TODO: the atmosphere baking heavily relies on populated volumetric LUTs, making this tightly
+// coupled. Need some way to skip volumetrics in the atmosphere baker if volumetrics are disabled.
+void dispatch_atmosphere_baker(
+    Context& ctx,
+    engine::State& engine,
+    engine::TaskList& task_list,
+    engine::DescriptorSet& lut_sets,
+    atmosphere::AtmosphereBaker& atms_baker
+)
+{
+    atmosphere::compute_octahedral_sky( atms_baker, task_list );
+    atmosphere::compute_octahedral_sky_irradiance( atms_baker, task_list );
+
+    // TODO: As shown in Destiny 2 GDC 2018 talk, we can simply substitute the last glossy mip with
+    // this irradiance. It is also possible to simplify glossy irradiance by naive gaussian blur.
+    atmosphere::compute_octahedral_sky_mips( atms_baker, ctx.vulkan, engine, task_list );
+
+    engine::update_descriptor_set_image(
+        ctx.vulkan,
+        engine,
+        lut_sets,
+        atms_baker.octahedral_sky,
+        LUT_INDEX::OCTAHEDRAL_SKY
+    );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan,
+        engine,
+        lut_sets,
+        atms_baker.octahedral_sky_irradiance,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        LUT_INDEX::OCTAHEDRAL_IRRADIANCE
+    );
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan,
+        engine,
+        lut_sets,
+        atms_baker.octahedral_sky_mips,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        LUT_INDEX::OCTAHEDRAL_MIPS
     );
 }
 

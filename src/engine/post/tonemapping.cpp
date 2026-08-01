@@ -1,5 +1,7 @@
 #include "tonemapping.hpp"
 
+#include "../../gui.hpp"
+
 #include "../../vk/create.hpp"
 
 #include <string_view>
@@ -71,6 +73,18 @@ TonemappingPass add_tonemapping(
     );
 
     return pass;
+}
+
+void update_tonemapping_uniform_buffer(
+    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::TonemappingPass& tm_pass
+)
+{
+    ub_data::Tonemapping tm_ub = tm_pass.buffer.get_data();
+    tm_ub.mode = static_cast<int>( gui.tonemapping.mode );
+    tm_ub.hdr_target_luminance = gui.tonemapping.hdr_target_luminance;
+
+    tm_pass.buffer.set_data( tm_ub );
+    tm_pass.buffer.update( vulkan, engine.get_frame_index() );
 }
 
 }

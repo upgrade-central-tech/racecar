@@ -9,6 +9,10 @@
 
 #include <memory>
 
+namespace racecar::gui {
+struct Gui;
+}
+
 namespace racecar::engine::post {
 
 struct AAPass {
@@ -21,5 +25,8 @@ struct AAPass {
 AAPass add_aa( vk::Common& vulkan, State& engine, const RWImage& input,
     const RWImage& GBuffer_Depth, const RWImage& GBuffer_Velocity, RWImage& output,
     RWImage& history, TaskList& task_list, UniformBuffer<ub_data::Camera>& camera_buffer );
+
+void update_aa_uniform_buffer(
+    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::AAPass& aa_pass );
 
 }

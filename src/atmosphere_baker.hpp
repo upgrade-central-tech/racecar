@@ -5,6 +5,10 @@
 #include "engine/task_list.hpp"
 #include "volumetrics.hpp"
 
+namespace racecar {
+struct Context;
+}
+
 namespace racecar::atmosphere {
 
 struct AtmosphereBaker {
@@ -54,5 +58,8 @@ void compute_octahedral_sky_mips(
     engine::State& engine,
     engine::TaskList& task_list
 );
+
+void dispatch_atmosphere_baker( Context& ctx, engine::State& engine, engine::TaskList& task_list,
+    engine::DescriptorSet& lut_sets, atmosphere::AtmosphereBaker& atms_baker );
 
 }

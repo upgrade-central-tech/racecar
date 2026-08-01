@@ -1,6 +1,8 @@
 #pragma once
 
+#include "context.hpp"
 #include "engine/descriptor_set.hpp"
+#include "engine/task_list.hpp"
 #include "engine/ub_data.hpp"
 #include "engine/uniform_buffer.hpp"
 #include "vk/mem.hpp"
@@ -8,6 +10,14 @@
 #include <volk.h>
 
 #include <string_view>
+
+namespace racecar {
+struct CameraData;
+}
+
+namespace racecar::gui {
+struct Gui;
+}
 
 namespace racecar::atmosphere {
 
@@ -31,5 +41,11 @@ struct Atmosphere {
 Atmosphere initialize( vk::Common& vulkan, engine::State& engine );
 
 glm::vec3 compute_sun_direction( const Atmosphere& atms );
+
+void draw_atmosphere( Context& ctx, engine::State& engine, engine::TaskList& task_list,
+    atmosphere::Atmosphere& atms, engine::RWImage& out_color );
+
+void update_atmosphere_uniform_buffer( Context& ctx, engine::State& engine, gui::Gui& gui,
+    atmosphere::Atmosphere& atms, const CameraData& camera_data );
 
 }

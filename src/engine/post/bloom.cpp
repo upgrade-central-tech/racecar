@@ -1,5 +1,7 @@
 #include "bloom.hpp"
 
+#include "../../gui.hpp"
+
 #include "../../log.hpp"
 #include "../../vk/create.hpp"
 
@@ -279,6 +281,20 @@ BloomPass add_bloom(
     log::info( "[Post] Added bloom pass!" );
 
     return pass;
+}
+
+void update_bloom_uniform_buffer(
+    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::BloomPass& bloom_pass
+)
+{
+    ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();
+
+    bloom_ub.enable = gui.bloom.enable ? 1 : 0;
+    bloom_ub.threshold = gui.bloom.threshold;
+    bloom_ub.filter_radius = gui.bloom.filter_radius;
+
+    bloom_pass.bloom_ub.set_data( bloom_ub );
+    bloom_pass.bloom_ub.update( vulkan, engine.get_frame_index() );
 }
 
 }

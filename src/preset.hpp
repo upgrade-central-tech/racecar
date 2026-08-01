@@ -1,11 +1,23 @@
 #pragma once
 
+#include "context.hpp"
+#include "engine/state.hpp"
+#include "engine/ub_data.hpp"
+#include "engine/uniform_buffer.hpp"
 #include "gui_material.hpp"
 
 #include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
+
+namespace racecar::gui {
+struct Gui;
+}
+
+namespace racecar::atmosphere {
+struct Atmosphere;
+}
 
 namespace racecar {
 
@@ -46,5 +58,9 @@ struct PresetTransition {
 
 std::vector<Preset> load_presets();
 Preset parse_preset_json( std::filesystem::path json_path );
+
+void update_preset_transition( Context& ctx, engine::State& engine, gui::Gui& gui,
+    std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
+    atmosphere::Atmosphere& atms );
 
 }

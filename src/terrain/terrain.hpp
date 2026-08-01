@@ -7,6 +7,10 @@
 #include "../engine/ub_data.hpp"
 #include "../engine/uniform_buffer.hpp"
 
+namespace racecar::gui {
+struct Gui;
+}
+
 namespace racecar::geometry {
 
 // Keep it simple for now
@@ -113,5 +117,8 @@ void draw_terrain_prepass( Terrain& terrain,
     [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
 
 void draw_terrain( Terrain& terrain, engine::State& engine, engine::TaskList& task_list );
+
+void update_terrain_uniform_buffer(
+    Context& ctx, engine::State& engine, gui::Gui& gui, geometry::Terrain& terrain );
 
 }

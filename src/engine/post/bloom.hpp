@@ -11,6 +11,10 @@
 #include <array>
 #include <memory>
 
+namespace racecar::gui {
+struct Gui;
+}
+
 namespace racecar::engine::post {
 
 struct BloomPass {
@@ -29,5 +33,8 @@ struct BloomPass {
 /// Assumes that `input` is already in `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`.
 BloomPass add_bloom( vk::Common& vulkan, const State& engine, TaskList& task_list, RWImage& inout,
     RWImage& write_only );
+
+void update_bloom_uniform_buffer(
+    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::BloomPass& bloom_pass );
 
 }

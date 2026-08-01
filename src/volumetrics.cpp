@@ -1,5 +1,8 @@
 #include "volumetrics.hpp"
 
+#include "atmosphere.hpp"
+#include "camera_data.hpp"
+
 #include "engine/descriptor_set.hpp"
 #include "engine/images.hpp"
 #include "engine/state.hpp"
@@ -582,6 +585,28 @@ void draw_volumetric(
         } );
 
     engine::add_gfx_task( task_list, volumetric_composite_task );
+}
+
+void update_volumetric_uniform_buffer(
+    Context& ctx,
+    engine::State& engine,
+    atmosphere::Atmosphere& atms,
+    volumetric::Volumetric& volumetric,
+    const CameraData& camera_data
+)
+{
+    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+
+    ub_data::Clouds cloud_ub = volumetric.uniform_buffer.get_data();
+    cloud_ub.inverse_proj = glm::inverse( camera_data.projection );
+    cloud_ub.inverse_view = glm::inverse( camera_data.view );
+    cloud_ub.camera_position = camera::calculate_eye_position( engine.camera );
+    cloud_ub.cloud_offset_x += 0.0001f;
+    cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
+    cloud_ub.cloud_offset_y += 0.0001f;
+
+    volumetric.uniform_buffer.set_data( cloud_ub );
+    volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
 }
 
 }

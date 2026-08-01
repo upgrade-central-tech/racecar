@@ -1,5 +1,13 @@
 #include "atmosphere.hpp"
 
+#define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
+#include <glm/gtx/compatibility.hpp>
+
+#include "camera_data.hpp"
+#include "geometry/quad.hpp"
+#include "gui.hpp"
+#include "vk/create.hpp"
+
 #include "engine/images.hpp"
 #include "engine/ub_data.hpp"
 #include "exception.hpp"
@@ -172,6 +180,100 @@ glm::vec3 compute_sun_direction( const Atmosphere& atms )
         std::cos( atms.sun_zenith ),
         std::sin( atms.sun_azimuth ) * std::sin( atms.sun_zenith ),
     };
+}
+
+void draw_atmosphere(
+    Context& ctx,
+    engine::State& engine,
+    engine::TaskList& task_list,
+    atmosphere::Atmosphere& atms,
+    engine::RWImage& out_color
+)
+{
+    engine::GfxTask atmosphere_gfx_task = {
+        .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
+        .clear_depth = 1.f,
+        .render_target_is_swapchain = false,
+        .color_attachments = { out_color },
+        .extent = engine.swapchain.extent,
+    };
+
+    engine::Pipeline atmosphere_pipeline;
+    geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
+
+    try {
+        atmosphere_pipeline = engine::create_gfx_pipeline(
+            engine,
+            ctx.vulkan,
+            engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance() ),
+            {
+                atms.uniform_desc_set.layouts[0],
+                atms.lut_desc_set.layouts[0],
+                atms.sampler_desc_set.layouts[0],
+            },
+            {
+                VK_FORMAT_R16G16B16A16_SFLOAT,
+            },
+            VK_SAMPLE_COUNT_1_BIT,
+            false,
+            true,
+            vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ),
+            false
+        );
+    } catch ( const Exception& ex ) {
+        log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
+        throw;
+    }
+
+    atmosphere_gfx_task.draw_tasks.push_back( {
+                .draw_resource_descriptor = {
+                        .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
+                        .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
+                        .vertex_buffer_offsets = { 0 },
+                        .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
+                },
+                .descriptor_sets = {
+                    &atms.uniform_desc_set,
+                    &atms.lut_desc_set,
+                    &atms.sampler_desc_set,
+                },
+                .pipeline = atmosphere_pipeline,
+            } );
+
+    engine::add_gfx_task( task_list, atmosphere_gfx_task );
+}
+
+void update_atmosphere_uniform_buffer(
+    Context& ctx,
+    engine::State& engine,
+    gui::Gui& gui,
+    atmosphere::Atmosphere& atms,
+    const CameraData& camera_data
+)
+{
+    if ( gui.atms.animate_zenith ) {
+        float sin = std::sin( static_cast<float>( engine.time ) * gui.atms.animate_zenith_speed );
+        float t = ( sin + 1.f ) * 0.5f;
+        atms.sun_zenith = glm::lerp( -glm::half_pi<float>(), glm::half_pi<float>(), t );
+    }
+
+    glm::vec3 atmosphere_position = {
+        camera_data.position.x,
+        // A y-value of 9 means the camera is 9 km above the surface. This is pretty
+        // ridiculous so we manually adjust it here. Now y needs to be 900.
+        camera_data.position.y * 0.01f,
+        camera_data.position.z,
+    };
+
+    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+    atms_ub.inverse_proj = glm::inverse( camera_data.projection );
+    atms_ub.inverse_view = glm::inverse( camera_data.view );
+    atms_ub.camera_position = atmosphere_position;
+    atms_ub.sun_direction = atmosphere::compute_sun_direction( atms );
+    atms_ub.radiance_exposure = gui.atms.radiance_exposure;
+
+    atms.uniform_buffer.set_data( atms_ub );
+    atms.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
 }
 
 }

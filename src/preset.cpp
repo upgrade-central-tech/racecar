@@ -1,5 +1,11 @@
 #include "preset.hpp"
 
+#include "atmosphere.hpp"
+#include "gui.hpp"
+
+#define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
+#include <glm/gtx/compatibility.hpp>
+
 #include "exception.hpp"
 #include "log.hpp"
 
@@ -112,6 +118,126 @@ Preset parse_preset_json( fs::path json_path )
     }
 
     return preset;
+}
+
+void update_preset_transition(
+    Context& ctx,
+    engine::State& engine,
+    gui::Gui& gui,
+    std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
+    atmosphere::Atmosphere& atms
+)
+{
+    PresetTransition& transition = gui.preset.transition.value();
+
+    float t = std::invoke( [&]() -> float {
+        if ( transition.duration == 0.f ) {
+            // Instantly complete transition if duration is zero
+            return 1.f;
+        }
+
+        // Have to clamp it because progress might be greater than 1 after
+        // adding the delta time
+        return glm::saturate( transition.progress / transition.duration );
+    } );
+
+    {
+        using enum gui::Gui::PresetData::Easing;
+
+        switch ( gui.preset.easing ) {
+        case LINEAR:
+            break;
+
+        case EASE_OUT_QUAD:
+            t = glm::saturate( 1.f - ( 1.f - t ) * ( 1.f - t ) );
+            break;
+
+        case EASE_OUT_QUINT:
+            t = glm::saturate( 1.f - std::pow( 1.f - t, 5.f ) );
+            break;
+
+        case EASE_IN_OUT_QUAD:
+            t = glm::saturate(
+                t < 0.5f ? 2.f * t * t : 1.f - std::pow( -2.f * t + 2.f, 2.f ) * 0.5f
+            );
+            break;
+
+        case EASE_IN_OUT_QUINT:
+            t = glm::saturate(
+                t < 0.5f ? 16.f * t * t * t * t * t : 1.f - std::pow( -2.f * t + 2.f, 5.f ) * 0.5f
+            );
+            break;
+
+        default:
+            throw Exception( "[preset] Unhandled easing type" );
+        }
+    }
+
+    // Initial and final
+    const Preset& i = transition.before;
+    const Preset& f = transition.after;
+
+    atms.sun_zenith = glm::mix( i.sun_zenith, f.sun_zenith, t );
+    atms.sun_azimuth = glm::mix( i.sun_azimuth, f.sun_azimuth, t );
+
+    gui.terrain.wetness = glm::mix( i.wetness, f.wetness, t );
+    gui.terrain.snow = glm::mix( i.snow, f.snow, t );
+    gui.terrain.scrolling_speed = glm::mix( i.scrolling_speed, f.scrolling_speed, t );
+    gui.demo.bumpiness = glm::mix( i.bumpiness, f.bumpiness, t );
+
+    for ( size_t idx = 0; idx < i.materials.size(); ++idx ) {
+        const gui::Material& i_mat = i.materials[idx].data;
+        const gui::Material& f_mat = f.materials[idx].data;
+
+        glm::vec4 color = glm::mix( i_mat.color, f_mat.color, t );
+        float roughness = glm::mix( i_mat.roughness, f_mat.roughness, t );
+        float metallic = glm::mix( i_mat.metallic, f_mat.metallic, t );
+        float clearcoat = glm::mix( i_mat.clearcoat_weight, f_mat.clearcoat_weight, t );
+        float clearcoat_roughness
+            = glm::mix( i_mat.clearcoat_roughness, f_mat.clearcoat_roughness, t );
+        float glintiness = glm::mix( i_mat.glintiness, f_mat.glintiness, t );
+        float glint_log_density = glm::mix( i_mat.glint_log_density, f_mat.glint_log_density, t );
+        float glint_roughness = glm::mix( i_mat.glint_roughness, f_mat.glint_roughness, t );
+        float glint_randomness = glm::mix( i_mat.glint_randomness, f_mat.glint_randomness, t );
+
+        size_t material_idx = static_cast<size_t>( i.materials[idx].slot );
+        auto mat_data = material_uniform_buffers[material_idx].get_data();
+
+        mat_data.base_color = color;
+        mat_data.roughness = roughness;
+        mat_data.metallic = metallic;
+        mat_data.clearcoat = clearcoat;
+        mat_data.clearcoat_roughness = clearcoat_roughness;
+        mat_data.glintiness = glintiness;
+        mat_data.glint_log_density = glint_log_density;
+        mat_data.glint_roughness = glint_roughness;
+        mat_data.glint_randomness = glint_randomness;
+
+        gui.debug.color = color;
+        gui.debug.roughness = roughness;
+        gui.debug.metallic = metallic;
+        gui.debug.clearcoat_weight = clearcoat;
+        gui.debug.clearcoat_roughness = clearcoat_roughness;
+        gui.debug.glintiness = glintiness;
+        gui.debug.glint_log_density = glint_log_density;
+        gui.debug.glint_roughness = glint_roughness;
+        gui.debug.glint_randomness = glint_randomness;
+
+        material_uniform_buffers[material_idx].set_data( mat_data );
+        material_uniform_buffers[material_idx].update( ctx.vulkan, engine.get_frame_index() );
+    }
+
+    engine.camera.center = glm::mix( i.camera_center, f.camera_center, t );
+    engine.camera.radius = glm::mix( i.camera_radius, f.camera_radius, t );
+    engine.camera.azimuth = glm::mix( i.camera_azimuth, f.camera_azimuth, t );
+    engine.camera.zenith = glm::mix( i.camera_zenith, f.camera_zenith, t );
+
+    transition.progress += static_cast<float>( engine.delta );
+
+    if ( transition.progress >= transition.duration ) {
+        // Finished the transition to the current preset
+        gui.preset.transition = std::nullopt;
+    }
 }
 
 }

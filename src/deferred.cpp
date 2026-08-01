@@ -234,4 +234,35 @@ void update_desc_sets( vk::Common& vulkan, engine::State& engine, GBuffers& gbuf
     );
 }
 
+void create_top_pipeline_barriers(
+    const deferred::GBuffers& gbuffers,
+    const engine::RWImage& screen_color,
+    engine::PipelineBarrierDescriptor* top_pipeline_barrier_desc
+)
+{
+    top_pipeline_barrier_desc->buffer_barriers = { };
+
+    // All GBuffer barriers are for VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+    top_pipeline_barrier_desc->image_barriers = deferred::init_gbuffer_image_barriers( gbuffers );
+
+    // Screen_color is set up for frag shader writing, but subsequent commands must operate after
+    // compute sahder stage This is because we use compute shaders to write to screen_color in the
+    // terrain rendering pass. This is potentially wasteful since we're unable to compute object
+    // lighting until after the compute stage, so an alternative is to either shift the terrain
+    // lighting to GFX (so color attachment output stage can be used instead), or to instead shift
+    // object lighting to compute.
+    top_pipeline_barrier_desc->image_barriers.push_back(
+        {
+            .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+            .src_access = VK_ACCESS_2_NONE,
+            .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+            .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+            .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+            .image = screen_color,
+            .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+        }
+    );
+}
+
 }

@@ -1,5 +1,7 @@
 #include "ao.hpp"
 
+#include "../../gui.hpp"
+
 #include "../../vk/create.hpp"
 
 const std::filesystem::path AO_SHADER_MODULE_PATH = "../shaders/post/ao/ao.spv";
@@ -116,6 +118,24 @@ void add_ao( AoPass& ao_pass, vk::Common& vulkan, engine::State& engine, TaskLis
     engine::add_cs_task( task_list, cs_ao_task );
 
     return;
+}
+
+void update_ao_uniform_buffer(
+    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::AoPass& ao_pass
+)
+{
+    ub_data::AOData ao_ub = ao_pass.ao_buffer.get_data();
+
+    ao_ub.packed_floats0 = glm::vec4(
+        gui.ao.thickness,
+        gui.ao.radius,
+        gui.ao.offset,
+        gui.ao.enable_debug ? 1.0f : 0.0f
+    );
+    ao_ub.packed_floats1 = glm::vec4( gui.ao.enable_ao ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f );
+
+    ao_pass.ao_buffer.set_data( ao_ub );
+    ao_pass.ao_buffer.update( vulkan, engine.get_frame_index() );
 }
 
 }

@@ -42,4 +42,8 @@ engine::ImageBarrier color_write_to_frag_read( engine::RWImage& image );
 
 void update_desc_sets( vk::Common& vulkan, engine::State& engine, GBuffers& gbuffers );
 
+void create_top_pipeline_barriers( const deferred::GBuffers& gbuffers,
+    const engine::RWImage& screen_color,
+    engine::PipelineBarrierDescriptor* top_pipeline_barrier_desc );
+
 }
