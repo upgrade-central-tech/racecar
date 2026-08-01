@@ -1290,6 +1290,15 @@ void create_reflection_pass_resources(
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
+    engine::update_descriptor_set_rwimage(
+        ctx.vulkan,
+        engine,
+        *reflection_buffer_desc_set,
+        *reflection_data,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        0
+    );
+
     *reflection_gfx_task = { .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
                              .color_attachments = { *reflection_data },
                              .extent = engine.swapchain.extent };
@@ -1336,6 +1345,102 @@ void create_deferred_lighting_pipeline_barrier(
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
             } }
     );
+}
+
+void create_terrain_car_screen_pipeline_barrier(
+    engine::TaskList& task_list, engine::RWImage& screen_color
+)
+{
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers = { engine::ImageBarrier {
+                .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                .src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+                .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                .image = screen_color,
+                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
+    );
+}
+
+struct LightingPassDescSets {
+    engine::DescriptorSet& uniform_desc_set;
+    std::vector<engine::DescriptorSet>& material_desc_sets;
+    engine::DescriptorSet& lut_sets;
+    engine::DescriptorSet& sampler_desc_set;
+    engine::DescriptorSet& gbuffer_desc_set;
+    engine::DescriptorSet& car_tlas_desc_set;
+    engine::DescriptorSet& reflection_buffer_desc_set;
+};
+
+void create_lighting_pass_resources(
+    Context& ctx,
+    engine::State& engine,
+    LightingPassDescSets desc_sets,
+    engine::Pipeline* lighting_pass_pipeline
+)
+{
+    *lighting_pass_pipeline = engine::create_gfx_pipeline(
+        engine,
+        ctx.vulkan,
+        engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance() ),
+        { desc_sets.uniform_desc_set.layouts[0],
+          desc_sets.material_desc_sets[0].layouts[0],
+          desc_sets.lut_sets.layouts[0],
+          desc_sets.sampler_desc_set.layouts[0],
+          desc_sets.gbuffer_desc_set.layouts[0],
+          desc_sets.car_tlas_desc_set.layouts[0],
+          desc_sets.reflection_buffer_desc_set.layouts[0] },
+        { VK_FORMAT_R16G16B16A16_SFLOAT },
+        VK_SAMPLE_COUNT_1_BIT,
+        true,
+        false,
+        vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ),
+        false
+    );
+}
+
+void car_lighting_pass(
+    engine::State& engine,
+    LightingPassDescSets desc_sets,
+    engine::Pipeline& lighting_pass_pipeline,
+    engine::RWImage& screen_color,
+    engine::TaskList& task_list
+)
+{
+    geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
+
+    engine::GfxTask lighting_pass_gfx_task = {
+        .clear_depth = 1.0f,
+        .render_target_is_swapchain = false,
+        .color_attachments = { screen_color },
+        .extent = engine.swapchain.extent
+    };
+
+    lighting_pass_gfx_task.draw_tasks.push_back({
+            .draw_resource_descriptor = {
+                .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
+                .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
+                .vertex_buffer_offsets = { 0 },
+                .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
+            },
+            .descriptor_sets = {
+                &desc_sets.uniform_desc_set,
+                &desc_sets.material_desc_sets[static_cast<size_t>( 0 )], // THIS IS WRONG; NEEDS FIX
+                &desc_sets.lut_sets,
+                &desc_sets.sampler_desc_set,
+                &desc_sets.gbuffer_desc_set,
+                &desc_sets.car_tlas_desc_set,
+                &desc_sets.reflection_buffer_desc_set
+            },
+            .pipeline = lighting_pass_pipeline,
+        });
+
+    engine::add_gfx_task( task_list, lighting_pass_gfx_task );
 }
 
 void run( bool use_fullscreen )
@@ -1593,6 +1698,20 @@ void run( bool use_fullscreen )
         &reflection_gfx_task
     );
 
+    // Set up car lighting pass
+    LightingPassDescSets lighting_pass_desc_sets = {
+        .uniform_desc_set = uniform_desc_set,
+        .material_desc_sets = material_desc_sets,
+        .lut_sets = lut_sets,
+        .sampler_desc_set = sampler_desc_set,
+        .gbuffer_desc_set = gbuffers.desc_set,
+        .car_tlas_desc_set = car_tlas_desc_set,
+        .reflection_buffer_desc_set = reflection_buffer_desc_set,
+    };
+
+    engine::Pipeline lighting_pass_pipeline;
+    create_lighting_pass_resources( ctx, engine, lighting_pass_desc_sets, &lighting_pass_pipeline );
+
     geometry::initialize_terrain_draw_pipeline(
         test_terrain,
         ctx.vulkan,
@@ -1680,94 +1799,17 @@ void run( bool use_fullscreen )
     // Terrain lighting pass
     geometry::draw_terrain( test_terrain, engine, task_list );
 
-    // Object lighting pass, writes to screen_color
-    {
-        engine::add_pipeline_barrier(
-            task_list,
-            engine::PipelineBarrierDescriptor {
-                .buffer_barriers = { },
-                .image_barriers = { engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    .image = screen_color,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
-        );
+    // Transfer screen_color from the terrain compute pass to the car lighting pass
+    create_terrain_car_screen_pipeline_barrier( task_list, screen_color );
 
-        // TODO: Replace with quad_mesh?
-        geometry::quad::Mesh lighting_pass_quad_mesh = geometry::quad::create( ctx.vulkan, engine );
-
-        engine::GfxTask lighting_pass_gfx_task = {
-            .clear_depth = 1.0f,
-            .render_target_is_swapchain = true,
-            .extent = engine.swapchain.extent,
-        };
-
-        lighting_pass_gfx_task.render_target_is_swapchain = false;
-        lighting_pass_gfx_task.color_attachments = { screen_color };
-
-        size_t frame_index = engine.get_frame_index();
-        engine::Pipeline lighting_pass_gfx_pipeline;
-        try {
-            lighting_pass_gfx_pipeline = engine::create_gfx_pipeline(
-                engine,
-                ctx.vulkan,
-                engine::get_vertex_input_state_create_info( lighting_pass_quad_mesh ),
-                { uniform_desc_set.layouts[frame_index],
-                  material_desc_sets[0].layouts[frame_index],
-                  lut_sets.layouts[frame_index],
-                  sampler_desc_set.layouts[frame_index],
-                  gbuffers.desc_set.layouts[frame_index],
-                  car_tlas_desc_set.layouts[frame_index],
-                  reflection_buffer_desc_set.layouts[0] },
-                {
-                    VK_FORMAT_R16G16B16A16_SFLOAT,
-                },
-                VK_SAMPLE_COUNT_1_BIT,
-                true,
-                false,
-                vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ),
-                false
-            );
-        } catch ( const Exception& ex ) {
-            log::error( "Failed to create lighting pass graphics pipeline: {}", ex.what() );
-            throw;
-        }
-
-        deferred::update_desc_sets( ctx.vulkan, engine, gbuffers );
-        engine::update_descriptor_set_rwimage(
-            ctx.vulkan,
-            engine,
-            reflection_buffer_desc_set,
-            reflection_data,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            0
-        );
-
-        lighting_pass_gfx_task.draw_tasks.push_back({
-                .draw_resource_descriptor = {
-                    .vertex_buffers = { lighting_pass_quad_mesh.mesh_buffers.vertex_buffer.handle },
-                    .index_buffer = lighting_pass_quad_mesh.mesh_buffers.index_buffer.handle,
-                    .vertex_buffer_offsets = { 0 },
-                    .index_count = static_cast<uint32_t>( lighting_pass_quad_mesh.indices.size() ),
-                },
-                .descriptor_sets = {
-                    &uniform_desc_set,
-                    &material_desc_sets[static_cast<size_t>( 0 )], // THIS IS WRONG; NEEDS FIX
-                    &lut_sets,
-                    &sampler_desc_set,
-                    &gbuffers.desc_set,
-                    &car_tlas_desc_set,
-                    &reflection_buffer_desc_set
-                },
-                .pipeline = lighting_pass_gfx_pipeline,
-            });
-
-        engine::add_gfx_task( task_list, lighting_pass_gfx_task );
-    }
+    // Car lighting pass, writes to screen_color
+    car_lighting_pass(
+        engine,
+        lighting_pass_desc_sets,
+        lighting_pass_pipeline,
+        screen_color,
+        task_list
+    );
 
     // Post-processing
     engine::post::AAPass aa_pass;

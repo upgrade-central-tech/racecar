@@ -95,6 +95,8 @@ GBuffers initialize_GBuffers( vk::Common& vulkan, engine::State& engine )
         VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
+    update_desc_sets( vulkan, engine, gbuffers );
+
     return gbuffers;
 }
 
