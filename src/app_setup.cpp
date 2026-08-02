@@ -11,6 +11,28 @@
 
 namespace racecar {
 
+namespace {
+
+constexpr size_t NUM_MATERIAL_TEXTURE_BINDINGS = 3;
+
+vk::mem::AllocatedImage create_fallback_texture( Context& ctx, engine::State& engine )
+{
+    uint32_t white = 0xFFFFFFFF;
+
+    return engine::create_image(
+        ctx.vulkan,
+        engine,
+        &white,
+        VkExtent3D( 1, 1, 1 ),
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_SAMPLED_BIT,
+        false
+    );
+}
+
+}
+
 Context initialize_context( bool use_fullscreen )
 {
     Context ctx;
@@ -341,6 +363,8 @@ void load_model_primitive_material_data(
     std::vector<engine::DescriptorSet>& material_desc_sets
 )
 {
+    const vk::mem::AllocatedImage fallback_texture = create_fallback_texture( ctx, engine );
+
     int tex_count = 0;
     for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
         if ( node->mesh.has_value() ) {
@@ -418,21 +442,14 @@ void load_model_primitive_material_data(
                     textures_needed.push_back( std::nullopt );
                 }
 
-                std::vector<vk::mem::AllocatedImage> textures_sent;
+                for ( size_t i = 0; i < NUM_MATERIAL_TEXTURE_BINDINGS; i++ ) {
+                    const bool has_texture = i < textures_needed.size() && textures_needed[i];
 
-                for ( std::optional<scene::Texture>& texture : textures_needed ) {
-                    if ( texture && ( textures_sent.size() < vk::binding::MAX_IMAGES_BINDED ) ) {
-                        textures_sent.push_back( texture->data.value() );
-                    }
-                }
-
-                // Actually bind the texture handle to the descriptorset
-                for ( size_t i = 0; i < textures_sent.size(); i++ ) {
                     engine::update_descriptor_set_image(
                         ctx.vulkan,
                         engine,
                         material_desc_sets[static_cast<size_t>( prim.material_id )],
-                        textures_sent[i],
+                        has_texture ? textures_needed[i]->data.value() : fallback_texture,
                         static_cast<int>( i )
                     );
                 }
