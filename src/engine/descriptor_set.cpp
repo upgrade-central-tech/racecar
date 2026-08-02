@@ -118,6 +118,10 @@ void update_descriptor_set_image_array(
     int binding_idx
 )
 {
+    if ( imgs.empty() ) {
+        return;
+    }
+
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         std::vector<VkDescriptorImageInfo> image_infos;
         for ( size_t img = 0; img < imgs.size(); img++ ) {
