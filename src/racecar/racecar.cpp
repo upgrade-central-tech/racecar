@@ -454,7 +454,7 @@ void run( bool use_fullscreen )
 
     bool will_quit = false;
     bool stop_drawing = false;
-    SDL_Event event = { };
+    SDL_Event event = {};
     std::chrono::steady_clock::time_point current_tick;
 
     while ( !will_quit ) {
@@ -485,7 +485,13 @@ void run( bool use_fullscreen )
 
         // Camera input, then demo-driven camera motion, then the derived matrices
         camera::process_input( engine.camera );
-        apply_demo_camera_motion( engine.camera, gui, scene, model_mat_uniform_buffers, volumetric );
+        apply_demo_camera_motion(
+            engine.camera,
+            gui,
+            scene,
+            model_mat_uniform_buffers,
+            volumetric
+        );
 
         CameraData camera_data = get_camera_data( engine );
 
@@ -515,7 +521,13 @@ void run( bool use_fullscreen )
         update_debug_uniform_buffer( ctx, engine, gui, atms, debug_buffer );
 
         // update materials
-        update_material_uniform_buffers( ctx, engine, gui, material_uniform_buffers, num_materials );
+        update_material_uniform_buffers(
+            ctx,
+            engine,
+            gui,
+            material_uniform_buffers,
+            num_materials
+        );
 
         // Update ray tracing uniform buffers
         update_rt_uniform_buffers( ctx, engine, offset_data, rt_texture_uniform_data );
