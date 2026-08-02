@@ -118,6 +118,13 @@ vkb::Device pick_and_create_device( const Common& vulkan )
         = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
             .rayQuery = VK_TRUE };
 
+    VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR compute_derivatives_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_KHR,
+        .pNext = nullptr,
+        .computeDerivativeGroupQuads = VK_TRUE,
+        .computeDerivativeGroupLinear = VK_FALSE,
+    };
+
     VkPhysicalDeviceVulkan11Features required_features_11 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
         .shaderDrawParameters = VK_TRUE,
@@ -126,6 +133,7 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     VkPhysicalDeviceVulkan12Features required_features_12 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
         .shaderFloat16 = VK_TRUE,
+        .runtimeDescriptorArray = VK_TRUE,
         .bufferDeviceAddress = VK_TRUE,
     };
 
@@ -151,9 +159,11 @@ vkb::Device pick_and_create_device( const Common& vulkan )
               .add_required_extension( VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME )
               .add_required_extension( VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME )
               .add_required_extension( VK_KHR_RAY_QUERY_EXTENSION_NAME )
+              .add_required_extension( VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME )
               .add_required_extension_features( as_features )
               .add_required_extension_features( rt_pipeline_features )
               .add_required_extension_features( ray_query_features )
+              .add_required_extension_features( compute_derivatives_features )
               .set_required_features_13( required_features_13 )
               .set_required_features_12( required_features_12 )
               .set_required_features_11( required_features_11 )
