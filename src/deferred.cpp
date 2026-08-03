@@ -100,18 +100,18 @@ GBuffers initialize_GBuffers( vk::Common& vulkan, engine::State& engine )
     return gbuffers;
 }
 
-std::vector<engine::RWImage> get_color_attachments( GBuffers& gbuffers )
+std::vector<engine::RWImage*> get_color_attachments( GBuffers& gbuffers )
 {
     return {
-        gbuffers.GBuffer_Position, gbuffers.GBuffer_Normal, gbuffers.GBuffer_Tangent,
-        gbuffers.GBuffer_UV,       gbuffers.GBuffer_Albedo, gbuffers.GBuffer_Packed_Data,
-        gbuffers.GBuffer_Velocity,
+        &gbuffers.GBuffer_Position, &gbuffers.GBuffer_Normal,      &gbuffers.GBuffer_Tangent,
+        &gbuffers.GBuffer_UV,       &gbuffers.GBuffer_Albedo,      &gbuffers.GBuffer_Packed_Data,
+        &gbuffers.GBuffer_Velocity,
     };
 }
 
-engine::RWImage get_depth_image( GBuffers& gbuffers ) { return gbuffers.GBuffer_Depth; }
+engine::RWImage* get_depth_image( GBuffers& gbuffers ) { return &gbuffers.GBuffer_Depth; }
 
-std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( const deferred::GBuffers& gbuffers )
+std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( deferred::GBuffers& gbuffers )
 {
     return { init_to_color_write( gbuffers.GBuffer_Normal ),
              init_to_color_write( gbuffers.GBuffer_Position ),
@@ -126,7 +126,7 @@ std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( const deferred::G
                                     .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
                                     .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                                     .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                                    .image = gbuffers.GBuffer_Depth,
+                                    .image = &gbuffers.GBuffer_Depth,
                                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
              engine::ImageBarrier {
                  .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
@@ -135,12 +135,12 @@ std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( const deferred::G
                  .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
                  .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                  .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                 .image = gbuffers.GBuffer_DepthMS,
+                 .image = &gbuffers.GBuffer_DepthMS,
                  .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
              } };
 }
 
-engine::ImageBarrier init_to_color_write( const engine::RWImage& image )
+engine::ImageBarrier init_to_color_write( engine::RWImage& image )
 {
     return {
         .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
@@ -149,7 +149,7 @@ engine::ImageBarrier init_to_color_write( const engine::RWImage& image )
         .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
         .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
         .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .image = image,
+        .image = &image,
         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
     };
 }
@@ -163,7 +163,7 @@ engine::ImageBarrier color_write_to_frag_read( engine::RWImage& image )
         .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
         .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
         .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-        .image = image,
+        .image = &image,
         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
     };
 };
@@ -235,8 +235,8 @@ void update_desc_sets( vk::Common& vulkan, engine::State& engine, GBuffers& gbuf
 }
 
 void create_top_pipeline_barriers(
-    const deferred::GBuffers& gbuffers,
-    const engine::RWImage& screen_color,
+    deferred::GBuffers& gbuffers,
+    engine::RWImage& screen_color,
     engine::PipelineBarrierDescriptor* top_pipeline_barrier_desc
 )
 {
@@ -259,7 +259,7 @@ void create_top_pipeline_barriers(
             .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
             .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
             .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-            .image = screen_color,
+            .image = &screen_color,
             .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
         }
     );

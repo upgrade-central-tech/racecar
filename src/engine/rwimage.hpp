@@ -10,9 +10,19 @@
 namespace racecar::engine {
 
 /// Abstraction over Vulkan images and takes into consideration the multiple swapchain images.
-/// Set of handles. It is trivially copyable.
+///
+/// Move-only
+/// An RWImage is the single owner of its per-frame images
 struct RWImage {
     std::vector<vk::mem::AllocatedImage> images;
+
+    RWImage() = default;
+
+    RWImage( const RWImage& ) = delete;
+    RWImage& operator=( const RWImage& ) = delete;
+
+    RWImage( RWImage&& ) = default;
+    RWImage& operator=( RWImage&& ) = default;
 };
 
 RWImage create_rwimage( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,

@@ -28,7 +28,7 @@ void create_screen_buffer_pipeline_barrier(
                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                    .image = screen_color,
+                    .image = &screen_color,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
                 engine::ImageBarrier {
@@ -38,7 +38,7 @@ void create_screen_buffer_pipeline_barrier(
                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                    .image = screen_buffer,
+                    .image = &screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
             } }
@@ -59,7 +59,7 @@ void create_screen_buffer_present_pipeline_barrier( engine::RWImage& screen_buff
                     .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
                     .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = screen_buffer,
+                    .image = &screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
             } }
@@ -81,8 +81,14 @@ void post_processing_passes(
     engine::post::TonemappingPass& tm_pass
 )
 {
-    bloom_pass
-        = engine::post::add_bloom( ctx.vulkan, engine, task_list, screen_color, screen_buffer );
+    engine::post::add_bloom(
+        &bloom_pass,
+        ctx.vulkan,
+        engine,
+        task_list,
+        screen_color,
+        screen_buffer
+    );
 
     ao_pass = {
         .camera_buffer = &camera_buffer,

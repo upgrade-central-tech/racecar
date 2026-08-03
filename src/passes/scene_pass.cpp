@@ -65,7 +65,6 @@ engine::GfxTask create_prepass_gfx_task( const engine::State& engine, deferred::
     return {
         .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
         .clear_depth = 1.f,
-        .render_target_is_swapchain = false,
         .color_attachments = deferred::get_color_attachments( gbuffers ),
         .depth_image = deferred::get_depth_image( gbuffers ),
         .extent = engine.swapchain.extent,

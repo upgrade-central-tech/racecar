@@ -435,15 +435,14 @@ void draw_volumetric(
                 .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                 .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                 .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                .image = volumetric.cloud_buffer,
+                .image = &volumetric.cloud_buffer,
                 .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
     );
 
     const geometry::quad::Mesh& volumetric_mesh = volumetric.scene_mesh;
 
     // We ideally don't want to render this at full resolution. That would take too much time!
-    engine::GfxTask volumetric_gfx_task = { .render_target_is_swapchain = false,
-                                            .color_attachments = { volumetric.cloud_buffer },
+    engine::GfxTask volumetric_gfx_task = { .color_attachments = { &volumetric.cloud_buffer },
                                             .extent = {
                                                 low_res_dim.width,
                                                 low_res_dim.height,
@@ -524,14 +523,13 @@ void draw_volumetric(
                 .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
                 .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                 .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                .image = volumetric.cloud_buffer,
+                .image = &volumetric.cloud_buffer,
                 .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
     );
 
     // Prepare composite stage
     engine::GfxTask volumetric_composite_task = {
-        .render_target_is_swapchain = false,
-        .color_attachments = { color_attachment },
+        .color_attachments = { &color_attachment },
         .extent = engine.swapchain.extent,
     };
 

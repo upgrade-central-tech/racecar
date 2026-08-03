@@ -262,15 +262,14 @@ void initialize_terrain(
     );
 
     terrain.terrain_prepass_task = {
-        .render_target_is_swapchain = false,
         .color_attachments = {
-            prepass_info.gbuffers->GBuffer_Position,
-            prepass_info.gbuffers->GBuffer_Normal,
-            prepass_info.gbuffers->GBuffer_Albedo,
-            prepass_info.gbuffers->GBuffer_Packed_Data,
-            prepass_info.gbuffers->GBuffer_Velocity,
+            &prepass_info.gbuffers->GBuffer_Position,
+            &prepass_info.gbuffers->GBuffer_Normal,
+            &prepass_info.gbuffers->GBuffer_Albedo,
+            &prepass_info.gbuffers->GBuffer_Packed_Data,
+            &prepass_info.gbuffers->GBuffer_Velocity,
         },
-        .depth_image = { prepass_info.gbuffers->GBuffer_Depth },
+        .depth_image = &prepass_info.gbuffers->GBuffer_Depth,
         .extent = engine.swapchain.extent,
     };
 

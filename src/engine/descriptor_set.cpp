@@ -86,7 +86,7 @@ void update_descriptor_set_image(
     vk::Common& vulkan,
     State& engine,
     DescriptorSet& desc_set,
-    vk::mem::AllocatedImage img,
+    const vk::mem::AllocatedImage& img,
     int binding_idx
 )
 {
@@ -114,7 +114,7 @@ void update_descriptor_set_image_array(
     vk::Common& vulkan,
     State& engine,
     DescriptorSet& desc_set,
-    std::vector<vk::mem::AllocatedImage> imgs,
+    const std::vector<vk::mem::AllocatedImage>& imgs,
     int binding_idx
 )
 {
@@ -214,11 +214,15 @@ void update_descriptor_set_rwimage_mip(
 }
 
 void update_descriptor_set_depth_image(
-    vk::Common& vulkan, State& engine, DescriptorSet& desc_set, RWImage depth_img, int binding_idx
+    vk::Common& vulkan,
+    State& engine,
+    DescriptorSet& desc_set,
+    const RWImage& depth_img,
+    int binding_idx
 )
 {
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        vk::mem::AllocatedImage& img = depth_img.images[i];
+        const vk::mem::AllocatedImage& img = depth_img.images[i];
         VkDescriptorImageInfo desc_image_info = {
             .sampler = VK_NULL_HANDLE,
             .imageView = img.image_view,
@@ -242,7 +246,7 @@ void update_descriptor_set_write_image(
     vk::Common& vulkan,
     State& engine,
     DescriptorSet& desc_set,
-    vk::mem::AllocatedImage img,
+    const vk::mem::AllocatedImage& img,
     int binding_idx
 )
 {

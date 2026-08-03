@@ -15,7 +15,8 @@ constexpr std::string_view UPSAMPLE_SHADER_PATH = "../shaders/post/bloom/upsampl
 
 }
 
-BloomPass add_bloom(
+void add_bloom(
+    BloomPass* pass_out,
     vk::Common& vulkan,
     const State& engine,
     TaskList& task_list,
@@ -23,7 +24,7 @@ BloomPass add_bloom(
     RWImage& write_only
 )
 {
-    BloomPass pass;
+    BloomPass& pass = *pass_out;
 
     engine::transition_cs_read_to_rw( task_list, inout );
     engine::transition_cs_write_to_rw( task_list, write_only );
@@ -53,7 +54,7 @@ BloomPass add_bloom(
                       .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                       .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                      .image = pass.images[i],
+                      .image = &pass.images[i],
                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                   } } }
             );
@@ -279,8 +280,6 @@ BloomPass add_bloom(
     engine::transition_cs_rw_to_read( task_list, inout );
 
     log::info( "[Post] Added bloom pass!" );
-
-    return pass;
 }
 
 void update_bloom_uniform_buffer(

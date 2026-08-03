@@ -33,7 +33,7 @@ void create_deferred_lighting_pipeline_barrier(
                                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
                                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-                                       .image = gbuffers.GBuffer_Depth,
+                                       .image = &gbuffers.GBuffer_Depth,
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
                                        .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
@@ -41,7 +41,7 @@ void create_deferred_lighting_pipeline_barrier(
                                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
                                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-                                       .image = gbuffers.GBuffer_DepthMS,
+                                       .image = &gbuffers.GBuffer_DepthMS,
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -49,7 +49,7 @@ void create_deferred_lighting_pipeline_barrier(
                                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
                                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                                        .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                                       .image = reflection_data,
+                                       .image = &reflection_data,
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
             } }
     );
@@ -70,7 +70,7 @@ void create_terrain_car_screen_pipeline_barrier(
                 .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                 .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                 .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                .image = screen_color,
+                .image = &screen_color,
                 .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
     );
 }
@@ -114,8 +114,7 @@ void car_lighting_pass(
 
     engine::GfxTask lighting_pass_gfx_task = {
         .clear_depth = 1.0f,
-        .render_target_is_swapchain = false,
-        .color_attachments = { screen_color },
+        .color_attachments = { &screen_color },
         .extent = engine.swapchain.extent
     };
 

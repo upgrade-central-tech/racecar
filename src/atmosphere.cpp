@@ -193,8 +193,7 @@ void draw_atmosphere(
     engine::GfxTask atmosphere_gfx_task = {
         .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
         .clear_depth = 1.f,
-        .render_target_is_swapchain = false,
-        .color_attachments = { out_color },
+        .color_attachments = { &out_color },
         .extent = engine.swapchain.extent,
     };
 

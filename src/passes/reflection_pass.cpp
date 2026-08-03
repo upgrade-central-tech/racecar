@@ -32,7 +32,7 @@ void create_deferred_reflection_pipeline_barrier(
                                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                       .image = reflection_data,
+                                       .image = &reflection_data,
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
             } }
     );
@@ -114,7 +114,7 @@ void create_reflection_pass_resources(
     );
 
     *reflection_gfx_task = { .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
-                             .color_attachments = { *reflection_data },
+                             .color_attachments = { reflection_data },
                              .extent = engine.swapchain.extent };
 
     reflection_gfx_task->draw_tasks.push_back( reflection_prepass_task );

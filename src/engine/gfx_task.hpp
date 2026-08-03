@@ -17,10 +17,9 @@ struct GfxTask {
     std::optional<VkClearColorValue> clear_color;
     std::optional<float> clear_depth;
 
-    bool render_target_is_swapchain = false;
-
-    std::vector<RWImage> color_attachments;
-    std::optional<RWImage> depth_image;
+    /// Non-owning. The images must outlive the task list, which is recorded once and replayed.
+    std::vector<RWImage*> color_attachments;
+    RWImage* depth_image = nullptr;
 
     VkExtent2D extent = {};
 };

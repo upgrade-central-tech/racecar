@@ -46,10 +46,11 @@ struct ImageBarrier {
     /// the layout of the image we want to transition to
     VkImageLayout dst_layout;
 
-    RWImage image;
+    /// Non-owning. Must outlive the task list.
+    RWImage* image = nullptr;
     VkImageSubresourceRange range;
 
-    VkImageMemoryBarrier2 get_vk( size_t idx );
+    VkImageMemoryBarrier2 get_vk( size_t idx ) const;
 };
 
 struct PipelineBarrierDescriptor {
@@ -58,7 +59,7 @@ struct PipelineBarrierDescriptor {
 };
 
 void run_pipeline_barrier(
-    const State& engine, PipelineBarrierDescriptor barrier, VkCommandBuffer cmd_buf );
+    const State& engine, const PipelineBarrierDescriptor& barrier, VkCommandBuffer cmd_buf );
 
 constexpr VkImageSubresourceRange VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR = {
     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

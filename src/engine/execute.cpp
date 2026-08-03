@@ -64,17 +64,6 @@ void execute( State& engine, Context& ctx, TaskList& task_list, const gui::Gui& 
 
     SwapchainSemaphores& swapchain_semaphores = engine.swapchain_semaphores[output_swapchain_index];
 
-    // For any render target rendering to the screen, set the dynamic output
-    for ( GfxTask& gfx_task : task_list.gfx_tasks ) {
-        if ( gfx_task.render_target_is_swapchain ) {
-            gfx_task.color_attachments = {
-                RWImage { .images
-                          = { { .image = output_image, .image_view = output_image_view } } },
-            };
-            gfx_task.depth_image = { { out_depth_image } };
-        }
-    }
-
     {
         // Make swapchain image writeable ( and clear! )
         vkBeginCommandBuffer( frame.start_cmdbuf, &command_buffer_begin_info );
@@ -192,8 +181,8 @@ void execute( State& engine, Context& ctx, TaskList& task_list, const gui::Gui& 
                     break;
                 }
 
-                const VkImage& dst_image = blit_task.out_color.has_value()
-                    ? blit_task.out_color.value().images[output_swapchain_index].image
+                const VkImage& dst_image = ( blit_task.out_color != nullptr )
+                    ? blit_task.out_color->images[output_swapchain_index].image
                     : output_image;
 
                 execute_blit_task( engine, frame.render_cmdbuf, blit_task, dst_image );

@@ -29,9 +29,8 @@ engine::GfxTask create_depth_ms_gfx_task( engine::State& engine, deferred::GBuff
     return {
         .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
         .clear_depth = 1.f,
-        .render_target_is_swapchain = false,
         .color_attachments = { },
-        .depth_image = gbuffers->GBuffer_DepthMS,
+        .depth_image = &gbuffers->GBuffer_DepthMS,
         .extent = engine.swapchain.extent,
     };
 }

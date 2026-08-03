@@ -214,7 +214,7 @@ void compute_octahedral_sky( AtmosphereBaker& atms_baker, engine::TaskList& task
                 .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                 .dst_access = VK_ACCESS_SHADER_WRITE_BIT,
                 .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                .image = atms_baker.octahedral_sky_irradiance,
+                .image = &atms_baker.octahedral_sky_irradiance,
                 .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
     );
 
@@ -252,7 +252,7 @@ void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, engine::Tas
                 .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                 .dst_access = VK_ACCESS_SHADER_WRITE_BIT,
                 .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                .image = atms_baker.octahedral_sky_irradiance,
+                .image = &atms_baker.octahedral_sky_irradiance,
                 .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
     );
 
@@ -270,7 +270,7 @@ void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, engine::Tas
                 .dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                 .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                .image = atms_baker.octahedral_sky_irradiance,
+                .image = &atms_baker.octahedral_sky_irradiance,
                 .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
     );
 };
@@ -343,7 +343,7 @@ void compute_octahedral_sky_mips(
                                                 .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                                                 .dst_access = VK_ACCESS_SHADER_WRITE_BIT,
                                                 .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                                .image = atms_baker.octahedral_sky_mips,
+                                                .image = &atms_baker.octahedral_sky_mips,
                                                 .range = {
                                                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                                                     .baseMipLevel = 0,
@@ -387,7 +387,7 @@ void compute_octahedral_sky_mips(
                                        .dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                       .image = atms_baker.octahedral_sky_mips,
+                                       .image = &atms_baker.octahedral_sky_mips,
                                        .range = {
                                            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                                            .baseMipLevel = 0,

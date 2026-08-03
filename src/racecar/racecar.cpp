@@ -446,7 +446,7 @@ void run( bool use_fullscreen )
     create_screen_buffer_present_pipeline_barrier( screen_buffer, task_list );
 
     // Blit screen buffer to the swapchain, ready for presentation
-    engine::add_blit_task( task_list, { screen_buffer } );
+    engine::add_blit_task( task_list, { &screen_buffer } );
 
     // ================================================================================================================
     // MAIN RUNNER LOOP

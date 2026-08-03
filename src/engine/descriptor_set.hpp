@@ -53,16 +53,16 @@ void update_descriptor_set_const_storage_buffer( vk::Common& vulkan, const State
     DescriptorSet& desc_set, vk::mem::AllocatedBuffer storage_buffer, int binding_idx );
 
 void update_descriptor_set_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
-    vk::mem::AllocatedImage img, int binding_idx );
+    const vk::mem::AllocatedImage& img, int binding_idx );
 
 void update_descriptor_set_image_array( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
-    std::vector<vk::mem::AllocatedImage> imgs, int binding_idx );
+    const std::vector<vk::mem::AllocatedImage>& imgs, int binding_idx );
 
 void update_descriptor_set_depth_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
-    RWImage depth_img, int binding_idx );
+    const RWImage& depth_img, int binding_idx );
 
 void update_descriptor_set_write_image( vk::Common& vulkan, State& engine, DescriptorSet& desc_set,
-    vk::mem::AllocatedImage img, int binding_idx );
+    const vk::mem::AllocatedImage& img, int binding_idx );
 
 void update_descriptor_set_rwimage( vk::Common& vulkan, const State& engine,
     DescriptorSet& desc_set, const RWImage& rw_img, VkImageLayout img_layout, int binding_idx );

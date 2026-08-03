@@ -32,18 +32,18 @@ struct GBuffers {
 
 GBuffers initialize_GBuffers( vk::Common& vulkan, engine::State& engine );
 
-std::vector<engine::RWImage> get_color_attachments( GBuffers& gbuffers );
-engine::RWImage get_depth_image( GBuffers& gbuffers );
+std::vector<engine::RWImage*> get_color_attachments( GBuffers& gbuffers );
+engine::RWImage* get_depth_image( GBuffers& gbuffers );
 
-std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( const deferred::GBuffers& gbuffers );
+std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( deferred::GBuffers& gbuffers );
 
-engine::ImageBarrier init_to_color_write( const engine::RWImage& image );
+engine::ImageBarrier init_to_color_write( engine::RWImage& image );
 engine::ImageBarrier color_write_to_frag_read( engine::RWImage& image );
 
 void update_desc_sets( vk::Common& vulkan, engine::State& engine, GBuffers& gbuffers );
 
-void create_top_pipeline_barriers( const deferred::GBuffers& gbuffers,
-    const engine::RWImage& screen_color,
+void create_top_pipeline_barriers( deferred::GBuffers& gbuffers,
+    engine::RWImage& screen_color,
     engine::PipelineBarrierDescriptor* top_pipeline_barrier_desc );
 
 }

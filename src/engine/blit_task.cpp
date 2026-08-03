@@ -11,11 +11,11 @@ void execute_blit_task(
     VkImage dst_image
 )
 {
-    VkImage src_image = blit_task.in_color.images[engine.get_frame_index()].image;
-    VkExtent3D src_extent = blit_task.in_color.images[engine.get_frame_index()].image_extent;
+    VkImage src_image = blit_task.in_color->images[engine.get_frame_index()].image;
+    VkExtent3D src_extent = blit_task.in_color->images[engine.get_frame_index()].image_extent;
     VkExtent3D dst_extent = { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 };
 
-    if ( blit_task.out_color.has_value() ) {
+    if ( blit_task.out_color != nullptr ) {
         dst_extent = blit_task.out_color->images[engine.get_frame_index()].image_extent;
     }
 
@@ -39,7 +39,7 @@ void execute_blit_task(
                                   1 };
 
     // Nasty code used for the swapchain.
-    if ( !blit_task.out_color.has_value() ) {
+    if ( blit_task.out_color == nullptr ) {
         vk::utility::transition_image(
             cmd_buf,
             dst_image,
@@ -65,7 +65,7 @@ void execute_blit_task(
     );
 
     // Nasty code used for the swapchain.
-    if ( !blit_task.out_color.has_value() ) {
+    if ( blit_task.out_color == nullptr ) {
         vk::utility::transition_image(
             cmd_buf,
             dst_image,
