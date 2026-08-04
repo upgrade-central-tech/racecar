@@ -17,7 +17,9 @@ constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferr
 void create_deferred_lighting_pipeline_barrier(
     engine::TaskList& task_list,
     deferred::GBuffers& gbuffers,
+#if RACECAR_RAY_TRACING
     engine::RWImage& reflection_data,
+#endif // RACECAR_RAY_TRACING
     engine::RWImage& screen_color
 )
 {
@@ -26,6 +28,11 @@ void create_deferred_lighting_pipeline_barrier(
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
             .image_barriers = {
+#if !RACECAR_RAY_TRACING
+                deferred::color_write_to_frag_read( gbuffers.GBuffer_Position ),
+                deferred::color_write_to_frag_read( gbuffers.GBuffer_Velocity ),
+                deferred::color_write_to_frag_read( gbuffers.GBuffer_Normal ),
+#endif // RACECAR_RAY_TRACING
                 deferred::color_write_to_frag_read( gbuffers.GBuffer_Tangent ),
                 deferred::color_write_to_frag_read( gbuffers.GBuffer_UV ),
                 deferred::color_write_to_frag_read( gbuffers.GBuffer_Albedo ),
@@ -46,6 +53,7 @@ void create_deferred_lighting_pipeline_barrier(
                                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
                                        .image = &gbuffers.GBuffer_DepthMS,
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+#if RACECAR_RAY_TRACING
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -54,6 +62,7 @@ void create_deferred_lighting_pipeline_barrier(
                                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                                        .image = &reflection_data,
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+#endif // RACECAR_RAY_TRACING
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -102,8 +111,11 @@ void create_lighting_pass_resources(
           desc_sets.lut_sets.layouts[0],
           desc_sets.sampler_desc_set.layouts[0],
           desc_sets.gbuffer_desc_set.layouts[0],
+#if RACECAR_RAY_TRACING
           desc_sets.car_tlas_desc_set.layouts[0],
-          desc_sets.reflection_buffer_desc_set.layouts[0] },
+          desc_sets.reflection_buffer_desc_set.layouts[0]
+#endif // RACECAR_RAY_TRACING
+        },
         { VK_FORMAT_R16G16B16A16_SFLOAT },
         VK_SAMPLE_COUNT_1_BIT,
         true,
@@ -140,8 +152,10 @@ void car_lighting_pass(
                 &desc_sets.lut_sets,
                 &desc_sets.sampler_desc_set,
                 &desc_sets.gbuffer_desc_set,
+#if RACECAR_RAY_TRACING
                 &desc_sets.car_tlas_desc_set,
                 &desc_sets.reflection_buffer_desc_set
+#endif // RACECAR_RAY_TRACING
             },
             .pipeline = lighting_pass_pipeline,
         });

@@ -63,22 +63,28 @@ struct Terrain {
     engine::DescriptorSet prepass_sampler_desc_set;
     engine::DescriptorSet prepass_lut_desc_set;
 
+#if RACECAR_RAY_TRACING
     engine::DescriptorSet terrain_tlas_desc_set;
+#endif // RACECAR_RAY_TRACING
 
     engine::DescriptorSet uniform_desc_set;
     engine::DescriptorSet texture_desc_set;
     engine::DescriptorSet lut_desc_set;
     engine::DescriptorSet sampler_desc_set;
+#if RACECAR_RAY_TRACING
     engine::DescriptorSet* car_tlas_desc_set;
     engine::DescriptorSet* reflection_texture_desc_set;
+#endif // RACECAR_RAY_TRACING
 
     engine::GfxTask terrain_prepass_task;
     engine::Pipeline terrain_prepass_pipeline;
     engine::Pipeline terrain_lighting_pipeline;
 
     UniformBuffer<ub_data::TerrainData> terrain_uniform;
+#if RACECAR_RAY_TRACING
     vk::rt::AccelerationStructure blas;
     vk::rt::AccelerationStructure tlas;
+#endif // RACECAR_RAY_TRACING
 
     // Crap-ton of images. We need a bindless-texture solution or something.
     // Maybe one giant atlas will work, actually.
@@ -107,9 +113,13 @@ struct Terrain {
 void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain,
     const TerrainPrepassInfo& prepass_info, const TerrainLightingInfo& lighting_info );
 
-void initialize_terrain_draw_pipeline( Terrain& terrain, vk::Common& vulkan,
+void initialize_terrain_draw_pipeline( Terrain& terrain, vk::Common& vulkan
+#if RACECAR_RAY_TRACING
+    ,
     engine::DescriptorSet& car_tlas_desc_set,
-    engine::DescriptorSet& reflection_texture_desc_set );
+    engine::DescriptorSet& reflection_texture_desc_set
+#endif // RACECAR_RAY_TRACING
+);
 
 void terrain_precompute( Terrain& terrain, VkCommandBuffer precompute_cmdbuf );
 

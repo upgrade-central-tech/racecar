@@ -1,5 +1,7 @@
 #pragma once
 
+#if RACECAR_RAY_TRACING
+
 #include "../context.hpp"
 #include "../deferred.hpp"
 #include "../engine/descriptor_set.hpp"
@@ -29,3 +31,5 @@ void create_deferred_reflection_pipeline_barrier(
     engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::RWImage& reflection_data );
 
 }
+
+#endif // RACECAR_RAY_TRACING

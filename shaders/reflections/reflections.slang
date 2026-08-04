@@ -47,8 +47,10 @@ layout( binding = 5, set = 2 ) Texture2D<float> GBuffer_Depth;
 layout( binding = 6, set = 2 ) Texture2DMS<float> GBuffer_DepthMS;
 layout( binding = 7, set = 2 ) Texture2D<float4> GBuffer_Packed_Data;
 
+#if RACECAR_RAY_TRACING
 layout( binding = 0, set = 3 ) RaytracingAccelerationStructure sceneBVH;
 layout( binding = 0, set = 4 ) RaytracingAccelerationStructure terrainBVH;
+#endif // RACECAR_RAY_TRACING
 
 layout( binding = 0, set = 5 ) StructuredBuffer<PaddedVertex> vertex_data;
 layout( binding = 1, set = 5 ) StructuredBuffer<uint32_t> index_data;
@@ -63,6 +65,7 @@ layout( binding = 1, set = 6 ) Texture2D<float4> metallic_roughness_textures[];
 
 #include "../car_mat/car_lighting.slang"
 
+#if RACECAR_RAY_TRACING
 bool traceRayClosestHit( float stencil, float3 rayOrigin, float3 rayDir, out float t,
     out int primitiveIndex, out float2 barycentrics, out int instanceIndex )
 {
@@ -98,6 +101,7 @@ bool traceRayClosestHit( float stencil, float3 rayOrigin, float3 rayDir, out flo
     barycentrics = float2( 0, 0 );
     return false;
 }
+#endif // RACECAR_RAY_TRACING
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -127,6 +131,7 @@ float4 fs_main( VertexOutput in )
     float3 view_dir = normalize( world_dir );
     float3 refl_dir = reflect( view_dir, in_nor );
 
+#if RACECAR_RAY_TRACING
     float t;
     int prim_idx;
     int instance_idx;
@@ -243,8 +248,11 @@ float4 fs_main( VertexOutput in )
             // return float4( normalize(color), 1.0 );
         }
     } else {
+#endif // RACECAR_RAY_TRACING
         return float4( 0.0 );
+#if RACECAR_RAY_TRACING
     }
+#endif // RACECAR_RAY_TRACING
 }
 
 

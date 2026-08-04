@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 4.0)
 project(racecar VERSION 1.0.0 LANGUAGES CXX)
 
 option(RACECAR_ENABLE_ASAN "Build racecar with AddressSanitizer" OFF)
+option(RACECAR_ENABLE_RAY_TRACING "Build racecar with ray tracing (ray query) support" ON)
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(VK_DIR "${SRC_DIR}/vk")
@@ -108,6 +109,12 @@ else()
     target_compile_definitions(racecar PRIVATE RACECAR_DEBUG=0)
 endif()
 
+if (RACECAR_ENABLE_RAY_TRACING)
+    target_compile_definitions(racecar PRIVATE RACECAR_RAY_TRACING=1)
+else()
+    target_compile_definitions(racecar PRIVATE RACECAR_RAY_TRACING=0)
+endif()
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(racecar PRIVATE /EHsc /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
 else()
@@ -202,10 +209,16 @@ if (WIN32)
 
         set(RACECAR_SHADER_STAMP "${CMAKE_CURRENT_BINARY_DIR}/shaders.stamp")
 
+        set(RACECAR_SHADER_SCRIPT_ARGS -File "${SHADER_DIR}/compile_all.ps1")
+
+        if(RACECAR_ENABLE_RAY_TRACING)
+            list(APPEND RACECAR_SHADER_SCRIPT_ARGS -RayTracing)
+        endif()
+
         add_custom_command(
             OUTPUT ${RACECAR_SHADER_STAMP}
             COMMAND "${RACECAR_POWERSHELL}" -NoProfile -ExecutionPolicy Bypass
-                    -File "${SHADER_DIR}/compile_all.ps1"
+                    ${RACECAR_SHADER_SCRIPT_ARGS}
             COMMAND ${CMAKE_COMMAND} -E touch "${RACECAR_SHADER_STAMP}"
             DEPENDS ${RACECAR_SHADER_SOURCES} ${RACECAR_SHADER_SCRIPTS}
             WORKING_DIRECTORY "${SHADER_DIR}"

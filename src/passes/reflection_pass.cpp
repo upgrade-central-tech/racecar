@@ -1,3 +1,5 @@
+#if RACECAR_RAY_TRACING
+
 #include "reflection_pass.hpp"
 
 #include "../engine/draw_task.hpp"
@@ -121,3 +123,5 @@ void create_reflection_pass_resources(
 }
 
 }
+
+#endif // RACECAR_RAY_TRACING

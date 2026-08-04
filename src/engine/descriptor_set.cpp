@@ -298,6 +298,7 @@ void update_descriptor_set_sampler(
     }
 }
 
+#if RACECAR_RAY_TRACING
 void update_descriptor_set_acceleration_structure(
     vk::Common& vulkan,
     State& engine,
@@ -325,6 +326,7 @@ void update_descriptor_set_acceleration_structure(
         vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
     }
 }
+#endif // RACECAR_RAY_TRACING
 
 void update_descriptor_set_const_storage_buffer(
     vk::Common& vulkan,

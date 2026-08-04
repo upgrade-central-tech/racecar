@@ -101,6 +101,7 @@ vkb::Device pick_and_create_device( const Common& vulkan )
 {
     vkb::PhysicalDeviceSelector phys_selector( vulkan.instance, vulkan.surface );
 
+#if RACECAR_RAY_TRACING
     VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
         .pNext = nullptr,
@@ -117,6 +118,9 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features
         = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
             .rayQuery = VK_TRUE };
+
+    log::info( "[Vulkan] Enabling ray tracing" );
+#endif // RACECAR_RAY_TRACING
 
     VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR compute_derivatives_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_KHR,
@@ -139,7 +143,9 @@ vkb::Device pick_and_create_device( const Common& vulkan )
 
     VkPhysicalDeviceVulkan13Features required_features_13 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+#if RACECAR_RAY_TRACING
         .pNext = &rt_pipeline_features,
+#endif // RACECAR_RAY_TRACING
         .synchronization2 = VK_TRUE,
         .dynamicRendering = VK_TRUE,
     };
@@ -155,14 +161,18 @@ vkb::Device pick_and_create_device( const Common& vulkan )
               .set_minimum_version( 1, 3 )
               .add_required_extension( VK_KHR_SWAPCHAIN_EXTENSION_NAME )
               .add_required_extension( VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME )
+#if RACECAR_RAY_TRACING
               .add_required_extension( VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME )
               .add_required_extension( VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME )
               .add_required_extension( VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME )
               .add_required_extension( VK_KHR_RAY_QUERY_EXTENSION_NAME )
+#endif // RACECAR_RAY_TRACING
               .add_required_extension( VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME )
+#if RACECAR_RAY_TRACING
               .add_required_extension_features( as_features )
               .add_required_extension_features( rt_pipeline_features )
               .add_required_extension_features( ray_query_features )
+#endif // RACECAR_RAY_TRACING
               .add_required_extension_features( compute_derivatives_features )
               .set_required_features_13( required_features_13 )
               .set_required_features_12( required_features_12 )
@@ -341,7 +351,9 @@ Common initialize( SDL_Window* window )
                 vkDestroySampler
             );
         }
+#if RACECAR_RAY_TRACING
         vulkan.ray_tracing_properties = rt::query_rt_properties( vulkan.device.physical_device );
+#endif // RACECAR_RAY_TRACING
     } catch ( const Exception& ex ) {
         log::error( "[vk] {}", ex.what() );
         throw Exception( "[Vulkan] Failed to initialize" );

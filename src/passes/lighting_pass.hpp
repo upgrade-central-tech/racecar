@@ -17,8 +17,10 @@ struct LightingPassDescSets {
     engine::DescriptorSet& lut_sets;
     engine::DescriptorSet& sampler_desc_set;
     engine::DescriptorSet& gbuffer_desc_set;
+#if RACECAR_RAY_TRACING
     engine::DescriptorSet& car_tlas_desc_set;
     engine::DescriptorSet& reflection_buffer_desc_set;
+#endif // RACECAR_RAY_TRACING
 };
 
 void create_lighting_pass_resources( Context& ctx, engine::State& engine,
@@ -29,7 +31,11 @@ void car_lighting_pass( engine::State& engine, LightingPassDescSets desc_sets,
     engine::TaskList& task_list );
 
 void create_deferred_lighting_pipeline_barrier( engine::TaskList& task_list,
-    deferred::GBuffers& gbuffers, engine::RWImage& reflection_data, engine::RWImage& screen_color );
+    deferred::GBuffers& gbuffers,
+#if RACECAR_RAY_TRACING
+    engine::RWImage& reflection_data,
+#endif // RACECAR_RAY_TRACING
+    engine::RWImage& screen_color );
 
 /*
  * Hands screen_color over from the terrain lighting compute pass, which writes it as a storage

@@ -1,3 +1,5 @@
+#if RACECAR_RAY_TRACING
+
 #include "ray_tracing.hpp"
 
 #include "../log.hpp"
@@ -494,3 +496,5 @@ void build_tlas( VkCommandBuffer cmd_buf, AccelerationStructure& tlas )
 }
 
 }
+
+#endif // RACECAR_RAY_TRACING

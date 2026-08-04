@@ -1,5 +1,7 @@
 #pragma once
 
+#if RACECAR_RAY_TRACING
+
 #include "../engine/destructor_stack.hpp"
 #include "vma.hpp"
 
@@ -80,3 +82,5 @@ void alloc_tlas(
 void build_tlas( VkCommandBuffer cmd_buf, AccelerationStructure& tlas );
 
 }
+
+#endif // RACECAR_RAY_TRACING

@@ -42,9 +42,10 @@ layout( binding = 6, set = 4 ) Texture2DMS<float> GBuffer_DepthMS;
 // roughness, metallic, clearcoat roughness, clearcoat weight
 layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
+#if RACECAR_RAY_TRACING
 layout( binding = 0, set = 5 ) RaytracingAccelerationStructure sceneBVH;
-
 layout( binding = 0, set = 6 ) Texture2D<float4> ReflectionData;
+#endif // RACECAR_RAY_TRACING
 
 // #include "../utils.slang"
 // #include "../glint/glint_noise_init.hlsl"
@@ -52,6 +53,7 @@ layout( binding = 0, set = 6 ) Texture2D<float4> ReflectionData;
 
 #include "../car_mat/car_lighting.slang"
 
+#if RACECAR_RAY_TRACING
 bool traceRayFirstHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigin, float3 rayDir,
     out float t, out int primitiveIndex )
 {
@@ -80,6 +82,7 @@ bool traceRayFirstHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigi
     unused( t );
     return false;
 }
+#endif // RACECAR_RAY_TRACING
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -98,7 +101,10 @@ float4 fs_main( VertexOutput in )
     float3 in_nor = GBuffer_Normals.Sample( nearest_sampler, in.uv ).rgb;
     float4 in_tangent = GBuffer_Position.Sample( nearest_sampler, in.uv );
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
+
+#if RACECAR_RAY_TRACING
     float4 in_refl = ReflectionData.Sample( nearest_sampler, in.uv );
+#endif // RACECAR_RAY_TRACING
 
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
 
@@ -144,12 +150,14 @@ float4 fs_main( VertexOutput in )
 
     bool hit = false;
 
+#if RACECAR_RAY_TRACING
     if ( debug_data.ray_traced_shadows ) {
         float t;
         int primitive_index;
         hit = traceRayFirstHit(
             sceneBVH, in_pos + 0.01 * normalize( in_nor ), light, t, primitive_index );
     }
+#endif // RACECAR_RAY_TRACING
 
     float3 out_color
         = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0, refl );

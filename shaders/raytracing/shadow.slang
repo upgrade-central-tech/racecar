@@ -72,7 +72,9 @@ layout( binding = 6, set = 4 ) Texture2DMS<float> GBuffer_DepthMS;
 // roughness, metallic, clearcoat roughness, clearcoat weight
 layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 
+#if RACECAR_RAY_TRACING
 layout( binding = 0, set = 5 ) RaytracingAccelerationStructure sceneBVH;
+#endif // RACECAR_RAY_TRACING
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -83,6 +85,7 @@ VertexOutput vs_main( VertexInput input )
     return output;
 }
 
+#if RACECAR_RAY_TRACING
 bool traceRayFirstHit(
     RaytracingAccelerationStructure sceneBVH,
     float3 rayOrigin,
@@ -120,6 +123,7 @@ bool traceRayFirstHit(
     unused( t );
     return false;
 }
+#endif // RACECAR_RAY_TRACING
 
 [shader( "fragment" )]
 float4 fs_main( VertexOutput in )
@@ -139,6 +143,7 @@ float4 fs_main( VertexOutput in )
     float t;
     int primitive_index;
 
+#if RACECAR_RAY_TRACING
     bool hit = traceRayFirstHit(
         sceneBVH,
         in_pos + 0.01 * normalize( in_nor ),
@@ -147,15 +152,18 @@ float4 fs_main( VertexOutput in )
         t,
         primitive_index
     );
+#endif // RACECAR_RAY_TRACING
 
     float3 base_albedo = debug_data.enable_albedo_map
         ? GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb
         : debug_data.color.rgb;
 
     float shadow = 0.7;
+#if RACECAR_RAY_TRACING
     if ( hit ) {
         shadow = 0.0;
     }
+#endif // RACECAR_RAY_TRACING
 
     float3 out_color = base_albedo * ( max( dot( light, normalize( in_nor ) ), 0.0 ) * shadow + 0.01 );
 

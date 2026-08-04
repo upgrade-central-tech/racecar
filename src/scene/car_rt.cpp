@@ -1,3 +1,5 @@
+#if RACECAR_RAY_TRACING
+
 #include "car_rt.hpp"
 
 #include "../engine/descriptors.hpp"
@@ -270,3 +272,5 @@ void update_rt_uniform_buffers(
 }
 
 }
+
+#endif // RACECAR_RAY_TRACING

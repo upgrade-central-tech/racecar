@@ -21,9 +21,10 @@ layout( binding = 3, set = 2 ) Texture2D<float2> BRDF_LUT;
 
 layout( binding = 0, set = 3 ) SamplerState sampler;
 
+#if RACECAR_RAY_TRACING
 layout( binding = 0, set = 4 ) RaytracingAccelerationStructure sceneBVH;
-
 layout( binding = 0, set = 5 ) Texture2D<float4> ReflectionData;
+#endif // RACECAR_RAY_TRACING
 
 // Misc.
 float3 direct_lighting(
@@ -86,6 +87,7 @@ float3 sample_glossy_ibl( float roughness, float2 direction )
     return lerp( glossy_lod0, glossy_lod1, lod_t );
 }
 
+#if RACECAR_RAY_TRACING
 bool traceRayFirstHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigin, float3 rayDir,
     out float t, out int primitiveIndex )
 {
@@ -114,6 +116,7 @@ bool traceRayFirstHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigi
     unused( t );
     return false;
 }
+#endif // RACECAR_RAY_TRACING
 
 // Main
 [shader( "compute" )]
@@ -139,7 +142,9 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     float4 packed_gbuffer_data = gbuffer_packed_data[pixel];
 
+#if RACECAR_RAY_TRACING
     float4 refl = ReflectionData[pixel].rgba;
+#endif // RACECAR_RAY_TRACING
 
     // Misc. vectors
     float3 view = normalize( camera_data.camera_pos.rgb - world_position );
@@ -169,7 +174,10 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     float specular_strength = 0.75f;
     float3 specular_irradiance = sample_glossy_ibl( mixed_roughness, oct_refl_uv );
+
+#if RACECAR_RAY_TRACING
     specular_irradiance = lerp( specular_irradiance, 2.0f * refl.rgb, refl.a );
+#endif // RACECAR_RAY_TRACING
 
     float metallic = 0.0f;
     float n_dot_v = max( dot( mixed_normal, view ), 0.0f );
@@ -183,12 +191,15 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     //=======================================================================================
 
     bool hit = false;
+
+#if RACECAR_RAY_TRACING
     if ( scene_data.ray_traced_shadows ) {
         float t;
         int primitive_index;
         hit = traceRayFirstHit( sceneBVH, world_position + 0.01f * normalize( mixed_normal ), light,
             t, primitive_index );
     }
+#endif // RACECAR_RAY_TRACING
 
     float3 final_color = float3( 1.f );
     float NDF = packed_gbuffer_data.y;

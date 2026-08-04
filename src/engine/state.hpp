@@ -39,19 +39,21 @@ struct State {
     uint32_t frame_number = 1;
     uint32_t rendered_frames = 0;
 
-    ImmediateSubmit immediate_submit = {};
+    ImmediateSubmit immediate_submit = { };
 
     VkCommandPool cmd_pool = VK_NULL_HANDLE;
 
     std::vector<FrameData> frames;
     std::vector<SwapchainSemaphores> swapchain_semaphores;
 
-    DescriptorSystem descriptor_system = {};
+    DescriptorSystem descriptor_system = { };
 
     size_t get_frame_index() const;
 
+#if RACECAR_RAY_TRACING
     std::vector<vk::rt::AccelerationStructure> blas;
     vk::rt::AccelerationStructure tlas;
+#endif // RACECAR_RAY_TRACING
 
     double time = 0.f; ///< Expressed in seconds.
     double delta = 0.f; ///< Expressed in seconds.

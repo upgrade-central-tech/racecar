@@ -197,6 +197,7 @@ void run( bool use_fullscreen )
         material_desc_sets
     );
 
+#if RACECAR_RAY_TRACING
     // BLAS allocation
     ub_data::BLASOffsets blas_offsets;
     alloc_blases( ctx, engine, prims, scene_mesh, &blas_offsets );
@@ -252,6 +253,7 @@ void run( bool use_fullscreen )
         albedo_textures,
         metallic_roughness_textures
     );
+#endif // RACECAR_RAY_TRACING
 
     // ================================================================================================================
     // TERRAIN init
@@ -281,6 +283,7 @@ void run( bool use_fullscreen )
     // Additional Resource Creation
     // ================================================================================================================
 
+#if RACECAR_RAY_TRACING
     // Set up reflection data
     engine::RWImage reflection_data;
     engine::Pipeline reflection_pipeline;
@@ -303,6 +306,7 @@ void run( bool use_fullscreen )
         &reflection_buffer_desc_set,
         &reflection_gfx_task
     );
+#endif // RACECAR_RAY_TRACING
 
     // Set up car lighting pass
     LightingPassDescSets lighting_pass_desc_sets = {
@@ -311,8 +315,10 @@ void run( bool use_fullscreen )
         .lut_sets = lut_sets,
         .sampler_desc_set = sampler_desc_set,
         .gbuffer_desc_set = gbuffers.desc_set,
+#if RACECAR_RAY_TRACING
         .car_tlas_desc_set = car_tlas_desc_set,
         .reflection_buffer_desc_set = reflection_buffer_desc_set,
+#endif // RACECAR_RAY_TRACING
     };
 
     // Create car lighting pass pipeline
@@ -322,9 +328,12 @@ void run( bool use_fullscreen )
     // Create terrain draw pipeline
     geometry::initialize_terrain_draw_pipeline(
         test_terrain,
-        ctx.vulkan,
+        ctx.vulkan
+#if RACECAR_RAY_TRACING
+        ,
         car_tlas_desc_set,
         reflection_buffer_desc_set
+#endif // RACECAR_RAY_TRACING
     );
 
     // ================================================================================================================
@@ -336,8 +345,10 @@ void run( bool use_fullscreen )
     VkCommandBuffer& precompute_cmdbuf = engine.frames[0].start_cmdbuf;
     engine::begin_precompute_commandbuffer( ctx, &precompute_cmdbuf, precompute_fence );
 
+#if RACECAR_RAY_TRACING
     build_car_blases( engine, precompute_cmdbuf );
     build_car_tlas( engine, precompute_cmdbuf );
+#endif // RACECAR_RAY_TRACING
 
     geometry::terrain_precompute( test_terrain, precompute_cmdbuf );
 
@@ -397,14 +408,23 @@ void run( bool use_fullscreen )
     // Submit depth prepass (car primitives + terrain)
     engine::add_gfx_task( task_list, depth_prepass_ms.depth_ms_gfx_task );
 
+#if RACECAR_RAY_TRACING
     // Pipeline barrier (gbuffer dependency for reflection compute)
     create_deferred_reflection_pipeline_barrier( task_list, gbuffers, reflection_data );
 
     // Add reflection task
     engine::add_gfx_task( task_list, reflection_gfx_task );
+#endif // RACECAR_RAY_TRACING
 
     // Lighting
-    create_deferred_lighting_pipeline_barrier( task_list, gbuffers, reflection_data, screen_color );
+    create_deferred_lighting_pipeline_barrier(
+        task_list,
+        gbuffers,
+#if RACECAR_RAY_TRACING
+        reflection_data,
+#endif // RACECAR_RAY_TRACING
+        screen_color
+    );
 
     // Terrain lighting pass
     geometry::draw_terrain( test_terrain, engine, task_list );
@@ -531,8 +551,10 @@ void run( bool use_fullscreen )
             num_materials
         );
 
+#if RACECAR_RAY_TRACING
         // Update ray tracing uniform buffers
         update_rt_uniform_buffers( ctx, engine, offset_data, rt_texture_uniform_data );
+#endif // RACECAR_RAY_TRACING
 
         // Update terrain
         geometry::update_terrain_uniform_buffer( ctx, engine, gui, test_terrain );

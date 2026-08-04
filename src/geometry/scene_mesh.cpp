@@ -24,7 +24,10 @@ GPUMeshBuffers upload_mesh(
                 index_buffer_size,
                 VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
                     | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-                    | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+#if RACECAR_RAY_TRACING
+                    | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
+#endif // RACECAR_RAY_TRACING
+                ,
                 VMA_MEMORY_USAGE_GPU_ONLY
             ),
             .vertex_buffer = vk::mem::create_buffer(
@@ -32,7 +35,10 @@ GPUMeshBuffers upload_mesh(
                 vertex_buffer_size,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
                     | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-                    | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+#if RACECAR_RAY_TRACING
+                    | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
+#endif // RACECAR_RAY_TRACING
+                ,
                 VMA_MEMORY_USAGE_CPU_TO_GPU
             ),
         };

@@ -15,6 +15,20 @@
             }
         },
         {
+            "name": "DebugNoRT",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_COMPILER": "clang-cl",
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_MAKE_PROGRAM": "ninja",
+                "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "RACECAR_ENABLE_RAY_TRACING": "OFF"
+            }
+        },
+        {
             "name": "Debug (macOS)",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build",
@@ -63,6 +77,20 @@
                 "CMAKE_MAKE_PROGRAM": "ninja",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_COLOR_DIAGNOSTICS": "ON"
+            }
+        },
+        {
+            "name": "ReleaseNoRT",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_COMPILER": "clang-cl",
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_MAKE_PROGRAM": "ninja",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "RACECAR_ENABLE_RAY_TRACING": "OFF"
             }
         }
     ]

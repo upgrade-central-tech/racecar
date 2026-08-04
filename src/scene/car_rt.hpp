@@ -1,5 +1,7 @@
 #pragma once
 
+#if RACECAR_RAY_TRACING
+
 #include "../atmosphere_baker.hpp"
 #include "../context.hpp"
 #include "../engine/descriptor_set.hpp"
@@ -49,3 +51,5 @@ void update_rt_uniform_buffers( Context& ctx, engine::State& engine,
     UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data );
 
 }
+
+#endif // RACECAR_RAY_TRACING

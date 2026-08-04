@@ -195,6 +195,7 @@ void initialize_terrain(
     terrain.terrain_noise
         = engine::load_image( TERRAIN_NOISE_PAPTH, vulkan, engine, 2, VK_FORMAT_R8G8_UNORM, true );
 
+#if RACECAR_RAY_TRACING
     vk::rt::alloc_blas(
         vulkan.device,
         vulkan.allocator,
@@ -233,6 +234,7 @@ void initialize_terrain(
         terrain.tlas.handle,
         0
     );
+#endif // RACECAR_RAY_TRACING
 
     // ============================================================================================
     // Prepass resources
@@ -552,13 +554,18 @@ void initialize_terrain(
 
 void initialize_terrain_draw_pipeline(
     Terrain& terrain,
-    vk::Common& vulkan,
+    vk::Common& vulkan
+#if RACECAR_RAY_TRACING
+    ,
     engine::DescriptorSet& car_tlas_desc_set,
     engine::DescriptorSet& reflection_texture_desc_set
+#endif // RACECAR_RAY_TRACING
 )
 {
+#if RACECAR_RAY_TRACING
     terrain.car_tlas_desc_set = &car_tlas_desc_set;
     terrain.reflection_texture_desc_set = &reflection_texture_desc_set;
+#endif // RACECAR_RAY_TRACING
 
     terrain.terrain_lighting_pipeline = engine::create_compute_pipeline(
         vulkan,
@@ -566,17 +573,24 @@ void initialize_terrain_draw_pipeline(
           terrain.texture_desc_set.layouts[0],
           terrain.lut_desc_set.layouts[0],
           terrain.sampler_desc_set.layouts[0],
+#if RACECAR_RAY_TRACING
           terrain.car_tlas_desc_set->layouts[0],
-          terrain.reflection_texture_desc_set->layouts[0] },
+          terrain.reflection_texture_desc_set->layouts[0]
+#endif // RACECAR_RAY_TRACING
+        },
         vk::create::shader_module( vulkan, TERRAIN_SHADER_LIGHTING_MODULE_PATH ),
         "cs_terrain_draw"
     );
 }
 
-void terrain_precompute( Terrain& terrain, VkCommandBuffer precompute_cmdbuf )
+void terrain_precompute(
+    [[maybe_unused]] Terrain& terrain, [[maybe_unused]] VkCommandBuffer precompute_cmdbuf
+)
 {
+#if RACECAR_RAY_TRACING
     vk::rt::build_blas( precompute_cmdbuf, terrain.blas );
     vk::rt::build_tlas( precompute_cmdbuf, terrain.tlas );
+#endif // RACECAR_RAY_TRACING
 }
 
 void draw_terrain_prepass(
@@ -638,8 +652,11 @@ void draw_terrain( Terrain& terrain, engine::State& engine, engine::TaskList& ta
           &terrain.texture_desc_set,
           &terrain.lut_desc_set,
           &terrain.sampler_desc_set,
+#if RACECAR_RAY_TRACING
           terrain.car_tlas_desc_set,
-          terrain.reflection_texture_desc_set },
+          terrain.reflection_texture_desc_set
+#endif // RACECAR_RAY_TRACING
+        },
         dispatch_dims,
     };
 

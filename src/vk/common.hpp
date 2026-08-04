@@ -6,6 +6,7 @@
 
 #include <SDL3/SDL_video.h>
 #include <volk.h>
+#include <glm/glm.hpp>
 
 #if RACECAR_MACOS
 /// Terrible hack that's needed because of mismatched Vulkan headers. Honestly IDK what's happening,
@@ -89,7 +90,9 @@ struct Common {
 
     DestructorStack destructor_stack;
 
+#if RACECAR_RAY_TRACING
     rt::RayTracingProperties ray_tracing_properties;
+#endif // RACECAR_RAY_TRACING
 };
 
 Common initialize( SDL_Window* window );
