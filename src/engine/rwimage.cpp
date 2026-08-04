@@ -51,20 +51,10 @@ RWImage create_rwimage(
     VkImageUsageFlags usage_flags
 )
 {
-    return allocate_rwimage(
-        extent,
-        format,
-        image_type,
-        samples,
-        usage_flags,
-        1,
-        false
-    );
+    return allocate_rwimage( extent, format, image_type, samples, usage_flags, 1, false );
 }
 
-RWImage create_gbuffer_image(
-    VkFormat format, VkSampleCountFlagBits samples
-)
+RWImage create_gbuffer_image( VkFormat format, VkSampleCountFlagBits samples )
 {
     const engine::State& engine = engine::State::GetConst();
     return engine::create_rwimage(
@@ -85,40 +75,27 @@ RWImage create_rwimage_mips(
     uint32_t mip_levels
 )
 {
-    return allocate_rwimage(
-        extent,
-        format,
-        image_type,
-        samples,
-        usage_flags,
-        mip_levels,
-        true
-    );
+    return allocate_rwimage( extent, format, image_type, samples, usage_flags, mip_levels, true );
 }
 
-void initialize_rwimage_layout(
-    RWImage& image, VkImageLayout layout
-)
+void initialize_rwimage_layout( RWImage& image, VkImageLayout layout )
 {
     const engine::State& engine = engine::State::GetConst();
-    engine::immediate_submit(
-        engine.immediate_submit,
-        [&]( VkCommandBuffer command_buffer ) {
-            for ( vk::mem::AllocatedImage& frame_image : image.images ) {
-                vk::utility::transition_image(
-                    command_buffer,
+    engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+        for ( vk::mem::AllocatedImage& frame_image : image.images ) {
+            vk::utility::transition_image(
+                command_buffer,
                 frame_image.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    layout,
-                    VK_ACCESS_2_NONE,
-                    VK_ACCESS_2_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
-            }
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                layout,
+                VK_ACCESS_2_NONE,
+                VK_ACCESS_2_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
         }
-    );
+    } );
 }
 
 } // namespace racecar::engine

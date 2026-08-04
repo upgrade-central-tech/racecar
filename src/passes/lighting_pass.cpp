@@ -96,8 +96,7 @@ void create_terrain_car_screen_pipeline_barrier(
 }
 
 void create_lighting_pass_resources(
-    LightingPassDescSets desc_sets,
-    engine::Pipeline* lighting_pass_pipeline
+    LightingPassDescSets desc_sets, engine::Pipeline* lighting_pass_pipeline
 )
 {
     *lighting_pass_pipeline = engine::create_gfx_pipeline(

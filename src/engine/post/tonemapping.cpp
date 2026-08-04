@@ -10,11 +10,7 @@ namespace racecar::engine::post {
 static constexpr std::string_view TONEMAPPING_SHADER_PATH
     = "../shaders/post/tonemapping/tonemapping.spv";
 
-TonemappingPass add_tonemapping(
-    const RWImage& input,
-    const RWImage& output,
-    TaskList& task_list
-)
+TonemappingPass add_tonemapping( const RWImage& input, const RWImage& output, TaskList& task_list )
 {
     const engine::State& engine = engine::State::GetConst();
 
@@ -67,8 +63,7 @@ TonemappingPass add_tonemapping(
 }
 
 void update_tonemapping_uniform_buffer(
-    const gui::Gui& gui,
-    engine::post::TonemappingPass& tm_pass
+    const gui::Gui& gui, engine::post::TonemappingPass& tm_pass
 )
 {
     const engine::State& engine = engine::State::GetConst();

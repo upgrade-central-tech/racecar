@@ -69,11 +69,7 @@ Atmosphere initialize()
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
-    engine::update_descriptor_set_uniform(
-        atms.uniform_desc_set,
-        atms.uniform_buffer,
-        0
-    );
+    engine::update_descriptor_set_uniform( atms.uniform_desc_set, atms.uniform_buffer, 0 );
 
     try {
         VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -168,9 +164,7 @@ glm::vec3 compute_sun_direction( const Atmosphere& atms )
 }
 
 void draw_atmosphere(
-    engine::TaskList& task_list,
-    atmosphere::Atmosphere& atms,
-    engine::RWImage& out_color
+    engine::TaskList& task_list, atmosphere::Atmosphere& atms, engine::RWImage& out_color
 )
 {
     const engine::State& engine = engine::State::GetConst();
@@ -225,9 +219,7 @@ void draw_atmosphere(
 }
 
 void update_atmosphere_uniform_buffer(
-    gui::Gui& gui,
-    atmosphere::Atmosphere& atms,
-    const CameraData& camera_data
+    gui::Gui& gui, atmosphere::Atmosphere& atms, const CameraData& camera_data
 )
 {
     const engine::State& engine = engine::State::GetConst();

@@ -248,10 +248,7 @@ State& State::GetMut()
     return instance;
 }
 
-const State& State::GetConst()
-{
-    return GetMut();
-}
+const State& State::GetConst() { return GetMut(); }
 
 void initialize( Context& ctx )
 {

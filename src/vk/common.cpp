@@ -263,10 +263,7 @@ Common& Common::GetMut()
     return instance;
 }
 
-const Common& Common::GetConst()
-{
-    return GetMut();
-}
+const Common& Common::GetConst() { return GetMut(); }
 
 void initialize( SDL_Window* window )
 {

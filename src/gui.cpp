@@ -66,8 +66,7 @@ Gui initialize( Context& ctx )
             ),
             "[gui] Failed to create descriptor pool"
         );
-        vulkan.destructor_stack
-            .push( vulkan.device, gui.descriptor_pool, vkDestroyDescriptorPool );
+        vulkan.destructor_stack.push( vulkan.device, gui.descriptor_pool, vkDestroyDescriptorPool );
     }
 
     IMGUI_CHECKVERSION();

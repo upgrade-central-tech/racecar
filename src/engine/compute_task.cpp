@@ -2,9 +2,7 @@
 
 namespace racecar::engine {
 
-void execute_cs_task(
-    const VkCommandBuffer& cmd_buf, ComputeTask& compute_task
-)
+void execute_cs_task( const VkCommandBuffer& cmd_buf, ComputeTask& compute_task )
 {
     const engine::State& engine = engine::State::GetConst();
     vkCmdBindPipeline( cmd_buf, VK_PIPELINE_BIND_POINT_COMPUTE, compute_task.pipeline.handle );

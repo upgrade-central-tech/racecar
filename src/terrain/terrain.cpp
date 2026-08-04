@@ -139,26 +139,14 @@ void initialize_terrain(
     terrain.terrain_uniform
         = create_uniform_buffer<ub_data::TerrainData>( { }, engine.frame_overlap );
 
-    terrain.test_layer_mask = engine::load_image(
-        TEST_LAYER_MASK_PATH,
-        2,
-        VK_FORMAT_R8G8_UNORM,
-        false
-    );
+    terrain.test_layer_mask
+        = engine::load_image( TEST_LAYER_MASK_PATH, 2, VK_FORMAT_R8G8_UNORM, false );
 
-    terrain.grass_albedo_roughness = engine::load_image(
-        TEST_GRASS_ALBEDO_ROUGHNESS_PATH,
-        4,
-        VK_FORMAT_R8G8B8A8_UNORM,
-        true
-    );
+    terrain.grass_albedo_roughness
+        = engine::load_image( TEST_GRASS_ALBEDO_ROUGHNESS_PATH, 4, VK_FORMAT_R8G8B8A8_UNORM, true );
 
-    terrain.grass_normal_ao = engine::load_image(
-        TEST_GRASS_NORMAL_AO_PATH,
-        4,
-        VK_FORMAT_R16G16B16A16_SFLOAT,
-        true
-    );
+    terrain.grass_normal_ao
+        = engine::load_image( TEST_GRASS_NORMAL_AO_PATH, 4, VK_FORMAT_R16G16B16A16_SFLOAT, true );
 
     terrain.asphalt_albedo_roughness = engine::load_image(
         TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH,
@@ -167,12 +155,8 @@ void initialize_terrain(
         true
     );
 
-    terrain.asphalt_normal_ao = engine::load_image(
-        TEST_ASPHALT_NORMAL_AO_PATH,
-        4,
-        VK_FORMAT_R16G16B16A16_SFLOAT,
-        true
-    );
+    terrain.asphalt_normal_ao
+        = engine::load_image( TEST_ASPHALT_NORMAL_AO_PATH, 4, VK_FORMAT_R16G16B16A16_SFLOAT, true );
 
     terrain.terrain_noise
         = engine::load_image( TERRAIN_NOISE_PAPTH, 2, VK_FORMAT_R8G8_UNORM, true );
@@ -311,11 +295,7 @@ void initialize_terrain(
         *prepass_info.glint_noise,
         0
     );
-    engine::update_descriptor_set_image(
-        terrain.prepass_lut_desc_set,
-        terrain.terrain_noise,
-        1
-    );
+    engine::update_descriptor_set_image( terrain.prepass_lut_desc_set, terrain.terrain_noise, 1 );
 
     try {
         terrain.terrain_prepass_pipeline = engine::create_gfx_pipeline(
@@ -396,11 +376,7 @@ void initialize_terrain(
         *lighting_info.debug_buffer,
         1
     );
-    engine::update_descriptor_set_uniform(
-        terrain.uniform_desc_set,
-        terrain.terrain_uniform,
-        2
-    );
+    engine::update_descriptor_set_uniform( terrain.uniform_desc_set, terrain.terrain_uniform, 2 );
 
     // Material image assignments
     engine::update_descriptor_set_rwimage(
@@ -452,11 +428,7 @@ void initialize_terrain(
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         2
     );
-    engine::update_descriptor_set_image(
-        terrain.lut_desc_set,
-        *lighting_info.lut_brdf,
-        3
-    );
+    engine::update_descriptor_set_image( terrain.lut_desc_set, *lighting_info.lut_brdf, 3 );
 
     // Sampler assignments
     engine::update_descriptor_set_sampler(
@@ -576,9 +548,7 @@ void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
     engine::add_cs_task( task_list, cs_terrain_draw_task );
 }
 
-void update_terrain_uniform_buffer(
-    gui::Gui& gui, geometry::Terrain& terrain
-)
+void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
 {
     const engine::State& engine = engine::State::GetConst();
     ub_data::TerrainData terrain_ub = terrain.terrain_uniform.get_data();

@@ -4,11 +4,7 @@
 
 namespace racecar::engine {
 
-void execute_blit_task(
-    const VkCommandBuffer& cmd_buf,
-    BlitTask& blit_task,
-    VkImage dst_image
-)
+void execute_blit_task( const VkCommandBuffer& cmd_buf, BlitTask& blit_task, VkImage dst_image )
 {
     const engine::State& engine = engine::State::GetConst();
     VkImage src_image = blit_task.in_color->images[engine.get_frame_index()].image;

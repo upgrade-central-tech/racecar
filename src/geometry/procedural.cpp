@@ -69,11 +69,7 @@ vk::mem::AllocatedImage generate_glint_noise()
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_write_image(
-            glint_desc_set,
-            glint_noise_texture,
-            0
-        );
+        engine::update_descriptor_set_write_image( glint_desc_set, glint_noise_texture, 0 );
 
         VkShaderModule glint_noise_init_module
             = vk::create::shader_module( "../shaders/glint/glint_noise_init.spv" );
@@ -88,59 +84,56 @@ vk::mem::AllocatedImage generate_glint_noise()
             "cs_generate_glint_noise"
         );
 
-        engine::immediate_submit(
-            engine.immediate_submit,
-            [&]( VkCommandBuffer command_buffer ) {
-                // RW cubemap transition first
-                vk::utility::transition_image(
-                    command_buffer,
-                    glint_noise_texture.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_ACCESS_NONE,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
+        engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            // RW cubemap transition first
+            vk::utility::transition_image(
+                command_buffer,
+                glint_noise_texture.image,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_ACCESS_NONE,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
 
-                vkCmdBindPipeline(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.handle
-                );
+            vkCmdBindPipeline(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.handle
+            );
 
-                VkDescriptorSet sets[] = { glint_desc_set.descriptor_sets[0] };
+            VkDescriptorSet sets[] = { glint_desc_set.descriptor_sets[0] };
 
-                vkCmdBindDescriptorSets(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.layout,
-                    0,
-                    1,
-                    sets,
-                    0,
-                    nullptr
-                );
+            vkCmdBindDescriptorSets(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.layout,
+                0,
+                1,
+                sets,
+                0,
+                nullptr
+            );
 
-                uint32_t x_groups = ( static_cast<uint32_t>( noise_texture_size ) + 7 ) / 8;
-                uint32_t y_groups = ( static_cast<uint32_t>( noise_texture_size ) + 7 ) / 8;
+            uint32_t x_groups = ( static_cast<uint32_t>( noise_texture_size ) + 7 ) / 8;
+            uint32_t y_groups = ( static_cast<uint32_t>( noise_texture_size ) + 7 ) / 8;
 
-                vkCmdDispatch( command_buffer, x_groups, y_groups, 1 );
+            vkCmdDispatch( command_buffer, x_groups, y_groups, 1 );
 
-                vk::utility::transition_image(
-                    command_buffer,
-                    glint_noise_texture.image,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
-            }
-        );
+            vk::utility::transition_image(
+                command_buffer,
+                glint_noise_texture.image,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
+        } );
     }
 
     return glint_noise_texture;

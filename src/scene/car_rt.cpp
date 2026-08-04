@@ -53,9 +53,7 @@ void alloc_blases(
     *ret_blas_offsets = blas_offsets;
 }
 
-void create_objects(
-    std::vector<glm::mat4>& transforms, std::vector<vk::rt::Object>& objects
-)
+void create_objects( std::vector<glm::mat4>& transforms, std::vector<vk::rt::Object>& objects )
 {
     engine::State& engine = engine::State::GetMut();
     for ( size_t i = 0; i < engine.blas.size(); i++ ) {
@@ -64,8 +62,7 @@ void create_objects(
     }
 }
 
-engine::DescriptorSet
-create_accel_structure_desc_set()
+engine::DescriptorSet create_accel_structure_desc_set()
 {
     return engine::generate_descriptor_set(
         { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR },
@@ -73,9 +70,7 @@ create_accel_structure_desc_set()
     );
 }
 
-void alloc_car_tlas(
-    const std::vector<vk::rt::Object>& objects
-)
+void alloc_car_tlas( const std::vector<vk::rt::Object>& objects )
 {
     vk::Common& vulkan = vk::Common::GetMut();
     engine::State& engine = engine::State::GetMut();
@@ -103,9 +98,7 @@ void build_car_tlas( VkCommandBuffer& precompute_cmdbuf )
     vk::rt::build_tlas( precompute_cmdbuf, engine.tlas );
 }
 
-vk::mem::AllocatedBuffer create_padded_vertex_data_buffer(
-    geometry::scene::Mesh& scene_mesh
-)
+vk::mem::AllocatedBuffer create_padded_vertex_data_buffer( geometry::scene::Mesh& scene_mesh )
 {
     const engine::State& engine = engine::State::GetConst();
     std::vector<ub_data::PaddedVertex> padded_vertex_data { };
@@ -203,11 +196,7 @@ engine::DescriptorSet create_car_desc_set(
         6
     );
 
-    engine::update_descriptor_set_uniform(
-        car_descriptor_set,
-        rt_texture_uniform_data,
-        3
-    );
+    engine::update_descriptor_set_uniform( car_descriptor_set, rt_texture_uniform_data, 3 );
 
     return car_descriptor_set;
 }
@@ -226,11 +215,7 @@ engine::DescriptorSet create_combined_textures_desc_set(
         uint32_t( albedo_textures.size() )
     );
 
-    engine::update_descriptor_set_image_array(
-        combined_textures_desc_set,
-        albedo_textures,
-        0
-    );
+    engine::update_descriptor_set_image_array( combined_textures_desc_set, albedo_textures, 0 );
     engine::update_descriptor_set_image_array(
         combined_textures_desc_set,
         metallic_roughness_textures,

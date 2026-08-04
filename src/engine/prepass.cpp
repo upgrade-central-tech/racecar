@@ -51,11 +51,7 @@ void create_depth_ms_prepass(
         VK_SHADER_STAGE_VERTEX_BIT
     );
 
-    engine::update_descriptor_set_uniform(
-        *depth_uniform_desc_set,
-        camera_buffer,
-        0
-    );
+    engine::update_descriptor_set_uniform( *depth_uniform_desc_set, camera_buffer, 0 );
 
     // DEPTH_MS PRE-PASS
     try {

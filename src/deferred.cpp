@@ -181,16 +181,8 @@ void update_desc_sets( GBuffers& gbuffers )
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         4
     );
-    engine::update_descriptor_set_depth_image(
-        gbuffers.desc_set,
-        gbuffers.GBuffer_Depth,
-        5
-    );
-    engine::update_descriptor_set_depth_image(
-        gbuffers.desc_set,
-        gbuffers.GBuffer_DepthMS,
-        6
-    );
+    engine::update_descriptor_set_depth_image( gbuffers.desc_set, gbuffers.GBuffer_Depth, 5 );
+    engine::update_descriptor_set_depth_image( gbuffers.desc_set, gbuffers.GBuffer_DepthMS, 6 );
     engine::update_descriptor_set_rwimage(
         gbuffers.desc_set,
         gbuffers.GBuffer_Packed_Data,

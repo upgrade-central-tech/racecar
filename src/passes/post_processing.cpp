@@ -81,12 +81,7 @@ void post_processing_passes(
     engine::post::TonemappingPass& tm_pass
 )
 {
-    engine::post::add_bloom(
-        &bloom_pass,
-        task_list,
-        screen_color,
-        screen_buffer
-    );
+    engine::post::add_bloom( &bloom_pass, task_list, screen_color, screen_buffer );
 
     ao_pass = {
         .camera_buffer = &camera_buffer,
@@ -141,11 +136,7 @@ void post_processing_passes(
                 },
             } }
     );
-    tm_pass = engine::post::add_tonemapping(
-        screen_buffer,
-        screen_color,
-        task_list
-    );
+    tm_pass = engine::post::add_tonemapping( screen_buffer, screen_color, task_list );
 
     engine::add_pipeline_barrier(
         task_list,

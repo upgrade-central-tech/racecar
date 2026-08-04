@@ -52,11 +52,7 @@ AAPass add_aa(
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             1
         );
-        engine::update_descriptor_set_depth_image(
-            uniform_desc_set,
-            GBuffer_Depth,
-            2
-        );
+        engine::update_descriptor_set_depth_image( uniform_desc_set, GBuffer_Depth, 2 );
         engine::update_descriptor_set_rwimage(
             uniform_desc_set,
             GBuffer_Velocity,
@@ -204,9 +200,7 @@ AAPass add_aa(
     return pass;
 }
 
-void update_aa_uniform_buffer(
-    const gui::Gui& gui, engine::post::AAPass& aa_pass
-)
+void update_aa_uniform_buffer( const gui::Gui& gui, engine::post::AAPass& aa_pass )
 {
     const engine::State& engine = engine::State::GetConst();
     ub_data::AA aa_ub = aa_pass.buffer.get_data();

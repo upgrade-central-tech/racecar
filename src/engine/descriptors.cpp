@@ -4,9 +4,7 @@
 
 namespace racecar::engine {
 
-void create_descriptor_system(
-    uint32_t frame_overlap, DescriptorSystem& descriptor_system
-)
+void create_descriptor_system( uint32_t frame_overlap, DescriptorSystem& descriptor_system )
 {
     std::vector<DescriptorAllocator::PoolSizeRatio> pool_sizes = {
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 },
@@ -24,11 +22,7 @@ void create_descriptor_system(
     descriptor_system.frame_allocators = std::vector<DescriptorAllocator>( frame_overlap );
 
     for ( uint32_t i = 0; i < frame_overlap; i++ ) {
-        descriptor_allocator::init_pool(
-            descriptor_system.frame_allocators[i],
-            500,
-            pool_sizes
-        );
+        descriptor_allocator::init_pool( descriptor_system.frame_allocators[i], 500, pool_sizes );
     }
 
     log::info( "[engine] Created descriptor system" );
@@ -139,9 +133,7 @@ void clear_descriptors( DescriptorAllocator& ds_allocator )
     vkResetDescriptorPool( vulkan.device, ds_allocator.pool, 0 );
 }
 
-VkDescriptorSet allocate(
-    const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout
-)
+VkDescriptorSet allocate( const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout )
 {
     vk::Common& vulkan = vk::Common::GetMut();
     VkDescriptorSetAllocateInfo allocate_info = {

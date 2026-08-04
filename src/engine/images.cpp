@@ -167,70 +167,67 @@ vk::mem::AllocatedImage create_image(
             mipmapped
         );
 
-        engine::immediate_submit(
-            engine.immediate_submit,
-            [&]( VkCommandBuffer command_buffer ) {
-                VkImageAspectFlags aspect_flags = format == VK_FORMAT_D32_SFLOAT
-                    ? VK_IMAGE_ASPECT_DEPTH_BIT
-                    : VK_IMAGE_ASPECT_COLOR_BIT;
+        engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            VkImageAspectFlags aspect_flags = format == VK_FORMAT_D32_SFLOAT
+                ? VK_IMAGE_ASPECT_DEPTH_BIT
+                : VK_IMAGE_ASPECT_COLOR_BIT;
 
-                vk::utility::transition_image_mips(
+            vk::utility::transition_image_mips(
+                command_buffer,
+                new_image.image,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                0,
+                VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                aspect_flags,
+                mip_levels
+            );
+
+            VkBufferImageCopy copy_region = {
+                .bufferOffset = 0,
+                .bufferRowLength = 0,
+                .bufferImageHeight = 0,
+            };
+
+            copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copy_region.imageSubresource.mipLevel = 0;
+            copy_region.imageSubresource.baseArrayLayer = 0;
+            copy_region.imageSubresource.layerCount = 1;
+            copy_region.imageExtent = extent;
+
+            vkCmdCopyBufferToImage(
+                command_buffer,
+                upload_buffer.handle,
+                new_image.image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                1,
+                &copy_region
+            );
+
+            if ( mipmapped ) {
+                // this function handles the image transitions for each image for us
+                generate_mipmaps(
+                    new_image.image,
+                    new_image.image_extent,
+                    mip_levels,
+                    command_buffer
+                );
+            } else {
+                vk::utility::transition_image(
                     command_buffer,
                     new_image.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    0,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT,
-                    aspect_flags,
-                    mip_levels
+                    VK_ACCESS_2_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                    VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    aspect_flags
                 );
-
-                VkBufferImageCopy copy_region = {
-                    .bufferOffset = 0,
-                    .bufferRowLength = 0,
-                    .bufferImageHeight = 0,
-                };
-
-                copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                copy_region.imageSubresource.mipLevel = 0;
-                copy_region.imageSubresource.baseArrayLayer = 0;
-                copy_region.imageSubresource.layerCount = 1;
-                copy_region.imageExtent = extent;
-
-                vkCmdCopyBufferToImage(
-                    command_buffer,
-                    upload_buffer.handle,
-                    new_image.image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    1,
-                    &copy_region
-                );
-
-                if ( mipmapped ) {
-                    // this function handles the image transitions for each image for us
-                    generate_mipmaps(
-                        new_image.image,
-                        new_image.image_extent,
-                        mip_levels,
-                        command_buffer
-                    );
-                } else {
-                    vk::utility::transition_image(
-                        command_buffer,
-                        new_image.image,
-                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                        VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                        VK_ACCESS_2_SHADER_READ_BIT,
-                        VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                        aspect_flags
-                    );
-                }
             }
-        );
+        } );
     } catch ( const Exception& ex ) {
         log::error( "[AllocatedImage] Error occurred: {}", ex.what() );
         throw;

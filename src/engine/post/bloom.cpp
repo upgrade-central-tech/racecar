@@ -14,12 +14,7 @@ constexpr std::string_view UPSAMPLE_SHADER_PATH = "../shaders/post/bloom/upsampl
 
 }
 
-void add_bloom(
-    BloomPass* pass_out,
-    TaskList& task_list,
-    RWImage& inout,
-    RWImage& write_only
-)
+void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImage& write_only )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
@@ -301,10 +296,7 @@ void add_bloom(
     log::info( "[Post] Added bloom pass!" );
 }
 
-void update_bloom_uniform_buffer(
-    const gui::Gui& gui,
-    engine::post::BloomPass& bloom_pass
-)
+void update_bloom_uniform_buffer( const gui::Gui& gui, engine::post::BloomPass& bloom_pass )
 {
     const engine::State& engine = engine::State::GetConst();
     ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();

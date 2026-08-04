@@ -5,9 +5,7 @@
 
 namespace racecar::engine {
 
-void run_pipeline_barrier(
-    const PipelineBarrierDescriptor& barrier, VkCommandBuffer cmd_buf
-)
+void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBuffer cmd_buf )
 {
     const engine::State& engine = engine::State::GetConst();
     std::vector<VkBufferMemoryBarrier2> vk_buffer_barriers;

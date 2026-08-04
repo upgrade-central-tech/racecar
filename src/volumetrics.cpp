@@ -79,9 +79,7 @@ Volumetric initialize()
     return volumetric;
 }
 
-bool generate_noise(
-    [[maybe_unused]] Volumetric& volumetric
-)
+bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 {
     const engine::State& engine = engine::State::GetConst();
     // Cumulus map generation
@@ -106,11 +104,7 @@ bool generate_noise(
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_write_image(
-            cumulus_desc_set,
-            volumetric.cumulus_map,
-            2
-        );
+        engine::update_descriptor_set_write_image( cumulus_desc_set, volumetric.cumulus_map, 2 );
 
         VkShaderModule generate_cumulus_module
             = vk::create::shader_module( "../shaders/clouds/cs_generate_cumulus.spv" );
@@ -121,56 +115,53 @@ bool generate_noise(
             "cs_generate_cumulus"
         );
 
-        engine::immediate_submit(
-            engine.immediate_submit,
-            [&]( VkCommandBuffer command_buffer ) {
-                vk::utility::transition_image(
-                    command_buffer,
-                    volumetric.cumulus_map.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_ACCESS_NONE,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
+        engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            vk::utility::transition_image(
+                command_buffer,
+                volumetric.cumulus_map.image,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_ACCESS_NONE,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
 
-                vkCmdBindPipeline(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.handle
-                );
+            vkCmdBindPipeline(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.handle
+            );
 
-                vkCmdBindDescriptorSets(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.layout,
-                    0,
-                    1,
-                    cumulus_desc_set.descriptor_sets.data(),
-                    0,
-                    nullptr
-                );
+            vkCmdBindDescriptorSets(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.layout,
+                0,
+                1,
+                cumulus_desc_set.descriptor_sets.data(),
+                0,
+                nullptr
+            );
 
-                uint32_t x_groups = ( cumulus_map_size + 7 ) / 8;
-                uint32_t y_groups = ( cumulus_map_size + 7 ) / 8;
+            uint32_t x_groups = ( cumulus_map_size + 7 ) / 8;
+            uint32_t y_groups = ( cumulus_map_size + 7 ) / 8;
 
-                vkCmdDispatch( command_buffer, x_groups, y_groups, 1 );
+            vkCmdDispatch( command_buffer, x_groups, y_groups, 1 );
 
-                vk::utility::transition_image(
-                    command_buffer,
-                    volumetric.cumulus_map.image,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
-            }
-        );
+            vk::utility::transition_image(
+                command_buffer,
+                volumetric.cumulus_map.image,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
+        } );
     }
 
     // Low frequency noise map generation
@@ -199,9 +190,8 @@ bool generate_noise(
             0
         );
 
-        VkShaderModule generate_low_freq_module = vk::create::shader_module(
-            "../shaders/clouds/cs_generate_low_frequency.spv"
-        );
+        VkShaderModule generate_low_freq_module
+            = vk::create::shader_module( "../shaders/clouds/cs_generate_low_frequency.spv" );
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
             { low_freq_desc_set.layouts[0] },
@@ -209,57 +199,54 @@ bool generate_noise(
             "cs_generate_low_frequency"
         );
 
-        engine::immediate_submit(
-            engine.immediate_submit,
-            [&]( VkCommandBuffer command_buffer ) {
-                vk::utility::transition_image(
-                    command_buffer,
-                    volumetric.low_freq_noise.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_ACCESS_NONE,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
+        engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            vk::utility::transition_image(
+                command_buffer,
+                volumetric.low_freq_noise.image,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_ACCESS_NONE,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
 
-                vkCmdBindPipeline(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.handle
-                );
+            vkCmdBindPipeline(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.handle
+            );
 
-                vkCmdBindDescriptorSets(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.layout,
-                    0,
-                    1,
-                    low_freq_desc_set.descriptor_sets.data(),
-                    0,
-                    nullptr
-                );
+            vkCmdBindDescriptorSets(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.layout,
+                0,
+                1,
+                low_freq_desc_set.descriptor_sets.data(),
+                0,
+                nullptr
+            );
 
-                uint32_t x_groups = ( low_freq_noise_size + 7 ) / 8;
-                uint32_t y_groups = ( low_freq_noise_size + 7 ) / 8;
-                uint32_t z_groups = ( low_freq_noise_size + 7 ) / 8;
+            uint32_t x_groups = ( low_freq_noise_size + 7 ) / 8;
+            uint32_t y_groups = ( low_freq_noise_size + 7 ) / 8;
+            uint32_t z_groups = ( low_freq_noise_size + 7 ) / 8;
 
-                vkCmdDispatch( command_buffer, x_groups, y_groups, z_groups );
+            vkCmdDispatch( command_buffer, x_groups, y_groups, z_groups );
 
-                vk::utility::transition_image(
-                    command_buffer,
-                    volumetric.low_freq_noise.image,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
-            }
-        );
+            vk::utility::transition_image(
+                command_buffer,
+                volumetric.low_freq_noise.image,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
+        } );
     }
 
     // high frequency noise map generation
@@ -288,9 +275,8 @@ bool generate_noise(
             1
         );
 
-        VkShaderModule generate_high_freq_module = vk::create::shader_module(
-            "../shaders/clouds/cs_generate_high_frequency.spv"
-        );
+        VkShaderModule generate_high_freq_module
+            = vk::create::shader_module( "../shaders/clouds/cs_generate_high_frequency.spv" );
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
             { high_freq_desc_set.layouts[0] },
@@ -298,57 +284,54 @@ bool generate_noise(
             "cs_generate_high_frequency"
         );
 
-        engine::immediate_submit(
-            engine.immediate_submit,
-            [&]( VkCommandBuffer command_buffer ) {
-                vk::utility::transition_image(
-                    command_buffer,
-                    volumetric.high_freq_noise.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_ACCESS_NONE,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
+        engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            vk::utility::transition_image(
+                command_buffer,
+                volumetric.high_freq_noise.image,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_ACCESS_NONE,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
 
-                vkCmdBindPipeline(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.handle
-                );
+            vkCmdBindPipeline(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.handle
+            );
 
-                vkCmdBindDescriptorSets(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.layout,
-                    0,
-                    1,
-                    high_freq_desc_set.descriptor_sets.data(),
-                    0,
-                    nullptr
-                );
+            vkCmdBindDescriptorSets(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.layout,
+                0,
+                1,
+                high_freq_desc_set.descriptor_sets.data(),
+                0,
+                nullptr
+            );
 
-                uint32_t x_groups = ( high_freq_noise_size + 7 ) / 8;
-                uint32_t y_groups = ( high_freq_noise_size + 7 ) / 8;
-                uint32_t z_groups = ( high_freq_noise_size + 7 ) / 8;
+            uint32_t x_groups = ( high_freq_noise_size + 7 ) / 8;
+            uint32_t y_groups = ( high_freq_noise_size + 7 ) / 8;
+            uint32_t z_groups = ( high_freq_noise_size + 7 ) / 8;
 
-                vkCmdDispatch( command_buffer, x_groups, y_groups, z_groups );
+            vkCmdDispatch( command_buffer, x_groups, y_groups, z_groups );
 
-                vk::utility::transition_image(
-                    command_buffer,
-                    volumetric.high_freq_noise.image,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
-            }
-        );
+            vk::utility::transition_image(
+                command_buffer,
+                volumetric.high_freq_noise.image,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
+        } );
     }
 
     return true;
@@ -411,21 +394,9 @@ void draw_volumetric(
 
     engine::Pipeline volumetric_pipeline;
 
-    engine::update_descriptor_set_image(
-        volumetric.lut_desc_set,
-        volumetric.low_freq_noise,
-        0
-    );
-    engine::update_descriptor_set_image(
-        volumetric.lut_desc_set,
-        volumetric.high_freq_noise,
-        1
-    );
-    engine::update_descriptor_set_image(
-        volumetric.lut_desc_set,
-        volumetric.cumulus_map,
-        2
-    );
+    engine::update_descriptor_set_image( volumetric.lut_desc_set, volumetric.low_freq_noise, 0 );
+    engine::update_descriptor_set_image( volumetric.lut_desc_set, volumetric.high_freq_noise, 1 );
+    engine::update_descriptor_set_image( volumetric.lut_desc_set, volumetric.cumulus_map, 2 );
 
     try {
         volumetric_pipeline = engine::create_gfx_pipeline(
@@ -535,9 +506,7 @@ void draw_volumetric(
 }
 
 void update_volumetric_uniform_buffer(
-    atmosphere::Atmosphere& atms,
-    volumetric::Volumetric& volumetric,
-    const CameraData& camera_data
+    atmosphere::Atmosphere& atms, volumetric::Volumetric& volumetric, const CameraData& camera_data
 )
 {
     const engine::State& engine = engine::State::GetConst();

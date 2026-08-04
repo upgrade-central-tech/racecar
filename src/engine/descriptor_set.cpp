@@ -6,8 +6,7 @@
 namespace racecar::engine {
 
 DescriptorSet generate_descriptor_set(
-    const std::vector<VkDescriptorType>& types,
-    VkShaderStageFlags shader_stage_flags
+    const std::vector<VkDescriptorType>& types, VkShaderStageFlags shader_stage_flags
 )
 {
     engine::State& engine = engine::State::GetMut();
@@ -79,9 +78,7 @@ DescriptorSet generate_array_descriptor_set(
 }
 
 void update_descriptor_set_image(
-    DescriptorSet& desc_set,
-    const vk::mem::AllocatedImage& img,
-    int binding_idx
+    DescriptorSet& desc_set, const vk::mem::AllocatedImage& img, int binding_idx
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
@@ -107,9 +104,7 @@ void update_descriptor_set_image(
 }
 
 void update_descriptor_set_image_array(
-    DescriptorSet& desc_set,
-    const std::vector<vk::mem::AllocatedImage>& imgs,
-    int binding_idx
+    DescriptorSet& desc_set, const std::vector<vk::mem::AllocatedImage>& imgs, int binding_idx
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
@@ -143,10 +138,7 @@ void update_descriptor_set_image_array(
 }
 
 void update_descriptor_set_rwimage(
-    DescriptorSet& desc_set,
-    const RWImage& rw_img,
-    VkImageLayout img_layout,
-    int binding_idx
+    DescriptorSet& desc_set, const RWImage& rw_img, VkImageLayout img_layout, int binding_idx
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
@@ -210,9 +202,7 @@ void update_descriptor_set_rwimage_mip(
 }
 
 void update_descriptor_set_depth_image(
-    DescriptorSet& desc_set,
-    const RWImage& depth_img,
-    int binding_idx
+    DescriptorSet& desc_set, const RWImage& depth_img, int binding_idx
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
@@ -239,9 +229,7 @@ void update_descriptor_set_depth_image(
 }
 
 void update_descriptor_set_write_image(
-    DescriptorSet& desc_set,
-    const vk::mem::AllocatedImage& img,
-    int binding_idx
+    DescriptorSet& desc_set, const vk::mem::AllocatedImage& img, int binding_idx
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
@@ -266,11 +254,7 @@ void update_descriptor_set_write_image(
     }
 }
 
-void update_descriptor_set_sampler(
-    DescriptorSet& desc_set,
-    VkSampler sampler,
-    int binding_idx
-)
+void update_descriptor_set_sampler( DescriptorSet& desc_set, VkSampler sampler, int binding_idx )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
@@ -296,9 +280,7 @@ void update_descriptor_set_sampler(
 
 #if RACECAR_RAY_TRACING
 void update_descriptor_set_acceleration_structure(
-    DescriptorSet& desc_set,
-    VkAccelerationStructureKHR tlas,
-    int binding_idx
+    DescriptorSet& desc_set, VkAccelerationStructureKHR tlas, int binding_idx
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
@@ -325,9 +307,7 @@ void update_descriptor_set_acceleration_structure(
 #endif // RACECAR_RAY_TRACING
 
 void update_descriptor_set_const_storage_buffer(
-    DescriptorSet& desc_set,
-    vk::mem::AllocatedBuffer storage_buffer,
-    int binding_idx
+    DescriptorSet& desc_set, vk::mem::AllocatedBuffer storage_buffer, int binding_idx
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();

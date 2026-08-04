@@ -28,9 +28,7 @@ glm::vec3 cubemap_direction( uint32_t face, float u, float v )
     return glm::vec3( -1.0f );
 }
 
-vk::mem::AllocatedImage generate_diffuse_irradiance(
-    std::filesystem::path file_path
-)
+vk::mem::AllocatedImage generate_diffuse_irradiance( std::filesystem::path file_path )
 {
     vk::Common& vulkan = vk::Common::GetMut();
     const engine::State& engine = engine::State::GetConst();
@@ -62,12 +60,7 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
 
         // Need to upload all of these
         // Batched upload necessary. I can't use my brain right now to use our API effectively
-        load_cubemap(
-            face_data,
-            cubemap_image,
-            tile_extent,
-            VK_FORMAT_R32G32B32A32_SFLOAT
-        );
+        load_cubemap( face_data, cubemap_image, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT );
     }
     {
         engine::DescriptorSet prefilter_desc_set = engine::generate_descriptor_set(
@@ -98,11 +91,7 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
         }
 
         engine::update_descriptor_set_image( prefilter_desc_set, cubemap_image, 0 );
-        engine::update_descriptor_set_write_image(
-            prefilter_desc_set,
-            irradiance_rw_image,
-            1
-        );
+        engine::update_descriptor_set_write_image( prefilter_desc_set, irradiance_rw_image, 1 );
 
         engine::update_descriptor_set_sampler( sampler_desc_set, sampler, 0 );
 
@@ -117,66 +106,61 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
             "cs_compute_irradiance"
         );
 
-        engine::immediate_submit(
-            engine.immediate_submit,
-            [&]( VkCommandBuffer command_buffer ) {
-                // RW cubemap transition first
-                vk::utility::transition_image(
-                    command_buffer,
-                    irradiance_rw_image.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_ACCESS_NONE,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
+        engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            // RW cubemap transition first
+            vk::utility::transition_image(
+                command_buffer,
+                irradiance_rw_image.image,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_ACCESS_NONE,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
 
-                vkCmdBindPipeline(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.handle
-                );
+            vkCmdBindPipeline(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.handle
+            );
 
-                VkDescriptorSet sets[] = { prefilter_desc_set.descriptor_sets[0],
-                                           sampler_desc_set.descriptor_sets[0] };
+            VkDescriptorSet sets[]
+                = { prefilter_desc_set.descriptor_sets[0], sampler_desc_set.descriptor_sets[0] };
 
-                vkCmdBindDescriptorSets(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.layout,
-                    0,
-                    2,
-                    sets,
-                    0,
-                    nullptr
-                );
+            vkCmdBindDescriptorSets(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.layout,
+                0,
+                2,
+                sets,
+                0,
+                nullptr
+            );
 
-                vkCmdDispatch( command_buffer, tile_width, tile_height, 6 );
+            vkCmdDispatch( command_buffer, tile_width, tile_height, 6 );
 
-                vk::utility::transition_image(
-                    command_buffer,
-                    irradiance_rw_image.image,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
-            }
-        );
+            vk::utility::transition_image(
+                command_buffer,
+                irradiance_rw_image.image,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
+        } );
     }
 
     return irradiance_rw_image;
 }
 
-vk::mem::AllocatedImage cs_generate_diffuse_sh(
-    vk::mem::AllocatedImage sample_cubemap,
-    VkSampler sampler
-)
+vk::mem::AllocatedImage
+cs_generate_diffuse_sh( vk::mem::AllocatedImage sample_cubemap, VkSampler sampler )
 {
     const engine::State& engine = engine::State::GetConst();
     // Hardcode them to be 9 coefficients for now.
@@ -210,11 +194,7 @@ vk::mem::AllocatedImage cs_generate_diffuse_sh(
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_image(
-            sh_projection_desc0_set,
-            sample_cubemap,
-            0
-        );
+        engine::update_descriptor_set_image( sh_projection_desc0_set, sample_cubemap, 0 );
 
         engine::update_descriptor_set_sampler( sampler_desc_set, sampler, 0 );
 
@@ -242,63 +222,60 @@ vk::mem::AllocatedImage cs_generate_diffuse_sh(
             "cs_compute_irradiance_sh"
         );
 
-        engine::immediate_submit(
-            engine.immediate_submit,
-            [&]( VkCommandBuffer command_buffer ) {
-                // RW cubemap transition first
-                vk::utility::transition_image(
-                    command_buffer,
-                    sh_coefficients_image.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_ACCESS_NONE,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
+        engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            // RW cubemap transition first
+            vk::utility::transition_image(
+                command_buffer,
+                sh_coefficients_image.image,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_ACCESS_NONE,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
 
-                vkCmdBindPipeline(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.handle
-                );
+            vkCmdBindPipeline(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.handle
+            );
 
-                VkDescriptorSet sets[] = { sh_projection_desc0_set.descriptor_sets[0],
-                                           sampler_desc_set.descriptor_sets[0],
-                                           sh_projection_desc1_set.descriptor_sets[0] };
+            VkDescriptorSet sets[] = { sh_projection_desc0_set.descriptor_sets[0],
+                                       sampler_desc_set.descriptor_sets[0],
+                                       sh_projection_desc1_set.descriptor_sets[0] };
 
-                vkCmdBindDescriptorSets(
-                    command_buffer,
-                    VK_PIPELINE_BIND_POINT_COMPUTE,
-                    compute_pipeline.layout,
-                    0,
-                    3,
-                    sets,
-                    0,
-                    nullptr
-                );
+            vkCmdBindDescriptorSets(
+                command_buffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                compute_pipeline.layout,
+                0,
+                3,
+                sets,
+                0,
+                nullptr
+            );
 
-                // uint32_t x_groups
-                //     = ( static_cast<uint32_t>( sample_cubemap.image_extent.width ) + 7 ) / 8;
-                // uint32_t y_groups
-                //     = ( static_cast<uint32_t>( sample_cubemap.image_extent.height ) + 7 ) / 8;
+            // uint32_t x_groups
+            //     = ( static_cast<uint32_t>( sample_cubemap.image_extent.width ) + 7 ) / 8;
+            // uint32_t y_groups
+            //     = ( static_cast<uint32_t>( sample_cubemap.image_extent.height ) + 7 ) / 8;
 
-                vkCmdDispatch( command_buffer, 1, 1, 1 );
+            vkCmdDispatch( command_buffer, 1, 1, 1 );
 
-                vk::utility::transition_image(
-                    command_buffer,
-                    sh_coefficients_image.image,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_SHADER_WRITE_BIT,
-                    VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
-            }
-        );
+            vk::utility::transition_image(
+                command_buffer,
+                sh_coefficients_image.image,
+                VK_IMAGE_LAYOUT_GENERAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
+        } );
     }
 
     return sh_coefficients_image;
@@ -390,8 +367,7 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
     return sh_coefficients;
 }
 
-vk::mem::AllocatedImage
-allocate_cube_map( VkExtent3D extent, VkFormat format, uint32_t mip_levels )
+vk::mem::AllocatedImage allocate_cube_map( VkExtent3D extent, VkFormat format, uint32_t mip_levels )
 {
     vk::Common& vulkan = vk::Common::GetMut();
     vk::mem::AllocatedImage allocated_image = {
@@ -500,8 +476,7 @@ allocate_cube_map( VkExtent3D extent, VkFormat format, uint32_t mip_levels )
     return allocated_image;
 }
 
-vk::mem::AllocatedImage
-create_cubemap( std::filesystem::path file_path )
+vk::mem::AllocatedImage create_cubemap( std::filesystem::path file_path )
 {
     // Parse the cubemap for each face individually. Somehow log important info?
     const size_t layer_count = 6;
@@ -527,12 +502,7 @@ create_cubemap( std::filesystem::path file_path )
 
     // Need to upload all of these
     // Batched upload necessary. I can't use my brain right now to use our API effectively
-    load_cubemap(
-        face_data,
-        cubemap_image,
-        tile_extent,
-        VK_FORMAT_R32G32B32A32_SFLOAT
-    );
+    load_cubemap( face_data, cubemap_image, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT );
 
     return cubemap_image;
 }
@@ -578,43 +548,40 @@ void load_cubemap(
             copy_regions[layer].imageSubresource.layerCount = 1;
         }
 
-        engine::immediate_submit(
-            engine.immediate_submit,
-            [&]( VkCommandBuffer command_buffer ) {
-                vk::utility::transition_image(
-                    command_buffer,
-                    cm_image.image,
-                    VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    0,
-                    VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
+        engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+            vk::utility::transition_image(
+                command_buffer,
+                cm_image.image,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                0,
+                VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
 
-                vkCmdCopyBufferToImage(
-                    command_buffer,
-                    upload_buffer.handle,
-                    cm_image.image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    layer_count,
-                    copy_regions.data()
-                );
+            vkCmdCopyBufferToImage(
+                command_buffer,
+                upload_buffer.handle,
+                cm_image.image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                layer_count,
+                copy_regions.data()
+            );
 
-                vk::utility::transition_image(
-                    command_buffer,
-                    cm_image.image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_TRANSFER_WRITE_BIT,
-                    VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    VK_IMAGE_ASPECT_COLOR_BIT
-                );
-            }
-        );
+            vk::utility::transition_image(
+                command_buffer,
+                cm_image.image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_ACCESS_TRANSFER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
+        } );
 
     } catch ( const Exception& ex ) {
         log::error( "[AllocatedImage] Error occurred: {}", ex.what() );

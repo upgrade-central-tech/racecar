@@ -5,9 +5,7 @@
 namespace racecar::geometry {
 
 bool create_mesh_buffers(
-    GPUMeshBuffers& mesh_buffers,
-    size_t vertex_buffer_size,
-    size_t index_buffer_size
+    GPUMeshBuffers& mesh_buffers, size_t vertex_buffer_size, size_t index_buffer_size
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
@@ -56,11 +54,7 @@ bool create_mesh_buffers(
     return true;
 }
 
-bool upload_mesh_buffers(
-    GPUMeshBuffers& mesh_buffers,
-    void* vertices_data,
-    void* indices_data
-)
+bool upload_mesh_buffers( GPUMeshBuffers& mesh_buffers, void* vertices_data, void* indices_data )
 {
     const engine::State& engine = engine::State::GetConst();
     // Upload index + vertex data to GPU

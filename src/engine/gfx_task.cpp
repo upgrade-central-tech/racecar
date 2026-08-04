@@ -2,9 +2,7 @@
 
 namespace racecar::engine {
 
-void execute_gfx_task(
-    const VkCommandBuffer& cmd_buf, GfxTask& gfx_task
-)
+void execute_gfx_task( const VkCommandBuffer& cmd_buf, GfxTask& gfx_task )
 {
     const engine::State& engine = engine::State::GetConst();
     const size_t frame_idx = engine.get_frame_index();

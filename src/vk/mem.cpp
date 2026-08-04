@@ -2,9 +2,8 @@
 
 namespace racecar::vk::mem {
 
-AllocatedBuffer create_buffer(
-    size_t alloc_size, VkBufferUsageFlags usage_flags, VmaMemoryUsage memory_usage
-)
+AllocatedBuffer
+create_buffer( size_t alloc_size, VkBufferUsageFlags usage_flags, VmaMemoryUsage memory_usage )
 {
     vk::Common& vulkan = vk::Common::GetMut();
     // We may want to adjust the sharingMode to be adjustable depending on use-case.

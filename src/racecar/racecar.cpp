@@ -72,11 +72,7 @@ void run( bool use_fullscreen )
     UniformBuffer<ub_data::Camera> camera_buffer;
     UniformBuffer<ub_data::Debug> debug_buffer;
     engine::DescriptorSet uniform_desc_set;
-    load_camera_debug_uniform_buffers(
-        &camera_buffer,
-        &debug_buffer,
-        &uniform_desc_set
-    );
+    load_camera_debug_uniform_buffers( &camera_buffer, &debug_buffer, &uniform_desc_set );
 
     // GLOBAL TEXTURE SAMPLER SETUP
     VkSampler linear_sampler = VK_NULL_HANDLE;
@@ -88,12 +84,7 @@ void run( bool use_fullscreen )
     size_t num_materials = scene.materials.size();
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
     std::vector<UniformBuffer<ub_data::Material>> material_uniform_buffers( num_materials );
-    load_materials(
-        scene,
-        num_materials,
-        &material_desc_sets,
-        &material_uniform_buffers
-    );
+    load_materials( scene, num_materials, &material_desc_sets, &material_uniform_buffers );
 
     // LOAD MODEL MATRIX UNIFORM BUFFERS
     size_t num_nodes = scene.nodes.size();
@@ -211,10 +202,8 @@ void run( bool use_fullscreen )
     rt_texture_uniform_data.set_data( rt_texture_uniform );
 
     // Create uniform buffer for BLAS offsets
-    UniformBuffer<ub_data::BLASOffsets> offset_data = create_uniform_buffer(
-        blas_offsets,
-        static_cast<size_t>( engine.frame_overlap )
-    );
+    UniformBuffer<ub_data::BLASOffsets> offset_data
+        = create_uniform_buffer( blas_offsets, static_cast<size_t>( engine.frame_overlap ) );
     offset_data.set_data( blas_offsets );
 
     // Initialize RT vertex data buffer
@@ -232,10 +221,8 @@ void run( bool use_fullscreen )
     );
 
     // Create combined textures descriptor set
-    engine::DescriptorSet combined_textures_desc_set = create_combined_textures_desc_set(
-        albedo_textures,
-        metallic_roughness_textures
-    );
+    engine::DescriptorSet combined_textures_desc_set
+        = create_combined_textures_desc_set( albedo_textures, metallic_roughness_textures );
 #endif // RACECAR_RAY_TRACING
 
     // ================================================================================================================
@@ -254,11 +241,7 @@ void run( bool use_fullscreen )
     };
 
     geometry::Terrain test_terrain;
-    geometry::initialize_terrain(
-        test_terrain,
-        prepass_terrain_info,
-        terrain_lighting_info
-    );
+    geometry::initialize_terrain( test_terrain, prepass_terrain_info, terrain_lighting_info );
 
     // ================================================================================================================
     // Additional Resource Creation
@@ -411,12 +394,7 @@ void run( bool use_fullscreen )
     create_terrain_car_screen_pipeline_barrier( task_list, screen_color );
 
     // Car lighting pass, writes to screen_color
-    car_lighting_pass(
-        lighting_pass_desc_sets,
-        lighting_pass_pipeline,
-        screen_color,
-        task_list
-    );
+    car_lighting_pass( lighting_pass_desc_sets, lighting_pass_pipeline, screen_color, task_list );
 
     // Transition screen color and screen buffer for post processing
     create_screen_buffer_pipeline_barrier( screen_color, screen_buffer, task_list );
@@ -517,11 +495,7 @@ void run( bool use_fullscreen )
         update_debug_uniform_buffer( gui, atms, debug_buffer );
 
         // update materials
-        update_material_uniform_buffers(
-            gui,
-            material_uniform_buffers,
-            num_materials
-        );
+        update_material_uniform_buffers( gui, material_uniform_buffers, num_materials );
 
 #if RACECAR_RAY_TRACING
         // Update ray tracing uniform buffers
@@ -534,13 +508,7 @@ void run( bool use_fullscreen )
         // Scene node transforms, sharing one `discovered` set so a node is only propagated once
         std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
 
-        update_car_transform(
-            gui,
-            scene,
-            model_mat_uniform_buffers,
-            volumetric,
-            discovered
-        );
+        update_car_transform( gui, scene, model_mat_uniform_buffers, volumetric, discovered );
 
         // wheel rotation
         update_wheel_transforms( gui, scene, model_mat_uniform_buffers, discovered );

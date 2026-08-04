@@ -5,10 +5,7 @@
 
 namespace racecar::geometry::scene {
 
-GPUMeshBuffers upload_mesh(
-    std::span<uint32_t> indices,
-    std::span<Vertex> vertices
-)
+GPUMeshBuffers upload_mesh( std::span<uint32_t> indices, std::span<Vertex> vertices )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();

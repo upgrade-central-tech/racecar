@@ -17,8 +17,7 @@ VkFence create_fence()
 }
 
 void begin_precompute_commandbuffer(
-    VkCommandBuffer* precompute_cmdbuf,
-    const VkFence& precompute_fence
+    VkCommandBuffer* precompute_cmdbuf, const VkFence& precompute_fence
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
@@ -29,9 +28,7 @@ void begin_precompute_commandbuffer(
     vkBeginCommandBuffer( *precompute_cmdbuf, &command_buffer_begin_info );
 }
 
-void submit_precompute_cmdbuf(
-    VkFence& precompute_fence, VkCommandBuffer& precompute_cmdbuf
-)
+void submit_precompute_cmdbuf( VkFence& precompute_fence, VkCommandBuffer& precompute_cmdbuf )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
     vkEndCommandBuffer( precompute_cmdbuf );

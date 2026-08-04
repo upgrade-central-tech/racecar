@@ -33,16 +33,8 @@ void initialize_ao_pass( AoPass& ao_pass )
         VK_SHADER_STAGE_COMPUTE_BIT
     );
 
-    engine::update_descriptor_set_uniform(
-        ao_pass.uniform_desc_set,
-        *ao_pass.camera_buffer,
-        0
-    );
-    engine::update_descriptor_set_uniform(
-        ao_pass.uniform_desc_set,
-        ao_pass.ao_buffer,
-        1
-    );
+    engine::update_descriptor_set_uniform( ao_pass.uniform_desc_set, *ao_pass.camera_buffer, 0 );
+    engine::update_descriptor_set_uniform( ao_pass.uniform_desc_set, ao_pass.ao_buffer, 1 );
 
     engine::update_descriptor_set_rwimage(
         ao_pass.texture_desc_set,
@@ -102,9 +94,7 @@ void add_ao( AoPass& ao_pass, TaskList& task_list )
     return;
 }
 
-void update_ao_uniform_buffer(
-    const gui::Gui& gui, engine::post::AoPass& ao_pass
-)
+void update_ao_uniform_buffer( const gui::Gui& gui, engine::post::AoPass& ao_pass )
 {
     const engine::State& engine = engine::State::GetConst();
     ub_data::AOData ao_ub = ao_pass.ao_buffer.get_data();

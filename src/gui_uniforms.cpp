@@ -3,9 +3,7 @@
 namespace racecar {
 
 void update_debug_uniform_buffer(
-    gui::Gui& gui,
-    atmosphere::Atmosphere& atms,
-    UniformBuffer<ub_data::Debug>& debug_buffer
+    gui::Gui& gui, atmosphere::Atmosphere& atms, UniformBuffer<ub_data::Debug>& debug_buffer
 )
 {
     const engine::State& engine = engine::State::GetConst();

@@ -32,9 +32,7 @@ CameraData get_camera_data()
 }
 
 void update_camera_uniform_buffer(
-    gui::Gui& gui,
-    UniformBuffer<ub_data::Camera>& camera_buffer,
-    const CameraData& camera_data
+    gui::Gui& gui, UniformBuffer<ub_data::Camera>& camera_buffer, const CameraData& camera_data
 )
 {
     const engine::State& engine = engine::State::GetConst();

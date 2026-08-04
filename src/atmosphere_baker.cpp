@@ -21,8 +21,7 @@ static const uint32_t mip0_size = 512;
 static const uint32_t mip_levels = 5;
 
 void initialize_atmosphere_baker(
-    AtmosphereBaker& atms_baker,
-    const volumetric::Volumetric& volumetric
+    AtmosphereBaker& atms_baker, const volumetric::Volumetric& volumetric
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
@@ -265,10 +264,7 @@ void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, engine::Tas
     );
 };
 
-void compute_octahedral_sky_mips(
-    AtmosphereBaker& atms_baker,
-    engine::TaskList& task_list
-)
+void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList& task_list )
 {
     const engine::State& engine = engine::State::GetConst();
     Atmosphere& atms = *atms_baker.atmosphere;

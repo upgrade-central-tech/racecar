@@ -39,21 +39,12 @@ Context initialize_context( bool use_fullscreen )
     return ctx;
 }
 
-void load_scene(
-    scene::Scene* scene, geometry::scene::Mesh* scene_mesh
-)
+void load_scene( scene::Scene* scene, geometry::scene::Mesh* scene_mesh )
 {
-    scene::load_gltf(
-        GLTF_FILE_PATH,
-        *scene,
-        scene_mesh->vertices,
-        scene_mesh->indices
-    );
+    scene::load_gltf( GLTF_FILE_PATH, *scene, scene_mesh->vertices, scene_mesh->indices );
     geometry::scene::generate_tangents( *scene_mesh );
-    scene_mesh->mesh_buffers = geometry::scene::upload_mesh(
-        scene_mesh->indices,
-        scene_mesh->vertices
-    );
+    scene_mesh->mesh_buffers
+        = geometry::scene::upload_mesh( scene_mesh->indices, scene_mesh->vertices );
 }
 
 void load_camera_debug_uniform_buffers(
@@ -67,10 +58,8 @@ void load_camera_debug_uniform_buffers(
         { },
         static_cast<size_t>( engine.frame_overlap )
     );
-    *debug_buffer = create_uniform_buffer<ub_data::Debug>(
-        { },
-        static_cast<size_t>( engine.frame_overlap )
-    );
+    *debug_buffer
+        = create_uniform_buffer<ub_data::Debug>( { }, static_cast<size_t>( engine.frame_overlap ) );
     // UniformBuffer raymarch_buffer = create_uniform_buffer<ub_data::RaymarchBufferData>(
     //     vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
@@ -80,22 +69,12 @@ void load_camera_debug_uniform_buffers(
             | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     );
 
-    engine::update_descriptor_set_uniform(
-        *uniform_desc_set,
-        *camera_buffer,
-        0
-    );
-    engine::update_descriptor_set_uniform(
-        *uniform_desc_set,
-        *debug_buffer,
-        1
-    );
+    engine::update_descriptor_set_uniform( *uniform_desc_set, *camera_buffer, 0 );
+    engine::update_descriptor_set_uniform( *uniform_desc_set, *debug_buffer, 1 );
 }
 
 void load_samplers(
-    VkSampler* linear_sampler,
-    VkSampler* point_sampler,
-    engine::DescriptorSet* sampler_desc_set
+    VkSampler* linear_sampler, VkSampler* point_sampler, engine::DescriptorSet* sampler_desc_set
 )
 {
     vk::Common& vulkan = vk::Common::GetMut();
@@ -137,17 +116,9 @@ void load_samplers(
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
-    engine::update_descriptor_set_sampler(
-        *sampler_desc_set,
-        *linear_sampler,
-        0
-    );
+    engine::update_descriptor_set_sampler( *sampler_desc_set, *linear_sampler, 0 );
 
-    engine::update_descriptor_set_sampler(
-        *sampler_desc_set,
-        *point_sampler,
-        1
-    );
+    engine::update_descriptor_set_sampler( *sampler_desc_set, *point_sampler, 1 );
 }
 
 void load_materials(
@@ -208,11 +179,7 @@ void load_materials(
         material_buffer.set_data( material_ub );
         material_buffer.update( engine.get_frame_index() );
 
-        engine::update_descriptor_set_uniform(
-            ( *material_desc_sets )[i],
-            material_buffer,
-            3
-        );
+        engine::update_descriptor_set_uniform( ( *material_desc_sets )[i], material_buffer, 3 );
         ( *material_uniform_buffers )[i] = std::move( material_buffer );
     }
 }
@@ -249,18 +216,12 @@ void load_model_mat_uniform_buffers(
         model_mat_buffer.set_data( model_mat_ub );
         model_mat_buffer.update( engine.get_frame_index() );
 
-        engine::update_descriptor_set_uniform(
-            ( *model_mat_desc_sets )[i],
-            model_mat_buffer,
-            0
-        );
+        engine::update_descriptor_set_uniform( ( *model_mat_desc_sets )[i], model_mat_buffer, 0 );
         ( *model_mat_uniform_buffers )[i] = std::move( model_mat_buffer );
     }
 }
 
-void create_raymarch_tex_sets(
-    engine::DescriptorSet* raymarch_tex_sets
-)
+void create_raymarch_tex_sets( engine::DescriptorSet* raymarch_tex_sets )
 {
     *raymarch_tex_sets = engine::generate_descriptor_set(
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
@@ -272,9 +233,7 @@ void create_raymarch_tex_sets(
 }
 
 void create_screen_buffers(
-    engine::RWImage* screen_color,
-    engine::RWImage* screen_buffer,
-    engine::RWImage* screen_history
+    engine::RWImage* screen_color, engine::RWImage* screen_buffer, engine::RWImage* screen_history
 )
 {
     const engine::State& engine = engine::State::GetConst();
@@ -306,10 +265,7 @@ void create_screen_buffers(
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
     );
 
-    engine::initialize_rwimage_layout(
-        *screen_history,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    );
+    engine::initialize_rwimage_layout( *screen_history, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 }
 
 void load_model_primitive_material_data(

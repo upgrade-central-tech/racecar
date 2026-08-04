@@ -30,25 +30,12 @@ void create_lut_sets(
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
-    *lut_brdf = engine::load_image(
-        BRDF_LUT_PATH,
-        2,
-        VK_FORMAT_R16G16_SFLOAT,
-        false
-    );
+    *lut_brdf = engine::load_image( BRDF_LUT_PATH, 2, VK_FORMAT_R16G16_SFLOAT, false );
 
     *glint_noise = geometry::generate_glint_noise();
 
-    engine::update_descriptor_set_image(
-        *lut_sets,
-        *lut_brdf,
-        LUT_INDEX::BRDF
-    );
-    engine::update_descriptor_set_image(
-        *lut_sets,
-        *glint_noise,
-        LUT_INDEX::GLINT
-    );
+    engine::update_descriptor_set_image( *lut_sets, *lut_brdf, LUT_INDEX::BRDF );
+    engine::update_descriptor_set_image( *lut_sets, *glint_noise, LUT_INDEX::GLINT );
 }
 
 }
