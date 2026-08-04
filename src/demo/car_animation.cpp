@@ -1,7 +1,7 @@
 #include "car_animation.hpp"
 
-#include "car_assets.hpp"
 #include "../scene/scene.hpp"
+#include "car_assets.hpp"
 
 #include <glm/ext/matrix_transform.hpp>
 
@@ -40,8 +40,7 @@ void apply_demo_camera_motion(
     const volumetric::Volumetric& volumetric
 )
 {
-    if ( scene.demo_scene_nodes.car_parent_id.has_value()
-         && gui.demo.enable_camera_lock_on_car ) {
+    if ( scene.demo_scene_nodes.car_parent_id.has_value() && gui.demo.enable_camera_lock_on_car ) {
         camera.center = model_mat_uniform_buffers.at( scene.demo_scene_nodes.car_parent_id.value() )
                             .get_data()
                             .model_mat[3];

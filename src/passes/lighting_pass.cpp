@@ -14,8 +14,12 @@ constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferr
 
 }
 
-void create_deferred_lighting_pipeline_barrier( engine::TaskList& task_list,
-    deferred::GBuffers& gbuffers, engine::RWImage& reflection_data, engine::RWImage& screen_color )
+void create_deferred_lighting_pipeline_barrier(
+    engine::TaskList& task_list,
+    deferred::GBuffers& gbuffers,
+    engine::RWImage& reflection_data,
+    engine::RWImage& screen_color
+)
 {
     engine::add_pipeline_barrier(
         task_list,
@@ -119,11 +123,9 @@ void car_lighting_pass(
 {
     geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
 
-    engine::GfxTask lighting_pass_gfx_task = {
-        .clear_depth = 1.0f,
-        .color_attachments = { &screen_color },
-        .extent = engine.swapchain.extent
-    };
+    engine::GfxTask lighting_pass_gfx_task = { .clear_depth = 1.0f,
+                                               .color_attachments = { &screen_color },
+                                               .extent = engine.swapchain.extent };
 
     lighting_pass_gfx_task.draw_tasks.push_back({
             .draw_resource_descriptor = {

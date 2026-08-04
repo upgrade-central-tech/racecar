@@ -1,7 +1,6 @@
 #include "ao.hpp"
 
 #include "../../gui.hpp"
-
 #include "../../vk/create.hpp"
 
 const std::filesystem::path AO_SHADER_MODULE_PATH = "../shaders/post/ao/ao.spv";

@@ -45,7 +45,9 @@ void create_screen_buffer_pipeline_barrier(
     );
 }
 
-void create_screen_buffer_present_pipeline_barrier( engine::RWImage& screen_buffer, engine::TaskList& task_list )
+void create_screen_buffer_present_pipeline_barrier(
+    engine::RWImage& screen_buffer, engine::TaskList& task_list
+)
 {
     engine::add_pipeline_barrier(
         task_list,

@@ -49,7 +49,8 @@ void update_camera_uniform_buffer(
         glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
 
         jittered_projection[2][0] += offset.x / static_cast<float>( engine.swapchain.extent.width );
-        jittered_projection[2][1] += offset.y / static_cast<float>( engine.swapchain.extent.height );
+        jittered_projection[2][1]
+            += offset.y / static_cast<float>( engine.swapchain.extent.height );
     }
 
     camera_ub.prev_mvp = camera_ub.mvp;

@@ -2,7 +2,6 @@
 
 #include "atmosphere.hpp"
 #include "camera_data.hpp"
-
 #include "engine/descriptor_set.hpp"
 #include "engine/images.hpp"
 #include "engine/state.hpp"

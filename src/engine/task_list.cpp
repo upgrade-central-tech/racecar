@@ -52,5 +52,4 @@ void add_cpu_task( TaskList& task_list, std::function<void()> task )
     task_list.cpu_tasks.push_back( { task } );
 }
 
-
 } // namespace racecar::engine

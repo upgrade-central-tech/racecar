@@ -1,7 +1,6 @@
 #include "bloom.hpp"
 
 #include "../../gui.hpp"
-
 #include "../../log.hpp"
 #include "../../vk/create.hpp"
 
@@ -27,7 +26,7 @@ void add_bloom(
     BloomPass& pass = *pass_out;
 
     // The threshold pass samples inout and stores to write_only. Both arrive in the
-    // correct layouts 
+    // correct layouts
 
     {
         VkExtent3D current_extent
@@ -332,7 +331,10 @@ void add_bloom(
 }
 
 void update_bloom_uniform_buffer(
-    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::BloomPass& bloom_pass
+    vk::Common& vulkan,
+    engine::State& engine,
+    const gui::Gui& gui,
+    engine::post::BloomPass& bloom_pass
 )
 {
     ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();

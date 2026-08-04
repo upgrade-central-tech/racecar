@@ -103,8 +103,8 @@ GBuffers initialize_GBuffers( vk::Common& vulkan, engine::State& engine )
 std::vector<engine::RWImage*> get_color_attachments( GBuffers& gbuffers )
 {
     return {
-        &gbuffers.GBuffer_Position, &gbuffers.GBuffer_Normal,      &gbuffers.GBuffer_Tangent,
-        &gbuffers.GBuffer_UV,       &gbuffers.GBuffer_Albedo,      &gbuffers.GBuffer_Packed_Data,
+        &gbuffers.GBuffer_Position, &gbuffers.GBuffer_Normal, &gbuffers.GBuffer_Tangent,
+        &gbuffers.GBuffer_UV,       &gbuffers.GBuffer_Albedo, &gbuffers.GBuffer_Packed_Data,
         &gbuffers.GBuffer_Velocity,
     };
 }

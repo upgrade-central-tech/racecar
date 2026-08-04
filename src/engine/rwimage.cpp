@@ -1,9 +1,9 @@
 #include "rwimage.hpp"
 
 #include "../log.hpp"
+#include "../vk/utility.hpp"
 #include "images.hpp"
 #include "imm_submit.hpp"
-#include "../vk/utility.hpp"
 
 #include <SDL3/SDL.h>
 

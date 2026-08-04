@@ -4,11 +4,10 @@
 #include "gui.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
-#include <glm/gtx/compatibility.hpp>
-
 #include "exception.hpp"
 #include "log.hpp"
 
+#include <glm/gtx/compatibility.hpp>
 #include <nlohmann/json.hpp>
 
 #include <filesystem>

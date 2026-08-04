@@ -1,19 +1,17 @@
 #include "atmosphere.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
-#include <glm/gtx/compatibility.hpp>
-
 #include "camera_data.hpp"
-#include "geometry/quad.hpp"
-#include "gui.hpp"
-#include "vk/create.hpp"
-
 #include "engine/images.hpp"
 #include "engine/ub_data.hpp"
 #include "exception.hpp"
+#include "geometry/quad.hpp"
+#include "gui.hpp"
 #include "log.hpp"
+#include "vk/create.hpp"
 
 #include <glm/gtc/constants.hpp>
+#include <glm/gtx/compatibility.hpp>
 
 #include <cmath>
 #include <filesystem>

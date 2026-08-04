@@ -456,7 +456,7 @@ void run( bool use_fullscreen )
 
     bool will_quit = false;
     bool stop_drawing = false;
-    SDL_Event event = {};
+    SDL_Event event = { };
     std::chrono::steady_clock::time_point current_tick;
 
     while ( !will_quit ) {
