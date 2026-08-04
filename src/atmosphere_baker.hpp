@@ -37,6 +37,8 @@ void initialize_atmosphere_baker(
     engine::State& engine
 );
 
+void atmosphere_baker_precompute( AtmosphereBaker& atms_baker, VkCommandBuffer precompute_cmdbuf );
+
 // TODO: refactor this later so that it abandons the junk-task system
 void prebake_octahedral_sky(
     const AtmosphereBaker& atms_baker, engine::State& engine

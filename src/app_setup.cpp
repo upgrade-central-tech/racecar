@@ -348,6 +348,13 @@ void create_screen_buffers(
         VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
     );
+
+    engine::initialize_rwimage_layout(
+        ctx.vulkan,
+        engine,
+        *screen_history,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    );
 }
 
 void load_model_primitive_material_data(

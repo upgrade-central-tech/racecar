@@ -26,8 +26,8 @@ void add_bloom(
 {
     BloomPass& pass = *pass_out;
 
-    engine::transition_cs_read_to_rw( task_list, inout );
-    engine::transition_cs_write_to_rw( task_list, write_only );
+    // The threshold pass samples inout and stores to write_only. Both arrive in the
+    // correct layouts 
 
     {
         VkExtent3D current_extent
@@ -53,7 +53,7 @@ void add_bloom(
                       .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
                       .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                      .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                      .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                       .image = &pass.images[i],
                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                   } } }
@@ -147,13 +147,33 @@ void add_bloom(
     VkShaderModule downsample_shader = vk::create::shader_module( vulkan, DOWNSAMPLE_SHADER_PATH );
 
     for ( size_t i = 0; i < BloomPass::NUM_PASSES; ++i ) {
-        if ( i == 0 ) {
-            // We'll be reading from the full resolution input texture
-            engine::transition_cs_read_to_write( task_list, pass.images[0] );
-        } else {
-            engine::transition_cs_write_to_read( task_list, pass.images[i - 1] );
-            engine::transition_cs_read_to_write( task_list, pass.images[i] );
-        }
+        engine::add_pipeline_barrier(
+            task_list,
+            engine::PipelineBarrierDescriptor {
+                .buffer_barriers = { },
+                .image_barriers = {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = i == 0 ? &write_only : &pass.images[i - 1],
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .image = &pass.images[i],
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                } }
+        );
 
         const RWImage& input_image = i == 0 ? write_only : pass.images[i - 1];
         VkExtent3D output_extent = pass.images[i].images[0].image_extent;
@@ -204,26 +224,40 @@ void add_bloom(
                 = { ( output_extent.width + 7 ) / 8, ( output_extent.height + 7 ) / 8, 1 },
             }
         );
-
-        if ( i == 0 ) {
-            engine::transition_cs_rw_to_write( task_list, write_only );
-        }
     }
-
-    engine::transition_cs_write_to_rw( task_list, pass.images[BloomPass::NUM_PASSES - 1] );
 
     VkShaderModule upsample_shader = vk::create::shader_module( vulkan, UPSAMPLE_SHADER_PATH );
 
     for ( int signed_i = BloomPass::NUM_PASSES - 1; signed_i >= 0; --signed_i ) {
         size_t i = static_cast<size_t>( signed_i );
 
-        if ( i == 0 ) {
-            // We'll be writing to the full resolution output texture
-            engine::transition_cs_rw_to_read( task_list, pass.images[0] );
-        } else {
-            engine::transition_cs_rw_to_read( task_list, pass.images[i] );
-            engine::transition_cs_read_to_rw( task_list, pass.images[i - 1] );
-        }
+        engine::add_pipeline_barrier(
+            task_list,
+            engine::PipelineBarrierDescriptor {
+                .buffer_barriers = { },
+                .image_barriers = {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &pass.images[i],
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .image = i == 0 ? &inout : &pass.images[i - 1],
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                } }
+        );
 
         const RWImage& output_image = i == 0 ? inout : pass.images[i - 1];
         VkExtent3D output_extent = output_image.images[0].image_extent;
@@ -277,7 +311,22 @@ void add_bloom(
         );
     }
 
-    engine::transition_cs_rw_to_read( task_list, inout );
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers = { engine::ImageBarrier {
+                .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                .image = &inout,
+                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+            } },
+        }
+    );
 
     log::info( "[Post] Added bloom pass!" );
 }

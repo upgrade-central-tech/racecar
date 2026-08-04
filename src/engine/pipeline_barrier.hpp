@@ -61,10 +61,20 @@ struct PipelineBarrierDescriptor {
 void run_pipeline_barrier(
     const State& engine, const PipelineBarrierDescriptor& barrier, VkCommandBuffer cmd_buf );
 
+/// Covers mip 0 only. For a mipped image use VK_IMAGE_SUBRESOURCE_RANGE_ALL_MIPS_COLOR instead.
+/// this leaves levels 1..n in whatever layout they were already in.
 constexpr VkImageSubresourceRange VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR = {
     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
     .baseMipLevel = 0,
     .levelCount = 1,
+    .baseArrayLayer = 0,
+    .layerCount = 1,
+};
+
+constexpr VkImageSubresourceRange VK_IMAGE_SUBRESOURCE_RANGE_ALL_MIPS_COLOR = {
+    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    .baseMipLevel = 0,
+    .levelCount = VK_REMAINING_MIP_LEVELS,
     .baseArrayLayer = 0,
     .layerCount = 1,
 };

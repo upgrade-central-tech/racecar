@@ -183,6 +183,21 @@ void initialize_atmosphere_baker(
     }
 }
 
+void atmosphere_baker_precompute( AtmosphereBaker& atms_baker, VkCommandBuffer precompute_cmdbuf )
+{
+    vk::utility::transition_image(
+        precompute_cmdbuf,
+        atms_baker.octahedral_sky.image,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_GENERAL,
+        VK_ACCESS_2_NONE,
+        VK_ACCESS_2_SHADER_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+        VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT
+    );
+}
+
 void compute_octahedral_sky( AtmosphereBaker& atms_baker, engine::TaskList& task_list )
 {
     Atmosphere& atms = *atms_baker.atmosphere;

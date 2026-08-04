@@ -36,4 +36,9 @@ RWImage create_rwimage_mips( vk::Common& vulkan, const engine::State& engine, Vk
 RWImage create_gbuffer_image( vk::Common& vulkan, const engine::State& engine, VkFormat format,
     VkSampleCountFlagBits samples );
 
+/// Transitions every frame's image out of UNDEFINED once, immediately.
+/// For images whose contents must survive across frames (AA)
+void initialize_rwimage_layout(
+    vk::Common& vulkan, engine::State& engine, RWImage& image, VkImageLayout layout );
+
 } // namespace racecar::engine

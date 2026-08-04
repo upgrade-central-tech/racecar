@@ -212,25 +212,25 @@ vk::mem::AllocatedImage create_image(
                     &copy_region
                 );
 
-                vk::utility::transition_image_mips(
-                    command_buffer,
-                    new_image.image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    VK_ACCESS_TRANSFER_WRITE_BIT,
-                    VK_ACCESS_SHADER_READ_BIT,
-                    VK_PIPELINE_STAGE_TRANSFER_BIT,
-                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                    aspect_flags,
-                    mip_levels
-                );
-
                 if ( mipmapped ) {
+                    // this function handles the image transitions for each image for us
                     generate_mipmaps(
                         new_image.image,
                         new_image.image_extent,
                         mip_levels,
                         command_buffer
+                    );
+                } else {
+                    vk::utility::transition_image(
+                        command_buffer,
+                        new_image.image,
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                        VK_ACCESS_2_SHADER_READ_BIT,
+                        VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        aspect_flags
                     );
                 }
             }

@@ -27,7 +27,7 @@ void create_screen_buffer_pipeline_barrier(
                     .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     .image = &screen_color,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
@@ -97,10 +97,52 @@ void post_processing_passes(
         .in_color = &screen_color,
         .out_color = &screen_buffer,
     };
+
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers = { engine::ImageBarrier {
+                .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                .image = &screen_buffer,
+                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+            } },
+        }
+    );
     add_ao( ao_pass, ctx.vulkan, engine, task_list );
 
-    engine::transition_cs_read_to_write( task_list, screen_color );
-    engine::transition_cs_write_to_read( task_list, screen_buffer );
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers = {
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .image = &screen_color,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .image = &screen_buffer,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+            } }
+    );
     tm_pass = engine::post::add_tonemapping(
         ctx.vulkan,
         engine,
@@ -109,9 +151,33 @@ void post_processing_passes(
         task_list
     );
 
-    // Anti-aliasing solution, run this post-tonemapping. Read prev. rendered frame into here
-    engine::transition_cs_read_to_write( task_list, screen_buffer );
-    engine::transition_cs_write_to_read( task_list, screen_color );
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers = {
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .image = &screen_buffer,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .image = &screen_color,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+            } }
+    );
     aa_pass = engine::post::add_aa(
         ctx.vulkan,
         engine,

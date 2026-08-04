@@ -14,9 +14,8 @@ constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferr
 
 }
 
-void create_deferred_lighting_pipeline_barrier(
-    engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::RWImage& reflection_data
-)
+void create_deferred_lighting_pipeline_barrier( engine::TaskList& task_list,
+    deferred::GBuffers& gbuffers, engine::RWImage& reflection_data, engine::RWImage& screen_color )
 {
     engine::add_pipeline_barrier(
         task_list,
@@ -48,8 +47,16 @@ void create_deferred_lighting_pipeline_barrier(
                                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
                                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+                                       .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                                        .image = &reflection_data,
+                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                       .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                                       .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                       .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                       .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                                       .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                                       .image = &screen_color,
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
             } }
     );

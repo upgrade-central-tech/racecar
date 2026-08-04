@@ -2,6 +2,8 @@
 
 #include "../log.hpp"
 #include "images.hpp"
+#include "imm_submit.hpp"
+#include "../vk/utility.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -102,6 +104,31 @@ RWImage create_rwimage_mips(
         usage_flags,
         mip_levels,
         true
+    );
+}
+
+void initialize_rwimage_layout(
+    vk::Common& vulkan, engine::State& engine, RWImage& image, VkImageLayout layout
+)
+{
+    engine::immediate_submit(
+        vulkan,
+        engine.immediate_submit,
+        [&]( VkCommandBuffer command_buffer ) {
+            for ( vk::mem::AllocatedImage& frame_image : image.images ) {
+                vk::utility::transition_image(
+                    command_buffer,
+                    frame_image.image,
+                    VK_IMAGE_LAYOUT_UNDEFINED,
+                    layout,
+                    VK_ACCESS_2_NONE,
+                    VK_ACCESS_2_SHADER_READ_BIT,
+                    VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    VK_IMAGE_ASPECT_COLOR_BIT
+                );
+            }
+        }
     );
 }
 

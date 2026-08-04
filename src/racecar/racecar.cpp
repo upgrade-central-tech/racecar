@@ -341,6 +341,8 @@ void run( bool use_fullscreen )
 
     geometry::terrain_precompute( test_terrain, precompute_cmdbuf );
 
+    atmosphere::atmosphere_baker_precompute( atms_baker, precompute_cmdbuf );
+
     engine::submit_precompute_cmdbuf( ctx.vulkan, precompute_fence, precompute_cmdbuf );
 
     // ================================================================================================================
@@ -402,7 +404,7 @@ void run( bool use_fullscreen )
     engine::add_gfx_task( task_list, reflection_gfx_task );
 
     // Lighting
-    create_deferred_lighting_pipeline_barrier( task_list, gbuffers, reflection_data );
+    create_deferred_lighting_pipeline_barrier( task_list, gbuffers, reflection_data, screen_color );
 
     // Terrain lighting pass
     geometry::draw_terrain( test_terrain, engine, task_list );

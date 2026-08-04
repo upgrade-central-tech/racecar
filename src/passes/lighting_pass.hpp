@@ -28,8 +28,8 @@ void car_lighting_pass( engine::State& engine, LightingPassDescSets desc_sets,
     engine::Pipeline& lighting_pass_pipeline, engine::RWImage& screen_color,
     engine::TaskList& task_list );
 
-void create_deferred_lighting_pipeline_barrier(
-    engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::RWImage& reflection_data );
+void create_deferred_lighting_pipeline_barrier( engine::TaskList& task_list,
+    deferred::GBuffers& gbuffers, engine::RWImage& reflection_data, engine::RWImage& screen_color );
 
 /*
  * Hands screen_color over from the terrain lighting compute pass, which writes it as a storage

@@ -150,8 +150,34 @@ AAPass add_aa(
         }
     );
 
-    transition_cs_write_to_read( task_list, output );
-    transition_cs_read_to_write( task_list, history );
+    // cs_write_history samples output and stores to history.
+    add_pipeline_barrier(
+        task_list,
+        PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers = {
+                ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .image = &output,
+                    .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+                ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .image = &history,
+                    .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+            } }
+    );
 
     engine::add_cs_task(
         task_list,
@@ -171,9 +197,34 @@ AAPass add_aa(
         }
     );
 
-    // Ensure write for the proper transition before... uh... the blit
-    transition_cs_read_to_write( task_list, output );
-    transition_cs_write_to_read( task_list, history );
+    // Ensure write for the proper transition before... uh... the blit. Leave history readable
+    add_pipeline_barrier(
+        task_list,
+        PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers = {
+                ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .image = &output,
+                    .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+                ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    .image = &history,
+                    .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+            } }
+    );
 
     return pass;
 }
