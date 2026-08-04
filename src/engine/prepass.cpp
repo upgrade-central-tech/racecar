@@ -68,7 +68,13 @@ void create_depth_ms_prepass(
         *depth_ms_pipeline = create_gfx_pipeline(
             engine,
             ctx.vulkan,
-            engine::get_vertex_input_state_create_info( scene_mesh ),
+            VkPipelineVertexInputStateCreateInfo {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+                .vertexBindingDescriptionCount = 1,
+                .pVertexBindingDescriptions = &scene_mesh.vertex_binding_description,
+                .vertexAttributeDescriptionCount = 1,
+                .pVertexAttributeDescriptions = scene_mesh.attribute_descriptions.data(),
+            },
             { depth_uniform_desc_set->layouts[frame_index] },
             { },
             VK_SAMPLE_COUNT_4_BIT,
