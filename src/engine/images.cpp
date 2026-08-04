@@ -124,8 +124,6 @@ void generate_mipmaps(
 }
 
 vk::mem::AllocatedImage create_image(
-    vk::Common& vulkan,
-    engine::State& engine,
     void* data,
     VkExtent3D extent,
     VkFormat format,
@@ -134,6 +132,7 @@ vk::mem::AllocatedImage create_image(
     bool mipmapped
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     const size_t data_size
         = extent.depth * extent.width * extent.height * vk::utility::bytes_from_format( format );
 
@@ -150,7 +149,6 @@ vk::mem::AllocatedImage create_image(
 
     try {
         vk::mem::AllocatedBuffer upload_buffer = vk::mem::create_buffer(
-            vulkan,
             data_size,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VMA_MEMORY_USAGE_CPU_TO_GPU
@@ -159,7 +157,6 @@ vk::mem::AllocatedImage create_image(
         std::memcpy( upload_buffer.info.pMappedData, data, data_size );
 
         new_image = allocate_image(
-            vulkan,
             extent,
             format,
             image_type,
@@ -171,7 +168,6 @@ vk::mem::AllocatedImage create_image(
         );
 
         engine::immediate_submit(
-            vulkan,
             engine.immediate_submit,
             [&]( VkCommandBuffer command_buffer ) {
                 VkImageAspectFlags aspect_flags = format == VK_FORMAT_D32_SFLOAT
@@ -244,7 +240,6 @@ vk::mem::AllocatedImage create_image(
 };
 
 vk::mem::AllocatedImage allocate_vma_image(
-    vk::Common& vulkan,
     VkExtent3D extent,
     VkFormat format,
     VkImageType image_type,
@@ -254,6 +249,7 @@ vk::mem::AllocatedImage allocate_vma_image(
     VkImageUsageFlags usage_flags
 )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
         .image_format = format,
@@ -351,7 +347,6 @@ vk::mem::AllocatedImage allocate_vma_image(
 }
 
 vk::mem::AllocatedImage allocate_image(
-    vk::Common& vulkan,
     VkExtent3D extent,
     VkFormat format,
     VkImageType image_type,
@@ -374,7 +369,6 @@ vk::mem::AllocatedImage allocate_image(
     }
 
     return allocate_vma_image(
-        vulkan,
         extent,
         format,
         image_type,
@@ -420,8 +414,6 @@ std::vector<uint16_t> load_image_to_float16( const std::string& global_path )
 
 vk::mem::AllocatedImage load_image(
     std::filesystem::path file_path,
-    vk::Common& vulkan,
-    engine::State& engine,
     size_t desired_channels,
     VkFormat image_format,
     bool is_mipmapped
@@ -470,8 +462,6 @@ vk::mem::AllocatedImage load_image(
         stbi_image_free( pixels );
 
         return engine::create_image(
-            vulkan,
-            engine,
             byte_data.data(),
             { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 },
             image_format,
@@ -494,8 +484,6 @@ vk::mem::AllocatedImage load_image(
         stbi_image_free( pixels );
 
         return engine::create_image(
-            vulkan,
-            engine,
             half_data.data(),
             { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 },
             image_format,

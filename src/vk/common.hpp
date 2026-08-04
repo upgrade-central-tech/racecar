@@ -93,9 +93,12 @@ struct Common {
 #if RACECAR_RAY_TRACING
     rt::RayTracingProperties ray_tracing_properties;
 #endif // RACECAR_RAY_TRACING
+
+    static Common& GetMut();
+    static const Common& GetConst();
 };
 
-Common initialize( SDL_Window* window );
-void free( Common& vulkan );
+void initialize( SDL_Window* window );
+void free();
 
 } // namespace racecar::vk

@@ -34,16 +34,16 @@ struct Volumetric {
     engine::DescriptorSet texture_composite_desc_set;
 };
 
-Volumetric initialize( vk::Common& vulkan, engine::State& engine );
+Volumetric initialize();
 
 bool generate_noise(
-    [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan, engine::State& engine );
+    [[maybe_unused]] Volumetric& volumetric );
 
-void draw_volumetric( [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan,
-    engine::State& engine, [[maybe_unused]] engine::TaskList& task_list,
+void draw_volumetric( [[maybe_unused]] Volumetric& volumetric,
+    [[maybe_unused]] engine::TaskList& task_list,
     engine::RWImage& color_attachment );
 
-void update_volumetric_uniform_buffer( Context& ctx, engine::State& engine,
+void update_volumetric_uniform_buffer( 
     atmosphere::Atmosphere& atms, volumetric::Volumetric& volumetric,
     const CameraData& camera_data );
 

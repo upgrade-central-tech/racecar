@@ -38,14 +38,14 @@ struct Atmosphere {
     float sun_azimuth = 0.f; ///< Stored in radians. Roughly clamped between [0, 2π].
 };
 
-Atmosphere initialize( vk::Common& vulkan, engine::State& engine );
+Atmosphere initialize();
 
 glm::vec3 compute_sun_direction( const Atmosphere& atms );
 
-void draw_atmosphere( Context& ctx, engine::State& engine, engine::TaskList& task_list,
+void draw_atmosphere( engine::TaskList& task_list,
     atmosphere::Atmosphere& atms, engine::RWImage& out_color );
 
-void update_atmosphere_uniform_buffer( Context& ctx, engine::State& engine, gui::Gui& gui,
+void update_atmosphere_uniform_buffer( gui::Gui& gui,
     atmosphere::Atmosphere& atms, const CameraData& camera_data );
 
 }

@@ -11,7 +11,7 @@ struct BlitTask {
     engine::RWImage* out_color = nullptr;
 };
 
-void execute_blit_task( const engine::State& engine, const VkCommandBuffer& cmd_buf,
+void execute_blit_task( const VkCommandBuffer& cmd_buf,
     BlitTask& blit_task, VkImage dst_image );
 
 }

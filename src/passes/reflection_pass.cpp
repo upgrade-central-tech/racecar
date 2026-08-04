@@ -41,8 +41,6 @@ void create_deferred_reflection_pipeline_barrier(
 }
 
 void create_reflection_pass_resources(
-    Context& ctx,
-    engine::State& engine,
     ReflectionPassDescSets desc_sets,
     engine::RWImage* reflection_data,
     engine::Pipeline* reflection_pipeline,
@@ -50,11 +48,10 @@ void create_reflection_pass_resources(
     engine::GfxTask* reflection_gfx_task
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
 
     *reflection_data = engine::create_rwimage(
-        ctx.vulkan,
-        engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
@@ -63,8 +60,6 @@ void create_reflection_pass_resources(
     );
 
     *reflection_pipeline = engine::create_gfx_pipeline(
-        engine,
-        ctx.vulkan,
         engine::get_vertex_input_state_create_info( quad_mesh ),
         { desc_sets.uniform_desc_set.layouts[0],
           desc_sets.sampler_desc_set.layouts[0],
@@ -77,7 +72,7 @@ void create_reflection_pass_resources(
         VK_SAMPLE_COUNT_1_BIT,
         false,
         false,
-        vk::create::shader_module( ctx.vulkan, REFLECTION_PASS_SHADER_MODULE_PATH ),
+        vk::create::shader_module( REFLECTION_PASS_SHADER_MODULE_PATH ),
         false
     );
 
@@ -100,15 +95,11 @@ void create_reflection_pass_resources(
                                                .pipeline = *reflection_pipeline };
 
     *reflection_buffer_desc_set = engine::generate_descriptor_set(
-        ctx.vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
     engine::update_descriptor_set_rwimage(
-        ctx.vulkan,
-        engine,
         *reflection_buffer_desc_set,
         *reflection_data,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

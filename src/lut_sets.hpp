@@ -15,7 +15,7 @@ enum LUT_INDEX {
     OCTAHEDRAL_MIPS = 4
 };
 
-void create_lut_sets( Context& ctx, engine::State& engine, engine::DescriptorSet* lut_sets,
+void create_lut_sets( engine::DescriptorSet* lut_sets,
     vk::mem::AllocatedImage* lut_brdf, vk::mem::AllocatedImage* glint_noise );
 
 }

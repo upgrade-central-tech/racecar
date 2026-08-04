@@ -14,8 +14,6 @@ constexpr std::string_view TESS_EVAL_ENTRY_NAME = "ts_eval_main";
 constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
 Pipeline create_gfx_pipeline(
-    const engine::State& engine,
-    vk::Common& vulkan,
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
     const std::vector<VkDescriptorSetLayout>& layouts,
     const std::vector<VkFormat> color_attachment_formats,
@@ -26,6 +24,8 @@ Pipeline create_gfx_pipeline(
     bool enable_tessellation_shaders
 )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
+    const engine::State& engine = engine::State::GetConst();
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info
         = vertex_input_state_create_info.value_or(
@@ -222,12 +222,12 @@ Pipeline create_gfx_pipeline(
 }
 
 Pipeline create_compute_pipeline(
-    vk::Common& vulkan,
     const std::vector<VkDescriptorSetLayout>& layouts,
     VkShaderModule shader_module,
     std::string_view entry_name
 )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
     Pipeline compute_pipeline;
 
     {

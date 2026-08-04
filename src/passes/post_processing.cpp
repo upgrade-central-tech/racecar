@@ -69,8 +69,6 @@ void create_screen_buffer_present_pipeline_barrier(
 }
 
 void post_processing_passes(
-    Context& ctx,
-    engine::State& engine,
     UniformBuffer<ub_data::Camera>& camera_buffer,
     deferred::GBuffers& gbuffers,
     engine::RWImage& screen_color,
@@ -85,8 +83,6 @@ void post_processing_passes(
 {
     engine::post::add_bloom(
         &bloom_pass,
-        ctx.vulkan,
-        engine,
         task_list,
         screen_color,
         screen_buffer
@@ -116,7 +112,7 @@ void post_processing_passes(
             } },
         }
     );
-    add_ao( ao_pass, ctx.vulkan, engine, task_list );
+    add_ao( ao_pass, task_list );
 
     engine::add_pipeline_barrier(
         task_list,
@@ -146,8 +142,6 @@ void post_processing_passes(
             } }
     );
     tm_pass = engine::post::add_tonemapping(
-        ctx.vulkan,
-        engine,
         screen_buffer,
         screen_color,
         task_list
@@ -181,8 +175,6 @@ void post_processing_passes(
             } }
     );
     aa_pass = engine::post::add_aa(
-        ctx.vulkan,
-        engine,
         screen_color,
         gbuffers.GBuffer_Depth,
         gbuffers.GBuffer_Velocity,

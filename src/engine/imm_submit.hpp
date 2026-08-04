@@ -12,12 +12,12 @@ struct ImmediateSubmit {
     VkCommandPool cmd_pool = VK_NULL_HANDLE;
 };
 
-void create_immediate_commands( ImmediateSubmit& immediate_submit, vk::Common& vulkan );
+void create_immediate_commands( ImmediateSubmit& immediate_submit );
 
 /// Used for immediate command buffer calls, used for stuff like uploading buffer mem, etc.
-void immediate_submit( const vk::Common& vulkan, const ImmediateSubmit& immediate_submit,
+void immediate_submit( const ImmediateSubmit& immediate_submit,
     std::function<void( VkCommandBuffer command_buffer )>&& function );
 
-void create_immediate_sync_structures( ImmediateSubmit& immediate_submit, vk::Common& vulkan );
+void create_immediate_sync_structures( ImmediateSubmit& immediate_submit );
 
 } // namespace racecar::engine

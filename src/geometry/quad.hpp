@@ -36,6 +36,6 @@ struct Mesh {
     static Mesh& get_instance() { return *instance; };
 };
 
-Mesh create( vk::Common& vulkan, const engine::State& engine );
+Mesh create();
 
 }

@@ -32,16 +32,14 @@ struct AtmosphereBaker {
 
 void initialize_atmosphere_baker(
     AtmosphereBaker& atms_baker,
-    const volumetric::Volumetric& volumetric,
-    vk::Common& vulkan,
-    engine::State& engine
+    const volumetric::Volumetric& volumetric
 );
 
 void atmosphere_baker_precompute( AtmosphereBaker& atms_baker, VkCommandBuffer precompute_cmdbuf );
 
 // TODO: refactor this later so that it abandons the junk-task system
 void prebake_octahedral_sky(
-    const AtmosphereBaker& atms_baker, engine::State& engine
+    const AtmosphereBaker& atms_baker
 );
 
 void compute_octahedral_sky(
@@ -56,12 +54,10 @@ void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffe
 
 void compute_octahedral_sky_mips(
     AtmosphereBaker& atms_baker,
-    vk::Common& vulkan,
-    engine::State& engine,
     engine::TaskList& task_list
 );
 
-void dispatch_atmosphere_baker( Context& ctx, engine::State& engine, engine::TaskList& task_list,
+void dispatch_atmosphere_baker( engine::TaskList& task_list,
     engine::DescriptorSet& lut_sets, atmosphere::AtmosphereBaker& atms_baker );
 
 }

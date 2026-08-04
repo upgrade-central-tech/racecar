@@ -113,7 +113,7 @@ struct Gui {
     } preset = {};
 };
 
-Gui initialize( Context& ctx, const engine::State& engine );
+Gui initialize( Context& ctx );
 void process_event(
     Gui& gui,
     const SDL_Event* event,

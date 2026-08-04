@@ -6,12 +6,11 @@
 namespace racecar::engine {
 
 DescriptorSet generate_descriptor_set(
-    vk::Common& vulkan,
-    const engine::State& engine,
     const std::vector<VkDescriptorType>& types,
     VkShaderStageFlags shader_stage_flags
 )
 {
+    engine::State& engine = engine::State::GetMut();
     const size_t num_frames = engine.swapchain_images.size();
 
     DescriptorSet desc_set = {
@@ -28,9 +27,8 @@ DescriptorSet generate_descriptor_set(
 
         for ( size_t i = 0; i < num_frames; ++i ) {
             desc_set.layouts[i]
-                = engine::descriptor_layout_builder::build( vulkan, shader_stage_flags, builder );
+                = engine::descriptor_layout_builder::build( shader_stage_flags, builder );
             desc_set.descriptor_sets[i] = engine::descriptor_allocator::allocate(
-                vulkan,
                 engine.descriptor_system.frame_allocators[i],
                 desc_set.layouts[i]
             );
@@ -44,13 +42,12 @@ DescriptorSet generate_descriptor_set(
 }
 
 DescriptorSet generate_array_descriptor_set(
-    vk::Common& vulkan,
-    const engine::State& engine,
     const std::vector<VkDescriptorType>& types,
     VkShaderStageFlags shader_stage_flags,
     uint32_t count
 )
 {
+    engine::State& engine = engine::State::GetMut();
     const size_t num_frames = engine.swapchain_images.size();
 
     DescriptorSet desc_set = {
@@ -67,9 +64,8 @@ DescriptorSet generate_array_descriptor_set(
 
         for ( size_t i = 0; i < num_frames; ++i ) {
             desc_set.layouts[i]
-                = engine::descriptor_layout_builder::build( vulkan, shader_stage_flags, builder );
+                = engine::descriptor_layout_builder::build( shader_stage_flags, builder );
             desc_set.descriptor_sets[i] = engine::descriptor_allocator::allocate(
-                vulkan,
                 engine.descriptor_system.frame_allocators[i],
                 desc_set.layouts[i]
             );
@@ -83,13 +79,13 @@ DescriptorSet generate_array_descriptor_set(
 }
 
 void update_descriptor_set_image(
-    vk::Common& vulkan,
-    State& engine,
     DescriptorSet& desc_set,
     const vk::mem::AllocatedImage& img,
     int binding_idx
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         VkDescriptorImageInfo desc_image_info = {
             .sampler = VK_NULL_HANDLE,
@@ -111,13 +107,13 @@ void update_descriptor_set_image(
 }
 
 void update_descriptor_set_image_array(
-    vk::Common& vulkan,
-    State& engine,
     DescriptorSet& desc_set,
     const std::vector<vk::mem::AllocatedImage>& imgs,
     int binding_idx
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     if ( imgs.empty() ) {
         return;
     }
@@ -147,14 +143,14 @@ void update_descriptor_set_image_array(
 }
 
 void update_descriptor_set_rwimage(
-    vk::Common& vulkan,
-    const State& engine,
     DescriptorSet& desc_set,
     const RWImage& rw_img,
     VkImageLayout img_layout,
     int binding_idx
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         const vk::mem::AllocatedImage& alloc_image = rw_img.images[i];
 
@@ -180,8 +176,6 @@ void update_descriptor_set_rwimage(
 }
 
 void update_descriptor_set_rwimage_mip(
-    vk::Common& vulkan,
-    const State& engine,
     DescriptorSet& desc_set,
     const RWImage& rw_img,
     VkImageLayout img_layout,
@@ -189,6 +183,8 @@ void update_descriptor_set_rwimage_mip(
     size_t mip
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         const vk::mem::AllocatedImage& alloc_image = rw_img.images[i];
 
@@ -214,13 +210,13 @@ void update_descriptor_set_rwimage_mip(
 }
 
 void update_descriptor_set_depth_image(
-    vk::Common& vulkan,
-    State& engine,
     DescriptorSet& desc_set,
     const RWImage& depth_img,
     int binding_idx
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         const vk::mem::AllocatedImage& img = depth_img.images[i];
         VkDescriptorImageInfo desc_image_info = {
@@ -243,13 +239,13 @@ void update_descriptor_set_depth_image(
 }
 
 void update_descriptor_set_write_image(
-    vk::Common& vulkan,
-    State& engine,
     DescriptorSet& desc_set,
     const vk::mem::AllocatedImage& img,
     int binding_idx
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         VkDescriptorImageInfo desc_image_info = {
             .sampler = VK_NULL_HANDLE,
@@ -271,13 +267,13 @@ void update_descriptor_set_write_image(
 }
 
 void update_descriptor_set_sampler(
-    vk::Common& vulkan,
-    const State& engine,
     DescriptorSet& desc_set,
     VkSampler sampler,
     int binding_idx
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         VkDescriptorImageInfo desc_image_info = {
             .sampler = sampler,
@@ -300,13 +296,13 @@ void update_descriptor_set_sampler(
 
 #if RACECAR_RAY_TRACING
 void update_descriptor_set_acceleration_structure(
-    vk::Common& vulkan,
-    State& engine,
     DescriptorSet& desc_set,
     VkAccelerationStructureKHR tlas,
     int binding_idx
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         VkWriteDescriptorSetAccelerationStructureKHR desc_as_info
             = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
@@ -329,13 +325,13 @@ void update_descriptor_set_acceleration_structure(
 #endif // RACECAR_RAY_TRACING
 
 void update_descriptor_set_const_storage_buffer(
-    vk::Common& vulkan,
-    const State& engine,
     DescriptorSet& desc_set,
     vk::mem::AllocatedBuffer storage_buffer,
     int binding_idx
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     VkBuffer buffer = storage_buffer.handle;
 
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {

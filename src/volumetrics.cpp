@@ -17,34 +17,31 @@ constexpr std::string_view VOLUMETRIC_SHADER_MODULE_PATH = "../shaders/clouds/cl
 constexpr std::string_view VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH
     = "../shaders/clouds/cloud_composite.spv";
 
-Volumetric initialize( vk::Common& vulkan, engine::State& engine )
+Volumetric initialize()
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     Volumetric volumetric;
     geometry::quad::Mesh& scene_mesh = volumetric.scene_mesh;
 
-    scene_mesh = geometry::quad::create( vulkan, engine );
+    scene_mesh = geometry::quad::create();
 
-    if ( !generate_noise( volumetric, vulkan, engine ) ) {
+    if ( !generate_noise( volumetric ) ) {
         return { };
     }
 
     volumetric.uniform_buffer = create_uniform_buffer<ub_data::Clouds>(
-        vulkan,
         { },
         static_cast<size_t>( engine.frame_overlap )
     );
 
     // Initialize descriptor sets
     volumetric.uniform_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
     volumetric.lut_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
@@ -52,38 +49,28 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
     );
 
     volumetric.sampler_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
     volumetric.texture_composite_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
     engine::update_descriptor_set_uniform(
-        vulkan,
-        engine,
         volumetric.uniform_desc_set,
         volumetric.uniform_buffer,
         0
     );
 
     engine::update_descriptor_set_sampler(
-        vulkan,
-        engine,
         volumetric.sampler_desc_set,
         vulkan.global_samplers.linear_sampler,
         0
     );
 
     engine::update_descriptor_set_sampler(
-        vulkan,
-        engine,
         volumetric.sampler_desc_set,
         vulkan.global_samplers.linear_mirrored_repeat_sampler,
         1
@@ -93,15 +80,15 @@ Volumetric initialize( vk::Common& vulkan, engine::State& engine )
 }
 
 bool generate_noise(
-    [[maybe_unused]] Volumetric& volumetric, vk::Common& vulkan, engine::State& engine
+    [[maybe_unused]] Volumetric& volumetric
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     // Cumulus map generation
     {
         uint32_t cumulus_map_size = 256;
 
         volumetric.cumulus_map = engine::allocate_image(
-            vulkan,
             { cumulus_map_size, cumulus_map_size, 1 },
             VK_FORMAT_R8_UNORM,
             VK_IMAGE_TYPE_2D,
@@ -113,8 +100,6 @@ bool generate_noise(
         );
 
         engine::DescriptorSet cumulus_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
               VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
               VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
@@ -122,25 +107,21 @@ bool generate_noise(
         );
 
         engine::update_descriptor_set_write_image(
-            vulkan,
-            engine,
             cumulus_desc_set,
             volumetric.cumulus_map,
             2
         );
 
         VkShaderModule generate_cumulus_module
-            = vk::create::shader_module( vulkan, "../shaders/clouds/cs_generate_cumulus.spv" );
+            = vk::create::shader_module( "../shaders/clouds/cs_generate_cumulus.spv" );
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
-            vulkan,
             { cumulus_desc_set.layouts[0] },
             generate_cumulus_module,
             "cs_generate_cumulus"
         );
 
         engine::immediate_submit(
-            vulkan,
             engine.immediate_submit,
             [&]( VkCommandBuffer command_buffer ) {
                 vk::utility::transition_image(
@@ -197,7 +178,6 @@ bool generate_noise(
         uint32_t low_freq_noise_size = 128;
 
         volumetric.low_freq_noise = engine::allocate_image(
-            vulkan,
             { low_freq_noise_size, low_freq_noise_size, low_freq_noise_size },
             VK_FORMAT_R8_UNORM,
             VK_IMAGE_TYPE_3D,
@@ -209,34 +189,27 @@ bool generate_noise(
         );
 
         engine::DescriptorSet low_freq_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
         engine::update_descriptor_set_write_image(
-            vulkan,
-            engine,
             low_freq_desc_set,
             volumetric.low_freq_noise,
             0
         );
 
         VkShaderModule generate_low_freq_module = vk::create::shader_module(
-            vulkan,
             "../shaders/clouds/cs_generate_low_frequency.spv"
         );
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
-            vulkan,
             { low_freq_desc_set.layouts[0] },
             generate_low_freq_module,
             "cs_generate_low_frequency"
         );
 
         engine::immediate_submit(
-            vulkan,
             engine.immediate_submit,
             [&]( VkCommandBuffer command_buffer ) {
                 vk::utility::transition_image(
@@ -294,7 +267,6 @@ bool generate_noise(
         uint32_t high_freq_noise_size = 32;
 
         volumetric.high_freq_noise = engine::allocate_image(
-            vulkan,
             { high_freq_noise_size, high_freq_noise_size, high_freq_noise_size },
             VK_FORMAT_R8_UNORM,
             VK_IMAGE_TYPE_3D,
@@ -306,34 +278,27 @@ bool generate_noise(
         );
 
         engine::DescriptorSet high_freq_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
         engine::update_descriptor_set_write_image(
-            vulkan,
-            engine,
             high_freq_desc_set,
             volumetric.high_freq_noise,
             1
         );
 
         VkShaderModule generate_high_freq_module = vk::create::shader_module(
-            vulkan,
             "../shaders/clouds/cs_generate_high_frequency.spv"
         );
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
-            vulkan,
             { high_freq_desc_set.layouts[0] },
             generate_high_freq_module,
             "cs_generate_high_frequency"
         );
 
         engine::immediate_submit(
-            vulkan,
             engine.immediate_submit,
             [&]( VkCommandBuffer command_buffer ) {
                 vk::utility::transition_image(
@@ -391,12 +356,11 @@ bool generate_noise(
 
 void draw_volumetric(
     [[maybe_unused]] Volumetric& volumetric,
-    vk::Common& vulkan,
-    engine::State& engine,
     [[maybe_unused]] engine::TaskList& task_list,
     engine::RWImage& color_attachment
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     // Build the low-res render image
     VkExtent2D color_dim = {
         color_attachment.images[0].image_extent.width,
@@ -409,8 +373,6 @@ void draw_volumetric(
     };
 
     volumetric.cloud_buffer = engine::create_rwimage(
-        vulkan,
-        engine,
         {
             low_res_dim.width,
             low_res_dim.height,
@@ -450,22 +412,16 @@ void draw_volumetric(
     engine::Pipeline volumetric_pipeline;
 
     engine::update_descriptor_set_image(
-        vulkan,
-        engine,
         volumetric.lut_desc_set,
         volumetric.low_freq_noise,
         0
     );
     engine::update_descriptor_set_image(
-        vulkan,
-        engine,
         volumetric.lut_desc_set,
         volumetric.high_freq_noise,
         1
     );
     engine::update_descriptor_set_image(
-        vulkan,
-        engine,
         volumetric.lut_desc_set,
         volumetric.cumulus_map,
         2
@@ -473,8 +429,6 @@ void draw_volumetric(
 
     try {
         volumetric_pipeline = engine::create_gfx_pipeline(
-            engine,
-            vulkan,
             engine::get_vertex_input_state_create_info( volumetric_mesh ),
             {
                 volumetric.uniform_desc_set.layouts[0],
@@ -485,7 +439,7 @@ void draw_volumetric(
             VK_SAMPLE_COUNT_1_BIT,
             false,
             true,
-            vk::create::shader_module( vulkan, VOLUMETRIC_SHADER_MODULE_PATH ),
+            vk::create::shader_module( VOLUMETRIC_SHADER_MODULE_PATH ),
             false
         );
     } catch ( const Exception& ex ) {
@@ -535,8 +489,6 @@ void draw_volumetric(
     engine::Pipeline volumetric_composite_pipeline;
     try {
         volumetric_composite_pipeline = engine::create_gfx_pipeline(
-            engine,
-            vulkan,
             engine::get_vertex_input_state_create_info( volumetric_mesh ),
             {
                 volumetric.uniform_desc_set.layouts[0],
@@ -549,7 +501,7 @@ void draw_volumetric(
             VK_SAMPLE_COUNT_1_BIT,
             true,
             true,
-            vk::create::shader_module( vulkan, VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH ),
+            vk::create::shader_module( VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH ),
             false
         );
     } catch ( const Exception& ex ) {
@@ -558,8 +510,6 @@ void draw_volumetric(
     }
 
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         volumetric.texture_composite_desc_set,
         volumetric.cloud_buffer,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -585,13 +535,12 @@ void draw_volumetric(
 }
 
 void update_volumetric_uniform_buffer(
-    Context& ctx,
-    engine::State& engine,
     atmosphere::Atmosphere& atms,
     volumetric::Volumetric& volumetric,
     const CameraData& camera_data
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
 
     ub_data::Clouds cloud_ub = volumetric.uniform_buffer.get_data();
@@ -603,7 +552,7 @@ void update_volumetric_uniform_buffer(
     cloud_ub.cloud_offset_y += 0.0001f;
 
     volumetric.uniform_buffer.set_data( cloud_ub );
-    volumetric.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
+    volumetric.uniform_buffer.update( engine.get_frame_index() );
 }
 
 }

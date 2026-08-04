@@ -55,24 +55,21 @@ std::vector<float> read_data( std::string_view path )
 
 }
 
-Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
+Atmosphere initialize()
 {
+    vk::Common& vulkan = vk::Common::GetMut();
+    const engine::State& engine = engine::State::GetConst();
     Atmosphere atms;
 
     atms.uniform_buffer = create_uniform_buffer<ub_data::Atmosphere>(
-        vulkan,
         { },
         static_cast<size_t>( engine.frame_overlap )
     );
     atms.uniform_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
     engine::update_descriptor_set_uniform(
-        vulkan,
-        engine,
         atms.uniform_desc_set,
         atms.uniform_buffer,
         0
@@ -85,8 +82,6 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
         {
             std::vector<float> irradiance = read_data( IRRADIANCE_DAT_PATH );
             atms.irradiance = engine::create_image(
-                vulkan,
-                engine,
                 static_cast<void*>( irradiance.data() ),
                 { .width = 64, .height = 16, .depth = 1 },
                 format,
@@ -99,8 +94,6 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
         {
             std::vector<float> scattering = read_data( SCATTERING_DAT_PATH );
             atms.scattering = engine::create_image(
-                vulkan,
-                engine,
                 static_cast<void*>( scattering.data() ),
                 { .width = 256, .height = 128, .depth = 32 },
                 format,
@@ -113,8 +106,6 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
         {
             std::vector<float> transmittance = read_data( TRANSMITTANCE_DAT_PATH );
             atms.transmittance = engine::create_image(
-                vulkan,
-                engine,
                 static_cast<void*>( transmittance.data() ),
                 { .width = 256, .height = 64, .depth = 1 },
                 format,
@@ -129,16 +120,14 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
     }
 
     atms.lut_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
-    engine::update_descriptor_set_image( vulkan, engine, atms.lut_desc_set, atms.irradiance, 0 );
-    engine::update_descriptor_set_image( vulkan, engine, atms.lut_desc_set, atms.scattering, 1 );
-    engine::update_descriptor_set_image( vulkan, engine, atms.lut_desc_set, atms.transmittance, 2 );
+    engine::update_descriptor_set_image( atms.lut_desc_set, atms.irradiance, 0 );
+    engine::update_descriptor_set_image( atms.lut_desc_set, atms.scattering, 1 );
+    engine::update_descriptor_set_image( atms.lut_desc_set, atms.transmittance, 2 );
 
     VkSampler sampler = VK_NULL_HANDLE;
     {
@@ -157,12 +146,10 @@ Atmosphere initialize( vk::Common& vulkan, engine::State& engine )
         vulkan.destructor_stack.push( vulkan.device, sampler, vkDestroySampler );
     }
     atms.sampler_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_SAMPLER },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
-    engine::update_descriptor_set_sampler( vulkan, engine, atms.sampler_desc_set, sampler, 0 );
+    engine::update_descriptor_set_sampler( atms.sampler_desc_set, sampler, 0 );
 
     // Some default states
     atms.sun_azimuth = 2.9f;
@@ -181,13 +168,12 @@ glm::vec3 compute_sun_direction( const Atmosphere& atms )
 }
 
 void draw_atmosphere(
-    Context& ctx,
-    engine::State& engine,
     engine::TaskList& task_list,
     atmosphere::Atmosphere& atms,
     engine::RWImage& out_color
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     engine::GfxTask atmosphere_gfx_task = {
         .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
         .clear_depth = 1.f,
@@ -200,8 +186,6 @@ void draw_atmosphere(
 
     try {
         atmosphere_pipeline = engine::create_gfx_pipeline(
-            engine,
-            ctx.vulkan,
             engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance() ),
             {
                 atms.uniform_desc_set.layouts[0],
@@ -214,7 +198,7 @@ void draw_atmosphere(
             VK_SAMPLE_COUNT_1_BIT,
             false,
             true,
-            vk::create::shader_module( ctx.vulkan, atmosphere::SHADER_PATH ),
+            vk::create::shader_module( atmosphere::SHADER_PATH ),
             false
         );
     } catch ( const Exception& ex ) {
@@ -241,13 +225,12 @@ void draw_atmosphere(
 }
 
 void update_atmosphere_uniform_buffer(
-    Context& ctx,
-    engine::State& engine,
     gui::Gui& gui,
     atmosphere::Atmosphere& atms,
     const CameraData& camera_data
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     if ( gui.atms.animate_zenith ) {
         float sin = std::sin( static_cast<float>( engine.time ) * gui.atms.animate_zenith_speed );
         float t = ( sin + 1.f ) * 0.5f;
@@ -270,7 +253,7 @@ void update_atmosphere_uniform_buffer(
     atms_ub.radiance_exposure = gui.atms.radiance_exposure;
 
     atms.uniform_buffer.set_data( atms_ub );
-    atms.uniform_buffer.update( ctx.vulkan, engine.get_frame_index() );
+    atms.uniform_buffer.update( engine.get_frame_index() );
 }
 
 }

@@ -110,10 +110,10 @@ struct Terrain {
     } };
 };
 
-void initialize_terrain( vk::Common& vulkan, engine::State& engine, Terrain& terrain,
+void initialize_terrain( Terrain& terrain,
     const TerrainPrepassInfo& prepass_info, const TerrainLightingInfo& lighting_info );
 
-void initialize_terrain_draw_pipeline( Terrain& terrain, vk::Common& vulkan
+void initialize_terrain_draw_pipeline( Terrain& terrain
 #if RACECAR_RAY_TRACING
     ,
     engine::DescriptorSet& car_tlas_desc_set,
@@ -126,9 +126,9 @@ void terrain_precompute( Terrain& terrain, VkCommandBuffer precompute_cmdbuf );
 void draw_terrain_prepass( Terrain& terrain,
     [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
 
-void draw_terrain( Terrain& terrain, engine::State& engine, engine::TaskList& task_list );
+void draw_terrain( Terrain& terrain, engine::TaskList& task_list );
 
 void update_terrain_uniform_buffer(
-    Context& ctx, engine::State& engine, gui::Gui& gui, geometry::Terrain& terrain );
+    gui::Gui& gui, geometry::Terrain& terrain );
 
 }

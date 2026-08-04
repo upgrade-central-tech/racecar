@@ -5,16 +5,15 @@
 namespace racecar::geometry {
 
 bool create_mesh_buffers(
-    vk::Common& vulkan,
     GPUMeshBuffers& mesh_buffers,
     size_t vertex_buffer_size,
     size_t index_buffer_size
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
     try {
         mesh_buffers = {
             .index_buffer = vk::mem::create_buffer(
-                vulkan,
                 index_buffer_size,
                 VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
                     | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
@@ -25,7 +24,6 @@ bool create_mesh_buffers(
                 VMA_MEMORY_USAGE_GPU_ONLY
             ),
             .vertex_buffer = vk::mem::create_buffer(
-                vulkan,
                 vertex_buffer_size,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
                     | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
@@ -59,17 +57,15 @@ bool create_mesh_buffers(
 }
 
 bool upload_mesh_buffers(
-    vk::Common& vulkan,
-    engine::State& engine,
     GPUMeshBuffers& mesh_buffers,
     void* vertices_data,
     void* indices_data
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     // Upload index + vertex data to GPU
     {
         vk::mem::AllocatedBuffer staging = vk::mem::create_buffer(
-            vulkan,
             mesh_buffers.vertex_buffer_size + mesh_buffers.index_buffer_size,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VMA_MEMORY_USAGE_CPU_ONLY
@@ -85,7 +81,7 @@ bool upload_mesh_buffers(
 
         // Copy stitched buffer [ vertex_buffer_data, index_buffer_data ] to respective vertex and
         // index buffer data on GPU Use CmdCopyBuffer to transfer data from CPU to GPU
-        engine::immediate_submit( vulkan, engine.immediate_submit, [&]( VkCommandBuffer cmd_buf ) {
+        engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer cmd_buf ) {
             VkBufferCopy vertex_buf_copy = {
                 .srcOffset = 0,
                 .dstOffset = 0,

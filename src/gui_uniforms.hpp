@@ -11,10 +11,10 @@
 
 namespace racecar {
 
-void update_debug_uniform_buffer( Context& ctx, engine::State& engine, gui::Gui& gui,
+void update_debug_uniform_buffer( gui::Gui& gui,
     atmosphere::Atmosphere& atms, UniformBuffer<ub_data::Debug>& debug_buffer );
 
-void update_material_uniform_buffers( Context& ctx, engine::State& engine, gui::Gui& gui,
+void update_material_uniform_buffers( gui::Gui& gui,
     std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
     size_t num_materials );
 

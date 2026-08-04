@@ -25,6 +25,6 @@ struct GfxTask {
 };
 
 void execute_gfx_task(
-    const engine::State& engine, const VkCommandBuffer& cmd_buf, GfxTask& gfx_task );
+    const VkCommandBuffer& cmd_buf, GfxTask& gfx_task );
 
 } // namespace racecar::engine

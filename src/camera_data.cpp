@@ -7,9 +7,10 @@
 
 namespace racecar {
 
-CameraData get_camera_data( engine::State& engine )
+CameraData get_camera_data()
 {
-    camera::OrbitCamera& camera = engine.camera;
+    const engine::State& engine = engine::State::GetConst();
+    const camera::OrbitCamera& camera = engine.camera;
 
     glm::mat4 view = camera::calculate_view_matrix( camera );
     glm::mat4 projection = glm::perspective(
@@ -31,13 +32,12 @@ CameraData get_camera_data( engine::State& engine )
 }
 
 void update_camera_uniform_buffer(
-    Context& ctx,
-    engine::State& engine,
     gui::Gui& gui,
     UniformBuffer<ub_data::Camera>& camera_buffer,
     const CameraData& camera_data
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     const camera::OrbitCamera& camera = engine.camera;
 
     ub_data::Camera camera_ub = camera_buffer.get_data();
@@ -72,7 +72,7 @@ void update_camera_uniform_buffer(
     camera_ub.camera_constants1 = glm::vec4( engine.get_frame_index() % 16, 0.0f, 0.0f, 0.0f );
 
     camera_buffer.set_data( camera_ub );
-    camera_buffer.update( ctx.vulkan, engine.get_frame_index() );
+    camera_buffer.update( engine.get_frame_index() );
 }
 
 }

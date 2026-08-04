@@ -28,7 +28,7 @@ struct UniformBuffer {
     void* mapped_data = nullptr;
 };
 
-AllocatedBuffer create_buffer( Common& vulkan, size_t alloc_size, VkBufferUsageFlags usage_flags,
+AllocatedBuffer create_buffer( size_t alloc_size, VkBufferUsageFlags usage_flags,
     VmaMemoryUsage memory_usage );
 
 } // namespace racecar::vk::mem

@@ -6,12 +6,12 @@
 namespace racecar::geometry::scene {
 
 GPUMeshBuffers upload_mesh(
-    vk::Common& vulkan,
-    const engine::State& engine,
     std::span<uint32_t> indices,
     std::span<Vertex> vertices
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     const size_t vertex_buffer_size = vertices.size() * sizeof( Vertex );
     const size_t index_buffer_size = indices.size() * sizeof( uint32_t );
 
@@ -20,7 +20,6 @@ GPUMeshBuffers upload_mesh(
     try {
         new_mesh_buffers = {
             .index_buffer = vk::mem::create_buffer(
-                vulkan,
                 index_buffer_size,
                 VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
                     | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
@@ -31,7 +30,6 @@ GPUMeshBuffers upload_mesh(
                 VMA_MEMORY_USAGE_GPU_ONLY
             ),
             .vertex_buffer = vk::mem::create_buffer(
-                vulkan,
                 vertex_buffer_size,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
                     | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
@@ -59,7 +57,6 @@ GPUMeshBuffers upload_mesh(
 
     // Need to upload this to the buffer, analogous to DX12 default + upload heap
     vk::mem::AllocatedBuffer staging = vk::mem::create_buffer(
-        vulkan,
         vertex_buffer_size + index_buffer_size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VMA_MEMORY_USAGE_CPU_ONLY
@@ -75,7 +72,7 @@ GPUMeshBuffers upload_mesh(
 
     // Copy stitched buffer [ vertex_buffer_data, index_buffer_data ] to respective vertex and
     // index buffer data on GPU Use CmdCopyBuffer to transfer data from CPU to GPU
-    engine::immediate_submit( vulkan, engine.immediate_submit, [&]( VkCommandBuffer cmd_buf ) {
+    engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer cmd_buf ) {
         VkBufferCopy vertex_buf_copy = {
             .srcOffset = 0,
             .dstOffset = 0,

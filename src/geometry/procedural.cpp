@@ -11,7 +11,7 @@
 
 namespace racecar::geometry {
 
-vk::mem::AllocatedImage generate_test_3D( vk::Common& vulkan, engine::State& engine )
+vk::mem::AllocatedImage generate_test_3D()
 {
     const uint32_t block_size = 32;
     const uint32_t dim = 128;
@@ -37,8 +37,6 @@ vk::mem::AllocatedImage generate_test_3D( vk::Common& vulkan, engine::State& eng
 
     // Create the 3D image
     return engine::create_image(
-        vulkan,
-        engine,
         static_cast<void*>( texture_data.data() ),
         { dim, dim, dim },
         VK_FORMAT_R32G32B32A32_SFLOAT, // 4-channel float
@@ -48,13 +46,13 @@ vk::mem::AllocatedImage generate_test_3D( vk::Common& vulkan, engine::State& eng
     );
 }
 
-vk::mem::AllocatedImage generate_glint_noise( vk::Common& vulkan, engine::State& engine )
+vk::mem::AllocatedImage generate_glint_noise()
 {
+    const engine::State& engine = engine::State::GetConst();
     uint32_t noise_texture_size = 512;
 
     // Allocate the coefficeints.
     vk::mem::AllocatedImage glint_noise_texture = engine::allocate_image(
-        vulkan,
         { noise_texture_size, noise_texture_size, 1 },
         VK_FORMAT_R32G32B32A32_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -67,36 +65,30 @@ vk::mem::AllocatedImage generate_glint_noise( vk::Common& vulkan, engine::State&
 
     {
         engine::DescriptorSet glint_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
         engine::update_descriptor_set_write_image(
-            vulkan,
-            engine,
             glint_desc_set,
             glint_noise_texture,
             0
         );
 
         VkShaderModule glint_noise_init_module
-            = vk::create::shader_module( vulkan, "../shaders/glint/glint_noise_init.spv" );
+            = vk::create::shader_module( "../shaders/glint/glint_noise_init.spv" );
 
         std::vector<engine::DescriptorSet> descs = { glint_desc_set };
 
         std::vector<VkDescriptorSet> bind_descs = { glint_desc_set.descriptor_sets[0] };
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
-            vulkan,
             { descs[0].layouts[0] },
             glint_noise_init_module,
             "cs_generate_glint_noise"
         );
 
         engine::immediate_submit(
-            vulkan,
             engine.immediate_submit,
             [&]( VkCommandBuffer command_buffer ) {
                 // RW cubemap transition first

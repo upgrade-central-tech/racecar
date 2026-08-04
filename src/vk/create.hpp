@@ -43,7 +43,7 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_info(
 ///
 /// Note that the destruction of the shader module is pushed into the destructor stack. Depending on
 /// what we want (e.g. destroying after pipeline creation) this may not be what we want.
-VkShaderModule shader_module( Common& vulkan, std::filesystem::path shader_path );
+VkShaderModule shader_module( std::filesystem::path shader_path );
 
 struct CreateSubmitInfoDescriptor {
     VkCommandBuffer command_buffer = VK_NULL_HANDLE;

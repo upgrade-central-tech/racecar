@@ -13,7 +13,7 @@
 
 namespace racecar {
 
-void post_processing_passes( Context& ctx, engine::State& engine,
+void post_processing_passes( 
     UniformBuffer<ub_data::Camera>& camera_buffer, deferred::GBuffers& gbuffers,
     engine::RWImage& screen_color, engine::RWImage& screen_buffer,
     engine::RWImage& screen_history, engine::TaskList& task_list, engine::post::AAPass& aa_pass,

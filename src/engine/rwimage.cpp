@@ -10,8 +10,6 @@
 namespace racecar::engine {
 
 RWImage allocate_rwimage(
-    vk::Common& vulkan,
-    const engine::State& engine,
     VkExtent3D extent,
     VkFormat format,
     VkImageType image_type,
@@ -21,12 +19,12 @@ RWImage allocate_rwimage(
     bool mipmapped
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     RWImage rwimage;
 
     try {
         for ( size_t i = 0; i < engine.swapchain_images.size(); ++i ) {
             rwimage.images.push_back( allocate_image(
-                vulkan,
                 extent,
                 format,
                 image_type,
@@ -46,8 +44,6 @@ RWImage allocate_rwimage(
 }
 
 RWImage create_rwimage(
-    vk::Common& vulkan,
-    const engine::State& engine,
     VkExtent3D extent,
     VkFormat format,
     VkImageType image_type,
@@ -56,8 +52,6 @@ RWImage create_rwimage(
 )
 {
     return allocate_rwimage(
-        vulkan,
-        engine,
         extent,
         format,
         image_type,
@@ -69,12 +63,11 @@ RWImage create_rwimage(
 }
 
 RWImage create_gbuffer_image(
-    vk::Common& vulkan, const engine::State& engine, VkFormat format, VkSampleCountFlagBits samples
+    VkFormat format, VkSampleCountFlagBits samples
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     return engine::create_rwimage(
-        vulkan,
-        engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         format,
         VkImageType::VK_IMAGE_TYPE_2D,
@@ -84,8 +77,6 @@ RWImage create_gbuffer_image(
 }
 
 RWImage create_rwimage_mips(
-    vk::Common& vulkan,
-    const engine::State& engine,
     VkExtent3D extent,
     VkFormat format,
     VkImageType image_type,
@@ -95,8 +86,6 @@ RWImage create_rwimage_mips(
 )
 {
     return allocate_rwimage(
-        vulkan,
-        engine,
         extent,
         format,
         image_type,
@@ -108,17 +97,17 @@ RWImage create_rwimage_mips(
 }
 
 void initialize_rwimage_layout(
-    vk::Common& vulkan, engine::State& engine, RWImage& image, VkImageLayout layout
+    RWImage& image, VkImageLayout layout
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     engine::immediate_submit(
-        vulkan,
         engine.immediate_submit,
         [&]( VkCommandBuffer command_buffer ) {
             for ( vk::mem::AllocatedImage& frame_image : image.images ) {
                 vk::utility::transition_image(
                     command_buffer,
-                    frame_image.image,
+                frame_image.image,
                     VK_IMAGE_LAYOUT_UNDEFINED,
                     layout,
                     VK_ACCESS_2_NONE,

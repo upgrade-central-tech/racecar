@@ -31,10 +31,10 @@ struct BloomPass {
 };
 
 /// Assumes that `input` is already in `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`.
-void add_bloom( BloomPass* pass, vk::Common& vulkan, const State& engine, TaskList& task_list,
+void add_bloom( BloomPass* pass, TaskList& task_list,
     RWImage& inout, RWImage& write_only );
 
 void update_bloom_uniform_buffer(
-    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::BloomPass& bloom_pass );
+    const gui::Gui& gui, engine::post::BloomPass& bloom_pass );
 
 }

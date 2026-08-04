@@ -11,8 +11,9 @@ namespace racecar::engine {
 
 namespace {
 
-vkb::Swapchain create_swapchain( SDL_Window* window, const vk::Common& vulkan )
+vkb::Swapchain create_swapchain( SDL_Window* window )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
     VkSurfaceCapabilitiesKHR capabilities = { };
 
     vk::check(
@@ -86,8 +87,10 @@ vkb::Swapchain create_swapchain( SDL_Window* window, const vk::Common& vulkan )
     return swapchain;
 }
 
-void create_frame_data( State& engine, vk::Common& vulkan )
+void create_frame_data()
 {
+    vk::Common& vulkan = vk::Common::GetMut();
+    engine::State& engine = engine::State::GetMut();
     size_t num_images = engine.swapchain_images.size();
 
     engine.frames = std::vector<FrameData>( num_images );
@@ -166,8 +169,10 @@ void create_frame_data( State& engine, vk::Common& vulkan )
 /// Generalized depth buffer creation per frame; for more robust depth textures, we may need a more
 /// general purpose create_texture() function later on. Ideally, create_depth_images would therefore
 /// re-use that create_texture() for each depth image.
-void create_depth_images( State& engine, vk::Common& vulkan )
+void create_depth_images()
 {
+    vk::Common& vulkan = vk::Common::GetMut();
+    engine::State& engine = engine::State::GetMut();
     engine.depth_images = std::vector<vk::mem::AllocatedImage>( engine.frame_overlap );
 
     for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
@@ -237,13 +242,24 @@ size_t State::get_frame_index() const
     return static_cast<size_t>( frame_number % frame_overlap );
 }
 
-State initialize( Context& ctx )
+State& State::GetMut()
 {
-    vk::Common& vulkan = ctx.vulkan;
-    State engine;
+    static State instance;
+    return instance;
+}
+
+const State& State::GetConst()
+{
+    return GetMut();
+}
+
+void initialize( Context& ctx )
+{
+    vk::Common& vulkan = vk::Common::GetMut();
+    State& engine = State::GetMut();
 
     try {
-        engine.swapchain = create_swapchain( ctx.window, vulkan );
+        engine.swapchain = create_swapchain( ctx.window );
 
         {
             vkb::Result<std::vector<VkImage>> images_res = engine.swapchain.get_images();
@@ -291,8 +307,8 @@ State initialize( Context& ctx )
             vulkan.destructor_stack.push( vulkan.device, engine.cmd_pool, vkDestroyCommandPool );
         }
 
-        create_frame_data( engine, vulkan );
-        create_depth_images( engine, vulkan );
+        create_frame_data();
+        create_depth_images();
 
         engine.camera = {
             .center = glm::vec3( 2.5f, 2.5f, 1.f ),
@@ -306,21 +322,21 @@ State initialize( Context& ctx )
             .far_plane = 1000.f,
         };
 
-        create_immediate_commands( engine.immediate_submit, vulkan );
-        create_immediate_sync_structures( engine.immediate_submit, vulkan );
-        create_descriptor_system( vulkan, engine.frame_overlap, engine.descriptor_system );
+        create_immediate_commands( engine.immediate_submit );
+        create_immediate_sync_structures( engine.immediate_submit );
+        create_descriptor_system( engine.frame_overlap, engine.descriptor_system );
     } catch ( const Exception& ex ) {
         log::error( "[engine] {}", ex.what() );
         throw Exception( "[engine] Failed to initialize" );
     }
 
     log::info( "[engine] Initialized!" );
-
-    return engine;
 }
 
-void free( State& engine )
+void free()
 {
+    State& engine = State::GetMut();
+
     engine.swapchain.destroy_image_views( engine.swapchain_image_views );
     vkb::destroy_swapchain( engine.swapchain );
 }

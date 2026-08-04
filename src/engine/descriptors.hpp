@@ -36,7 +36,7 @@ struct LayoutResource {
 };
 
 void create_descriptor_system(
-    vk::Common& vulkan, uint32_t frame_overlap, DescriptorSystem& descriptor_system );
+    uint32_t frame_overlap, DescriptorSystem& descriptor_system );
 
 // Descriptors are essentially shader resources. This can be anything from a buffer, buffer view,
 // image view, sampler, etc. For that general purpose reason, it makes sense to me that descriptors
@@ -59,7 +59,7 @@ void add_array_binding(
 
 void clear( DescriptorLayoutBuilder& ds_layout_builder );
 
-VkDescriptorSetLayout build( vk::Common& vulkan, VkShaderStageFlags shader_stage_flags,
+VkDescriptorSetLayout build( VkShaderStageFlags shader_stage_flags,
     DescriptorLayoutBuilder& ds_layout_builder,
     VkDescriptorSetLayoutCreateFlags ds_layout_flags = 0 );
 
@@ -69,13 +69,13 @@ VkDescriptorSetLayout build( vk::Common& vulkan, VkShaderStageFlags shader_stage
 // To my understanding, a descriptor pool manages descriptor sets, and it's where they're allocated.
 namespace descriptor_allocator {
 
-void init_pool( vk::Common& vulkan, DescriptorAllocator& ds_allocator, uint32_t max_sets,
+void init_pool( DescriptorAllocator& ds_allocator, uint32_t max_sets,
     std::span<DescriptorAllocator::PoolSizeRatio> pool_ratios );
 
-void clear_descriptors( const vk::Common& vulkan, DescriptorAllocator& ds_allocator );
+void clear_descriptors( DescriptorAllocator& ds_allocator );
 
 VkDescriptorSet allocate(
-    vk::Common& vulkan, const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout );
+    const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout );
 
 } // namespace descriptor_allocator
 

@@ -175,8 +175,9 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_info(
     };
 }
 
-VkShaderModule shader_module( Common& vulkan, std::filesystem::path shader_path )
+VkShaderModule shader_module( std::filesystem::path shader_path )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
     std::string absolute = std::filesystem::absolute( shader_path ).string();
 
     if ( !std::filesystem::exists( shader_path ) ) {

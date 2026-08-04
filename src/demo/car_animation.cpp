@@ -51,8 +51,6 @@ void apply_demo_camera_motion(
 }
 
 void update_car_transform(
-    Context& ctx,
-    engine::State& engine,
     gui::Gui& gui,
     scene::Scene& scene,
     std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
@@ -78,8 +76,6 @@ void update_car_transform(
 
     if ( gui.demo.enable_translation ) {
         scene::propagate_transform(
-            ctx.vulkan,
-            engine,
             scene,
             model_mat_uniform_buffers,
             scene.demo_scene_nodes.car_parent_id.value(),
@@ -90,8 +86,6 @@ void update_car_transform(
 }
 
 void update_wheel_transforms(
-    Context& ctx,
-    engine::State& engine,
     gui::Gui& gui,
     scene::Scene& scene,
     std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
@@ -109,8 +103,6 @@ void update_wheel_transforms(
 
     if ( scene.demo_scene_nodes.wheel_front_left_id.has_value() ) {
         scene::propagate_transform(
-            ctx.vulkan,
-            engine,
             scene,
             model_mat_uniform_buffers,
             scene.demo_scene_nodes.wheel_front_left_id.value(),
@@ -120,8 +112,6 @@ void update_wheel_transforms(
     }
     if ( scene.demo_scene_nodes.wheel_front_right_id.has_value() ) {
         scene::propagate_transform(
-            ctx.vulkan,
-            engine,
             scene,
             model_mat_uniform_buffers,
             scene.demo_scene_nodes.wheel_front_right_id.value(),
@@ -138,8 +128,6 @@ void update_wheel_transforms(
 
     if ( scene.demo_scene_nodes.wheel_back_left_id.has_value() ) {
         scene::propagate_transform(
-            ctx.vulkan,
-            engine,
             scene,
             model_mat_uniform_buffers,
             scene.demo_scene_nodes.wheel_back_left_id.value(),
@@ -149,8 +137,6 @@ void update_wheel_transforms(
     }
     if ( scene.demo_scene_nodes.wheel_back_right_id.has_value() ) {
         scene::propagate_transform(
-            ctx.vulkan,
-            engine,
             scene,
             model_mat_uniform_buffers,
             scene.demo_scene_nodes.wheel_back_right_id.value(),

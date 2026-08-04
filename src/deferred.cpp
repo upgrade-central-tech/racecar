@@ -2,56 +2,43 @@
 
 namespace racecar::deferred {
 
-GBuffers initialize_GBuffers( vk::Common& vulkan, engine::State& engine )
+GBuffers initialize_GBuffers()
 {
+    const engine::State& engine = engine::State::GetConst();
     GBuffers gbuffers;
 
     // deferred rendering
     gbuffers.GBuffer_Normal = engine::create_gbuffer_image(
-        vulkan,
-        engine,
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_SAMPLE_COUNT_1_BIT
     );
 
     gbuffers.GBuffer_Position = engine::create_gbuffer_image(
-        vulkan,
-        engine,
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_SAMPLE_COUNT_1_BIT
     );
 
     gbuffers.GBuffer_Tangent = engine::create_gbuffer_image(
-        vulkan,
-        engine,
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_SAMPLE_COUNT_1_BIT
     );
 
     gbuffers.GBuffer_UV = engine::create_gbuffer_image(
-        vulkan,
-        engine,
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_SAMPLE_COUNT_1_BIT
     );
 
     gbuffers.GBuffer_Albedo = engine::create_gbuffer_image(
-        vulkan,
-        engine,
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_SAMPLE_COUNT_1_BIT
     );
 
     gbuffers.GBuffer_Packed_Data = engine::create_gbuffer_image(
-        vulkan,
-        engine,
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_SAMPLE_COUNT_1_BIT
     );
 
     gbuffers.GBuffer_Depth = engine::create_rwimage(
-        vulkan,
-        engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_D32_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
@@ -60,8 +47,6 @@ GBuffers initialize_GBuffers( vk::Common& vulkan, engine::State& engine )
     );
 
     gbuffers.GBuffer_DepthMS = engine::create_rwimage(
-        vulkan,
-        engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_D32_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
@@ -70,8 +55,6 @@ GBuffers initialize_GBuffers( vk::Common& vulkan, engine::State& engine )
     );
 
     gbuffers.GBuffer_Velocity = engine::create_rwimage(
-        vulkan,
-        engine,
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
@@ -80,8 +63,6 @@ GBuffers initialize_GBuffers( vk::Common& vulkan, engine::State& engine )
     );
 
     gbuffers.desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         {
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // NORMAL
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // POSITION
@@ -95,7 +76,7 @@ GBuffers initialize_GBuffers( vk::Common& vulkan, engine::State& engine )
         VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
-    update_desc_sets( vulkan, engine, gbuffers );
+    update_desc_sets( gbuffers );
 
     return gbuffers;
 }
@@ -168,65 +149,49 @@ engine::ImageBarrier color_write_to_frag_read( engine::RWImage& image )
     };
 };
 
-void update_desc_sets( vk::Common& vulkan, engine::State& engine, GBuffers& gbuffers )
+void update_desc_sets( GBuffers& gbuffers )
 {
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         gbuffers.desc_set,
         gbuffers.GBuffer_Position,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         gbuffers.desc_set,
         gbuffers.GBuffer_Normal,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         gbuffers.desc_set,
         gbuffers.GBuffer_Tangent,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         2
     );
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         gbuffers.desc_set,
         gbuffers.GBuffer_UV,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         3
     );
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         gbuffers.desc_set,
         gbuffers.GBuffer_Albedo,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         4
     );
     engine::update_descriptor_set_depth_image(
-        vulkan,
-        engine,
         gbuffers.desc_set,
         gbuffers.GBuffer_Depth,
         5
     );
     engine::update_descriptor_set_depth_image(
-        vulkan,
-        engine,
         gbuffers.desc_set,
         gbuffers.GBuffer_DepthMS,
         6
     );
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         gbuffers.desc_set,
         gbuffers.GBuffer_Packed_Data,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

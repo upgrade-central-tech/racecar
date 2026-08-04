@@ -25,20 +25,20 @@ struct RWImage {
     RWImage& operator=( RWImage&& ) = default;
 };
 
-RWImage create_rwimage( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,
+RWImage create_rwimage( VkExtent3D extent,
     VkFormat format, VkImageType image_type, VkSampleCountFlagBits samples,
     VkImageUsageFlags usage_flags );
 
-RWImage create_rwimage_mips( vk::Common& vulkan, const engine::State& engine, VkExtent3D extent,
+RWImage create_rwimage_mips( VkExtent3D extent,
     VkFormat format, VkImageType image_type, VkSampleCountFlagBits samples,
     VkImageUsageFlags usage_flags, uint32_t mip_levels );
 
-RWImage create_gbuffer_image( vk::Common& vulkan, const engine::State& engine, VkFormat format,
+RWImage create_gbuffer_image( VkFormat format,
     VkSampleCountFlagBits samples );
 
 /// Transitions every frame's image out of UNDEFINED once, immediately.
 /// For images whose contents must survive across frames (AA)
 void initialize_rwimage_layout(
-    vk::Common& vulkan, engine::State& engine, RWImage& image, VkImageLayout layout );
+    RWImage& image, VkImageLayout layout );
 
 } // namespace racecar::engine

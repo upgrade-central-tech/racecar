@@ -13,8 +13,6 @@ constexpr std::string_view SHADER_MODULE_PATH = "../shaders/deferred/prepass.spv
 }
 
 void create_scene_gfx_pipeline(
-    Context& ctx,
-    engine::State& engine,
     engine::Pipeline* scene_pipeline,
     const geometry::scene::Mesh& scene_mesh,
     engine::DescriptorSet* uniform_desc_set,
@@ -24,11 +22,10 @@ void create_scene_gfx_pipeline(
     engine::DescriptorSet* sampler_desc_set
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     try {
         size_t frame_index = engine.get_frame_index();
-        *scene_pipeline = create_gfx_pipeline(
-            engine,
-            ctx.vulkan,
+        *scene_pipeline = engine::create_gfx_pipeline(
             engine::get_vertex_input_state_create_info( scene_mesh ),
             {
                 uniform_desc_set->layouts[frame_index],
@@ -51,7 +48,7 @@ void create_scene_gfx_pipeline(
             VK_SAMPLE_COUNT_1_BIT,
             false,
             true,
-            vk::create::shader_module( ctx.vulkan, SHADER_MODULE_PATH ),
+            vk::create::shader_module( SHADER_MODULE_PATH ),
             false
         );
     } catch ( const Exception& ex ) {
@@ -60,8 +57,9 @@ void create_scene_gfx_pipeline(
     }
 }
 
-engine::GfxTask create_prepass_gfx_task( const engine::State& engine, deferred::GBuffers& gbuffers )
+engine::GfxTask create_prepass_gfx_task( deferred::GBuffers& gbuffers )
 {
+    const engine::State& engine = engine::State::GetConst();
     return {
         .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
         .clear_depth = 1.f,

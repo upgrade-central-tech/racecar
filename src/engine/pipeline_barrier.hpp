@@ -59,7 +59,7 @@ struct PipelineBarrierDescriptor {
 };
 
 void run_pipeline_barrier(
-    const State& engine, const PipelineBarrierDescriptor& barrier, VkCommandBuffer cmd_buf );
+    const PipelineBarrierDescriptor& barrier, VkCommandBuffer cmd_buf );
 
 /// Covers mip 0 only. For a mipped image use VK_IMAGE_SUBRESOURCE_RANGE_ALL_MIPS_COLOR instead.
 /// this leaves levels 1..n in whatever layout they were already in.

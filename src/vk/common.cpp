@@ -97,8 +97,9 @@ vkb::Instance create_instance()
 
 /// Picks a physical device with a preference for a discrete GPU, and then creates a logical
 /// device with one queue enabled from each available queue family.
-vkb::Device pick_and_create_device( const Common& vulkan )
+vkb::Device pick_and_create_device()
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
     vkb::PhysicalDeviceSelector phys_selector( vulkan.instance, vulkan.surface );
 
 #if RACECAR_RAY_TRACING
@@ -230,8 +231,9 @@ vkb::Device pick_and_create_device( const Common& vulkan )
     return device;
 }
 
-void initialize_vmaallocator( vk::Common& vulkan )
+void initialize_vmaallocator()
 {
+    vk::Common& vulkan = vk::Common::GetMut();
     VmaAllocatorCreateInfo allocator_info = {
         .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
         .physicalDevice = vulkan.device.physical_device,
@@ -255,9 +257,20 @@ void initialize_vmaallocator( vk::Common& vulkan )
 
 } // namespace
 
-Common initialize( SDL_Window* window )
+Common& Common::GetMut()
 {
-    Common vulkan;
+    static Common instance;
+    return instance;
+}
+
+const Common& Common::GetConst()
+{
+    return GetMut();
+}
+
+void initialize( SDL_Window* window )
+{
+    Common& vulkan = Common::GetMut();
 
     try {
         vulkan.instance = create_instance();
@@ -267,8 +280,8 @@ Common initialize( SDL_Window* window )
             throw Exception( "[SDL] Could not create Vulkan surface: {}", SDL_GetError() );
         }
 
-        vulkan.device = pick_and_create_device( vulkan );
-        initialize_vmaallocator( vulkan );
+        vulkan.device = pick_and_create_device();
+        initialize_vmaallocator();
 
         {
             vkb::Result<VkQueue> gfx_queue_res
@@ -360,12 +373,12 @@ Common initialize( SDL_Window* window )
     }
 
     log::info( "[Vulkan] Initialized!" );
-
-    return vulkan;
 }
 
-void free( Common& vulkan )
+void free()
 {
+    Common& vulkan = Common::GetMut();
+
     vmaDestroyAllocator( vulkan.allocator );
     vkb::destroy_device( vulkan.device );
     SDL_Vulkan_DestroySurface( vulkan.instance, vulkan.surface, nullptr );

@@ -52,27 +52,27 @@ namespace racecar {
 
 void run( bool use_fullscreen )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
     // ================================================================================================================
     // GLOBAL RESOURCE INITIALIZATION
     // ================================================================================================================
 
     // INITIALIZE VULKAN CONTEXT + ENGINE CONTEXT
     Context ctx = initialize_context( use_fullscreen );
-    engine::State engine = engine::initialize( ctx );
-    gui::Gui gui = gui::initialize( ctx, engine );
+    engine::initialize( ctx );
+    engine::State& engine = engine::State::GetMut();
+    gui::Gui gui = gui::initialize( ctx );
 
     // SCENE LOADING/PROCESSING
     scene::Scene scene;
     geometry::scene::Mesh scene_mesh;
-    load_scene( ctx, engine, &scene, &scene_mesh );
+    load_scene( &scene, &scene_mesh );
 
     // GLOBAL UNIFORM BUFFER SETUP
     UniformBuffer<ub_data::Camera> camera_buffer;
     UniformBuffer<ub_data::Debug> debug_buffer;
     engine::DescriptorSet uniform_desc_set;
     load_camera_debug_uniform_buffers(
-        ctx,
-        engine,
         &camera_buffer,
         &debug_buffer,
         &uniform_desc_set
@@ -82,15 +82,13 @@ void run( bool use_fullscreen )
     VkSampler linear_sampler = VK_NULL_HANDLE;
     VkSampler point_sampler = VK_NULL_HANDLE;
     engine::DescriptorSet sampler_desc_set;
-    load_samplers( ctx, engine, &linear_sampler, &point_sampler, &sampler_desc_set );
+    load_samplers( &linear_sampler, &point_sampler, &sampler_desc_set );
 
     // LOAD MATERIAL DATA AND BUFFERS
     size_t num_materials = scene.materials.size();
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
     std::vector<UniformBuffer<ub_data::Material>> material_uniform_buffers( num_materials );
     load_materials(
-        ctx,
-        engine,
         scene,
         num_materials,
         &material_desc_sets,
@@ -102,8 +100,6 @@ void run( bool use_fullscreen )
     std::vector<engine::DescriptorSet> model_mat_desc_sets( num_nodes );
     std::vector<UniformBuffer<ub_data::ModelMat>> model_mat_uniform_buffers( num_nodes );
     load_model_mat_uniform_buffers(
-        ctx,
-        engine,
         num_nodes,
         &scene,
         &model_mat_desc_sets,
@@ -112,18 +108,18 @@ void run( bool use_fullscreen )
 
     // LOAD RAYMARCHING TEXTURE SETS
     engine::DescriptorSet raymarch_tex_sets;
-    create_raymarch_tex_sets( ctx, engine, &raymarch_tex_sets );
+    create_raymarch_tex_sets( &raymarch_tex_sets );
 
     // LOAD MATERIAL LOOKUP TABLES
     engine::DescriptorSet lut_sets;
     vk::mem::AllocatedImage lut_brdf;
     vk::mem::AllocatedImage glint_noise;
-    create_lut_sets( ctx, engine, &lut_sets, &lut_brdf, &glint_noise );
+    create_lut_sets( &lut_sets, &lut_brdf, &glint_noise );
 
     // LOAD GLOBAL QUAD MESH
     // TODO: It might be beneficial if meshes like these are global; helps avoid rebuilding them for
     // whatever reason.
-    geometry::quad::Mesh quad_mesh = geometry::quad::create( ctx.vulkan, engine );
+    geometry::quad::Mesh quad_mesh = geometry::quad::create();
     geometry::quad::Mesh::instance = &quad_mesh;
 
     // ================================================================================================================
@@ -131,15 +127,13 @@ void run( bool use_fullscreen )
     // ================================================================================================================
 
     // INITIALIZE GBUFFER
-    deferred::GBuffers gbuffers = deferred::initialize_GBuffers( ctx.vulkan, engine );
+    deferred::GBuffers gbuffers = deferred::initialize_GBuffers();
 
     // CREATE DEPTH PREPASS PIPELINE
     engine::DescriptorSet depth_uniform_desc_set;
     engine::Pipeline depth_ms_pipeline;
     engine::DepthPrepassMS depth_prepass_ms;
     engine::create_depth_ms_prepass(
-        ctx,
-        engine,
         &depth_uniform_desc_set,
         &depth_ms_pipeline,
         camera_buffer,
@@ -151,8 +145,6 @@ void run( bool use_fullscreen )
     // CREATE MAIN SCENE DRAW PIPELINE
     engine::Pipeline scene_pipeline;
     create_scene_gfx_pipeline(
-        ctx,
-        engine,
         &scene_pipeline,
         scene_mesh,
         &uniform_desc_set,
@@ -166,13 +158,13 @@ void run( bool use_fullscreen )
     engine::RWImage screen_color;
     engine::RWImage screen_buffer;
     engine::RWImage screen_history;
-    create_screen_buffers( ctx, engine, &screen_color, &screen_buffer, &screen_history );
+    create_screen_buffers( &screen_color, &screen_buffer, &screen_history );
 
     // SETUP ATMOSPHERIC/VOLUMETRIC RESOURCES
-    atmosphere::Atmosphere atms = atmosphere::initialize( ctx.vulkan, engine );
+    atmosphere::Atmosphere atms = atmosphere::initialize();
     atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
-    volumetric::Volumetric volumetric = volumetric::initialize( ctx.vulkan, engine );
-    atmosphere::initialize_atmosphere_baker( atms_baker, volumetric, ctx.vulkan, engine );
+    volumetric::Volumetric volumetric = volumetric::initialize();
+    atmosphere::initialize_atmosphere_baker( atms_baker, volumetric );
 
     // ================================================================================================================
     // MODEL LOADING
@@ -185,8 +177,6 @@ void run( bool use_fullscreen )
     std::vector<vk::mem::AllocatedImage> albedo_textures;
     std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
     load_model_primitive_material_data(
-        ctx,
-        engine,
         scene,
         model_mat_uniform_buffers,
         transforms,
@@ -200,18 +190,16 @@ void run( bool use_fullscreen )
 #if RACECAR_RAY_TRACING
     // BLAS allocation
     ub_data::BLASOffsets blas_offsets;
-    alloc_blases( ctx, engine, prims, scene_mesh, &blas_offsets );
+    alloc_blases( prims, scene_mesh, &blas_offsets );
 
     // TLAS allocation
     std::vector<vk::rt::Object> objects;
-    create_objects( engine, transforms, objects );
-    alloc_car_tlas( ctx.vulkan, engine, objects );
+    create_objects( transforms, objects );
+    alloc_car_tlas( objects );
 
     // Create car acceleration structure descriptor set
-    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set( ctx.vulkan, engine );
+    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set();
     engine::update_descriptor_set_acceleration_structure(
-        ctx.vulkan,
-        engine,
         car_tlas_desc_set,
         engine.tlas.handle,
         0
@@ -219,12 +207,11 @@ void run( bool use_fullscreen )
 
     // Initialize RT texture data uniform buffer
     UniformBuffer<ub_data::RTTextureUniform> rt_texture_uniform_data
-        = create_uniform_buffer( ctx.vulkan, rt_texture_uniform, engine.frame_overlap );
+        = create_uniform_buffer( rt_texture_uniform, engine.frame_overlap );
     rt_texture_uniform_data.set_data( rt_texture_uniform );
 
     // Create uniform buffer for BLAS offsets
     UniformBuffer<ub_data::BLASOffsets> offset_data = create_uniform_buffer(
-        ctx.vulkan,
         blas_offsets,
         static_cast<size_t>( engine.frame_overlap )
     );
@@ -232,12 +219,10 @@ void run( bool use_fullscreen )
 
     // Initialize RT vertex data buffer
     vk::mem::AllocatedBuffer padded_vertex_data_buffer
-        = create_padded_vertex_data_buffer( ctx, engine, scene_mesh );
+        = create_padded_vertex_data_buffer( scene_mesh );
 
     // Create car descriptor set
     engine::DescriptorSet car_descriptor_set = create_car_desc_set(
-        ctx,
-        engine,
         scene_mesh,
         padded_vertex_data_buffer,
         offset_data,
@@ -248,8 +233,6 @@ void run( bool use_fullscreen )
 
     // Create combined textures descriptor set
     engine::DescriptorSet combined_textures_desc_set = create_combined_textures_desc_set(
-        ctx,
-        engine,
         albedo_textures,
         metallic_roughness_textures
     );
@@ -272,8 +255,6 @@ void run( bool use_fullscreen )
 
     geometry::Terrain test_terrain;
     geometry::initialize_terrain(
-        ctx.vulkan,
-        engine,
         test_terrain,
         prepass_terrain_info,
         terrain_lighting_info
@@ -290,8 +271,6 @@ void run( bool use_fullscreen )
     engine::DescriptorSet reflection_buffer_desc_set;
     engine::GfxTask reflection_gfx_task;
     create_reflection_pass_resources(
-        ctx,
-        engine,
         ReflectionPassDescSets {
             .uniform_desc_set = uniform_desc_set,
             .sampler_desc_set = sampler_desc_set,
@@ -323,12 +302,11 @@ void run( bool use_fullscreen )
 
     // Create car lighting pass pipeline
     engine::Pipeline lighting_pass_pipeline;
-    create_lighting_pass_resources( ctx, engine, lighting_pass_desc_sets, &lighting_pass_pipeline );
+    create_lighting_pass_resources( lighting_pass_desc_sets, &lighting_pass_pipeline );
 
     // Create terrain draw pipeline
     geometry::initialize_terrain_draw_pipeline(
-        test_terrain,
-        ctx.vulkan
+        test_terrain
 #if RACECAR_RAY_TRACING
         ,
         car_tlas_desc_set,
@@ -340,21 +318,21 @@ void run( bool use_fullscreen )
     // PRECOMPUTE
     // ================================================================================================================
 
-    VkFence precompute_fence = engine::create_fence( ctx );
+    VkFence precompute_fence = engine::create_fence();
 
     VkCommandBuffer& precompute_cmdbuf = engine.frames[0].start_cmdbuf;
-    engine::begin_precompute_commandbuffer( ctx, &precompute_cmdbuf, precompute_fence );
+    engine::begin_precompute_commandbuffer( &precompute_cmdbuf, precompute_fence );
 
 #if RACECAR_RAY_TRACING
-    build_car_blases( engine, precompute_cmdbuf );
-    build_car_tlas( engine, precompute_cmdbuf );
+    build_car_blases( precompute_cmdbuf );
+    build_car_tlas( precompute_cmdbuf );
 #endif // RACECAR_RAY_TRACING
 
     geometry::terrain_precompute( test_terrain, precompute_cmdbuf );
 
     atmosphere::atmosphere_baker_precompute( atms_baker, precompute_cmdbuf );
 
-    engine::submit_precompute_cmdbuf( ctx.vulkan, precompute_fence, precompute_cmdbuf );
+    engine::submit_precompute_cmdbuf( precompute_fence, precompute_cmdbuf );
 
     // ================================================================================================================
     // TASK LIST POPULATION
@@ -369,16 +347,16 @@ void run( bool use_fullscreen )
     engine::add_pipeline_barrier( task_list, top_pipeline_barriers );
 
     // Draw the atmosphere
-    atmosphere::draw_atmosphere( ctx, engine, task_list, atms, screen_color );
+    atmosphere::draw_atmosphere( task_list, atms, screen_color );
 
     // Draw the volumetric clouds
-    volumetric::draw_volumetric( volumetric, ctx.vulkan, engine, task_list, screen_color );
+    volumetric::draw_volumetric( volumetric, task_list, screen_color );
 
     // Running the atmosphere baker
-    atmosphere::dispatch_atmosphere_baker( ctx, engine, task_list, lut_sets, atms_baker );
+    atmosphere::dispatch_atmosphere_baker( task_list, lut_sets, atms_baker );
 
     // Add draw tasks for each primitive to the Prepass Gfx Task and Depth Gfx Task
-    engine::GfxTask prepass_gfx_task = create_prepass_gfx_task( engine, gbuffers );
+    engine::GfxTask prepass_gfx_task = create_prepass_gfx_task( gbuffers );
     add_prim_draw_tasks(
         scene_mesh,
         prims,
@@ -427,14 +405,13 @@ void run( bool use_fullscreen )
     );
 
     // Terrain lighting pass
-    geometry::draw_terrain( test_terrain, engine, task_list );
+    geometry::draw_terrain( test_terrain, task_list );
 
     // Transfer screen_color from the terrain compute pass to the car lighting pass
     create_terrain_car_screen_pipeline_barrier( task_list, screen_color );
 
     // Car lighting pass, writes to screen_color
     car_lighting_pass(
-        engine,
         lighting_pass_desc_sets,
         lighting_pass_pipeline,
         screen_color,
@@ -450,8 +427,6 @@ void run( bool use_fullscreen )
     engine::post::BloomPass bloom_pass;
     engine::post::TonemappingPass tm_pass;
     post_processing_passes(
-        ctx,
-        engine,
         camera_buffer,
         gbuffers,
         screen_color,
@@ -485,7 +460,6 @@ void run( bool use_fullscreen )
         // Handle QUIT, MINIMIZED, RESTORED events
         handle_sdl_window_events(
             ctx,
-            engine,
             gui,
             material_uniform_buffers,
             atms,
@@ -502,7 +476,7 @@ void run( bool use_fullscreen )
 
         // Handle preset transitioning
         if ( gui.preset.transition.has_value() ) {
-            update_preset_transition( ctx, engine, gui, material_uniform_buffers, atms );
+            update_preset_transition( gui, material_uniform_buffers, atms );
         }
 
         // Camera input, then demo-driven camera motion, then the derived matrices
@@ -515,37 +489,35 @@ void run( bool use_fullscreen )
             volumetric
         );
 
-        CameraData camera_data = get_camera_data( engine );
+        CameraData camera_data = get_camera_data();
 
         camera::OrbitCamera& camera = engine.camera;
 
         // Update camera uniform buffer
-        update_camera_uniform_buffer( ctx, engine, gui, camera_buffer, camera_data );
+        update_camera_uniform_buffer( gui, camera_buffer, camera_data );
 
         // Update atmosphere uniform buffer
-        atmosphere::update_atmosphere_uniform_buffer( ctx, engine, gui, atms, camera_data );
+        atmosphere::update_atmosphere_uniform_buffer( gui, atms, camera_data );
 
         // AO update
-        engine::post::update_ao_uniform_buffer( ctx.vulkan, engine, gui, ao_pass );
+        engine::post::update_ao_uniform_buffer( gui, ao_pass );
 
         // Tonemapping update
-        engine::post::update_tonemapping_uniform_buffer( ctx.vulkan, engine, gui, tm_pass );
+        engine::post::update_tonemapping_uniform_buffer( gui, tm_pass );
 
         // AA update
-        engine::post::update_aa_uniform_buffer( ctx.vulkan, engine, gui, aa_pass );
+        engine::post::update_aa_uniform_buffer( gui, aa_pass );
 
 #if ENABLE_VOLUMETRICS
         // Update volumetric camera buffer
-        volumetric::update_volumetric_uniform_buffer( ctx, engine, atms, volumetric, camera_data );
+        volumetric::update_volumetric_uniform_buffer( atms, volumetric, camera_data );
 #endif
 
         // Update debug uniform buffer
-        update_debug_uniform_buffer( ctx, engine, gui, atms, debug_buffer );
+        update_debug_uniform_buffer( gui, atms, debug_buffer );
 
         // update materials
         update_material_uniform_buffers(
-            ctx,
-            engine,
             gui,
             material_uniform_buffers,
             num_materials
@@ -553,18 +525,16 @@ void run( bool use_fullscreen )
 
 #if RACECAR_RAY_TRACING
         // Update ray tracing uniform buffers
-        update_rt_uniform_buffers( ctx, engine, offset_data, rt_texture_uniform_data );
+        update_rt_uniform_buffers( offset_data, rt_texture_uniform_data );
 #endif // RACECAR_RAY_TRACING
 
         // Update terrain
-        geometry::update_terrain_uniform_buffer( ctx, engine, gui, test_terrain );
+        geometry::update_terrain_uniform_buffer( gui, test_terrain );
 
         // Scene node transforms, sharing one `discovered` set so a node is only propagated once
         std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
 
         update_car_transform(
-            ctx,
-            engine,
             gui,
             scene,
             model_mat_uniform_buffers,
@@ -573,14 +543,14 @@ void run( bool use_fullscreen )
         );
 
         // wheel rotation
-        update_wheel_transforms( ctx, engine, gui, scene, model_mat_uniform_buffers, discovered );
+        update_wheel_transforms( gui, scene, model_mat_uniform_buffers, discovered );
 
         // Update bloom settings
-        engine::post::update_bloom_uniform_buffer( ctx.vulkan, engine, gui, bloom_pass );
+        engine::post::update_bloom_uniform_buffer( gui, bloom_pass );
 
         gui::update( gui, atms, camera, material_uniform_buffers );
 
-        engine::execute( engine, ctx, task_list, gui );
+        engine::execute( task_list, gui );
         engine.rendered_frames = engine.rendered_frames + 1;
         engine.frame_number = ( engine.rendered_frames + 1 ) % engine.frame_overlap;
 
@@ -601,11 +571,11 @@ void run( bool use_fullscreen )
     // RESOURCE CLEANUP
     // ================================================================================================================
 
-    vkDeviceWaitIdle( ctx.vulkan.device );
+    vkDeviceWaitIdle( vulkan.device );
     gui::free();
-    engine::free( engine );
-    ctx.vulkan.destructor_stack.execute_cleanup();
-    vk::free( ctx.vulkan );
+    engine::free();
+    vulkan.destructor_stack.execute_cleanup();
+    vk::free();
     sdl::free( ctx.window );
 }
 

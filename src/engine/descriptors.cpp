@@ -5,7 +5,7 @@
 namespace racecar::engine {
 
 void create_descriptor_system(
-    vk::Common& vulkan, uint32_t frame_overlap, DescriptorSystem& descriptor_system
+    uint32_t frame_overlap, DescriptorSystem& descriptor_system
 )
 {
     std::vector<DescriptorAllocator::PoolSizeRatio> pool_sizes = {
@@ -19,13 +19,12 @@ void create_descriptor_system(
         { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4 },
     };
 
-    descriptor_allocator::init_pool( vulkan, descriptor_system.global_allocator, 200, pool_sizes );
+    descriptor_allocator::init_pool( descriptor_system.global_allocator, 200, pool_sizes );
 
     descriptor_system.frame_allocators = std::vector<DescriptorAllocator>( frame_overlap );
 
     for ( uint32_t i = 0; i < frame_overlap; i++ ) {
         descriptor_allocator::init_pool(
-            vulkan,
             descriptor_system.frame_allocators[i],
             500,
             pool_sizes
@@ -71,12 +70,12 @@ void add_array_binding(
 void clear( DescriptorLayoutBuilder& ds_layout_builder ) { ds_layout_builder.bindings.clear(); }
 
 VkDescriptorSetLayout build(
-    vk::Common& vulkan,
     VkShaderStageFlags shader_stage_flags,
     DescriptorLayoutBuilder& ds_layout_builder,
     VkDescriptorSetLayoutCreateFlags ds_layout_flags
 )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
     for ( auto& binding : ds_layout_builder.bindings ) {
         binding.stageFlags |= shader_stage_flags;
     }
@@ -103,12 +102,12 @@ VkDescriptorSetLayout build(
 namespace descriptor_allocator {
 
 void init_pool(
-    vk::Common& vulkan,
     DescriptorAllocator& ds_allocator,
     uint32_t max_sets,
     std::span<DescriptorAllocator::PoolSizeRatio> pool_ratios
 )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
     std::vector<VkDescriptorPoolSize> pool_sizes;
     for ( DescriptorAllocator::PoolSizeRatio ratio : pool_ratios ) {
         pool_sizes.push_back(
@@ -134,15 +133,17 @@ void init_pool(
     vulkan.destructor_stack.push( vulkan.device, ds_allocator.pool, vkDestroyDescriptorPool );
 }
 
-void clear_descriptors( const vk::Common& vulkan, DescriptorAllocator& ds_allocator )
+void clear_descriptors( DescriptorAllocator& ds_allocator )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
     vkResetDescriptorPool( vulkan.device, ds_allocator.pool, 0 );
 }
 
 VkDescriptorSet allocate(
-    vk::Common& vulkan, const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout
+    const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout
 )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
     VkDescriptorSetAllocateInfo allocate_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = ds_allocator.pool,

@@ -37,8 +37,10 @@ constexpr std::array EASING_OPTIONS = std::to_array<std::string_view>( {
 
 }
 
-Gui initialize( Context& ctx, const engine::State& engine )
+Gui initialize( Context& ctx )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
+    engine::State& engine = engine::State::GetMut();
     Gui gui;
 
     {
@@ -57,15 +59,15 @@ Gui initialize( Context& ctx, const engine::State& engine )
 
         vk::check(
             vkCreateDescriptorPool(
-                ctx.vulkan.device,
+                vulkan.device,
                 &descriptor_pool_info,
                 nullptr,
                 &gui.descriptor_pool
             ),
             "[gui] Failed to create descriptor pool"
         );
-        ctx.vulkan.destructor_stack
-            .push( ctx.vulkan.device, gui.descriptor_pool, vkDestroyDescriptorPool );
+        vulkan.destructor_stack
+            .push( vulkan.device, gui.descriptor_pool, vkDestroyDescriptorPool );
     }
 
     IMGUI_CHECKVERSION();
@@ -88,11 +90,11 @@ Gui initialize( Context& ctx, const engine::State& engine )
     {
         ImGui_ImplVulkan_InitInfo init_info = {
             .ApiVersion = VK_API_VERSION_1_4,
-            .Instance = ctx.vulkan.instance,
-            .PhysicalDevice = ctx.vulkan.device.physical_device,
-            .Device = ctx.vulkan.device,
-            .QueueFamily = ctx.vulkan.graphics_queue_family,
-            .Queue = ctx.vulkan.graphics_queue,
+            .Instance = vulkan.instance,
+            .PhysicalDevice = vulkan.device.physical_device,
+            .Device = vulkan.device,
+            .QueueFamily = vulkan.graphics_queue_family,
+            .Queue = vulkan.graphics_queue,
             .DescriptorPool = gui.descriptor_pool,
             .MinImageCount = engine.swapchain.requested_min_image_count,
             .ImageCount = engine.swapchain.image_count,

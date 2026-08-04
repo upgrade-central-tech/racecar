@@ -33,7 +33,7 @@ struct DrawTask {
     Pipeline pipeline = {};
 };
 
-void draw( const engine::State& engine, const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
+void draw( const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
     const VkExtent2D extent );
 
 } // namespace racecar::engine

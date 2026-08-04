@@ -22,7 +22,7 @@ struct ReflectionPassDescSets {
     engine::DescriptorSet& combined_textures_desc_set;
 };
 
-void create_reflection_pass_resources( Context& ctx, engine::State& engine,
+void create_reflection_pass_resources( 
     ReflectionPassDescSets desc_sets, engine::RWImage* reflection_data,
     engine::Pipeline* reflection_pipeline, engine::DescriptorSet* reflection_buffer_desc_set,
     engine::GfxTask* reflection_gfx_task );

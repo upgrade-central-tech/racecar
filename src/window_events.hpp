@@ -13,7 +13,7 @@
 
 namespace racecar {
 
-void handle_sdl_window_events( Context& ctx, engine::State& engine, gui::Gui& gui,
+void handle_sdl_window_events( Context& ctx, gui::Gui& gui,
     std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
     atmosphere::Atmosphere& atms, bool& will_quit, bool& stop_drawing, SDL_Event& event );
 

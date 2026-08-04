@@ -22,9 +22,9 @@ struct AoPass {
     UniformBuffer<ub_data::AOData> ao_buffer = {};
 };
 
-void add_ao( AoPass& ao_pass, vk::Common& vulkan, engine::State& engine, TaskList& task_list );
+void add_ao( AoPass& ao_pass, TaskList& task_list );
 
 void update_ao_uniform_buffer(
-    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::AoPass& ao_pass );
+    const gui::Gui& gui, engine::post::AoPass& ao_pass );
 
 }

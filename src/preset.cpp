@@ -120,13 +120,12 @@ Preset parse_preset_json( fs::path json_path )
 }
 
 void update_preset_transition(
-    Context& ctx,
-    engine::State& engine,
     gui::Gui& gui,
     std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
     atmosphere::Atmosphere& atms
 )
 {
+    engine::State& engine = engine::State::GetMut();
     PresetTransition& transition = gui.preset.transition.value();
 
     float t = std::invoke( [&]() -> float {
@@ -223,7 +222,7 @@ void update_preset_transition(
         gui.debug.glint_randomness = glint_randomness;
 
         material_uniform_buffers[material_idx].set_data( mat_data );
-        material_uniform_buffers[material_idx].update( ctx.vulkan, engine.get_frame_index() );
+        material_uniform_buffers[material_idx].update( engine.get_frame_index() );
     }
 
     engine.camera.center = glm::mix( i.camera_center, f.camera_center, t );

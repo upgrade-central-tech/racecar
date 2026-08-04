@@ -22,16 +22,15 @@ static const uint32_t mip_levels = 5;
 
 void initialize_atmosphere_baker(
     AtmosphereBaker& atms_baker,
-    const volumetric::Volumetric& volumetric,
-    vk::Common& vulkan,
-    engine::State& engine
+    const volumetric::Volumetric& volumetric
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     uint32_t octahedral_sky_size = 512;
     uint32_t irradiance_size = 32;
 
     atms_baker.octahedral_sky = engine::allocate_image(
-        vulkan,
         { octahedral_sky_size, octahedral_sky_size, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -43,8 +42,6 @@ void initialize_atmosphere_baker(
     );
 
     atms_baker.octahedral_sky_irradiance = engine::create_rwimage(
-        vulkan,
-        engine,
         { irradiance_size, irradiance_size, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -53,8 +50,6 @@ void initialize_atmosphere_baker(
     );
 
     atms_baker.octahedral_write_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         {
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
@@ -65,8 +60,6 @@ void initialize_atmosphere_baker(
     );
 
     atms_baker.volumetrics_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         {
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
@@ -77,16 +70,12 @@ void initialize_atmosphere_baker(
     );
 
     engine::update_descriptor_set_write_image(
-        vulkan,
-        engine,
         atms_baker.octahedral_write_desc_set,
         atms_baker.octahedral_sky,
         0
     );
 
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         atms_baker.octahedral_write_desc_set,
         atms_baker.octahedral_sky_irradiance,
         VK_IMAGE_LAYOUT_GENERAL,
@@ -94,36 +83,27 @@ void initialize_atmosphere_baker(
     );
 
     engine::update_descriptor_set_image(
-        vulkan,
-        engine,
         atms_baker.volumetrics_desc_set,
         volumetric.cumulus_map,
         0
     );
     engine::update_descriptor_set_image(
-        vulkan,
-        engine,
         atms_baker.volumetrics_desc_set,
         volumetric.low_freq_noise,
         1
     );
     engine::update_descriptor_set_sampler(
-        vulkan,
-        engine,
         atms_baker.volumetrics_desc_set,
         vulkan.global_samplers.linear_mirrored_repeat_sampler,
         2
     );
     engine::update_descriptor_set_uniform(
-        vulkan,
-        engine,
         atms_baker.volumetrics_desc_set,
         volumetric.uniform_buffer,
         3
     );
 
     atms_baker.cs_bake_atmosphere_pipeline = engine::create_compute_pipeline(
-        vulkan,
         {
             atms_baker.atmosphere->uniform_desc_set.layouts[0],
             atms_baker.atmosphere->lut_desc_set.layouts[0],
@@ -131,12 +111,11 @@ void initialize_atmosphere_baker(
             atms_baker.octahedral_write_desc_set.layouts[0],
             atms_baker.volumetrics_desc_set.layouts[0],
         },
-        vk::create::shader_module( vulkan, BAKE_ATMS_SHADER_PATH ),
+        vk::create::shader_module( BAKE_ATMS_SHADER_PATH ),
         "cs_bake_atmosphere"
     );
 
     atms_baker.cs_sky_irradiance_pipeline = engine::create_compute_pipeline(
-        vulkan,
         {
             atms_baker.atmosphere->uniform_desc_set.layouts[0],
             atms_baker.atmosphere->lut_desc_set.layouts[0],
@@ -144,12 +123,11 @@ void initialize_atmosphere_baker(
             atms_baker.octahedral_write_desc_set.layouts[0],
             atms_baker.volumetrics_desc_set.layouts[0],
         },
-        vk::create::shader_module( vulkan, BAKE_ATMS_IRR_SHADER_PATH ),
+        vk::create::shader_module( BAKE_ATMS_IRR_SHADER_PATH ),
         "cs_bake_atmosphere_irradiance"
     );
 
     atms_baker.cs_octahedral_mip_pipeline = engine::create_compute_pipeline(
-        vulkan,
         {
             // Repeated code everywhere, is there a way to cache this vector?
             atms_baker.atmosphere->uniform_desc_set.layouts[0],
@@ -158,15 +136,13 @@ void initialize_atmosphere_baker(
             atms_baker.octahedral_write_desc_set.layouts[0],
             atms_baker.volumetrics_desc_set.layouts[0],
         },
-        vk::create::shader_module( vulkan, BAKE_ATMS_MIPS_SHADER_PATH ),
+        vk::create::shader_module( BAKE_ATMS_MIPS_SHADER_PATH ),
         "cs_bake_atmosphere_mips"
     );
 
     // TODO: Refactor this mip generation somewhere else.
     // Mip generation itself should be abstracted away.
     atms_baker.octahedral_sky_mips = engine::create_rwimage_mips(
-        vulkan,
-        engine,
         { mip0_size, mip0_size, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -178,7 +154,7 @@ void initialize_atmosphere_baker(
     atms_baker.mip_data.resize( mip_levels );
     for ( size_t mip = 0; mip < mip_levels; mip++ ) {
         atms_baker.mip_data[mip]
-            = create_uniform_buffer<ub_data::OctahedralData>( vulkan, { }, engine.frame_overlap );
+            = create_uniform_buffer<ub_data::OctahedralData>( { }, engine.frame_overlap );
     }
 }
 
@@ -291,18 +267,15 @@ void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, engine::Tas
 
 void compute_octahedral_sky_mips(
     AtmosphereBaker& atms_baker,
-    vk::Common& vulkan,
-    engine::State& engine,
     engine::TaskList& task_list
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     Atmosphere& atms = *atms_baker.atmosphere;
 
     for ( size_t mip = 0; mip < mip_levels; mip++ ) {
         atms_baker.octahedral_mip_writes.push_back(
             engine::generate_descriptor_set(
-                vulkan,
-                engine,
                 {
                     VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                     VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
@@ -314,15 +287,11 @@ void compute_octahedral_sky_mips(
         );
 
         engine::update_descriptor_set_write_image(
-            vulkan,
-            engine,
             atms_baker.octahedral_mip_writes[mip],
             atms_baker.octahedral_sky,
             0
         );
         engine::update_descriptor_set_rwimage_mip(
-            vulkan,
-            engine,
             atms_baker.octahedral_mip_writes[mip],
             atms_baker.octahedral_sky_mips,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -335,12 +304,10 @@ void compute_octahedral_sky_mips(
 
         // Set this only once per frame.
         for ( uint32_t frame_index = 0; frame_index < engine.frame_overlap; frame_index++ ) {
-            atms_baker.mip_data[mip].update( vulkan, frame_index );
+            atms_baker.mip_data[mip].update( frame_index );
         }
 
         engine::update_descriptor_set_uniform(
-            vulkan,
-            engine,
             atms_baker.octahedral_mip_writes[mip],
             atms_baker.mip_data[mip],
             3
@@ -417,8 +384,6 @@ void compute_octahedral_sky_mips(
 // TODO: the atmosphere baking heavily relies on populated volumetric LUTs, making this tightly
 // coupled. Need some way to skip volumetrics in the atmosphere baker if volumetrics are disabled.
 void dispatch_atmosphere_baker(
-    Context& ctx,
-    engine::State& engine,
     engine::TaskList& task_list,
     engine::DescriptorSet& lut_sets,
     atmosphere::AtmosphereBaker& atms_baker
@@ -429,26 +394,20 @@ void dispatch_atmosphere_baker(
 
     // TODO: As shown in Destiny 2 GDC 2018 talk, we can simply substitute the last glossy mip with
     // this irradiance. It is also possible to simplify glossy irradiance by naive gaussian blur.
-    atmosphere::compute_octahedral_sky_mips( atms_baker, ctx.vulkan, engine, task_list );
+    atmosphere::compute_octahedral_sky_mips( atms_baker, task_list );
 
     engine::update_descriptor_set_image(
-        ctx.vulkan,
-        engine,
         lut_sets,
         atms_baker.octahedral_sky,
         LUT_INDEX::OCTAHEDRAL_SKY
     );
     engine::update_descriptor_set_rwimage(
-        ctx.vulkan,
-        engine,
         lut_sets,
         atms_baker.octahedral_sky_irradiance,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         LUT_INDEX::OCTAHEDRAL_IRRADIANCE
     );
     engine::update_descriptor_set_rwimage(
-        ctx.vulkan,
-        engine,
         lut_sets,
         atms_baker.octahedral_sky_mips,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

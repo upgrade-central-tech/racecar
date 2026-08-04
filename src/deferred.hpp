@@ -30,7 +30,7 @@ struct GBuffers {
     engine::DescriptorSet desc_set;
 };
 
-GBuffers initialize_GBuffers( vk::Common& vulkan, engine::State& engine );
+GBuffers initialize_GBuffers();
 
 std::vector<engine::RWImage*> get_color_attachments( GBuffers& gbuffers );
 engine::RWImage* get_depth_image( GBuffers& gbuffers );
@@ -40,7 +40,7 @@ std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( deferred::GBuffer
 engine::ImageBarrier init_to_color_write( engine::RWImage& image );
 engine::ImageBarrier color_write_to_frag_read( engine::RWImage& image );
 
-void update_desc_sets( vk::Common& vulkan, engine::State& engine, GBuffers& gbuffers );
+void update_desc_sets( GBuffers& gbuffers );
 
 void create_top_pipeline_barriers( deferred::GBuffers& gbuffers,
     engine::RWImage& screen_color,

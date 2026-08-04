@@ -16,10 +16,10 @@ struct GPUMeshBuffers {
     size_t index_buffer_size = 0;
 };
 
-bool create_mesh_buffers( vk::Common& vulkan, GPUMeshBuffers& mesh_buffers,
+bool create_mesh_buffers( GPUMeshBuffers& mesh_buffers,
     size_t vertex_buffer_size, size_t index_buffer_size );
 
-bool upload_mesh_buffers( vk::Common& vulkan, engine::State& engine, GPUMeshBuffers& mesh_buffers,
+bool upload_mesh_buffers( GPUMeshBuffers& mesh_buffers,
     void* vertices_data, void* indices_data );
 
 }

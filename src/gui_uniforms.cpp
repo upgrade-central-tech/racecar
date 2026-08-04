@@ -3,13 +3,12 @@
 namespace racecar {
 
 void update_debug_uniform_buffer(
-    Context& ctx,
-    engine::State& engine,
     gui::Gui& gui,
     atmosphere::Atmosphere& atms,
     UniformBuffer<ub_data::Debug>& debug_buffer
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
 
     ub_data::Debug debug_ub = {
@@ -33,17 +32,16 @@ void update_debug_uniform_buffer(
     };
 
     debug_buffer.set_data( debug_ub );
-    debug_buffer.update( ctx.vulkan, engine.get_frame_index() );
+    debug_buffer.update( engine.get_frame_index() );
 }
 
 void update_material_uniform_buffers(
-    Context& ctx,
-    engine::State& engine,
     gui::Gui& gui,
     std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
     size_t num_materials
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     gui.debug.current_editing_material
         = glm::clamp( gui.debug.current_editing_material, 0, int( num_materials ) );
     int mat_idx = gui.debug.current_editing_material;
@@ -68,7 +66,7 @@ void update_material_uniform_buffers(
     mat_data.glint_randomness = gui.debug.glint_randomness;
 
     material_uniform_buffers[size_t( mat_idx )].set_data( mat_data );
-    material_uniform_buffers[size_t( mat_idx )].update( ctx.vulkan, engine.get_frame_index() );
+    material_uniform_buffers[size_t( mat_idx )].update( engine.get_frame_index() );
 }
 
 }

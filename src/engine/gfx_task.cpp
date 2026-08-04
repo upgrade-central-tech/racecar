@@ -3,9 +3,10 @@
 namespace racecar::engine {
 
 void execute_gfx_task(
-    const engine::State& engine, const VkCommandBuffer& cmd_buf, GfxTask& gfx_task
+    const VkCommandBuffer& cmd_buf, GfxTask& gfx_task
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     const size_t frame_idx = engine.get_frame_index();
 
     std::vector<VkRenderingAttachmentInfo> color_attachment_infos;
@@ -50,7 +51,7 @@ void execute_gfx_task(
     vkCmdBeginRendering( cmd_buf, &rendering_info );
 
     for ( const DrawTask& draw_task : gfx_task.draw_tasks ) {
-        draw( engine, draw_task, cmd_buf, gfx_task.extent );
+        draw( draw_task, cmd_buf, gfx_task.extent );
     }
 
     vkCmdEndRendering( cmd_buf );

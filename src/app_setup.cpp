@@ -15,13 +15,11 @@ namespace {
 
 constexpr size_t NUM_MATERIAL_TEXTURE_BINDINGS = 3;
 
-vk::mem::AllocatedImage create_fallback_texture( Context& ctx, engine::State& engine )
+vk::mem::AllocatedImage create_fallback_texture()
 {
     uint32_t white = 0xFFFFFFFF;
 
     return engine::create_image(
-        ctx.vulkan,
-        engine,
         &white,
         VkExtent3D( 1, 1, 1 ),
         VK_FORMAT_R8G8B8A8_UNORM,
@@ -36,18 +34,16 @@ vk::mem::AllocatedImage create_fallback_texture( Context& ctx, engine::State& en
 Context initialize_context( bool use_fullscreen )
 {
     Context ctx;
-    ctx.window = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, use_fullscreen ),
-    ctx.vulkan = vk::initialize( ctx.window );
+    ctx.window = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, use_fullscreen );
+    vk::initialize( ctx.window );
     return ctx;
 }
 
 void load_scene(
-    Context& ctx, engine::State& engine, scene::Scene* scene, geometry::scene::Mesh* scene_mesh
+    scene::Scene* scene, geometry::scene::Mesh* scene_mesh
 )
 {
     scene::load_gltf(
-        ctx.vulkan,
-        engine,
         GLTF_FILE_PATH,
         *scene,
         scene_mesh->vertices,
@@ -55,52 +51,41 @@ void load_scene(
     );
     geometry::scene::generate_tangents( *scene_mesh );
     scene_mesh->mesh_buffers = geometry::scene::upload_mesh(
-        ctx.vulkan,
-        engine,
         scene_mesh->indices,
         scene_mesh->vertices
     );
 }
 
 void load_camera_debug_uniform_buffers(
-    Context& ctx,
-    engine::State& engine,
     UniformBuffer<ub_data::Camera>* camera_buffer,
     UniformBuffer<ub_data::Debug>* debug_buffer,
     engine::DescriptorSet* uniform_desc_set
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     *camera_buffer = create_uniform_buffer<ub_data::Camera>(
-        ctx.vulkan,
         { },
         static_cast<size_t>( engine.frame_overlap )
     );
     *debug_buffer = create_uniform_buffer<ub_data::Debug>(
-        ctx.vulkan,
         { },
         static_cast<size_t>( engine.frame_overlap )
     );
     // UniformBuffer raymarch_buffer = create_uniform_buffer<ub_data::RaymarchBufferData>(
-    //     ctx.vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
+    //     vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
     *uniform_desc_set = engine::generate_descriptor_set(
-        ctx.vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
             | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     );
 
     engine::update_descriptor_set_uniform(
-        ctx.vulkan,
-        engine,
         *uniform_desc_set,
         *camera_buffer,
         0
     );
     engine::update_descriptor_set_uniform(
-        ctx.vulkan,
-        engine,
         *uniform_desc_set,
         *debug_buffer,
         1
@@ -108,13 +93,12 @@ void load_camera_debug_uniform_buffers(
 }
 
 void load_samplers(
-    Context& ctx,
-    engine::State& engine,
     VkSampler* linear_sampler,
     VkSampler* point_sampler,
     engine::DescriptorSet* sampler_desc_set
 )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
     // Simple set up for linear sampler
     VkSamplerCreateInfo sampler_linear_create_info = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -127,10 +111,10 @@ void load_samplers(
     };
 
     vk::check(
-        vkCreateSampler( ctx.vulkan.device, &sampler_linear_create_info, nullptr, linear_sampler ),
+        vkCreateSampler( vulkan.device, &sampler_linear_create_info, nullptr, linear_sampler ),
         "Failed to create sampler"
     );
-    ctx.vulkan.destructor_stack.push( ctx.vulkan.device, *linear_sampler, vkDestroySampler );
+    vulkan.destructor_stack.push( vulkan.device, *linear_sampler, vkDestroySampler );
 
     VkSamplerCreateInfo sampler_nearest_create_info = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -143,29 +127,23 @@ void load_samplers(
     };
 
     vk::check(
-        vkCreateSampler( ctx.vulkan.device, &sampler_nearest_create_info, nullptr, point_sampler ),
+        vkCreateSampler( vulkan.device, &sampler_nearest_create_info, nullptr, point_sampler ),
         "Failed to create nearest smapler!"
     );
-    ctx.vulkan.destructor_stack.push( ctx.vulkan.device, *point_sampler, vkDestroySampler );
+    vulkan.destructor_stack.push( vulkan.device, *point_sampler, vkDestroySampler );
 
     *sampler_desc_set = engine::generate_descriptor_set(
-        ctx.vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_SAMPLER, VK_DESCRIPTOR_TYPE_SAMPLER },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
     engine::update_descriptor_set_sampler(
-        ctx.vulkan,
-        engine,
         *sampler_desc_set,
         *linear_sampler,
         0
     );
 
     engine::update_descriptor_set_sampler(
-        ctx.vulkan,
-        engine,
         *sampler_desc_set,
         *point_sampler,
         1
@@ -173,19 +151,16 @@ void load_samplers(
 }
 
 void load_materials(
-    Context& ctx,
-    engine::State& engine,
     scene::Scene& scene,
     size_t num_materials,
     std::vector<engine::DescriptorSet>* material_desc_sets,
     std::vector<UniformBuffer<ub_data::Material>>* material_uniform_buffers
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < num_materials; i++ ) {
         // Generate a separate texture descriptor set for each of the materials
         ( *material_desc_sets )[i] = engine::generate_descriptor_set(
-            ctx.vulkan,
-            engine,
             {
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
@@ -198,7 +173,6 @@ void load_materials(
         scene::Material& mat = scene.materials[i];
 
         UniformBuffer material_buffer = create_uniform_buffer<ub_data::Material>(
-            ctx.vulkan,
             { },
             static_cast<size_t>( engine.frame_overlap )
         );
@@ -232,11 +206,9 @@ void load_materials(
         };
 
         material_buffer.set_data( material_ub );
-        material_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        material_buffer.update( engine.get_frame_index() );
 
         engine::update_descriptor_set_uniform(
-            ctx.vulkan,
-            engine,
             ( *material_desc_sets )[i],
             material_buffer,
             3
@@ -246,18 +218,15 @@ void load_materials(
 }
 
 void load_model_mat_uniform_buffers(
-    Context& ctx,
-    engine::State& engine,
     size_t num_nodes,
     scene::Scene* scene,
     std::vector<engine::DescriptorSet>* model_mat_desc_sets,
     std::vector<UniformBuffer<ub_data::ModelMat>>* model_mat_uniform_buffers
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < num_nodes; i++ ) {
         ( *model_mat_desc_sets )[i] = engine::generate_descriptor_set(
-            ctx.vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
             VK_SHADER_STAGE_VERTEX_BIT
         );
@@ -270,7 +239,6 @@ void load_model_mat_uniform_buffers(
         }
 
         UniformBuffer model_mat_buffer = create_uniform_buffer<ub_data::ModelMat>(
-            ctx.vulkan,
             { },
             static_cast<size_t>( engine.frame_overlap )
         );
@@ -279,11 +247,9 @@ void load_model_mat_uniform_buffers(
                                            .inv_model_mat = glm::inverse( transform ),
                                            .prev_model_mat = transform };
         model_mat_buffer.set_data( model_mat_ub );
-        model_mat_buffer.update( ctx.vulkan, engine.get_frame_index() );
+        model_mat_buffer.update( engine.get_frame_index() );
 
         engine::update_descriptor_set_uniform(
-            ctx.vulkan,
-            engine,
             ( *model_mat_desc_sets )[i],
             model_mat_buffer,
             0
@@ -293,31 +259,26 @@ void load_model_mat_uniform_buffers(
 }
 
 void create_raymarch_tex_sets(
-    Context& ctx, engine::State& engine, engine::DescriptorSet* raymarch_tex_sets
+    engine::DescriptorSet* raymarch_tex_sets
 )
 {
     *raymarch_tex_sets = engine::generate_descriptor_set(
-        ctx.vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
-    vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D( ctx.vulkan, engine );
-    engine::update_descriptor_set_image( ctx.vulkan, engine, *raymarch_tex_sets, test_data_3D, 0 );
+    vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D();
+    engine::update_descriptor_set_image( *raymarch_tex_sets, test_data_3D, 0 );
 }
 
 void create_screen_buffers(
-    Context& ctx,
-    engine::State& engine,
     engine::RWImage* screen_color,
     engine::RWImage* screen_buffer,
     engine::RWImage* screen_history
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     *screen_color = engine::create_rwimage(
-        ctx.vulkan,
-        engine,
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -329,8 +290,6 @@ void create_screen_buffers(
     // Buffer needed, this is what the final compute pass will write to.
     // We will later copy the results of this back to `screen_color`, and blit it to the swapchain.
     *screen_buffer = engine::create_rwimage(
-        ctx.vulkan,
-        engine,
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -340,8 +299,6 @@ void create_screen_buffers(
 
     // Stores the last-rendered image. Needed for TAA/motion-vectors
     *screen_history = engine::create_rwimage(
-        ctx.vulkan,
-        engine,
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -350,16 +307,12 @@ void create_screen_buffers(
     );
 
     engine::initialize_rwimage_layout(
-        ctx.vulkan,
-        engine,
         *screen_history,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     );
 }
 
 void load_model_primitive_material_data(
-    Context& ctx,
-    engine::State& engine,
     const scene::Scene& scene,
     const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
     std::vector<glm::mat4>& transforms,
@@ -370,7 +323,7 @@ void load_model_primitive_material_data(
     std::vector<engine::DescriptorSet>& material_desc_sets
 )
 {
-    const vk::mem::AllocatedImage fallback_texture = create_fallback_texture( ctx, engine );
+    const vk::mem::AllocatedImage fallback_texture = create_fallback_texture();
 
     int tex_count = 0;
     for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
@@ -453,8 +406,6 @@ void load_model_primitive_material_data(
                     const bool has_texture = i < textures_needed.size() && textures_needed[i];
 
                     engine::update_descriptor_set_image(
-                        ctx.vulkan,
-                        engine,
                         material_desc_sets[static_cast<size_t>( prim.material_id )],
                         has_texture ? textures_needed[i]->data.value() : fallback_texture,
                         static_cast<int>( i )

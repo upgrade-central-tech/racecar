@@ -11,8 +11,6 @@ static constexpr std::string_view ANTI_ALIASING_SHADER_PATH = "../shaders/post/a
 static constexpr std::string_view HISTORY_SHADER_PATH = "../shaders/post/aa/history_aa.spv";
 
 AAPass add_aa(
-    vk::Common& vulkan,
-    State& engine,
     const RWImage& input,
     const RWImage& GBuffer_Depth,
     const RWImage& GBuffer_Velocity,
@@ -22,13 +20,13 @@ AAPass add_aa(
     UniformBuffer<ub_data::Camera>& camera_buffer
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     AAPass pass;
     {
-        pass.buffer = create_uniform_buffer<ub_data::AA>( vulkan, { }, engine.frame_overlap );
+        pass.buffer = create_uniform_buffer<ub_data::AA>( { }, engine.frame_overlap );
 
         engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             {
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // scene_color
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // scene_history
@@ -43,60 +41,46 @@ AAPass add_aa(
         );
 
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             uniform_desc_set,
             input,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             uniform_desc_set,
             history,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             1
         );
         engine::update_descriptor_set_depth_image(
-            vulkan,
-            engine,
             uniform_desc_set,
             GBuffer_Depth,
             2
         );
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             uniform_desc_set,
             GBuffer_Velocity,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             3
         );
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             uniform_desc_set,
             output,
             VK_IMAGE_LAYOUT_GENERAL,
             4
         );
         engine::update_descriptor_set_sampler(
-            vulkan,
-            engine,
             uniform_desc_set,
             vulkan.global_samplers.linear_sampler,
             5
         );
-        engine::update_descriptor_set_uniform( vulkan, engine, uniform_desc_set, camera_buffer, 6 );
-        engine::update_descriptor_set_uniform( vulkan, engine, uniform_desc_set, pass.buffer, 7 );
+        engine::update_descriptor_set_uniform( uniform_desc_set, camera_buffer, 6 );
+        engine::update_descriptor_set_uniform( uniform_desc_set, pass.buffer, 7 );
 
         pass.uniform_desc_set
             = std::make_unique<engine::DescriptorSet>( std::move( uniform_desc_set ) );
 
         engine::DescriptorSet history_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             {
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
@@ -111,16 +95,12 @@ AAPass add_aa(
         );
 
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             history_desc_set,
             output,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             history_desc_set,
             history,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -135,9 +115,8 @@ AAPass add_aa(
         task_list,
         {
             .pipeline = engine::create_compute_pipeline(
-                vulkan,
                 { pass.uniform_desc_set->layouts[0] },
-                vk::create::shader_module( vulkan, ANTI_ALIASING_SHADER_PATH ),
+                vk::create::shader_module( ANTI_ALIASING_SHADER_PATH ),
                 "cs_main"
             ),
             .descriptor_sets = { pass.uniform_desc_set.get() },
@@ -181,9 +160,8 @@ AAPass add_aa(
         task_list,
         {
             .pipeline = engine::create_compute_pipeline(
-                vulkan,
                 { pass.history_desc_set->layouts[0] },
-                vk::create::shader_module( vulkan, HISTORY_SHADER_PATH ),
+                vk::create::shader_module( HISTORY_SHADER_PATH ),
                 "cs_write_history"
             ),
             .descriptor_sets = { pass.history_desc_set.get() },
@@ -227,13 +205,14 @@ AAPass add_aa(
 }
 
 void update_aa_uniform_buffer(
-    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::AAPass& aa_pass
+    const gui::Gui& gui, engine::post::AAPass& aa_pass
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     ub_data::AA aa_ub = aa_pass.buffer.get_data();
     aa_ub.mode = static_cast<int>( gui.aa.mode );
     aa_pass.buffer.set_data( aa_ub );
-    aa_pass.buffer.update( vulkan, engine.get_frame_index() );
+    aa_pass.buffer.update( engine.get_frame_index() );
 }
 
 }

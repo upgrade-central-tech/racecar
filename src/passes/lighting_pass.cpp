@@ -96,15 +96,11 @@ void create_terrain_car_screen_pipeline_barrier(
 }
 
 void create_lighting_pass_resources(
-    Context& ctx,
-    engine::State& engine,
     LightingPassDescSets desc_sets,
     engine::Pipeline* lighting_pass_pipeline
 )
 {
     *lighting_pass_pipeline = engine::create_gfx_pipeline(
-        engine,
-        ctx.vulkan,
         engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance() ),
         { desc_sets.uniform_desc_set.layouts[0],
           desc_sets.material_desc_sets[0].layouts[0],
@@ -120,19 +116,19 @@ void create_lighting_pass_resources(
         VK_SAMPLE_COUNT_1_BIT,
         true,
         false,
-        vk::create::shader_module( ctx.vulkan, LIGHTING_PASS_SHADER_MODULE_PATH ),
+        vk::create::shader_module( LIGHTING_PASS_SHADER_MODULE_PATH ),
         false
     );
 }
 
 void car_lighting_pass(
-    engine::State& engine,
     LightingPassDescSets desc_sets,
     engine::Pipeline& lighting_pass_pipeline,
     engine::RWImage& screen_color,
     engine::TaskList& task_list
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
 
     engine::GfxTask lighting_pass_gfx_task = { .clear_depth = 1.0f,

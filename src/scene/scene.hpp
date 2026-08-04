@@ -116,13 +116,13 @@ struct Scene {
     DemoSceneNodes demo_scene_nodes;
 };
 
-void load_gltf( vk::Common& vulkan, engine::State& engine, std::filesystem::path file_path,
+void load_gltf( std::filesystem::path file_path,
     Scene& scene, std::vector<geometry::scene::Vertex>& out_vertices,
     std::vector<uint32_t>& out_indices );
 
-bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene );
+bool load_hdri( std::string file_path, Scene& scene );
 
-void propagate_transform( vk::Common vulkan, engine::State& engine, Scene& scene,
+void propagate_transform( Scene& scene,
     std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers, size_t start_node_id,
     glm::mat4 transform, std::vector<bool>& discovered );
 

@@ -5,12 +5,12 @@
 namespace racecar::engine {
 
 void draw(
-    const engine::State& engine,
     const DrawTask& draw_task,
     const VkCommandBuffer& cmd_buf,
     const VkExtent2D extent
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     vkCmdBindPipeline( cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, draw_task.pipeline.handle );
 
     // Dynamically set viewport state

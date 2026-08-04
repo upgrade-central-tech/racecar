@@ -63,8 +63,6 @@ VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color
 }
 
 void load_gltf(
-    vk::Common& vulkan,
-    engine::State& engine,
     std::filesystem::path file_path,
     Scene& scene,
     std::vector<geometry::scene::Vertex>& out_global_vertices,
@@ -239,8 +237,6 @@ void load_gltf(
             = get_vk_format( texture.bits_per_channel, texture.num_channels, texture.color_space );
 
         texture.data = engine::create_image(
-            vulkan,
-            engine,
             static_cast<void*>( loaded_img.image.data() ),
             { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
             image_format,
@@ -580,7 +576,7 @@ void load_gltf(
     }
 }
 
-bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path, Scene& scene )
+bool load_hdri( std::string file_path, Scene& scene )
 {
     int x = 0, y = 0, channels = 0;
     float* hdriData = stbi_loadf( file_path.c_str(), &x, &y, &channels, 4 );
@@ -599,8 +595,6 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
     VkFormat image_format
         = get_vk_format( hdri.bits_per_channel, hdri.num_channels, ColorSpace::SFLOAT );
     hdri.data = engine::create_image(
-        vulkan,
-        engine,
         static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
         image_format,
@@ -615,8 +609,6 @@ bool load_hdri( vk::Common vulkan, engine::State& engine, std::string file_path,
 }
 
 void propagate_transform(
-    vk::Common vulkan,
-    engine::State& engine,
     Scene& scene,
     std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
     size_t start_node_id,
@@ -624,6 +616,7 @@ void propagate_transform(
     std::vector<bool>& discovered
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     std::vector<size_t> stack;
     stack.push_back( start_node_id );
 
@@ -643,7 +636,7 @@ void propagate_transform(
         model_mat_ub.inv_model_mat = glm::inverse( model_mat_ub.model_mat );
 
         model_mat_uniform_buffers.at( current_node_id ).set_data( model_mat_ub );
-        model_mat_uniform_buffers.at( current_node_id ).update( vulkan, engine.get_frame_index() );
+        model_mat_uniform_buffers.at( current_node_id ).update( engine.get_frame_index() );
 
         for ( Node* child : scene.nodes.at( current_node_id )->children ) {
             stack.push_back( child->id );

@@ -8,7 +8,6 @@ namespace racecar {
 
 struct Context {
     SDL_Window* window = nullptr;
-    vk::Common vulkan;
 };
 
 } // namespace racecar

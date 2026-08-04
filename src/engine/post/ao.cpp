@@ -7,17 +7,15 @@ const std::filesystem::path AO_SHADER_MODULE_PATH = "../shaders/post/ao/ao.spv";
 
 namespace racecar::engine::post {
 
-void initialize_ao_pass( vk::Common& vulkan, engine::State& engine, AoPass& ao_pass )
+void initialize_ao_pass( AoPass& ao_pass )
 {
+    const engine::State& engine = engine::State::GetConst();
     ao_pass.ao_buffer = create_uniform_buffer<ub_data::AOData>(
-        vulkan,
         { },
         static_cast<size_t>( engine.frame_overlap )
     );
 
     ao_pass.uniform_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         {
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -26,8 +24,6 @@ void initialize_ao_pass( vk::Common& vulkan, engine::State& engine, AoPass& ao_p
     );
 
     ao_pass.texture_desc_set = engine::generate_descriptor_set(
-        vulkan,
-        engine,
         {
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
@@ -38,23 +34,17 @@ void initialize_ao_pass( vk::Common& vulkan, engine::State& engine, AoPass& ao_p
     );
 
     engine::update_descriptor_set_uniform(
-        vulkan,
-        engine,
         ao_pass.uniform_desc_set,
         *ao_pass.camera_buffer,
         0
     );
     engine::update_descriptor_set_uniform(
-        vulkan,
-        engine,
         ao_pass.uniform_desc_set,
         ao_pass.ao_buffer,
         1
     );
 
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         ao_pass.texture_desc_set,
         *ao_pass.out_color,
         VK_IMAGE_LAYOUT_GENERAL,
@@ -62,24 +52,18 @@ void initialize_ao_pass( vk::Common& vulkan, engine::State& engine, AoPass& ao_p
     );
 
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         ao_pass.texture_desc_set,
         *ao_pass.in_color,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
     engine::update_descriptor_set_rwimage(
-        vulkan,
-        engine,
         ao_pass.texture_desc_set,
         *ao_pass.GBuffer_Normal,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         2
     );
     engine::update_descriptor_set_depth_image(
-        vulkan,
-        engine,
         ao_pass.texture_desc_set,
         *ao_pass.GBuffer_Depth,
         3
@@ -88,17 +72,16 @@ void initialize_ao_pass( vk::Common& vulkan, engine::State& engine, AoPass& ao_p
     return;
 }
 
-void add_ao( AoPass& ao_pass, vk::Common& vulkan, engine::State& engine, TaskList& task_list )
+void add_ao( AoPass& ao_pass, TaskList& task_list )
 {
-    initialize_ao_pass( vulkan, engine, ao_pass );
+    initialize_ao_pass( ao_pass );
 
     engine::Pipeline cs_ao_pipeline = engine::create_compute_pipeline(
-        vulkan,
         {
             ao_pass.uniform_desc_set.layouts[0],
             ao_pass.texture_desc_set.layouts[0],
         },
-        vk::create::shader_module( vulkan, AO_SHADER_MODULE_PATH ),
+        vk::create::shader_module( AO_SHADER_MODULE_PATH ),
         "cs_ao"
     );
 
@@ -120,9 +103,10 @@ void add_ao( AoPass& ao_pass, vk::Common& vulkan, engine::State& engine, TaskLis
 }
 
 void update_ao_uniform_buffer(
-    vk::Common& vulkan, engine::State& engine, const gui::Gui& gui, engine::post::AoPass& ao_pass
+    const gui::Gui& gui, engine::post::AoPass& ao_pass
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     ub_data::AOData ao_ub = ao_pass.ao_buffer.get_data();
 
     ao_ub.packed_floats0 = glm::vec4(
@@ -134,7 +118,7 @@ void update_ao_uniform_buffer(
     ao_ub.packed_floats1 = glm::vec4( gui.ao.enable_ao ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f );
 
     ao_pass.ao_buffer.set_data( ao_ub );
-    ao_pass.ao_buffer.update( vulkan, engine.get_frame_index() );
+    ao_pass.ao_buffer.update( engine.get_frame_index() );
 }
 
 }

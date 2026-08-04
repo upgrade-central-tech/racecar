@@ -16,13 +16,13 @@ constexpr std::string_view UPSAMPLE_SHADER_PATH = "../shaders/post/bloom/upsampl
 
 void add_bloom(
     BloomPass* pass_out,
-    vk::Common& vulkan,
-    const State& engine,
     TaskList& task_list,
     RWImage& inout,
     RWImage& write_only
 )
 {
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
     BloomPass& pass = *pass_out;
 
     // The threshold pass samples inout and stores to write_only. Both arrive in the
@@ -34,8 +34,6 @@ void add_bloom(
 
         for ( size_t i = 0; i < BloomPass::NUM_PASSES; ++i ) {
             pass.images[i] = engine::create_rwimage(
-                vulkan,
-                engine,
                 current_extent,
                 VK_FORMAT_R16G16B16A16_SFLOAT,
                 VK_IMAGE_TYPE_2D,
@@ -64,15 +62,13 @@ void add_bloom(
     }
 
     {
-        pass.bloom_ub = create_uniform_buffer<ub_data::Bloom>( vulkan, { }, engine.frame_overlap );
+        pass.bloom_ub = create_uniform_buffer<ub_data::Bloom>( { }, engine.frame_overlap );
 
         engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
-        engine::update_descriptor_set_uniform( vulkan, engine, uniform_desc_set, pass.bloom_ub, 0 );
+        engine::update_descriptor_set_uniform( uniform_desc_set, pass.bloom_ub, 0 );
 
         pass.uniform_desc_set
             = std::make_unique<engine::DescriptorSet>( std::move( uniform_desc_set ) );
@@ -80,14 +76,10 @@ void add_bloom(
 
     {
         engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_SAMPLER },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
         engine::update_descriptor_set_sampler(
-            vulkan,
-            engine,
             sampler_desc_set,
             vulkan.global_samplers.linear_sampler,
             0
@@ -99,22 +91,16 @@ void add_bloom(
 
     {
         engine::DescriptorSet threshold_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             threshold_desc_set,
             inout,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             threshold_desc_set,
             write_only,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -122,9 +108,8 @@ void add_bloom(
         );
 
         engine::Pipeline threshold_pipeline = engine::create_compute_pipeline(
-            vulkan,
             { threshold_desc_set.layouts[0], pass.uniform_desc_set->layouts[0] },
-            vk::create::shader_module( vulkan, THRESHOLD_SHADER_PATH ),
+            vk::create::shader_module( THRESHOLD_SHADER_PATH ),
             "threshold"
         );
 
@@ -143,7 +128,7 @@ void add_bloom(
         );
     }
 
-    VkShaderModule downsample_shader = vk::create::shader_module( vulkan, DOWNSAMPLE_SHADER_PATH );
+    VkShaderModule downsample_shader = vk::create::shader_module( DOWNSAMPLE_SHADER_PATH );
 
     for ( size_t i = 0; i < BloomPass::NUM_PASSES; ++i ) {
         engine::add_pipeline_barrier(
@@ -178,22 +163,16 @@ void add_bloom(
         VkExtent3D output_extent = pass.images[i].images[0].image_extent;
 
         engine::DescriptorSet downsample_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             downsample_desc_set,
             input_image,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             downsample_desc_set,
             pass.images[i],
             VK_IMAGE_LAYOUT_GENERAL,
@@ -201,7 +180,6 @@ void add_bloom(
         );
 
         engine::Pipeline downsample_pipeline = engine::create_compute_pipeline(
-            vulkan,
             { downsample_desc_set.layouts[0],
               pass.uniform_desc_set->layouts[0],
               pass.sampler_desc_set->layouts[0] },
@@ -225,7 +203,7 @@ void add_bloom(
         );
     }
 
-    VkShaderModule upsample_shader = vk::create::shader_module( vulkan, UPSAMPLE_SHADER_PATH );
+    VkShaderModule upsample_shader = vk::create::shader_module( UPSAMPLE_SHADER_PATH );
 
     for ( int signed_i = BloomPass::NUM_PASSES - 1; signed_i >= 0; --signed_i ) {
         size_t i = static_cast<size_t>( signed_i );
@@ -262,22 +240,16 @@ void add_bloom(
         VkExtent3D output_extent = output_image.images[0].image_extent;
 
         engine::DescriptorSet upsample_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             upsample_desc_set,
             pass.images[i],
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
         engine::update_descriptor_set_rwimage(
-            vulkan,
-            engine,
             upsample_desc_set,
             output_image,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -285,7 +257,6 @@ void add_bloom(
         );
 
         engine::Pipeline upsample_pipeline = engine::create_compute_pipeline(
-            vulkan,
             { upsample_desc_set.layouts[0],
               pass.uniform_desc_set->layouts[0],
               pass.sampler_desc_set->layouts[0] },
@@ -331,12 +302,11 @@ void add_bloom(
 }
 
 void update_bloom_uniform_buffer(
-    vk::Common& vulkan,
-    engine::State& engine,
     const gui::Gui& gui,
     engine::post::BloomPass& bloom_pass
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();
 
     bloom_ub.enable = gui.bloom.enable ? 1 : 0;
@@ -344,7 +314,7 @@ void update_bloom_uniform_buffer(
     bloom_ub.filter_radius = gui.bloom.filter_radius;
 
     bloom_pass.bloom_ub.set_data( bloom_ub );
-    bloom_pass.bloom_ub.update( vulkan, engine.get_frame_index() );
+    bloom_pass.bloom_ub.update( engine.get_frame_index() );
 }
 
 }

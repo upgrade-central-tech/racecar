@@ -11,9 +11,10 @@
 
 namespace racecar::engine {
 
-void execute( State& engine, Context& ctx, TaskList& task_list, const gui::Gui& gui )
+void execute( TaskList& task_list, const gui::Gui& gui )
 {
-    vk::Common& vulkan = ctx.vulkan;
+    engine::State& engine = engine::State::GetMut();
+    const vk::Common& vulkan = vk::Common::GetConst();
 
     size_t frame_number = engine.get_frame_index();
     FrameData& frame = engine.frames[frame_number];
@@ -133,7 +134,7 @@ void execute( State& engine, Context& ctx, TaskList& task_list, const gui::Gui& 
                 } );
 
             if ( search != task_list.pipeline_barriers.end() ) {
-                run_pipeline_barrier( engine, ( *search ).second, frame.render_cmdbuf );
+                run_pipeline_barrier( ( *search ).second, frame.render_cmdbuf );
             }
 #else
             // Current implementation only handles 1 pipeline barrier for a given task_ptr.
@@ -144,7 +145,7 @@ void execute( State& engine, Context& ctx, TaskList& task_list, const gui::Gui& 
 
             for ( auto& [barrier_index, barrier] : task_list.pipeline_barriers ) {
                 if ( barrier_index == task_index ) {
-                    run_pipeline_barrier( engine, barrier, frame.render_cmdbuf );
+                    run_pipeline_barrier( barrier, frame.render_cmdbuf );
                 }
             }
 #endif
@@ -157,7 +158,7 @@ void execute( State& engine, Context& ctx, TaskList& task_list, const gui::Gui& 
                     break;
                 }
 
-                execute_gfx_task( engine, frame.render_cmdbuf, gfx_task );
+                execute_gfx_task( frame.render_cmdbuf, gfx_task );
                 break;
             }
 
@@ -169,7 +170,7 @@ void execute( State& engine, Context& ctx, TaskList& task_list, const gui::Gui& 
                     break;
                 }
 
-                execute_cs_task( engine, frame.render_cmdbuf, cs_task );
+                execute_cs_task( frame.render_cmdbuf, cs_task );
                 break;
             }
 
@@ -185,7 +186,7 @@ void execute( State& engine, Context& ctx, TaskList& task_list, const gui::Gui& 
                     ? blit_task.out_color->images[output_swapchain_index].image
                     : output_image;
 
-                execute_blit_task( engine, frame.render_cmdbuf, blit_task, dst_image );
+                execute_blit_task( frame.render_cmdbuf, blit_task, dst_image );
                 break;
             }
 

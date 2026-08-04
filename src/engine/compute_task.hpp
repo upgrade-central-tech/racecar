@@ -19,6 +19,6 @@ struct ComputeTask {
 };
 
 void execute_cs_task(
-    const engine::State& engine, const VkCommandBuffer& cmd_buf, ComputeTask& compute_task );
+    const VkCommandBuffer& cmd_buf, ComputeTask& compute_task );
 
 } // namespace racecar::engine

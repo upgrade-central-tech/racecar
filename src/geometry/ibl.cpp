@@ -29,9 +29,11 @@ glm::vec3 cubemap_direction( uint32_t face, float u, float v )
 }
 
 vk::mem::AllocatedImage generate_diffuse_irradiance(
-    std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine
+    std::filesystem::path file_path
 )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
+    const engine::State& engine = engine::State::GetConst();
     // Parse the cubemap for each face individually. Somehow log important info?
     const size_t layer_count = 6;
     uint32_t tile_width = 256;
@@ -39,10 +41,10 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
     VkExtent3D tile_extent = { tile_width, tile_height, 1 };
 
     vk::mem::AllocatedImage cubemap_image
-        = allocate_cube_map( vulkan, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
+        = allocate_cube_map( tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
 
     vk::mem::AllocatedImage irradiance_rw_image
-        = allocate_cube_map( vulkan, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
+        = allocate_cube_map( tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
 
     {
         // hardcode file paths for now because screw you
@@ -61,8 +63,6 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
         // Need to upload all of these
         // Batched upload necessary. I can't use my brain right now to use our API effectively
         load_cubemap(
-            vulkan,
-            engine,
             face_data,
             cubemap_image,
             tile_extent,
@@ -71,15 +71,11 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
     }
     {
         engine::DescriptorSet prefilter_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
         engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_SAMPLER },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
@@ -101,31 +97,27 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
             vulkan.destructor_stack.push( vulkan.device, sampler, vkDestroySampler );
         }
 
-        engine::update_descriptor_set_image( vulkan, engine, prefilter_desc_set, cubemap_image, 0 );
+        engine::update_descriptor_set_image( prefilter_desc_set, cubemap_image, 0 );
         engine::update_descriptor_set_write_image(
-            vulkan,
-            engine,
             prefilter_desc_set,
             irradiance_rw_image,
             1
         );
 
-        engine::update_descriptor_set_sampler( vulkan, engine, sampler_desc_set, sampler, 0 );
+        engine::update_descriptor_set_sampler( sampler_desc_set, sampler, 0 );
 
         VkShaderModule irradiance_module
-            = vk::create::shader_module( vulkan, "../shaders/prefilter/irradiance.spv" );
+            = vk::create::shader_module( "../shaders/prefilter/irradiance.spv" );
 
         std::vector<engine::DescriptorSet> descs = { prefilter_desc_set, sampler_desc_set };
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
-            vulkan,
             { descs[0].layouts[0], descs[1].layouts[0] },
             irradiance_module,
             "cs_compute_irradiance"
         );
 
         engine::immediate_submit(
-            vulkan,
             engine.immediate_submit,
             [&]( VkCommandBuffer command_buffer ) {
                 // RW cubemap transition first
@@ -183,17 +175,15 @@ vk::mem::AllocatedImage generate_diffuse_irradiance(
 
 vk::mem::AllocatedImage cs_generate_diffuse_sh(
     vk::mem::AllocatedImage sample_cubemap,
-    VkSampler sampler,
-    vk::Common& vulkan,
-    engine::State& engine
+    VkSampler sampler
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     // Hardcode them to be 9 coefficients for now.
     std::vector<glm::vec3> SH_coefficients( 9, glm::vec3( 0.0f ) );
 
     // Allocate the coefficeints.
     vk::mem::AllocatedImage sh_coefficients_image = engine::allocate_image(
-        vulkan,
         { 9, 6, 1 },
         VK_FORMAT_R32G32B32A32_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -206,46 +196,36 @@ vk::mem::AllocatedImage cs_generate_diffuse_sh(
 
     {
         engine::DescriptorSet sh_projection_desc0_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
         engine::DescriptorSet sh_projection_desc1_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
         engine::DescriptorSet sampler_desc_set = engine::generate_descriptor_set(
-            vulkan,
-            engine,
             { VK_DESCRIPTOR_TYPE_SAMPLER },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
         engine::update_descriptor_set_image(
-            vulkan,
-            engine,
             sh_projection_desc0_set,
             sample_cubemap,
             0
         );
 
-        engine::update_descriptor_set_sampler( vulkan, engine, sampler_desc_set, sampler, 0 );
+        engine::update_descriptor_set_sampler( sampler_desc_set, sampler, 0 );
 
         engine::update_descriptor_set_write_image(
-            vulkan,
-            engine,
             sh_projection_desc1_set,
             sh_coefficients_image,
             0
         );
 
         VkShaderModule irradiance_module
-            = vk::create::shader_module( vulkan, "../shaders/prefilter/irradiance_sh.spv" );
+            = vk::create::shader_module( "../shaders/prefilter/irradiance_sh.spv" );
 
         std::vector<engine::DescriptorSet> descs
             = { sh_projection_desc0_set, sampler_desc_set, sh_projection_desc1_set };
@@ -257,14 +237,12 @@ vk::mem::AllocatedImage cs_generate_diffuse_sh(
         };
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
-            vulkan,
             { descs[0].layouts[0], descs[1].layouts[0], descs[2].layouts[0] },
             irradiance_module,
             "cs_compute_irradiance_sh"
         );
 
         engine::immediate_submit(
-            vulkan,
             engine.immediate_submit,
             [&]( VkCommandBuffer command_buffer ) {
                 // RW cubemap transition first
@@ -413,8 +391,9 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
 }
 
 vk::mem::AllocatedImage
-allocate_cube_map( vk::Common& vulkan, VkExtent3D extent, VkFormat format, uint32_t mip_levels )
+allocate_cube_map( VkExtent3D extent, VkFormat format, uint32_t mip_levels )
 {
+    vk::Common& vulkan = vk::Common::GetMut();
     vk::mem::AllocatedImage allocated_image = {
         .image_extent = extent,
         .image_format = format,
@@ -522,7 +501,7 @@ allocate_cube_map( vk::Common& vulkan, VkExtent3D extent, VkFormat format, uint3
 }
 
 vk::mem::AllocatedImage
-create_cubemap( std::filesystem::path file_path, vk::Common& vulkan, engine::State& engine )
+create_cubemap( std::filesystem::path file_path )
 {
     // Parse the cubemap for each face individually. Somehow log important info?
     const size_t layer_count = 6;
@@ -531,7 +510,7 @@ create_cubemap( std::filesystem::path file_path, vk::Common& vulkan, engine::Sta
     VkExtent3D tile_extent = { tile_width, tile_height, 1 };
 
     vk::mem::AllocatedImage cubemap_image
-        = allocate_cube_map( vulkan, tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
+        = allocate_cube_map( tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
 
     // hardcode file paths for now because screw you
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
@@ -549,8 +528,6 @@ create_cubemap( std::filesystem::path file_path, vk::Common& vulkan, engine::Sta
     // Need to upload all of these
     // Batched upload necessary. I can't use my brain right now to use our API effectively
     load_cubemap(
-        vulkan,
-        engine,
         face_data,
         cubemap_image,
         tile_extent,
@@ -562,14 +539,13 @@ create_cubemap( std::filesystem::path file_path, vk::Common& vulkan, engine::Sta
 
 template <typename T>
 void load_cubemap(
-    vk::Common& vulkan,
-    engine::State& engine,
     std::vector<std::vector<T>>& face_data,
     vk::mem::AllocatedImage& cm_image,
     VkExtent3D extent,
     VkFormat format
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     const size_t layer_count = 6;
     const size_t face_size
         = extent.width * extent.height * vk::utility::bytes_from_format( format );
@@ -577,7 +553,6 @@ void load_cubemap(
 
     try {
         vk::mem::AllocatedBuffer upload_buffer = vk::mem::create_buffer(
-            vulkan,
             data_size,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VMA_MEMORY_USAGE_CPU_TO_GPU
@@ -604,7 +579,6 @@ void load_cubemap(
         }
 
         engine::immediate_submit(
-            vulkan,
             engine.immediate_submit,
             [&]( VkCommandBuffer command_buffer ) {
                 vk::utility::transition_image(

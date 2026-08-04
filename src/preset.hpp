@@ -59,7 +59,7 @@ struct PresetTransition {
 std::vector<Preset> load_presets();
 Preset parse_preset_json( std::filesystem::path json_path );
 
-void update_preset_transition( Context& ctx, engine::State& engine, gui::Gui& gui,
+void update_preset_transition( gui::Gui& gui,
     std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
     atmosphere::Atmosphere& atms );
 

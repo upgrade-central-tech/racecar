@@ -24,8 +24,9 @@ void PushDepthPrepassMS(
     );
 }
 
-engine::GfxTask create_depth_ms_gfx_task( engine::State& engine, deferred::GBuffers* gbuffers )
+engine::GfxTask create_depth_ms_gfx_task( deferred::GBuffers* gbuffers )
 {
+    const engine::State& engine = engine::State::GetConst();
     return {
         .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
         .clear_depth = 1.f,
@@ -36,8 +37,6 @@ engine::GfxTask create_depth_ms_gfx_task( engine::State& engine, deferred::GBuff
 }
 
 void create_depth_ms_prepass(
-    Context& ctx,
-    engine::State& engine,
     engine::DescriptorSet* depth_uniform_desc_set,
     engine::Pipeline* depth_ms_pipeline,
     const UniformBuffer<ub_data::Camera>& camera_buffer,
@@ -46,16 +45,13 @@ void create_depth_ms_prepass(
     engine::DepthPrepassMS* depth_prepass_ms
 )
 {
+    const engine::State& engine = engine::State::GetConst();
     *depth_uniform_desc_set = engine::generate_descriptor_set(
-        ctx.vulkan,
-        engine,
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT
     );
 
     engine::update_descriptor_set_uniform(
-        ctx.vulkan,
-        engine,
         *depth_uniform_desc_set,
         camera_buffer,
         0
@@ -66,8 +62,6 @@ void create_depth_ms_prepass(
         // Pipeline needs to support MSAA
         size_t frame_index = engine.get_frame_index();
         *depth_ms_pipeline = create_gfx_pipeline(
-            engine,
-            ctx.vulkan,
             VkPipelineVertexInputStateCreateInfo {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
                 .vertexBindingDescriptionCount = 1,
@@ -80,7 +74,7 @@ void create_depth_ms_prepass(
             VK_SAMPLE_COUNT_4_BIT,
             false,
             true,
-            vk::create::shader_module( ctx.vulkan, DEPTH_PREPASS_SHADER_MODULE_PATH ),
+            vk::create::shader_module( DEPTH_PREPASS_SHADER_MODULE_PATH ),
             false
         );
     } catch ( const Exception& ex ) {
@@ -88,7 +82,7 @@ void create_depth_ms_prepass(
         throw;
     }
 
-    depth_prepass_ms->depth_ms_gfx_task = create_depth_ms_gfx_task( engine, gbuffers );
+    depth_prepass_ms->depth_ms_gfx_task = create_depth_ms_gfx_task( gbuffers );
     depth_prepass_ms->descriptor_sets = { depth_uniform_desc_set };
     depth_prepass_ms->pipeline = *depth_ms_pipeline;
 }

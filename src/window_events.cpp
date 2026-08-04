@@ -4,7 +4,6 @@ namespace racecar {
 
 void handle_sdl_window_events(
     Context& ctx,
-    engine::State& engine,
     gui::Gui& gui,
     std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
     atmosphere::Atmosphere& atms,
@@ -13,6 +12,7 @@ void handle_sdl_window_events(
     SDL_Event& event
 )
 {
+    engine::State& engine = engine::State::GetMut();
     while ( SDL_PollEvent( &event ) ) {
         gui::process_event( gui, &event, atms, engine.camera, material_uniform_buffers );
         camera::process_event( ctx, &event, engine.camera, gui.show_window );

@@ -23,10 +23,10 @@ struct LightingPassDescSets {
 #endif // RACECAR_RAY_TRACING
 };
 
-void create_lighting_pass_resources( Context& ctx, engine::State& engine,
+void create_lighting_pass_resources( 
     LightingPassDescSets desc_sets, engine::Pipeline* lighting_pass_pipeline );
 
-void car_lighting_pass( engine::State& engine, LightingPassDescSets desc_sets,
+void car_lighting_pass( LightingPassDescSets desc_sets,
     engine::Pipeline& lighting_pass_pipeline, engine::RWImage& screen_color,
     engine::TaskList& task_list );
 

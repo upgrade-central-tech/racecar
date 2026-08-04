@@ -57,9 +57,12 @@ struct State {
 
     double time = 0.f; ///< Expressed in seconds.
     double delta = 0.f; ///< Expressed in seconds.
+
+    static State& GetMut();
+    static const State& GetConst();
 };
 
-State initialize( Context& ctx );
-void free( State& engine );
+void initialize( Context& ctx );
+void free();
 
 } // namespace racecar::engine

@@ -22,9 +22,9 @@ struct DepthPrepassMS {
 void PushDepthPrepassMS(
     DepthPrepassMS& depth_prepass_ms, engine::DrawResourceDescriptor draw_descriptor );
 
-GfxTask create_depth_ms_gfx_task( engine::State& engine, deferred::GBuffers* gbuffers );
+GfxTask create_depth_ms_gfx_task( deferred::GBuffers* gbuffers );
 
-void create_depth_ms_prepass( Context& ctx, engine::State& engine,
+void create_depth_ms_prepass( 
     engine::DescriptorSet* depth_uniform_desc_set, engine::Pipeline* depth_ms_pipeline,
     const UniformBuffer<ub_data::Camera>& camera_buffer,
     const geometry::scene::Mesh& scene_mesh, deferred::GBuffers* gbuffers,
