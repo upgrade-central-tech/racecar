@@ -110,7 +110,7 @@ PatchConstantOutput constants( InputPatch<VertexOutput, 4> patch )
 [domain( "quad" )]
 [patchconstantfunc( "constants" )]
 [partitioning( "integer" )]
-[outputtopology( "triangleccw" )]
+[outputtopology( "triangle_ccw" )]
 [outputcontrolpoints( 4 )]
 HullOutput ts_control_main( InputPatch<VertexOutput, 4> patch, uint i: SV_OutputControlPointID )
 {
@@ -172,7 +172,7 @@ DomainOutput ts_eval_main(
         + uv_scrolling_offset );
     float2 world_uv_unwrapped = (world_position_uv)*world_scale + uv_scrolling_offset;
 
-    float2 layers = layer_test_mask.Sample( linear_sampler, my_uv );
+    float2 layers = layer_test_mask.SampleLevel( linear_sampler, my_uv, 0 );
     float layer = 1.0 - layers.r;
 
     float x_dist = clamp(abs( p.x / 50.0 ), 0.0, 1.0);
