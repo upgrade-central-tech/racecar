@@ -32,13 +32,8 @@ struct Setting {
 // ---------------------------OPTION LABELS---------------------------
 // -------------------------------------------------------------------
 constexpr const char* DEBUG_VIEW_OPTIONS[] = {
-    "None",
-    "Albedo map only",
-    "Normal map only",
-    "Roughness + metallic map only",
-    "Normals only",
-    "Albedo only",
-    "Roughness + metallic only",
+    "None",         "Albedo map only", "Normal map only",           "Roughness + metallic map only",
+    "Normals only", "Albedo only",     "Roughness + metallic only",
 };
 
 constexpr const char* AA_OPTIONS[] = {
@@ -47,11 +42,7 @@ constexpr const char* AA_OPTIONS[] = {
 };
 
 constexpr const char* TONEMAPPING_OPTIONS[] = {
-    "None",
-    "GT7 SDR",
-    "GT7 HDR",
-    "Reinhard",
-    "ACES",
+    "None", "GT7 SDR", "GT7 HDR", "Reinhard", "ACES",
 };
 
 // -------------------------------------------------------------------
@@ -77,21 +68,17 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
 
     Setting { .validate = &validate_bloom }, // ENABLE_BLOOM
 
-    Setting {
-        .validate = &validate_aa,
-        .options = AA_OPTIONS,
-        .option_count = (int)std::size( AA_OPTIONS ),
-        .desired = (int)AAMode::TAA,
-        .fallback = (int)AAMode::NONE
-    }, // AA_MODE
-    
-    Setting {
-        .validate = &validate_tonemapping,
-        .options = TONEMAPPING_OPTIONS,
-        .option_count = (int)std::size( TONEMAPPING_OPTIONS ),
-        .desired = (int)TonemappingMode::GT7_HDR,
-        .fallback = (int)TonemappingMode::NONE
-    }, // TONEMAPPING_MODE
+    Setting { .validate = &validate_aa,
+              .options = AA_OPTIONS,
+              .option_count = (int)std::size( AA_OPTIONS ),
+              .desired = (int)AAMode::TAA,
+              .fallback = (int)AAMode::NONE }, // AA_MODE
+
+    Setting { .validate = &validate_tonemapping,
+              .options = TONEMAPPING_OPTIONS,
+              .option_count = (int)std::size( TONEMAPPING_OPTIONS ),
+              .desired = (int)TonemappingMode::GT7_HDR,
+              .fallback = (int)TonemappingMode::NONE }, // TONEMAPPING_MODE
 };
 
 }

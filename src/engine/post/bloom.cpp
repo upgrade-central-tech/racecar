@@ -2,8 +2,8 @@
 
 #include "../../gui.hpp"
 #include "../../log.hpp"
-#include "../../vk/create.hpp"
 #include "../../settings.h"
+#include "../../vk/create.hpp"
 
 namespace racecar::engine::post {
 
@@ -302,7 +302,7 @@ void update_bloom_uniform_buffer( const gui::Gui& gui, engine::post::BloomPass& 
     const engine::State& engine = engine::State::GetConst();
     ub_data::Bloom bloom_ub = bloom_pass.bloom_ub.get_data();
 
-    bloom_ub.enable = RuntimeSettings::GetEnabled(RacecarSettings::ENABLE_BLOOM) ? 1 : 0;
+    bloom_ub.enable = RuntimeSettings::GetEnabled( RacecarSettings::ENABLE_BLOOM ) ? 1 : 0;
     bloom_ub.threshold = gui.bloom.threshold;
     bloom_ub.filter_radius = gui.bloom.filter_radius;
 

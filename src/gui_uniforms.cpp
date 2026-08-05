@@ -1,4 +1,5 @@
 #include "gui_uniforms.hpp"
+
 #include "settings.h"
 
 namespace racecar {

@@ -7,10 +7,9 @@
 #include <imgui_impl_vulkan.h>
 
 #include <array>
+#include <gui_helpers.hpp>
 #include <optional>
 #include <string_view>
-
-#include <gui_helpers.hpp>
 
 namespace racecar::gui {
 
@@ -383,7 +382,7 @@ void update(
 
             if ( ImGui::BeginTabItem( "Post" ) ) {
                 ImGui::SeparatorText( "Bloom" );
-                RacecarGUI::SettingsCheckbox("Enable", RacecarSettings::ENABLE_BLOOM);
+                RacecarGUI::SettingsCheckbox( "Enable", RacecarSettings::ENABLE_BLOOM );
                 ImGui::SliderFloat( "Threshold", &gui.bloom.threshold, 0.f, 5.f );
                 ImGui::SliderFloat( "Filter radius", &gui.bloom.filter_radius, 0.f, 0.025f );
 
@@ -393,7 +392,8 @@ void update(
                 ImGui::SeparatorText( "Tonemapping" );
                 RacecarGUI::SettingsCombo( "Tonemapping Mode", RacecarSettings::TONEMAPPING_MODE );
 
-                bool is_not_gt7_hdr = RuntimeSettings::GetValue(RacecarSettings::TONEMAPPING_MODE) != (int)TonemappingMode::GT7_HDR;
+                bool is_not_gt7_hdr = RuntimeSettings::GetValue( RacecarSettings::TONEMAPPING_MODE )
+                    != (int)TonemappingMode::GT7_HDR;
                 if ( is_not_gt7_hdr ) {
                     ImGui::BeginDisabled();
                 }
