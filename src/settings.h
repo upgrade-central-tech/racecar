@@ -9,15 +9,25 @@ enum class AAMode : int {
     TAA,
 };
 
+enum class DebugView : int {
+    NONE = 0,
+    
+    // Not wired up yet
+    ALBEDO_MAP,
+    NORMAL_MAP,
+    ROUGHNESS_METAL_MAP,
+
+    NORMALS,
+    ALBEDO,
+    ROUGHNESS_METAL,
+};
+
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
 
 enum class RacecarSettings {
-    ENABLE_NORMAL_DEBUG_VIEW = 0,
-    ENABLE_ALBEDO_DEBUG_VIEW,
-    ENABLE_ROUGHNESS_DEBUG_VIEW,
-    ENABLE_UV_DEBUG_VIEW,
+    DEBUG_VIEW = 0,
     ENABLE_BLOOM,
     AA_MODE,
     RACECAR_SETTINGS_LENGTH
@@ -44,6 +54,11 @@ struct SettingValue;
 template <>
 struct SettingValue<RacecarSettings::AA_MODE> {
     using type = AAMode;
+};
+
+template <>
+struct SettingValue<RacecarSettings::DEBUG_VIEW> {
+    using type = DebugView;
 };
 
 template <RacecarSettings S>

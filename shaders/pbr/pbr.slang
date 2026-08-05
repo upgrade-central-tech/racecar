@@ -22,13 +22,16 @@ struct CameraBufferData {
     float3 color;
 };
 
+static const int DEBUG_VIEW_NONE = 0;
+static const int DEBUG_VIEW_ALBEDO_MAP = 1;
+static const int DEBUG_VIEW_NORMAL_MAP = 2;
+static const int DEBUG_VIEW_ROUGHNESS_METAL_MAP = 3;
+static const int DEBUG_VIEW_NORMALS = 4;
+static const int DEBUG_VIEW_ALBEDO = 5;
+static const int DEBUG_VIEW_ROUGHNESS_METAL = 6;
+
 struct DebugData {
-    bool enable_albedo_map;
-    bool enable_normal_map;
-    bool enable_roughness_metal_map;
-    bool normals_only;
-    bool albedo_only;
-    bool roughness_metal_only;
+    int debug_view;
 }
 
 struct MaterialData {
@@ -138,11 +141,11 @@ float4 fs_main( VertexOutput in )
     : SV_Target
 {
     // Texture samples
-    float3 base_albedo = debug_data.enable_albedo_map
+    float3 base_albedo = material_data.has_base_color_texture != 0
         ? albedo_map.Sample( nearest_sampler, in.uv ).rgb
         : camera_buffer_data.color;
     float3 normal_map_norm = normal_map.Sample( nearest_sampler, in.uv ).rgb;
-    float2 metallic_roughness = debug_data.enable_roughness_metal_map
+    float2 metallic_roughness = material_data.has_metallic_roughness_texture != 0
         ? metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb
         : float2( 0.01f, 0.0f );
 
@@ -158,7 +161,7 @@ float4 fs_main( VertexOutput in )
     attenuation *= attenuation;
 
     float3 camera_pos = camera_buffer_data.camera_pos;
-    float3 normal = debug_data.enable_normal_map
+    float3 normal = material_data.has_normal_texture != 0
         ? map_normals( normal_map_norm, in.tangent, in.normal )
         : normalize( in.normal );
     float3 view = normalize( camera_pos - in.position );
@@ -190,9 +193,11 @@ float4 fs_main( VertexOutput in )
     // out_color = out_color / (out_color + float3(1.0f));
     // out_color = pow(out_color, float3(1.0f / 2.2f));
 
-    out_color = debug_data.normals_only ? normal : out_color;
-    out_color = debug_data.roughness_metal_only ? float3( roughness, metallic, 0.0f ) : out_color;
-    out_color = debug_data.albedo_only ? base_albedo : out_color;
+    out_color = debug_data.debug_view == DEBUG_VIEW_NORMALS ? normal : out_color;
+    out_color = debug_data.debug_view == DEBUG_VIEW_ROUGHNESS_METAL
+        ? float3( roughness, metallic, 0.0f )
+        : out_color;
+    out_color = debug_data.debug_view == DEBUG_VIEW_ALBEDO ? base_albedo : out_color;
 
     return float4( out_color, 1.0 );
 }

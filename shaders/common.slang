@@ -5,6 +5,14 @@ static const int TERRAIN_ID = 2;
 
 static const float PI = 3.14159265359;
 
+static const int DEBUG_VIEW_NONE = 0;
+static const int DEBUG_VIEW_ALBEDO_MAP = 1;
+static const int DEBUG_VIEW_NORMAL_MAP = 2;
+static const int DEBUG_VIEW_ROUGHNESS_METAL_MAP = 3;
+static const int DEBUG_VIEW_NORMALS = 4;
+static const int DEBUG_VIEW_ALBEDO = 5;
+static const int DEBUG_VIEW_ROUGHNESS_METAL = 6;
+
 struct CameraBufferData {
     float4x4 mvp;
     float4x4 prev_mvp;
@@ -40,12 +48,7 @@ public struct DebugData {
     float4 packed_data0;
     float4 sun_direction;
 
-    bool enable_albedo_map;
-    bool enable_normal_map;
-    bool enable_roughness_metal_map;
-    bool normals_only;
-    bool albedo_only;
-    bool roughness_metal_only;
+    int debug_view;
 
     bool ray_traced_shadows;
 }

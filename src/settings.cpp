@@ -31,6 +31,16 @@ struct Setting {
 // -------------------------------------------------------------------
 // ---------------------------OPTION LABELS---------------------------
 // -------------------------------------------------------------------
+constexpr const char* DEBUG_VIEW_OPTIONS[] = {
+    "None",
+    "Albedo map only",
+    "Normal map only",
+    "Roughness + metallic map only",
+    "Normals only",
+    "Albedo only",
+    "Roughness + metallic only",
+};
+
 constexpr const char* AA_OPTIONS[] = {
     "None",
     "TAA",
@@ -39,28 +49,24 @@ constexpr const char* AA_OPTIONS[] = {
 // -------------------------------------------------------------------
 // -------------------RUNTIME VALIDATION FUNCTIONS--------------------
 // -------------------------------------------------------------------
-bool validate_bloom() { return !GetEnabled( RacecarSettings::ENABLE_NORMAL_DEBUG_VIEW ); }
+bool debug_view_is_off() { return Get<RacecarSettings::DEBUG_VIEW>() == DebugView::NONE; }
 
-bool validate_aa() { return !GetEnabled( RacecarSettings::ENABLE_NORMAL_DEBUG_VIEW ); }
+bool validate_aa() { return debug_view_is_off(); }
 
-bool validate_options_aa( int option )
-{
-    return option == (int)AAMode::NONE || !GetEnabled( RacecarSettings::ENABLE_NORMAL_DEBUG_VIEW );
-}
+bool validate_bloom() { return debug_view_is_off(); }
 
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
 
 std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
-    Setting { }, // ENABLE_NORMAL_DEBUG_VIEW
-    Setting { }, // ENABLE_ALBEDO_DEBUG_VIEW
-    Setting { }, // ENABLE_ROUGHNESS_DEBUG_VIEW
-    Setting { }, // ENABLE_UV_DEBUG_VIEW
+    Setting {
+        .options = DEBUG_VIEW_OPTIONS,
+        .option_count = (int)std::size( DEBUG_VIEW_OPTIONS ),
+    }, // DEBUG_VIEW
     Setting { .validate = &validate_bloom }, // ENABLE_BLOOM
     Setting {
         .validate = &validate_aa,
-        .validate_option = &validate_options_aa,
         .options = AA_OPTIONS,
         .option_count = (int)std::size( AA_OPTIONS ),
         .desired = (int)AAMode::TAA,

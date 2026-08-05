@@ -27,12 +27,6 @@ struct Gui {
     bool show_window = true;
 
     struct DebugData : public Material {
-        bool enable_albedo_map = false;
-        bool enable_normal_map = false;
-        bool enable_roughness_metal_map = false;
-
-        bool albedo_only = false;
-        bool roughness_metal_only = false;
         bool ray_traced_shadows = true;
         int current_editing_material = 0;
         bool load_material_into_gui = true;

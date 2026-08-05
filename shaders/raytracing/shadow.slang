@@ -24,12 +24,7 @@ struct DebugData {
     float4 packed_data0;
     float4 sun_direction;
 
-    bool enable_albedo_map;
-    bool enable_normal_map;
-    bool enable_roughness_metal_map;
-    bool normals_only;
-    bool albedo_only;
-    bool roughness_metal_only;
+    int debug_view;
 }
 
 struct SHData {
@@ -154,9 +149,7 @@ float4 fs_main( VertexOutput in )
     );
 #endif // RACECAR_RAY_TRACING
 
-    float3 base_albedo = debug_data.enable_albedo_map
-        ? GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb
-        : debug_data.color.rgb;
+    float3 base_albedo = GBuffer_Albedo.Sample( nearest_sampler, in.uv ).rgb;
 
     float shadow = 0.7;
 #if RACECAR_RAY_TRACING

@@ -34,12 +34,7 @@ struct DebugData {
     // Pack: glint roughness,
     float4 packed_data1;
 
-    bool enable_albedo_map;
-    bool enable_normal_map;
-    bool enable_roughness_metal_map;
-    bool normals_only;
-    bool albedo_only;
-    bool roughness_metal_only;
+    int debug_view;
 };
 
 // God help us all.
@@ -129,13 +124,13 @@ float4 fs_main( VertexOutput in )
     : SV_Target
 {
     // Texture samples
-    float3 base_albedo = debug_data.enable_albedo_map
+    float3 base_albedo = material_data.has_base_color_texture != 0
         ? albedo_map.Sample( nearest_sampler, in.uv ).rgb
         : material_data.base_color.rgb;
 
     float3 normal_map_norm = normal_map.Sample( nearest_sampler, in.uv ).rgb;
 
-    float2 metallic_roughness = debug_data.enable_roughness_metal_map
+    float2 metallic_roughness = material_data.has_metallic_roughness_texture != 0
         ? metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb
         : float2( debug_data.packed_data0.x, debug_data.packed_data0.y );
 
@@ -151,7 +146,7 @@ float4 fs_main( VertexOutput in )
     attenuation *= attenuation;
 
     float3 camera_pos = camera_buffer_data.camera_pos;
-    float3 normal = debug_data.enable_normal_map
+    float3 normal = material_data.has_normal_texture != 0
         ? map_normals( normal_map_norm, in.tangent, in.normal )
         : normalize( in.normal );
     float3 view = normalize( camera_pos - in.position );

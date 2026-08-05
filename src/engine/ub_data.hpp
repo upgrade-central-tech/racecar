@@ -26,12 +26,7 @@ struct Debug {
     glm::vec4 packed_data0 = {};
     glm::vec4 sun_direction = {};
 
-    uint32_t enable_albedo_map = 0;
-    uint32_t enable_normal_map = 0;
-    uint32_t enable_roughness_metal_map = 0;
-    uint32_t normals_only = 0;
-    uint32_t albedo_only = 0;
-    uint32_t roughness_metal_only = 0;
+    uint32_t debug_view = 0;
     uint32_t ray_traced_shadows = 0;
 };
 

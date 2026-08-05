@@ -20,12 +20,7 @@ struct CloudUniformData {
 };
 
 struct DebugData {
-    bool enable_albedo_map;
-    bool enable_normal_map;
-    bool enable_roughness_metal_map;
-    bool normals_only;
-    bool albedo_only;
-    bool roughness_metal_only;
+    int debug_view;
 }
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CloudUniformData> clouds_buffer_data;

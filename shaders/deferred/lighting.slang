@@ -163,10 +163,17 @@ float4 fs_main( VertexOutput in )
         = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0, refl );
 
     // DEBUG VIEWS
-    if ( debug_data.normals_only ) {
+    switch ( debug_data.debug_view ) {
+    case DEBUG_VIEW_NORMALS:
         return float4( normal, 1.0f );
+    case DEBUG_VIEW_ALBEDO:
+        return float4( base_albedo, 1.0f );
+    case DEBUG_VIEW_ROUGHNESS_METAL:
+        return float4( roughness, metallic, 0.0f, 1.0f );
+    default:
+        break;
     }
-    
+
     return float4( out_color, 1.0f );
 }
 

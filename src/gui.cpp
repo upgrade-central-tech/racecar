@@ -327,19 +327,7 @@ void update(
 
             if ( ImGui::BeginTabItem( "General" ) ) {
                 ImGui::SeparatorText( "Debug" );
-                ImGui::Checkbox( "Enable albedo map", &gui.debug.enable_albedo_map );
-                ImGui::Checkbox( "Enable normal map", &gui.debug.enable_normal_map );
-                ImGui::Checkbox(
-                    "Enable roughness + metallic map",
-                    &gui.debug.enable_roughness_metal_map
-                );
-
-                ImGui::Checkbox( "Turn on albedo only", &gui.debug.albedo_only );
-                RacecarGUI::SettingsCheckbox( "Turn on normals only" , RacecarSettings::ENABLE_NORMAL_DEBUG_VIEW);
-                ImGui::Checkbox(
-                    "Turn on roughness + metallic only",
-                    &gui.debug.roughness_metal_only
-                );
+                RacecarGUI::SettingsCombo( "Debug view", RacecarSettings::DEBUG_VIEW );
                 ImGui::Checkbox( "Ray Traced Shadows", &gui.debug.ray_traced_shadows );
 
                 ImGui::SeparatorText( "Demo Settings" );

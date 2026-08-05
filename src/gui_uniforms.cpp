@@ -20,13 +20,7 @@ void update_debug_uniform_buffer(
         ),
         .sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f ),
 
-        .enable_albedo_map = gui.debug.enable_albedo_map,
-        .enable_normal_map = gui.debug.enable_normal_map,
-        .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
-        .normals_only = RuntimeSettings::GetEnabled(RacecarSettings::ENABLE_NORMAL_DEBUG_VIEW),
-        .albedo_only = gui.debug.albedo_only,
-        .roughness_metal_only = gui.debug.roughness_metal_only,
-
+        .debug_view = (uint32_t)RuntimeSettings::GetValue( RacecarSettings::DEBUG_VIEW ),
         .ray_traced_shadows = gui.debug.ray_traced_shadows,
     };
 

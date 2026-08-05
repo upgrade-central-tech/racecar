@@ -136,14 +136,13 @@ FragmentOutput fs_main( VertexOutput in )
 
     output.velocity = ( curr_pos - old_pos ).xy;
 
-    if ( material_data.has_base_color_texture != 0 && debug_data.enable_albedo_map != 1 ) {
+    if ( material_data.has_base_color_texture != 0 ) {
         output.albedo = albedo_map.Sample( nearest_sampler, in.uv );
     } else {
         output.albedo = material_data.base_color;
     }
 
-    if ( material_data.has_metallic_roughness_texture != 0
-        && debug_data.enable_roughness_metal_map ) {
+    if ( material_data.has_metallic_roughness_texture != 0 ) {
         output.packed_data = float4( metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb,
             material_data.clearcoat_roughness, material_data.clearcoat );
     } else {
@@ -175,7 +174,7 @@ FragmentOutput fs_main( VertexOutput in )
 
     output.position = float4( in.position, stencil );
     output.normal = float4( in.normal, 1.0f );
-    if ( debug_data.enable_normal_map && material_data.has_normal_texture != 0 ) {
+    if ( material_data.has_normal_texture != 0 ) {
         float3 normal_map_norm = normal_map.Sample( nearest_sampler, in.uv ).rgb;
         float3 new_normal = map_normals( normal_map_norm, in.tangent, in.normal );
         if ( !any( isnan( new_normal ) ) ) {
