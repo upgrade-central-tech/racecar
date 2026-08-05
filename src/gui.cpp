@@ -24,11 +24,6 @@ constexpr std::array TONEMAPPING_OPTIONS = std::to_array<std::string_view>( {
     "ACES",
 } );
 
-constexpr std::array AA_OPTIONS = std::to_array<std::string_view>( {
-    "None",
-    "TAA",
-} );
-
 constexpr std::array EASING_OPTIONS = std::to_array<std::string_view>( {
     "Linear",
     "Ease out quadratic",
@@ -413,24 +408,7 @@ void update(
                 ImGui::SliderFloat( "Filter radius", &gui.bloom.filter_radius, 0.f, 0.025f );
 
                 ImGui::SeparatorText( "Anti-Aliasing" );
-                size_t aa_selected_index = static_cast<size_t>( gui.aa.mode );
-                std::string_view aa_preview_value = AA_OPTIONS[aa_selected_index];
-                if ( ImGui::BeginCombo( "AA Mode", aa_preview_value.data() ) ) {
-                    for ( size_t i = 0; i < AA_OPTIONS.size(); ++i ) {
-                        bool is_selected = ( aa_selected_index == i );
-
-                        if ( ImGui::Selectable( AA_OPTIONS[i].data(), is_selected ) ) {
-                            aa_selected_index = i;
-                        }
-
-                        if ( is_selected ) {
-                            ImGui::SetItemDefaultFocus();
-                        }
-                    }
-
-                    gui.aa.mode = static_cast<Gui::AAData::Mode>( aa_selected_index );
-                    ImGui::EndCombo();
-                }
+                RacecarGUI::SettingsCombo( "AA Mode", RacecarSettings::AA_MODE );
 
                 ImGui::SeparatorText( "Tonemapping" );
                 size_t selected_index = static_cast<size_t>( gui.tonemapping.mode );

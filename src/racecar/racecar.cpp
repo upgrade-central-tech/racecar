@@ -472,7 +472,7 @@ void run( bool use_fullscreen )
         camera::OrbitCamera& camera = engine.camera;
 
         // Update camera uniform buffer
-        update_camera_uniform_buffer( gui, camera_buffer, camera_data );
+        update_camera_uniform_buffer( camera_buffer, camera_data );
 
         // Update atmosphere uniform buffer
         atmosphere::update_atmosphere_uniform_buffer( gui, atms, camera_data );
@@ -484,7 +484,7 @@ void run( bool use_fullscreen )
         engine::post::update_tonemapping_uniform_buffer( gui, tm_pass );
 
         // AA update
-        engine::post::update_aa_uniform_buffer( gui, aa_pass );
+        engine::post::update_aa_uniform_buffer( aa_pass );
 
 #if ENABLE_VOLUMETRICS
         // Update volumetric camera buffer

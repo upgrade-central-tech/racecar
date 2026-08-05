@@ -1,6 +1,6 @@
 #include "anti_aliasing.hpp"
 
-#include "../../gui.hpp"
+#include "../../settings.h"
 #include "../../vk/create.hpp"
 
 #include <string_view>
@@ -200,11 +200,11 @@ AAPass add_aa(
     return pass;
 }
 
-void update_aa_uniform_buffer( const gui::Gui& gui, engine::post::AAPass& aa_pass )
+void update_aa_uniform_buffer( engine::post::AAPass& aa_pass )
 {
     const engine::State& engine = engine::State::GetConst();
     ub_data::AA aa_ub = aa_pass.buffer.get_data();
-    aa_ub.mode = static_cast<int>( gui.aa.mode );
+    aa_ub.mode = RuntimeSettings::GetValue( RacecarSettings::AA_MODE );
     aa_pass.buffer.set_data( aa_ub );
     aa_pass.buffer.update( engine.get_frame_index() );
 }

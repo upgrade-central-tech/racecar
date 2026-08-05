@@ -1,6 +1,7 @@
 #include "camera_data.hpp"
 
 #include "orbit_camera.hpp"
+#include "settings.h"
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -32,7 +33,7 @@ CameraData get_camera_data()
 }
 
 void update_camera_uniform_buffer(
-    gui::Gui& gui, UniformBuffer<ub_data::Camera>& camera_buffer, const CameraData& camera_data
+    UniformBuffer<ub_data::Camera>& camera_buffer, const CameraData& camera_data
 )
 {
     const engine::State& engine = engine::State::GetConst();
@@ -44,7 +45,7 @@ void update_camera_uniform_buffer(
 
     glm::mat4 jittered_projection = camera_data.projection;
 
-    if ( gui.aa.mode == gui::Gui::AAData::Mode::TAA ) {
+    if ( RuntimeSettings::Get<RacecarSettings::AA_MODE>() == AAMode::TAA ) {
         glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
 
         jittered_projection[2][0] += offset.x / static_cast<float>( engine.swapchain.extent.width );

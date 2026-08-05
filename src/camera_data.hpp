@@ -22,7 +22,7 @@ struct CameraData {
  */
 CameraData get_camera_data();
 
-void update_camera_uniform_buffer( gui::Gui& gui,
+void update_camera_uniform_buffer(
     UniformBuffer<ub_data::Camera>& camera_buffer, const CameraData& camera_data );
 
 }

@@ -89,10 +89,6 @@ struct Gui {
         float filter_radius = 0.003f;
     } bloom = {};
 
-    struct AAData {
-        enum class Mode : int { NONE = 0, TAA } mode = Mode::TAA;
-    } aa = {};
-
     struct PresetData {
         std::vector<Preset> presets = load_presets();
         std::optional<PresetTransition> transition;
