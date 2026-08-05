@@ -25,15 +25,14 @@ DescriptorSet generate_array_descriptor_set(
 
 template <typename UBData>
 void update_descriptor_set_uniform(
-    DescriptorSet& desc_set, UniformBuffer<UBData> uniform_buffer, int binding_idx )
+    DescriptorSet& desc_set, const UniformBuffer<UBData>& uniform_buffer, int binding_idx )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
-    VkBuffer buffer = uniform_buffer.buffer( engine.get_frame_index() ).handle;
 
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         VkDescriptorBufferInfo buffer_info = {
-            .buffer = buffer,
+            .buffer = uniform_buffer.buffer( i ).handle,
             .offset = 0,
             .range = sizeof( UBData ),
         };

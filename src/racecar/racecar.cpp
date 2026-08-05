@@ -200,11 +200,13 @@ void run( bool use_fullscreen )
     UniformBuffer<ub_data::RTTextureUniform> rt_texture_uniform_data
         = create_uniform_buffer( rt_texture_uniform, engine.frame_overlap );
     rt_texture_uniform_data.set_data( rt_texture_uniform );
+    rt_texture_uniform_data.update_all();
 
     // Create uniform buffer for BLAS offsets
     UniformBuffer<ub_data::BLASOffsets> offset_data
         = create_uniform_buffer( blas_offsets, static_cast<size_t>( engine.frame_overlap ) );
     offset_data.set_data( blas_offsets );
+    offset_data.update_all();
 
     // Initialize RT vertex data buffer
     vk::mem::AllocatedBuffer padded_vertex_data_buffer
@@ -452,6 +454,8 @@ void run( bool use_fullscreen )
             continue;
         }
 
+        engine::begin_frame();
+
         // Handle preset transitioning
         if ( gui.preset.transition.has_value() ) {
             update_preset_transition( gui, material_uniform_buffers, atms );
@@ -496,6 +500,10 @@ void run( bool use_fullscreen )
 
         // update materials
         update_material_uniform_buffers( gui, material_uniform_buffers, num_materials );
+
+        for ( UniformBuffer<ub_data::ModelMat>& model_mat_buffer : model_mat_uniform_buffers ) {
+            model_mat_buffer.update( engine.get_frame_index() );
+        }
 
 #if RACECAR_RAY_TRACING
         // Update ray tracing uniform buffers

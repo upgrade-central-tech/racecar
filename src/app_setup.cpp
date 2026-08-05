@@ -177,7 +177,7 @@ void load_materials(
         };
 
         material_buffer.set_data( material_ub );
-        material_buffer.update( engine.get_frame_index() );
+        material_buffer.update_all();
 
         engine::update_descriptor_set_uniform( ( *material_desc_sets )[i], material_buffer, 3 );
         ( *material_uniform_buffers )[i] = std::move( material_buffer );
@@ -214,7 +214,7 @@ void load_model_mat_uniform_buffers(
                                            .inv_model_mat = glm::inverse( transform ),
                                            .prev_model_mat = transform };
         model_mat_buffer.set_data( model_mat_ub );
-        model_mat_buffer.update( engine.get_frame_index() );
+        model_mat_buffer.update_all();
 
         engine::update_descriptor_set_uniform( ( *model_mat_desc_sets )[i], model_mat_buffer, 0 );
         ( *model_mat_uniform_buffers )[i] = std::move( model_mat_buffer );

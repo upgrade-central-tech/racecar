@@ -5,40 +5,55 @@
 
 #include <volk.h>
 
+#include <algorithm>
+#include <vector>
+
 namespace racecar {
 
 struct IUniformBuffer {
-    virtual vk::mem::AllocatedBuffer buffer( size_t ) = 0;
+    virtual vk::mem::AllocatedBuffer buffer( size_t ) const = 0;
     virtual void update( size_t frame_idx ) = 0;
+    virtual void update_all() = 0;
 
     virtual ~IUniformBuffer() { }
 };
 
 template <typename T> struct UniformBuffer : IUniformBuffer {
-    bool dirty = false;
-
     UniformBuffer() = default;
 
     UniformBuffer( T data, std::vector<vk::mem::AllocatedBuffer> buffer )
         : data_( data )
         , buffer_( buffer )
+        , dirty_( buffer.size(), false )
     {
     }
 
-    vk::mem::AllocatedBuffer buffer( size_t frame_idx ) override { return buffer_[frame_idx]; }
+    vk::mem::AllocatedBuffer buffer( size_t frame_idx ) const override
+    {
+        return buffer_[frame_idx];
+    }
 
+    // Update current frame's buffer (Runtime)
     void update( size_t frame_idx ) override
     {
         const vk::Common& vulkan = vk::Common::GetConst();
 
-        if ( !dirty ) {
+        if ( frame_idx >= dirty_.size() || !dirty_[frame_idx] ) {
             return;
         }
 
         std::memcpy( buffer_[frame_idx].info.pMappedData, &data_, sizeof( T ) );
         vmaFlushAllocation( vulkan.allocator, buffer_[frame_idx].allocation, 0, sizeof( T ) );
 
-        dirty = false;
+        dirty_[frame_idx] = false;
+    }
+
+    // Update all frame's buffers (Setup)
+    void update_all() override
+    {
+        for ( size_t i = 0; i < buffer_.size(); ++i ) {
+            update( i );
+        }
     }
 
     T get_data() const { return data_; }
@@ -46,13 +61,14 @@ template <typename T> struct UniformBuffer : IUniformBuffer {
     void set_data( T t )
     {
         data_ = t;
-        dirty = true;
+        std::fill( dirty_.begin(), dirty_.end(), true );
     }
 
 private:
     T data_ = {};
     std::vector<VkDescriptorSetLayout> layout_;
     std::vector<vk::mem::AllocatedBuffer> buffer_;
+    std::vector<bool> dirty_;
 };
 
 template <typename T>

@@ -11,13 +11,12 @@
 
 namespace racecar::engine {
 
-void execute( TaskList& task_list, const gui::Gui& gui )
+void begin_frame()
 {
-    engine::State& engine = engine::State::GetMut();
+    const engine::State& engine = engine::State::GetConst();
     const vk::Common& vulkan = vk::Common::GetConst();
 
-    size_t frame_number = engine.get_frame_index();
-    FrameData& frame = engine.frames[frame_number];
+    const FrameData& frame = engine.frames[engine.get_frame_index()];
 
     // Using the maximum 64-bit unsigned integer value effectively disables the timeout
     vk::check(
@@ -40,6 +39,15 @@ void execute( TaskList& task_list, const gui::Gui& gui )
     vkResetCommandBuffer( frame.start_cmdbuf, 0 );
     vkResetCommandBuffer( frame.render_cmdbuf, 0 );
     vkResetCommandBuffer( frame.end_cmdbuf, 0 );
+}
+
+void execute( TaskList& task_list, const gui::Gui& gui )
+{
+    engine::State& engine = engine::State::GetMut();
+    const vk::Common& vulkan = vk::Common::GetConst();
+
+    size_t frame_number = engine.get_frame_index();
+    FrameData& frame = engine.frames[frame_number];
 
     VkCommandBufferBeginInfo command_buffer_begin_info
         = vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );

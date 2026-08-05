@@ -266,7 +266,6 @@ void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, engine::Tas
 
 void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList& task_list )
 {
-    const engine::State& engine = engine::State::GetConst();
     Atmosphere& atms = *atms_baker.atmosphere;
 
     for ( size_t mip = 0; mip < mip_levels; mip++ ) {
@@ -298,10 +297,7 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
         float roughness = (float)mip / (float)( mip_levels - 1 );
         atms_baker.mip_data[mip].set_data( { glm::vec4( mip, roughness, 0.0f, 0.0f ) } );
 
-        // Set this only once per frame.
-        for ( uint32_t frame_index = 0; frame_index < engine.frame_overlap; frame_index++ ) {
-            atms_baker.mip_data[mip].update( frame_index );
-        }
+        atms_baker.mip_data[mip].update_all();
 
         engine::update_descriptor_set_uniform(
             atms_baker.octahedral_mip_writes[mip],

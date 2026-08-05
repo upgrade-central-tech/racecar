@@ -59,7 +59,10 @@ void update_material_uniform_buffers(
     mat_data.glint_randomness = gui.debug.glint_randomness;
 
     material_uniform_buffers[size_t( mat_idx )].set_data( mat_data );
-    material_uniform_buffers[size_t( mat_idx )].update( engine.get_frame_index() );
+
+    for ( UniformBuffer<ub_data::Material>& material_buffer : material_uniform_buffers ) {
+        material_buffer.update( engine.get_frame_index() );
+    }
 }
 
 }
