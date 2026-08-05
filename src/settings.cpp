@@ -46,6 +46,14 @@ constexpr const char* AA_OPTIONS[] = {
     "TAA",
 };
 
+constexpr const char* TONEMAPPING_OPTIONS[] = {
+    "None",
+    "GT7 SDR",
+    "GT7 HDR",
+    "Reinhard",
+    "ACES",
+};
+
 // -------------------------------------------------------------------
 // -------------------RUNTIME VALIDATION FUNCTIONS--------------------
 // -------------------------------------------------------------------
@@ -54,6 +62,8 @@ bool debug_view_is_off() { return Get<RacecarSettings::DEBUG_VIEW>() == DebugVie
 bool validate_aa() { return debug_view_is_off(); }
 
 bool validate_bloom() { return debug_view_is_off(); }
+
+bool validate_tonemapping() { return debug_view_is_off(); }
 
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
@@ -64,13 +74,24 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
         .options = DEBUG_VIEW_OPTIONS,
         .option_count = (int)std::size( DEBUG_VIEW_OPTIONS ),
     }, // DEBUG_VIEW
+
     Setting { .validate = &validate_bloom }, // ENABLE_BLOOM
+
     Setting {
         .validate = &validate_aa,
         .options = AA_OPTIONS,
         .option_count = (int)std::size( AA_OPTIONS ),
         .desired = (int)AAMode::TAA,
+        .fallback = (int)AAMode::NONE
     }, // AA_MODE
+    
+    Setting {
+        .validate = &validate_tonemapping,
+        .options = TONEMAPPING_OPTIONS,
+        .option_count = (int)std::size( TONEMAPPING_OPTIONS ),
+        .desired = (int)TonemappingMode::GT7_HDR,
+        .fallback = (int)TonemappingMode::NONE
+    }, // TONEMAPPING_MODE
 };
 
 }

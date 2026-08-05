@@ -2,6 +2,7 @@
 
 #include "../../gui.hpp"
 #include "../../vk/create.hpp"
+#include "../../settings.h"
 
 #include <string_view>
 
@@ -68,7 +69,7 @@ void update_tonemapping_uniform_buffer(
 {
     const engine::State& engine = engine::State::GetConst();
     ub_data::Tonemapping tm_ub = tm_pass.buffer.get_data();
-    tm_ub.mode = static_cast<int>( gui.tonemapping.mode );
+    tm_ub.mode = static_cast<int>( RuntimeSettings::GetValue( RacecarSettings::TONEMAPPING_MODE ) );
     tm_ub.hdr_target_luminance = gui.tonemapping.hdr_target_luminance;
 
     tm_pass.buffer.set_data( tm_ub );

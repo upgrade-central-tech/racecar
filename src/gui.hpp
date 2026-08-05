@@ -66,15 +66,6 @@ struct Gui {
     } terrain = {};
 
     struct TonemappingData {
-        enum class Mode : int {
-            NONE = 0,
-            GT7_SDR,
-            GT7_HDR,
-            REINHARD,
-            ACES,
-        } mode
-            = Mode::GT7_HDR;
-
         float hdr_target_luminance = 1'000.f;
     } tonemapping = {};
 

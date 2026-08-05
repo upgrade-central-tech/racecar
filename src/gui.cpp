@@ -16,14 +16,6 @@ namespace racecar::gui {
 
 namespace {
 
-constexpr std::array TONEMAPPING_OPTIONS = std::to_array<std::string_view>( {
-    "None",
-    "GT7 SDR",
-    "GT7 HDR",
-    "Reinhard",
-    "ACES",
-} );
-
 constexpr std::array EASING_OPTIONS = std::to_array<std::string_view>( {
     "Linear",
     "Ease out quadratic",
@@ -399,27 +391,9 @@ void update(
                 RacecarGUI::SettingsCombo( "AA Mode", RacecarSettings::AA_MODE );
 
                 ImGui::SeparatorText( "Tonemapping" );
-                size_t selected_index = static_cast<size_t>( gui.tonemapping.mode );
-                std::string_view preview_value = TONEMAPPING_OPTIONS[selected_index];
-                if ( ImGui::BeginCombo( "Tonemapping Mode", preview_value.data() ) ) {
-                    for ( size_t i = 0; i < TONEMAPPING_OPTIONS.size(); ++i ) {
-                        bool is_selected = ( selected_index == i );
+                RacecarGUI::SettingsCombo( "Tonemapping Mode", RacecarSettings::TONEMAPPING_MODE );
 
-                        if ( ImGui::Selectable( TONEMAPPING_OPTIONS[i].data(), is_selected ) ) {
-                            selected_index = i;
-                        }
-
-                        if ( is_selected ) {
-                            ImGui::SetItemDefaultFocus();
-                        }
-                    }
-
-                    gui.tonemapping.mode
-                        = static_cast<Gui::TonemappingData::Mode>( selected_index );
-                    ImGui::EndCombo();
-                }
-
-                bool is_not_gt7_hdr = gui.tonemapping.mode != Gui::TonemappingData::Mode::GT7_HDR;
+                bool is_not_gt7_hdr = RuntimeSettings::GetValue(RacecarSettings::TONEMAPPING_MODE) != (int)TonemappingMode::GT7_HDR;
                 if ( is_not_gt7_hdr ) {
                     ImGui::BeginDisabled();
                 }
