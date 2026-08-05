@@ -28,6 +28,8 @@ struct CameraBufferData {
 
     // Pack: modded frame index [0, 15], null, null, null
     float4 camera_constants1;
+    
+    float4x4 unjittered_mvp;
 };
 
 struct AOData {

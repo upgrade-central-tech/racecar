@@ -1,3 +1,5 @@
+#include "../common.slang"
+
 struct VertexInput {
     float3 position : POSITION;
     float3 normal : NORMAL;
@@ -14,55 +16,6 @@ struct VertexOutput {
     float2 uv;
 };
 
-struct CameraBufferData {
-    float4x4 mvp;
-    float4x4 model;
-    float4x4 inv_model;
-    float3 camera_pos;
-    float3 color;
-};
-
-static const int DEBUG_VIEW_NONE = 0;
-static const int DEBUG_VIEW_ALBEDO_MAP = 1;
-static const int DEBUG_VIEW_NORMAL_MAP = 2;
-static const int DEBUG_VIEW_ROUGHNESS_METAL_MAP = 3;
-static const int DEBUG_VIEW_NORMALS = 4;
-static const int DEBUG_VIEW_ALBEDO = 5;
-static const int DEBUG_VIEW_ROUGHNESS_METAL = 6;
-
-struct DebugData {
-    int debug_view;
-}
-
-struct MaterialData {
-    int has_base_color_texture;
-    int has_metallic_roughness_texture;
-    int has_normal_texture;
-    int has_emmisive_texture;
-
-    float4 base_color;
-
-    float metallic;
-    float roughness;
-    float normal_texture_weight;
-    float ior;
-
-    float3 specular_tint;
-    float specular;
-
-    float3 sheen_tint;
-    float sheen_roughness;
-
-    float sheen_weight;
-    float transmission;
-    float clearcoat;
-    float clearcoat_roughness;
-
-    float3 emissive;
-    // 0 if lit, 1 if unlit
-    int unlit = false;
-}
-
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
@@ -72,8 +25,6 @@ layout( binding = 2, set = 1 ) Texture2D<float4> metallic_roughness_map;
 layout( binding = 3, set = 1 ) ConstantBuffer<MaterialData> material_data;
 
 layout( binding = 0, set = 2 ) SamplerState nearest_sampler;
-
-static const float PI = 3.14159265359;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -143,7 +94,7 @@ float4 fs_main( VertexOutput in )
     // Texture samples
     float3 base_albedo = material_data.has_base_color_texture != 0
         ? albedo_map.Sample( nearest_sampler, in.uv ).rgb
-        : camera_buffer_data.color;
+        : material_data.base_color.rgb;
     float3 normal_map_norm = normal_map.Sample( nearest_sampler, in.uv ).rgb;
     float2 metallic_roughness = material_data.has_metallic_roughness_texture != 0
         ? metallic_roughness_map.Sample( nearest_sampler, in.uv ).gb
@@ -160,7 +111,7 @@ float4 fs_main( VertexOutput in )
     float attenuation = 1.0f / length( light_pos - in.position );
     attenuation *= attenuation;
 
-    float3 camera_pos = camera_buffer_data.camera_pos;
+    float3 camera_pos = camera_buffer_data.camera_pos.xyz;
     float3 normal = material_data.has_normal_texture != 0
         ? map_normals( normal_map_norm, in.tangent, in.normal )
         : normalize( in.normal );

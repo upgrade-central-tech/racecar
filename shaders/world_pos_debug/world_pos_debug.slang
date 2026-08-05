@@ -1,3 +1,5 @@
+#include "../common.slang"
+
 struct VertexInput {
     float4 color    : COLOR0;
     float3 position : POSITION;
@@ -11,14 +13,7 @@ struct VertexOutput {
   float3 color;
 };
 
-struct CameraBufferData {
-    float4x4 mvp;
-    float4x4 model;
-    float4x4 inv_model;
-    float3 color;
-};
-
-layout(binding = 0, set = 0) ConstantBuffer<CameraBufferData> camera_buffer_data; 
+layout(binding = 0, set = 0) ConstantBuffer<CameraBufferData> camera_buffer_data;
 
 [shader("vertex")]
 VertexOutput vs_main( VertexInput input ) {

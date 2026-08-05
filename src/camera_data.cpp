@@ -48,17 +48,20 @@ void update_camera_uniform_buffer(
     if ( RuntimeSettings::Get<RacecarSettings::AA_MODE>() == AAMode::TAA ) {
         glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
 
-        jittered_projection[2][0] += offset.x / static_cast<float>( engine.swapchain.extent.width );
+        jittered_projection[2][0]
+            += 2.0f * offset.x / static_cast<float>( engine.swapchain.extent.width );
         jittered_projection[2][1]
-            += offset.y / static_cast<float>( engine.swapchain.extent.height );
+            += 2.0f * offset.y / static_cast<float>( engine.swapchain.extent.height );
     }
 
-    camera_ub.prev_mvp = camera_ub.mvp;
+    camera_ub.prev_mvp = camera_ub.unjittered_mvp;
+    camera_ub.unjittered_mvp = camera_data.projection * camera_data.view * model;
+
     camera_ub.mvp = jittered_projection * camera_data.view * model;
     camera_ub.model = model;
     camera_ub.view_mat = camera_data.view;
     camera_ub.inv_model = glm::inverse( model );
-    camera_ub.inv_vp = glm::inverse( jittered_projection * camera_data.view );
+    camera_ub.inv_vp = glm::inverse( camera_data.projection * camera_data.view );
 
     camera_ub.proj_mat = jittered_projection;
     camera_ub.inv_proj = glm::inverse( jittered_projection );

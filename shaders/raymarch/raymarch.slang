@@ -1,3 +1,5 @@
+#include "../common.slang"
+
 struct VertexInput {
     float4 color : COLOR0;
     float3 position : POSITION;
@@ -15,21 +17,9 @@ struct VertexOutput {
     float2 uv;
 };
 
-struct CameraBufferData {
-    float4x4 mvp;
-    float4x4 model;
-    float4x4 inv_model;
-    float3 camera_pos;
-    float3 color;
-};
-
 struct RaymarchBufferData {
     float step_size;
 };
-
-struct DebugData {
-    int debug_view;
-}
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
@@ -42,7 +32,6 @@ layout( binding = 0, set = 2 ) Texture3D<float4> volume_data;
 
 layout( binding = 0, set = 3 ) SamplerState nearest_sampler;
 
-static const float PI = 3.14159265359;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -128,7 +117,7 @@ float4 fs_main( VertexOutput in )
     : SV_Target
 {
     float3 world_pos = in.position;
-    float3 camera_pos = camera_buffer_data.camera_pos;
+    float3 camera_pos = camera_buffer_data.camera_pos.xyz;
 
     // Direction vectors
     float3 normal = in.normal;

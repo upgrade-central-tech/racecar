@@ -19,6 +19,7 @@ struct Camera {
     glm::vec4 camera_pos = {};
     glm::vec4 camera_constants = {};
     glm::vec4 camera_constants1 = {};
+    glm::mat4 unjittered_mvp = {};
 };
 
 struct Debug {

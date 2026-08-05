@@ -1,3 +1,4 @@
+#include "../common.slang"
 
 struct VertexInput {
     float2 position : POSITION;
@@ -7,25 +8,6 @@ struct VertexOutput {
     float4 sv_position : SV_Position;
     float2 uv;
 };
-
-struct CameraBufferData {
-    float4x4 mvp;
-    float4x4 model;
-    float4x4 inv_model;
-    float4 camera_pos;
-    // Pack: near plane, far plane, aspect ratio, fov_Y
-    float4 camera_constants;
-};
-
-struct DebugData {
-    float4 color;
-
-    // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
-    float4 packed_data0;
-    float4 sun_direction;
-
-    int debug_view;
-}
 
 struct SHData {
     float4 coeff0;

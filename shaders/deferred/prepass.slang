@@ -81,11 +81,15 @@ VertexOutput vs_main( VertexInput input )
     float4 clip_pos = mul(
         mul( camera_buffer_data.mvp, model_mat_data.model_mat ), float4( input.position, 1.0 ) );
 
+    float4 curr_clip_pos = mul(
+        mul( camera_buffer_data.unjittered_mvp, model_mat_data.model_mat ),
+        float4( input.position, 1.0f ) );
+
     float4 prev_clip_pos = mul( mul( camera_buffer_data.prev_mvp, model_mat_data.prev_model_mat ),
         float4( input.position, 1.0f ) );
 
     output.sv_position = clip_pos;
-    output.curr_clip_pos = clip_pos;
+    output.curr_clip_pos = curr_clip_pos;
     output.prev_clip_pos = prev_clip_pos;
 
     output.position = mul(
@@ -128,13 +132,13 @@ FragmentOutput fs_main( VertexOutput in )
     float stencil = CAR_ID;
 
     // VELOCITY
-    float4 old_pos = in.prev_clip_pos;
-    old_pos.xy = 0.5f * ( old_pos.xy ) + 0.5f;
+    // The perspective divide is what turns clip space into something screen-relative; without
+    // it the offset scales with view depth. Points current -> previous, which is the direction
+    // the TAA resolve wants, since it samples history at `uv + velocity`.
+    float2 old_uv = 0.5f * ( in.prev_clip_pos.xy / in.prev_clip_pos.w ) + 0.5f;
+    float2 curr_uv = 0.5f * ( in.curr_clip_pos.xy / in.curr_clip_pos.w ) + 0.5f;
 
-    float4 curr_pos = in.curr_clip_pos;
-    curr_pos.xy = 0.5f * ( curr_pos.xy ) + 0.5f;
-
-    output.velocity = ( curr_pos - old_pos ).xy;
+    output.velocity = old_uv - curr_uv;
 
     if ( material_data.has_base_color_texture != 0 ) {
         output.albedo = albedo_map.Sample( nearest_sampler, in.uv );

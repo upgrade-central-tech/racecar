@@ -1,3 +1,5 @@
+#include "../common.slang"
+
 struct VertexInput {
     float3 position : POSITION;
     float3 normal : NORMAL;
@@ -7,15 +9,6 @@ struct VertexInput {
 
 struct VertexOutput {
     float4 sv_position : SV_Position;
-};
-
-struct CameraBufferData {
-    float4x4 mvp;
-    float4x4 model;
-    float4x4 inv_model;
-    float4 camera_pos;
-    // Pack: near plane, far plane, aspect ratio, fov_Y
-    float4 camera_constants;
 };
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;

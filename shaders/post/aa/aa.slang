@@ -43,8 +43,10 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     uint width;
     uint height;
     scene_color.GetDimensions( width, height );
-    float2 uv = ( float2( pixel ) + 0.5f ) / float2( width, height );
-    float2 velocity = 0.0f; // gbuffer_velocity[pixel];
+    float2 screen_size = float2( width, height );
+    float2 uv = ( float2( pixel ) + 0.5f ) / screen_size;
+
+    float2 velocity = gbuffer_velocity[pixel];
 
     // computes mag sq, check if valid.
     // If there's no velocity, do fallback method
@@ -61,29 +63,35 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
         velocity = ( prev_clip.xy / prev_clip.w * 0.5f + 0.5f ) - uv;
     }
 
+    float3 curr_color = scene_color[pixel].rgb;
+
     float2 prev_uv = uv + velocity;
     bool invalid = any( prev_uv < 0.0f ) || any( prev_uv > 1.0f );
 
     float3 prev_color = select(
-        invalid, float3( 0.0f ), scene_history.SampleLevel( linear_sampler, prev_uv, 0 ).rgb );
-    float3 curr_color = scene_color[pixel].rgb;
+        invalid, curr_color, scene_history.SampleLevel( linear_sampler, prev_uv, 0 ).rgb );
 
     // Neighborhood clamp process
-    float3 n0 = RGB_to_YCoCg( scene_color.Load( int3( pixel + int2( -1, -1 ), 0 ) ).rgb );
-    float3 n1 = RGB_to_YCoCg( scene_color.Load( int3( pixel + int2( 1, -1 ), 0 ) ).rgb );
-    float3 n2 = RGB_to_YCoCg( scene_color.Load( int3( pixel + int2( -1, 1 ), 0 ) ).rgb );
-    float3 n3 = RGB_to_YCoCg( scene_color.Load( int3( pixel + int2( 1, 1 ), 0 ) ).rgb );
+    float3 nmin = RGB_to_YCoCg( curr_color );
+    float3 nmax = nmin;
 
-    float3 nmin = min( min( n0, n1 ), min( n2, n3 ) );
-    float3 nmax = max( max( n0, n1 ), max( n2, n3 ) );
+    for ( int y = -1; y <= 1; y++ ) {
+        for ( int x = -1; x <= 1; x++ ) {
+            float3 n = RGB_to_YCoCg(
+                scene_color.Load( int3( int2( pixel ) + int2( x, y ), 0 ) ).rgb );
+            nmin = min( nmin, n );
+            nmax = max( nmax, n );
+        }
+    }
+
     float3 prev_ycocg = RGB_to_YCoCg( prev_color );
 
     prev_color = clamp( prev_ycocg, nmin, nmax );
 
     // Motion blending
-    float2 motion = ( uv - prev_uv );
+    float2 motion = ( uv - prev_uv ) * screen_size;
     float motion_mag = length( motion );
-    const float motion_boost = 0.35f;
+    const float motion_boost = 0.02f;
     float blend = saturate( 1.0f - motion_mag * motion_boost );
 
     float modulation_factor = lerp( 0.1f, 0.9f, blend );

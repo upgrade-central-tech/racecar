@@ -1,6 +1,6 @@
 #define USE_SH_IRRADIANCE 1
 
-static const float PI = 3.14159265359;
+#include "../common.slang"
 
 struct VertexInput {
     float3 position : POSITION;
@@ -18,25 +18,6 @@ struct VertexOutput {
     float2 uv;
 };
 
-struct CameraBufferData {
-    float4x4 mvp;
-    float4x4 model;
-    float4x4 inv_model;
-    float3 camera_pos;
-    float3 color;
-};
-
-struct DebugData {
-    float4 color;
-
-    // Pack: roughness, metallic, clearcoat roughness, and clearcoat weight respsectively
-    float4 packed_data0;
-    // Pack: glint roughness,
-    float4 packed_data1;
-
-    int debug_view;
-};
-
 // God help us all.
 struct SHData {
     float4 coeff0;
@@ -46,35 +27,6 @@ struct SHData {
     float4 coeff4;
     float4 coeff5;
     float4 coeff6;
-}
-
-struct MaterialData {
-    int has_base_color_texture;
-    int has_metallic_roughness_texture;
-    int has_normal_texture;
-    int has_emmisive_texture;
-
-    float4 base_color;
-
-    float metallic;
-    float roughness;
-    float normal_texture_weight;
-    float ior;
-
-    float3 specular_tint;
-    float specular;
-
-    float3 sheen_tint;
-    float sheen_roughness;
-
-    float sheen_weight;
-    float transmission;
-    float clearcoat;
-    float clearcoat_roughness;
-
-    float3 emissive;
-    // 0 if lit, 1 if unlit
-    int unlit = false;
 }
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_data;
@@ -145,7 +97,7 @@ float4 fs_main( VertexOutput in )
     float attenuation = 1.0f / length( light_pos - in.position );
     attenuation *= attenuation;
 
-    float3 camera_pos = camera_buffer_data.camera_pos;
+    float3 camera_pos = camera_buffer_data.camera_pos.xyz;
     float3 normal = material_data.has_normal_texture != 0
         ? map_normals( normal_map_norm, in.tangent, in.normal )
         : normalize( in.normal );
