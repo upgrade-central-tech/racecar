@@ -1,4 +1,5 @@
 #include "gui_uniforms.hpp"
+#include "settings.h"
 
 namespace racecar {
 
@@ -22,7 +23,7 @@ void update_debug_uniform_buffer(
         .enable_albedo_map = gui.debug.enable_albedo_map,
         .enable_normal_map = gui.debug.enable_normal_map,
         .enable_roughness_metal_map = gui.debug.enable_roughness_metal_map,
-        .normals_only = gui.debug.normals_only,
+        .normals_only = RuntimeSettings::GetEnabled(RacecarSettings::ENABLE_NORMAL_DEBUG_VIEW),
         .albedo_only = gui.debug.albedo_only,
         .roughness_metal_only = gui.debug.roughness_metal_only,
 

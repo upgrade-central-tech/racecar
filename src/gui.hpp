@@ -31,7 +31,6 @@ struct Gui {
         bool enable_normal_map = false;
         bool enable_roughness_metal_map = false;
 
-        bool normals_only = false;
         bool albedo_only = false;
         bool roughness_metal_only = false;
         bool ray_traced_shadows = true;
@@ -86,7 +85,6 @@ struct Gui {
     } tonemapping = {};
 
     struct BloomData {
-        bool enable = true;
         float threshold = 1.2f;
         float filter_radius = 0.003f;
     } bloom = {};

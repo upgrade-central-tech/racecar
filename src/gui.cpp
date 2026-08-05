@@ -10,6 +10,8 @@
 #include <optional>
 #include <string_view>
 
+#include <gui_helpers.hpp>
+
 namespace racecar::gui {
 
 namespace {
@@ -338,7 +340,7 @@ void update(
                 );
 
                 ImGui::Checkbox( "Turn on albedo only", &gui.debug.albedo_only );
-                ImGui::Checkbox( "Turn on normals only", &gui.debug.normals_only );
+                RacecarGUI::SettingsCheckbox( "Turn on normals only" , RacecarSettings::ENABLE_NORMAL_DEBUG_VIEW);
                 ImGui::Checkbox(
                     "Turn on roughness + metallic only",
                     &gui.debug.roughness_metal_only
@@ -406,7 +408,7 @@ void update(
 
             if ( ImGui::BeginTabItem( "Post" ) ) {
                 ImGui::SeparatorText( "Bloom" );
-                ImGui::Checkbox( "Enable", &gui.bloom.enable );
+                RacecarGUI::SettingsCheckbox("Enable", RacecarSettings::ENABLE_BLOOM);
                 ImGui::SliderFloat( "Threshold", &gui.bloom.threshold, 0.f, 5.f );
                 ImGui::SliderFloat( "Filter radius", &gui.bloom.filter_radius, 0.f, 0.025f );
 

@@ -162,6 +162,11 @@ float4 fs_main( VertexOutput in )
     float3 out_color
         = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0, refl );
 
+    // DEBUG VIEWS
+    if ( debug_data.normals_only ) {
+        return float4( normal, 1.0f );
+    }
+    
     return float4( out_color, 1.0f );
 }
 

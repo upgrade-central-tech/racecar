@@ -32,6 +32,8 @@ add_executable(racecar
     ${SRC_DIR}/gui_uniforms.cpp
     ${SRC_DIR}/lut_sets.cpp
     ${SRC_DIR}/window_events.cpp
+    ${SRC_DIR}/gui_helpers.cpp
+    ${SRC_DIR}/settings.cpp
 
     ${PASSES_DIR}/scene_pass.cpp
     ${PASSES_DIR}/reflection_pass.cpp
