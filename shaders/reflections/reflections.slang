@@ -82,7 +82,9 @@ bool traceRayClosestHit( float stencil, float3 rayOrigin, float3 rayDir, out flo
 
     uint rayFlags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
 
-    if ( stencil == TERRAIN_ID ) {
+    // Terrain pixels reflect the car, and car pixels reflect the car onto itself. Both cases
+    // trace the car TLAS, so both can be resolved through the same car hit shading path.
+    if ( stencil == TERRAIN_ID || stencil == CAR_ID ) {
         q.TraceRayInline( sceneBVH, rayFlags, 0xff, ray );
     } else {
         q.TraceRayInline( terrainBVH, rayFlags, 0xff, ray );
@@ -148,124 +150,117 @@ float4 fs_main( VertexOutput in )
     bool hit = traceRayClosestHit( stencil, in_pos, refl_dir, t, prim_idx, barycentrics,
         instance_idx, object_to_world, world_to_object );
 
-    if ( hit ) {
-        if ( stencil == CAR_ID ) {
-            return float4( 0.0 );
-        } else {
-            // return float4( float( instance_idx ) / 40.0f, 1.0 - float( instance_idx ) / 40.0f,
-            // 0.0, 1.0 );
-            uint4 idx_buf = blas_offsets.index_buffer_offset[instance_idx / 4];
-            uint4 vtx_buf = blas_offsets.vertex_buffer_offset[instance_idx / 4];
-
-            uint32_t index_offset = idx_buf[instance_idx % 4];
-            uint32_t vertex_offset = vtx_buf[instance_idx % 4];
-
-            int idx_1 = index_data[index_offset + 3 * prim_idx];
-            int idx_2 = index_data[index_offset + 3 * prim_idx + 1];
-            int idx_3 = index_data[index_offset + 3 * prim_idx + 2];
-
-            PaddedVertex col1 = vertex_data[vertex_offset + idx_1];
-            PaddedVertex col2 = vertex_data[vertex_offset + idx_2];
-            PaddedVertex col3 = vertex_data[vertex_offset + idx_3];
-
-            float3 local_barycentrics = float3(
-                1.0f - barycentrics.x - barycentrics.y, barycentrics.x, barycentrics.y );
-
-            float3 object_position = ( col1.position.xyz * local_barycentrics.x )
-                + ( col2.position.xyz * local_barycentrics.y )
-                + ( col3.position.xyz * local_barycentrics.z );
-
-            float3 position = mul( object_to_world, float4( object_position, 1.0f ) );
-
-            float2 uv = ( col1.uv.xy * local_barycentrics.x )
-                + ( col2.uv.xy * local_barycentrics.y ) + ( col3.uv.xy * local_barycentrics.z );
-
-            float3 object_normal = ( col1.normal.xyz * local_barycentrics.x )
-                + ( col2.normal.xyz * local_barycentrics.y )
-                + ( col3.normal.xyz * local_barycentrics.z );
-
-            float3x3 world_to_object_3x3 = float3x3(
-                world_to_object[0].xyz, world_to_object[1].xyz, world_to_object[2].xyz );
-
-            float3 normal = normalize( mul( object_normal, world_to_object_3x3 ) );
-
-            int albedo_texture_index
-                = rt_texture_uniform.albedo_texture_index[instance_idx / 4][instance_idx % 4];
-            int metallic_roughness_texture_index
-                = rt_texture_uniform
-                      .metallic_roughness_texture_index[instance_idx / 4][instance_idx % 4];
-
-            uint material_id = blas_offsets.material_id[instance_idx / 4][instance_idx % 4];
-            MaterialData material = material_table.materials[material_id];
-
-            float3 albedo = material.base_color.rgb;
-            float roughness = material.roughness;
-            float metallic = material.metallic;
-            float clearcoat_roughness = material.clearcoat_roughness;
-            float clearcoat_weight = material.clearcoat;
-
-            if ( albedo_texture_index != -1 ) {
-                float4 sam = albedo_textures[albedo_texture_index].Sample( nearest_sampler, uv );
-                albedo = sam.rgb;
-            }
-
-            if ( metallic_roughness_texture_index != -1 ) {
-                float4 sam
-                    = metallic_roughness_textures[metallic_roughness_texture_index].Sample(
-                        nearest_sampler, uv );
-                roughness = sam.y;
-                metallic = sam.z;
-            }
-
-            GBuffer g_buffer = {
-                in_pos,
-                in_nor,
-                float4( 0.0f ), // tangents
-                float2( 0.0f ), // uv
-                float2( 0.0f ), // ddx_uv
-                float2( 0.0f ), // ddy_uv
-            };
-
-            Material pbr = {
-                roughness,
-                metallic,
-                clearcoat_roughness,
-                clearcoat_weight,
-            };
-
-            float3 light = normalize( debug_data.sun_direction ).rgb;
-            float3 view_dir = -refl_dir;
-            float3 half_vector = normalize( view_dir + light );
-
-            //
-            float4 refl_input = float4(
-                0.0f ); // just use 1-bounce for reflections, sample IBL - mark alpha 0, as such
-            float3 color = car_bsdf(
-                albedo, normal, view_dir, half_vector, light, pbr, g_buffer, 1.0f, refl_input );
-
-            return float4( color, 1.0f );
-
-            // int roughness_metallic_index =
-            // rt_texture_uniform.metallic_roughness_texture_index[instance_idx / 4][instance_idx %
-            // 4];
-
-            // if ( roughness_metallic_index == -1 ) {
-            //     return float4( rt_texture_uniform.roughness[instance_idx / 4][instance_idx % 4],
-            //     rt_texture_uniform.metallic[instance_idx / 4][instance_idx % 4], 0.0, 1.0);
-            // }
-            // else {
-            //     return float4( 0.0, 1.0, 0.0, 1.0 );
-            //     float4 sample = metallic_roughness_textures[roughness_metallic_index].Sample(
-            //     nearest_sampler, uv ); return float4( sample.rgb, 1.0 );
-            // }
-
-            // return float4( normalize(color), 1.0 );
-        }
-    } else {
-#endif // RACECAR_RAY_TRACING
+    if ( !hit ) {
         return float4( 0.0 );
-#if RACECAR_RAY_TRACING
     }
+    
+    // return float4( float( instance_idx ) / 40.0f, 1.0 - float( instance_idx ) / 40.0f,
+    // 0.0, 1.0 );
+    uint4 idx_buf = blas_offsets.index_buffer_offset[instance_idx / 4];
+    uint4 vtx_buf = blas_offsets.vertex_buffer_offset[instance_idx / 4];
+
+    uint32_t index_offset = idx_buf[instance_idx % 4];
+    uint32_t vertex_offset = vtx_buf[instance_idx % 4];
+
+    int idx_1 = index_data[index_offset + 3 * prim_idx];
+    int idx_2 = index_data[index_offset + 3 * prim_idx + 1];
+    int idx_3 = index_data[index_offset + 3 * prim_idx + 2];
+
+    PaddedVertex col1 = vertex_data[vertex_offset + idx_1];
+    PaddedVertex col2 = vertex_data[vertex_offset + idx_2];
+    PaddedVertex col3 = vertex_data[vertex_offset + idx_3];
+
+    float3 local_barycentrics
+        = float3( 1.0f - barycentrics.x - barycentrics.y, barycentrics.x, barycentrics.y );
+
+    float3 object_position = ( col1.position.xyz * local_barycentrics.x )
+        + ( col2.position.xyz * local_barycentrics.y )
+        + ( col3.position.xyz * local_barycentrics.z );
+
+    float3 position = mul( object_to_world, float4( object_position, 1.0f ) );
+
+    float2 uv = ( col1.uv.xy * local_barycentrics.x ) + ( col2.uv.xy * local_barycentrics.y )
+        + ( col3.uv.xy * local_barycentrics.z );
+
+    float3 object_normal = ( col1.normal.xyz * local_barycentrics.x )
+        + ( col2.normal.xyz * local_barycentrics.y ) + ( col3.normal.xyz * local_barycentrics.z );
+
+    float3x3 world_to_object_3x3
+        = float3x3( world_to_object[0].xyz, world_to_object[1].xyz, world_to_object[2].xyz );
+
+    float3 normal = normalize( mul( object_normal, world_to_object_3x3 ) );
+
+    int albedo_texture_index
+        = rt_texture_uniform.albedo_texture_index[instance_idx / 4][instance_idx % 4];
+    int metallic_roughness_texture_index
+        = rt_texture_uniform.metallic_roughness_texture_index[instance_idx / 4][instance_idx % 4];
+
+    uint material_id = blas_offsets.material_id[instance_idx / 4][instance_idx % 4];
+    MaterialData material = material_table.materials[material_id];
+
+    float3 albedo = material.base_color.rgb;
+    float roughness = material.roughness;
+    float metallic = material.metallic;
+    float clearcoat_roughness = material.clearcoat_roughness;
+    float clearcoat_weight = material.clearcoat;
+
+    if ( albedo_texture_index != -1 ) {
+        float4 sam = albedo_textures[albedo_texture_index].Sample( nearest_sampler, uv );
+        albedo = sam.rgb;
+    }
+
+    if ( metallic_roughness_texture_index != -1 ) {
+        float4 sam = metallic_roughness_textures[metallic_roughness_texture_index].Sample(
+            nearest_sampler, uv );
+        roughness = sam.y;
+        metallic = sam.z;
+    }
+
+    GBuffer g_buffer = {
+        in_pos,
+        in_nor,
+        float4( 0.0f ), // tangents
+        float2( 0.0f ), // uv
+        float2( 0.0f ), // ddx_uv
+        float2( 0.0f ), // ddy_uv
+    };
+
+    Material pbr = {
+        roughness,
+        metallic,
+        clearcoat_roughness,
+        clearcoat_weight,
+    };
+
+    float3 light = normalize( debug_data.sun_direction ).rgb;
+    float3 hit_view_dir = -refl_dir;
+    float3 half_vector = normalize( hit_view_dir + light );
+
+    //
+    float4 refl_input
+        = float4( 0.0f ); // just use 1-bounce for reflections, sample IBL - mark alpha 0, as such
+    float3 color = car_bsdf(
+        albedo, normal, hit_view_dir, half_vector, light, pbr, g_buffer, 1.0f, refl_input );
+
+    return float4( color, 1.0f );
+
+    // int roughness_metallic_index =
+    // rt_texture_uniform.metallic_roughness_texture_index[instance_idx / 4][instance_idx %
+    // 4];
+
+    // if ( roughness_metallic_index == -1 ) {
+    //     return float4( rt_texture_uniform.roughness[instance_idx / 4][instance_idx % 4],
+    //     rt_texture_uniform.metallic[instance_idx / 4][instance_idx % 4], 0.0, 1.0);
+    // }
+    // else {
+    //     return float4( 0.0, 1.0, 0.0, 1.0 );
+    //     float4 sample = metallic_roughness_textures[roughness_metallic_index].Sample(
+    //     nearest_sampler, uv ); return float4( sample.rgb, 1.0 );
+    // }
+
+    // return float4( normalize(color), 1.0 );
+#else
+    return float4( 0.0 );
 #endif // RACECAR_RAY_TRACING
 }
 
