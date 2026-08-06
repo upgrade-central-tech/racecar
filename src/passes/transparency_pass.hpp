@@ -24,7 +24,10 @@ struct TransparencyPass {
     engine::Pipeline transparency_pipeline;
 
     engine::DescriptorSet* uniform_desc_set = nullptr;
+    std::vector<engine::DescriptorSet>* material_desc_sets = nullptr;
     std::vector<engine::DescriptorSet>* model_mat_desc_sets = nullptr;
+    engine::DescriptorSet* lut_sets = nullptr;
+    engine::DescriptorSet* sampler_desc_set = nullptr;
 
     std::vector<TransparentPrimInfo> prim_info;
 };
@@ -34,7 +37,10 @@ void create_transparency_pass_resources(
     const geometry::scene::Mesh& scene_mesh,
     const std::vector<const scene::Primitive*>& transparent_prims,
     engine::DescriptorSet* uniform_desc_set,
-    std::vector<engine::DescriptorSet>* model_mat_desc_sets
+    std::vector<engine::DescriptorSet>* material_desc_sets,
+    std::vector<engine::DescriptorSet>* model_mat_desc_sets,
+    engine::DescriptorSet* lut_sets,
+    engine::DescriptorSet* sampler_desc_set
 );
 
 void execute_transparency_pass(

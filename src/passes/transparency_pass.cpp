@@ -41,7 +41,10 @@ void create_transparency_pass_resources(
     const geometry::scene::Mesh& scene_mesh,
     const std::vector<const scene::Primitive*>& transparent_prims,
     engine::DescriptorSet* uniform_desc_set,
-    std::vector<engine::DescriptorSet>* model_mat_desc_sets
+    std::vector<engine::DescriptorSet>* material_desc_sets,
+    std::vector<engine::DescriptorSet>* model_mat_desc_sets,
+    engine::DescriptorSet* lut_sets,
+    engine::DescriptorSet* sampler_desc_set
 )
 {
     const engine::State& engine = engine::State::GetConst();
@@ -50,7 +53,10 @@ void create_transparency_pass_resources(
     transparency_pass->transparency_pipeline = engine::create_gfx_pipeline(
         engine::get_vertex_input_state_create_info( scene_mesh ),
         { uniform_desc_set->layouts[frame_index],
-          ( *model_mat_desc_sets )[0].layouts[frame_index] },
+          ( *material_desc_sets )[0].layouts[frame_index],
+          ( *model_mat_desc_sets )[0].layouts[frame_index],
+          lut_sets->layouts[frame_index],
+          sampler_desc_set->layouts[frame_index] },
         { VK_FORMAT_R16G16B16A16_SFLOAT },
         VK_SAMPLE_COUNT_1_BIT,
         true,
@@ -60,7 +66,10 @@ void create_transparency_pass_resources(
     );
 
     transparency_pass->uniform_desc_set = uniform_desc_set;
+    transparency_pass->material_desc_sets = material_desc_sets;
     transparency_pass->model_mat_desc_sets = model_mat_desc_sets;
+    transparency_pass->lut_sets = lut_sets;
+    transparency_pass->sampler_desc_set = sampler_desc_set;
 
     transparency_pass->prim_info.clear();
     transparency_pass->prim_info.reserve( transparent_prims.size() );
@@ -109,7 +118,10 @@ void execute_transparency_pass(
             .draw_resource_descriptor = draw_descriptor,
             .descriptor_sets = {
                 transparency_pass->uniform_desc_set,
+                &( *transparency_pass->material_desc_sets )[static_cast<size_t>( prim->material_id )],
                 &( *transparency_pass->model_mat_desc_sets )[static_cast<size_t>( prim->node_id )],
+                transparency_pass->lut_sets,
+                transparency_pass->sampler_desc_set,
             },
             .pipeline = transparency_pass->transparency_pipeline,
         });

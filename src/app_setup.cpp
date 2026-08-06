@@ -154,7 +154,7 @@ void load_materials(
             .has_normal_texture = mat.normal_texture_index.has_value() ? 1 : 0,
             .has_emmisive_texture = mat.emmisive_texture_index.has_value() ? 1 : 0,
 
-            .base_color = glm::vec4( mat.base_color, 1.0 ),
+            .base_color = glm::vec4( mat.base_color, mat.alpha ),
 
             .metallic = mat.metallic,
             .roughness = mat.roughness,

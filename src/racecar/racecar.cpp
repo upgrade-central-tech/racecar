@@ -323,7 +323,10 @@ void run( bool use_fullscreen )
         scene_mesh,
         transparent_prims,
         &uniform_desc_set,
-        &model_mat_desc_sets
+        &material_desc_sets,
+        &model_mat_desc_sets,
+        &lut_sets,
+        &sampler_desc_set
     );
 
     // ================================================================================================================
