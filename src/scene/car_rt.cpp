@@ -6,6 +6,9 @@
 #include "../engine/images.hpp"
 #include "../vk/create.hpp"
 
+#include <algorithm>
+#include <cstring>
+
 namespace racecar {
 
 void alloc_blases(
@@ -16,6 +19,10 @@ void alloc_blases(
 {
     vk::Common& vulkan = vk::Common::GetMut();
     engine::State& engine = engine::State::GetMut();
+    if ( prims.size() > ub_data::MAX_RT_PRIMITIVES ) {
+        throw Exception( "[Alloc BLASes] Scene has more primitives than the ray tracing lookup tables can address" );
+    }
+
     int blas_count = 0;
     ub_data::BLASOffsets blas_offsets { };
     for ( const scene::Primitive* prim : prims ) {
@@ -46,6 +53,7 @@ void alloc_blases(
             = uint32_t( prim == nullptr ? 0 : prim->vertex_offset );
         blas_offsets.index_buffer_offset[blas_count]
             = uint32_t( prim == nullptr ? 0 : prim->ind_offset );
+        blas_offsets.material_id[blas_count] = uint32_t( prim == nullptr ? 0 : prim->material_id );
 
         blas_count++;
     }
@@ -152,7 +160,8 @@ engine::DescriptorSet create_car_desc_set(
     UniformBuffer<ub_data::BLASOffsets>& offset_data,
     vk::mem::AllocatedImage& lut_brdf,
     atmosphere::AtmosphereBaker& atms_baker,
-    UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data
+    UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data,
+    UniformBuffer<ub_data::MaterialTable>& material_table
 )
 {
     engine::DescriptorSet car_descriptor_set = engine::generate_descriptor_set(
@@ -164,6 +173,7 @@ engine::DescriptorSet create_car_desc_set(
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF_LUT
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // octahedral_sky_mips
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // octahedral_sky_irradiance
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // material_table
         },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
@@ -197,6 +207,7 @@ engine::DescriptorSet create_car_desc_set(
     );
 
     engine::update_descriptor_set_uniform( car_descriptor_set, rt_texture_uniform_data, 3 );
+    engine::update_descriptor_set_uniform( car_descriptor_set, material_table, 7 );
 
     return car_descriptor_set;
 }
@@ -225,14 +236,66 @@ engine::DescriptorSet create_combined_textures_desc_set(
     return combined_textures_desc_set;
 }
 
-void update_rt_uniform_buffers(
-    UniformBuffer<ub_data::BLASOffsets>& offset_data,
-    UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data
+UniformBuffer<ub_data::MaterialTable> create_material_table(
+    const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers
 )
 {
     const engine::State& engine = engine::State::GetConst();
+
+    if ( material_uniform_buffers.size() > ub_data::MAX_MATERIALS ) {
+        throw Exception( "[Create Material Table] Scene has more materials than the table can "
+                         "hold; raise MAX_MATERIALS" );
+    }
+
+    UniformBuffer<ub_data::MaterialTable> material_table
+        = create_uniform_buffer<ub_data::MaterialTable>( { }, engine.frame_overlap );
+
+    sync_material_table( material_table, material_uniform_buffers );
+    material_table.update_all();
+
+    return material_table;
+}
+
+bool sync_material_table(
+    UniformBuffer<ub_data::MaterialTable>& material_table,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers
+)
+{
+    ub_data::MaterialTable table = material_table.get_data();
+
+    const size_t count = std::min( material_uniform_buffers.size(), ub_data::MAX_MATERIALS );
+
+    bool changed = false;
+    for ( size_t i = 0; i < count; ++i ) {
+        const ub_data::Material material = material_uniform_buffers[i].get_data();
+
+        if ( std::memcmp( &table.materials[i], &material, sizeof( ub_data::Material ) ) != 0 ) {
+            table.materials[i] = material;
+            changed = true;
+        }
+    }
+
+    if ( changed ) {
+        material_table.set_data( table );
+    }
+
+    return changed;
+}
+
+void update_rt_uniform_buffers(
+    UniformBuffer<ub_data::BLASOffsets>& offset_data,
+    UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data,
+    UniformBuffer<ub_data::MaterialTable>& material_table,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers
+)
+{
+    const engine::State& engine = engine::State::GetConst();
+
+    sync_material_table( material_table, material_uniform_buffers );
+
     offset_data.update( engine.get_frame_index() );
     rt_texture_uniform_data.update( engine.get_frame_index() );
+    material_table.update( engine.get_frame_index() );
 }
 
 }

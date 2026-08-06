@@ -157,9 +157,13 @@ struct ModelMat {
     glm::mat4 prev_model_mat = {};
 };
 
+constexpr size_t MAX_RT_PRIMITIVES = 104;
+constexpr size_t MAX_MATERIALS = 104;
+
 struct BLASOffsets {
-    uint32_t vertex_buffer_offset[104];
-    uint32_t index_buffer_offset[104];
+    uint32_t vertex_buffer_offset[MAX_RT_PRIMITIVES];
+    uint32_t index_buffer_offset[MAX_RT_PRIMITIVES];
+    uint32_t material_id[MAX_RT_PRIMITIVES];
 };
 
 struct PaddedVertex {
@@ -173,14 +177,16 @@ struct PaddedVertex {
 };
 
 struct RTTextureUniform {
-    glm::vec4 base_color[104];
-    int32_t albedo_texture_index[104];
-
-    float metallic[104];
-    float roughness[104];
-    int32_t metallic_roughness_texture_index[104];
-
-    int32_t normal_texture_index[104];
+    int32_t albedo_texture_index[MAX_RT_PRIMITIVES];
+    int32_t metallic_roughness_texture_index[MAX_RT_PRIMITIVES];
+    int32_t normal_texture_index[MAX_RT_PRIMITIVES];
 };
+
+struct MaterialTable {
+    Material materials[MAX_MATERIALS];
+};
+
+static_assert( sizeof( MaterialTable ) <= 16384,
+    "MaterialTable exceeds the guaranteed maximum uniform buffer range" );
 
 } // namespace racecar::uniform_buffer

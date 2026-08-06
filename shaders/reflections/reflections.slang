@@ -9,19 +9,16 @@ struct VertexOutput {
     float2 uv;
 };
 
+// It's an int array, but we use uint4 for packing
 struct BLASOffsets {
     uint4 vertex_buffer_offset[26];
     uint4 index_buffer_offset[26];
+    uint4 material_id[26];
 };
 
 struct RTTextureUniform {
-    float4 base_color[104];
     int4 albedo_texture_index[26];
-
-    float4 metallic[26];
-    float4 roughness[26];
     int4 metallic_roughness_texture_index[26];
-
     int4 normal_texture_index[26];
 };
 
@@ -59,6 +56,7 @@ layout( binding = 3, set = 5 ) ConstantBuffer<RTTextureUniform> rt_texture_unifo
 layout( binding = 4, set = 5 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 5, set = 5 ) Texture2D<float4> octahedral_sky_mips;
 layout( binding = 6, set = 5 ) Texture2D<float4> octahedral_sky_irradiance;
+layout( binding = 7, set = 5 ) ConstantBuffer<MaterialTable> material_table;
 
 layout( binding = 0, set = 6 ) Texture2D<float4> albedo_textures[];
 layout( binding = 1, set = 6 ) Texture2D<float4> metallic_roughness_textures[];
@@ -196,28 +194,26 @@ float4 fs_main( VertexOutput in )
                 = rt_texture_uniform
                       .metallic_roughness_texture_index[instance_idx / 4][instance_idx % 4];
 
-            float3 albedo;
-            float roughness = 0.1f;
-            float metallic = 0.0f;
-            float clearcoat_roughness = 0.5f;
-            float clearcoat_weight = 0.0f;
+            uint material_id = blas_offsets.material_id[instance_idx / 4][instance_idx % 4];
+            MaterialData material = material_table.materials[material_id];
 
-            if ( albedo_texture_index == -1 ) {
-                albedo = ( rt_texture_uniform.base_color[instance_idx].rgb );
-            } else {
-                float4 sample = albedo_textures[albedo_texture_index].Sample( nearest_sampler, uv );
-                albedo = sample.rgb;
+            float3 albedo = material.base_color.rgb;
+            float roughness = material.roughness;
+            float metallic = material.metallic;
+            float clearcoat_roughness = material.clearcoat_roughness;
+            float clearcoat_weight = material.clearcoat;
+
+            if ( albedo_texture_index != -1 ) {
+                float4 sam = albedo_textures[albedo_texture_index].Sample( nearest_sampler, uv );
+                albedo = sam.rgb;
             }
 
-            if ( metallic_roughness_texture_index == -1 ) {
-                // metallic = rt_texture_uniform.metallic[instance_idx].r;
-                // roughness = rt_texture_uniform.roughness[instance_idx].r;
-            } else {
-                float4 sample
+            if ( metallic_roughness_texture_index != -1 ) {
+                float4 sam
                     = metallic_roughness_textures[metallic_roughness_texture_index].Sample(
                         nearest_sampler, uv );
-                // metallic = sample.x;
-                // roughness = sample.y;
+                roughness = sam.y;
+                metallic = sam.z;
             }
 
             GBuffer g_buffer = {

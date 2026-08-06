@@ -327,8 +327,6 @@ void load_model_primitive_material_data(
                             = int( albedo_textures.size() - 1 );
                     } else {
                         rt_texture_uniform.albedo_texture_index[tex_count] = -1;
-                        rt_texture_uniform.base_color[tex_count]
-                            = glm::vec4( current_material.base_color, 1.0 );
                     }
 
                     if ( metallic_roughness_index ) {
@@ -340,9 +338,10 @@ void load_model_primitive_material_data(
                             = int( metallic_roughness_textures.size() - 1 );
                     } else {
                         rt_texture_uniform.metallic_roughness_texture_index[tex_count] = -1;
-                        rt_texture_uniform.metallic[tex_count] = current_material.metallic;
-                        rt_texture_uniform.roughness[tex_count] = current_material.roughness;
                     }
+
+                    // TODO: No bindless normal map array is bound for ray tracing yet
+                    rt_texture_uniform.normal_texture_index[tex_count] = -1;
 
                     break;
                 }

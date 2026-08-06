@@ -165,7 +165,7 @@ void run( bool use_fullscreen )
     // Load data for each primitive
     std::vector<glm::mat4> transforms;
     std::vector<const scene::Primitive*> prims;
-    ub_data::RTTextureUniform rt_texture_uniform;
+    ub_data::RTTextureUniform rt_texture_uniform = { };
     std::vector<vk::mem::AllocatedImage> albedo_textures;
     std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
     load_model_primitive_material_data(
@@ -213,6 +213,9 @@ void run( bool use_fullscreen )
     vk::mem::AllocatedBuffer padded_vertex_data_buffer
         = create_padded_vertex_data_buffer( scene_mesh );
 
+    UniformBuffer<ub_data::MaterialTable> material_table
+        = create_material_table( material_uniform_buffers );
+
     // Create car descriptor set
     engine::DescriptorSet car_descriptor_set = create_car_desc_set(
         scene_mesh,
@@ -220,7 +223,8 @@ void run( bool use_fullscreen )
         offset_data,
         lut_brdf,
         atms_baker,
-        rt_texture_uniform_data
+        rt_texture_uniform_data,
+        material_table
     );
 
     // Create combined textures descriptor set
@@ -517,7 +521,12 @@ void run( bool use_fullscreen )
 
 #if RACECAR_RAY_TRACING
         // Update ray tracing uniform buffers
-        update_rt_uniform_buffers( offset_data, rt_texture_uniform_data );
+        update_rt_uniform_buffers(
+            offset_data,
+            rt_texture_uniform_data,
+            material_table,
+            material_uniform_buffers
+        );
 #endif // RACECAR_RAY_TRACING
 
         // Update terrain

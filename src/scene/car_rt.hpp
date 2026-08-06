@@ -35,19 +35,28 @@ void build_car_tlas( VkCommandBuffer& precompute_cmdbuf );
 vk::mem::AllocatedBuffer create_padded_vertex_data_buffer(
     geometry::scene::Mesh& scene_mesh );
 
-engine::DescriptorSet create_car_desc_set( 
+engine::DescriptorSet create_car_desc_set(
     geometry::scene::Mesh& scene_mesh, vk::mem::AllocatedBuffer& padded_vertex_data_buffer,
     UniformBuffer<ub_data::BLASOffsets>& offset_data, vk::mem::AllocatedImage& lut_brdf,
     atmosphere::AtmosphereBaker& atms_baker,
-    UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data );
+    UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data,
+    UniformBuffer<ub_data::MaterialTable>& material_table );
+
+UniformBuffer<ub_data::MaterialTable> create_material_table(
+    const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers );
+
+bool sync_material_table( UniformBuffer<ub_data::MaterialTable>& material_table,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers );
 
 engine::DescriptorSet create_combined_textures_desc_set( 
     std::vector<vk::mem::AllocatedImage>& albedo_textures,
     std::vector<vk::mem::AllocatedImage>& metallic_roughness_textures );
 
-void update_rt_uniform_buffers( 
+void update_rt_uniform_buffers(
     UniformBuffer<ub_data::BLASOffsets>& offset_data,
-    UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data );
+    UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data,
+    UniformBuffer<ub_data::MaterialTable>& material_table,
+    const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers );
 
 }
 

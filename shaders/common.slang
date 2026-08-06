@@ -28,7 +28,7 @@ struct CameraBufferData {
 
     // Pack: modded frame index [0, 15], null, null, null
     float4 camera_constants1;
-    
+
     float4x4 unjittered_mvp;
 };
 
@@ -105,6 +105,12 @@ struct MaterialData {
     float glint_log_density; // 18.0f
     float glint_roughness; // 0.28f
     float glint_randomness; // 2.0f
+};
+
+static const int MAX_MATERIALS = 104;
+
+struct MaterialTable {
+    MaterialData materials[MAX_MATERIALS];
 };
 
 struct ModelMatData {
