@@ -66,8 +66,12 @@ layout( binding = 1, set = 6 ) Texture2D<float4> metallic_roughness_textures[];
 #include "../car_mat/car_lighting.slang"
 
 #if RACECAR_RAY_TRACING
+static const float3x4 IDENTITY_3X4
+    = float3x4( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0 );
+
 bool traceRayClosestHit( float stencil, float3 rayOrigin, float3 rayDir, out float t,
-    out int primitiveIndex, out float2 barycentrics, out int instanceIndex )
+    out int primitiveIndex, out float2 barycentrics, out int instanceIndex,
+    out float3x4 objectToWorld, out float3x4 worldToObject )
 {
     RayDesc ray;
     ray.Origin = rayOrigin;
@@ -92,6 +96,8 @@ bool traceRayClosestHit( float stencil, float3 rayOrigin, float3 rayDir, out flo
         primitiveIndex = q.CommittedPrimitiveIndex();
         instanceIndex = q.CommittedInstanceIndex();
         barycentrics = q.CommittedTriangleBarycentrics();
+        objectToWorld = q.CommittedObjectToWorld3x4();
+        worldToObject = q.CommittedWorldToObject3x4();
         return true;
     }
 
@@ -99,6 +105,8 @@ bool traceRayClosestHit( float stencil, float3 rayOrigin, float3 rayDir, out flo
     primitiveIndex = -1;
     instanceIndex = -1;
     barycentrics = float2( 0, 0 );
+    objectToWorld = IDENTITY_3X4;
+    worldToObject = IDENTITY_3X4;
     return false;
 }
 #endif // RACECAR_RAY_TRACING
@@ -136,8 +144,10 @@ float4 fs_main( VertexOutput in )
     int prim_idx;
     int instance_idx;
     float2 barycentrics;
-    bool hit
-        = traceRayClosestHit( stencil, in_pos, refl_dir, t, prim_idx, barycentrics, instance_idx );
+    float3x4 object_to_world;
+    float3x4 world_to_object;
+    bool hit = traceRayClosestHit( stencil, in_pos, refl_dir, t, prim_idx, barycentrics,
+        instance_idx, object_to_world, world_to_object );
 
     if ( hit ) {
         if ( stencil == CAR_ID ) {
@@ -162,16 +172,23 @@ float4 fs_main( VertexOutput in )
             float3 local_barycentrics
                 = float3( barycentrics, 1.0 - barycentrics.x - barycentrics.y );
 
-            float3 position = ( col1.position.xyz * local_barycentrics.x )
+            float3 object_position = ( col1.position.xyz * local_barycentrics.x )
                 + ( col2.position.xyz * local_barycentrics.y )
                 + ( col3.position.xyz * local_barycentrics.z );
+
+            float3 position = mul( object_to_world, float4( object_position, 1.0f ) );
 
             float2 uv = ( col1.uv.xy * local_barycentrics.x )
                 + ( col2.uv.xy * local_barycentrics.y ) + ( col3.uv.xy * local_barycentrics.z );
 
-            float3 normal = normalize( ( col1.normal.xyz * local_barycentrics.x )
+            float3 object_normal = ( col1.normal.xyz * local_barycentrics.x )
                 + ( col2.normal.xyz * local_barycentrics.y )
-                + ( col3.normal.xyz * local_barycentrics.z ) );
+                + ( col3.normal.xyz * local_barycentrics.z );
+
+            float3x3 world_to_object_3x3 = float3x3(
+                world_to_object[0].xyz, world_to_object[1].xyz, world_to_object[2].xyz );
+
+            float3 normal = normalize( mul( object_normal, world_to_object_3x3 ) );
 
             int albedo_texture_index
                 = rt_texture_uniform.albedo_texture_index[instance_idx / 4][instance_idx % 4];

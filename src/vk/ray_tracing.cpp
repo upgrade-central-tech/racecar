@@ -271,8 +271,14 @@ void alloc_tlas(
             );
         }
 
+        const glm::mat4 row_major_transform = glm::transpose( obj.transform );
+
         VkTransformMatrixKHR transform_matrix;
-        memcpy( &transform_matrix.matrix, glm::value_ptr( obj.transform ), sizeof( float ) * 12 );
+        memcpy(
+            &transform_matrix.matrix,
+            glm::value_ptr( row_major_transform ),
+            sizeof( float ) * 12
+        );
 
         VkAccelerationStructureInstanceKHR instance = { };
         instance.transform = transform_matrix;
