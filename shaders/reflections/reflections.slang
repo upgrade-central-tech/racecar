@@ -167,8 +167,8 @@ float4 fs_main( VertexOutput in )
             PaddedVertex col2 = vertex_data[vertex_offset + idx_2];
             PaddedVertex col3 = vertex_data[vertex_offset + idx_3];
 
-            float3 local_barycentrics
-                = float3( barycentrics, 1.0 - barycentrics.x - barycentrics.y );
+            float3 local_barycentrics = float3(
+                1.0f - barycentrics.x - barycentrics.y, barycentrics.x, barycentrics.y );
 
             float3 object_position = ( col1.position.xyz * local_barycentrics.x )
                 + ( col2.position.xyz * local_barycentrics.y )
