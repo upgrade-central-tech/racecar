@@ -55,4 +55,14 @@ void add_cpu_task( TaskList& task_list, std::function<void()> task )
     task_list.cpu_tasks.push_back( { task } );
 }
 
+void add_gpu_task( TaskList& task_list, std::function<void( VkCommandBuffer )> task )
+{
+    Task new_task;
+    new_task.index = static_cast<int>( task_list.tasks.size() );
+    new_task.type = Task::GPU_CALL;
+
+    task_list.tasks.push_back( new_task );
+    task_list.gpu_tasks.push_back( { task } );
+}
+
 } // namespace racecar::engine
