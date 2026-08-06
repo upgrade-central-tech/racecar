@@ -137,6 +137,50 @@ void update_descriptor_set_image_array(
     }
 }
 
+void update_descriptor_set_rwimage_array(
+    DescriptorSet& desc_set,
+    const std::vector<const RWImage*>& imgs,
+    VkImageLayout img_layout,
+    int binding_idx,
+    uint32_t array_count
+)
+{
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
+    if ( imgs.empty() || array_count == 0 ) {
+        return;
+    }
+
+    for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
+        std::vector<VkDescriptorImageInfo> image_infos;
+
+        for ( uint32_t slot = 0; slot < array_count; slot++ ) {
+            // Repeat the last entry across the unused tail. The shader never reads those slots,
+            // but leaving descriptors unwritten is invalid.
+            size_t img = std::min( size_t( slot ), imgs.size() - 1 );
+
+            image_infos.push_back(
+                {
+                    .sampler = VK_NULL_HANDLE,
+                    .imageView = imgs[img]->images[i].image_view,
+                    .imageLayout = img_layout,
+                }
+            );
+        }
+
+        VkWriteDescriptorSet write_desc_set = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = desc_set.descriptor_sets[i],
+            .dstBinding = static_cast<uint32_t>( binding_idx ),
+            .descriptorCount = array_count,
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .pImageInfo = image_infos.data(),
+        };
+
+        vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
+    }
+}
+
 void update_descriptor_set_rwimage(
     DescriptorSet& desc_set, const RWImage& rw_img, VkImageLayout img_layout, int binding_idx
 )

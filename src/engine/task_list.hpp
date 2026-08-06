@@ -9,6 +9,8 @@
 
 namespace racecar::engine {
 
+using task_predicate_fn_t = bool ( * )( void );
+
 /// To be space-efficient, a `Task` only stores the type (graphics, compute, blit)
 /// and then an index into the corresponding list which is owned by `TaskList`.
 struct Task {
@@ -18,6 +20,8 @@ struct Task {
 
     bool is_ran = false;
     bool is_single_run = false;
+
+    task_predicate_fn_t predicate = nullptr;
 
     /// This allows you to skip writing "Type" e.g. you can just write `Task::GFX` or `Task::COMP`.
     using enum Type;
@@ -38,9 +42,9 @@ struct TaskList {
     std::vector<std::pair<int, PipelineBarrierDescriptor>> pipeline_barriers;
 };
 
-void add_gfx_task( TaskList& task_list, GfxTask task );
-void add_cs_task( TaskList& task_list, ComputeTask task );
-void add_blit_task( TaskList& task_list, BlitTask task );
+void add_gfx_task( TaskList& task_list, GfxTask task, task_predicate_fn_t predicate = nullptr );
+void add_cs_task( TaskList& task_list, ComputeTask task, task_predicate_fn_t predicate = nullptr );
+void add_blit_task( TaskList& task_list, BlitTask task, task_predicate_fn_t predicate = nullptr );
 void add_pipeline_barrier( TaskList& task_list, PipelineBarrierDescriptor barrier );
 void add_cpu_task( TaskList& task_list, std::function<void()> task );
 

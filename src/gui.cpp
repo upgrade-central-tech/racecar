@@ -321,6 +321,21 @@ void update(
                 RacecarGUI::SettingsCombo( "Debug view", RacecarSettings::DEBUG_VIEW );
                 ImGui::Checkbox( "Ray Traced Shadows", &gui.debug.ray_traced_shadows );
 
+                RacecarGUI::SettingsCombo( "Debug texture", RacecarSettings::DEBUG_TEXTURE );
+
+                ImGui::BeginDisabled(
+                    RuntimeSettings::Get<RacecarSettings::DEBUG_TEXTURE>() == DebugTexture::NONE
+                );
+                ImGui::SliderFloat(
+                    "Texture exposure",
+                    &gui.debug.texture_exposure,
+                    0.05f,
+                    8.0f,
+                    "%.2f",
+                    ImGuiSliderFlags_Logarithmic
+                );
+                ImGui::EndDisabled();
+
                 ImGui::SeparatorText( "Demo Settings" );
                 ImGui::Checkbox( "Enable car translation", &gui.demo.enable_translation );
                 ImGui::Checkbox( "Enable camera lock on car", &gui.demo.enable_camera_lock_on_car );

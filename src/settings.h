@@ -24,6 +24,11 @@ enum class DebugView : int {
 
 enum class TonemappingMode : int { NONE = 0, GT7_SDR, GT7_HDR, REINHARD, ACES };
 
+enum class DebugTexture : int {
+    NONE = 0,
+    REFLECTIONS,
+};
+
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
@@ -33,6 +38,7 @@ enum class RacecarSettings {
     ENABLE_BLOOM,
     AA_MODE,
     TONEMAPPING_MODE,
+    DEBUG_TEXTURE,
     RACECAR_SETTINGS_LENGTH
 };
 
@@ -63,6 +69,10 @@ template <> struct SettingValue<RacecarSettings::DEBUG_VIEW> {
 
 template <> struct SettingValue<RacecarSettings::TONEMAPPING_MODE> {
     using type = TonemappingMode;
+};
+
+template <> struct SettingValue<RacecarSettings::DEBUG_TEXTURE> {
+    using type = DebugTexture;
 };
 
 template <RacecarSettings S> typename SettingValue<S>::type Get()

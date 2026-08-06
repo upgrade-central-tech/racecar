@@ -146,6 +146,11 @@ struct AA {
     int mode = 0;
 };
 
+struct DebugTexture {
+    int index = 0;
+    float exposure = 1.f;
+};
+
 struct ModelMat {
     glm::mat4 model_mat = {};
     glm::mat4 inv_model_mat = {};

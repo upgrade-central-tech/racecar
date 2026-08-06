@@ -27,6 +27,7 @@
 #include "gui.hpp"
 #include "gui_uniforms.hpp"
 #include "lut_sets.hpp"
+#include "passes/debug_texture_pass.hpp"
 #include "passes/lighting_pass.hpp"
 #include "passes/post_processing.hpp"
 #include "passes/reflection_pass.hpp"
@@ -272,6 +273,13 @@ void run( bool use_fullscreen )
     );
 #endif // RACECAR_RAY_TRACING
 
+    DebugTexturePass debug_texture_pass;
+    std::vector<const engine::RWImage*> debug_textures;
+#if RACECAR_RAY_TRACING
+    debug_textures.push_back( &reflection_data );
+#endif // RACECAR_RAY_TRACING
+    initialize_debug_texture_pass( debug_texture_pass, screen_buffer, debug_textures );
+
     // Set up car lighting pass
     LightingPassDescSets lighting_pass_desc_sets = {
         .uniform_desc_set = uniform_desc_set,
@@ -419,6 +427,8 @@ void run( bool use_fullscreen )
         tm_pass
     );
 
+    add_debug_texture_pass( debug_texture_pass, task_list );
+
     // Transition screen buffer to be ready for swapchain blit
     create_screen_buffer_present_pipeline_barrier( screen_buffer, task_list );
 
@@ -523,6 +533,8 @@ void run( bool use_fullscreen )
 
         // Update bloom settings
         engine::post::update_bloom_uniform_buffer( gui, bloom_pass );
+
+        update_debug_texture_uniform_buffer( debug_texture_pass, gui.debug.texture_exposure );
 
         gui::update( gui, atms, camera, material_uniform_buffers );
 

@@ -30,6 +30,8 @@ struct Gui {
         bool ray_traced_shadows = true;
         int current_editing_material = 0;
         bool load_material_into_gui = true;
+
+        float texture_exposure = 1.f;
     } debug = {};
 
     struct DemoData {

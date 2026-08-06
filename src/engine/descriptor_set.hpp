@@ -59,6 +59,10 @@ void update_descriptor_set_image( DescriptorSet& desc_set,
 void update_descriptor_set_image_array( DescriptorSet& desc_set,
     const std::vector<vk::mem::AllocatedImage>& imgs, int binding_idx );
 
+void update_descriptor_set_rwimage_array( DescriptorSet& desc_set,
+    const std::vector<const RWImage*>& imgs, VkImageLayout img_layout, int binding_idx,
+    uint32_t array_count );
+
 void update_descriptor_set_depth_image( DescriptorSet& desc_set,
     const RWImage& depth_img, int binding_idx );
 

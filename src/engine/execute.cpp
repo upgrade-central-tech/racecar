@@ -166,6 +166,10 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                     break;
                 }
 
+                if ( task.predicate != nullptr && !task.predicate() ) {
+                    break;
+                }
+
                 execute_gfx_task( frame.render_cmdbuf, gfx_task );
                 break;
             }
@@ -178,6 +182,10 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                     break;
                 }
 
+                if ( task.predicate != nullptr && !task.predicate() ) {
+                    break;
+                }
+
                 execute_cs_task( frame.render_cmdbuf, cs_task );
                 break;
             }
@@ -187,6 +195,10 @@ void execute( TaskList& task_list, const gui::Gui& gui )
 
                 // Brain-dead solution. We need to ensure the pointers advance
                 if ( task.is_single_run && task.is_ran ) {
+                    break;
+                }
+
+                if ( task.predicate != nullptr && !task.predicate() ) {
                     break;
                 }
 

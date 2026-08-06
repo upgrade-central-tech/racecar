@@ -45,6 +45,11 @@ constexpr const char* TONEMAPPING_OPTIONS[] = {
     "None", "GT7 SDR", "GT7 HDR", "Reinhard", "ACES",
 };
 
+constexpr const char* DEBUG_TEXTURE_OPTIONS[] = {
+    "None",
+    "Reflections",
+};
+
 // -------------------------------------------------------------------
 // -------------------RUNTIME VALIDATION FUNCTIONS--------------------
 // -------------------------------------------------------------------
@@ -54,7 +59,19 @@ bool validate_aa() { return debug_view_is_off(); }
 
 bool validate_bloom() { return debug_view_is_off(); }
 
-bool validate_tonemapping() { return debug_view_is_off(); }
+bool validate_tonemapping()
+{
+    return debug_view_is_off() && Get<RacecarSettings::DEBUG_TEXTURE>() == DebugTexture::NONE;
+}
+
+bool validate_debug_texture_option( int option )
+{
+    if ( option == (int)DebugTexture::REFLECTIONS ) {
+        return RACECAR_RAY_TRACING != 0;
+    }
+
+    return true;
+}
 
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
@@ -79,6 +96,12 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
               .option_count = (int)std::size( TONEMAPPING_OPTIONS ),
               .desired = (int)TonemappingMode::GT7_HDR,
               .fallback = (int)TonemappingMode::NONE }, // TONEMAPPING_MODE
+
+    Setting { .validate_option = &validate_debug_texture_option,
+              .options = DEBUG_TEXTURE_OPTIONS,
+              .option_count = (int)std::size( DEBUG_TEXTURE_OPTIONS ),
+              .desired = (int)DebugTexture::NONE,
+              .fallback = (int)DebugTexture::NONE }, // DEBUG_TEXTURE
 };
 
 }
