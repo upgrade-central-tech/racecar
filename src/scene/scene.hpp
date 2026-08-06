@@ -25,6 +25,7 @@ struct Material {
     std::optional<int> base_color_texture_index = std::nullopt;
     float metallic = 0.f;
     float roughness = 1.f;
+    float alpha = 1.0f;
 
     /// Typically roughness in G, metallic in B
     std::optional<int> metallic_roughness_texture_index = std::nullopt;

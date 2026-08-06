@@ -179,6 +179,10 @@ void run( bool use_fullscreen )
         material_desc_sets
     );
 
+    std::vector<const scene::Primitive*> transparent_prims;
+    std::vector<const scene::Primitive*> opaque_prims;
+    sort_transparent_opaque_prims( prims, scene.materials, &transparent_prims, &opaque_prims );
+
 #if RACECAR_RAY_TRACING
     // BLAS allocation
     ub_data::BLASOffsets blas_offsets;

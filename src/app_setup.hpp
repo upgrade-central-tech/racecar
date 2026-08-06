@@ -48,4 +48,11 @@ void load_model_primitive_material_data(
     std::vector<vk::mem::AllocatedImage>& metallic_roughness_textures,
     std::vector<engine::DescriptorSet>& material_desc_sets );
 
+void sort_transparent_opaque_prims(
+    const std::vector<const scene::Primitive*>& prims, 
+    const std::vector<scene::Material>& materials,
+    std::vector<const scene::Primitive*>* transparent_prims, 
+    std::vector<const scene::Primitive*>* opaque_prims
+);
+
 }

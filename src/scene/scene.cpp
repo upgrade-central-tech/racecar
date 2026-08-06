@@ -116,6 +116,7 @@ void load_gltf(
         new_mat.base_color
             = double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );
         new_mat.base_color_texture_index = loaded_mat.pbrMetallicRoughness.baseColorTexture.index;
+        new_mat.alpha = static_cast<float>(loaded_mat.pbrMetallicRoughness.baseColorFactor[3]);
 
         if ( new_mat.base_color_texture_index.value() == -1 ) {
             new_mat.base_color_texture_index = std::nullopt;

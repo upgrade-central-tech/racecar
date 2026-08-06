@@ -380,4 +380,24 @@ void load_model_primitive_material_data(
     }
 }
 
+void sort_transparent_opaque_prims(
+    const std::vector<const scene::Primitive*>& prims, 
+    const std::vector<scene::Material>& materials,
+    std::vector<const scene::Primitive*>* transparent_prims, 
+    std::vector<const scene::Primitive*>* opaque_prims
+)
+{
+    for (const scene::Primitive* prim : prims) {
+        const scene::Material& mat = materials[(size_t)prim->material_id];
+
+        if ( mat.alpha > 0.99f ) {
+            opaque_prims->push_back(prim);
+        }
+        else {
+            transparent_prims->push_back(prim);
+            log::info("Transparent Object");
+        }
+    }
+}
+
 }
