@@ -80,7 +80,7 @@ void execute_transparency_pass(
     TransparencyPass* transparency_pass,
     geometry::scene::Mesh& scene_mesh,
     const std::vector<const scene::Primitive*>& transparent_prims,
-    engine::RWImage* screen_color,
+    engine::RWImage* target_color,
     engine::RWImage* gbuffer_depth_image,
     const UniformBuffer<ub_data::Camera>& camera_buffer,
     const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
@@ -92,7 +92,7 @@ void execute_transparency_pass(
     engine::GfxTask transparency_gfx_task = {
         .clear_color = std::nullopt,
         .clear_depth = std::nullopt,
-        .color_attachments = { screen_color },
+        .color_attachments = { target_color },
         .depth_image = gbuffer_depth_image,
         .extent = engine.swapchain.extent,
     };
@@ -166,8 +166,8 @@ void execute_transparency_pass(
     engine::add_gfx_task( task_list, std::move( transparency_gfx_task ) );
 }
 
-void create_lighting_transparency_pipeline_barrier(
-    engine::RWImage& screen_color, engine::RWImage& gbuffer_depth, engine::TaskList& task_list
+void create_transparency_pipeline_barrier(
+    engine::RWImage& target_color, engine::RWImage& gbuffer_depth, engine::TaskList& task_list
 )
 {
     engine::add_pipeline_barrier(
@@ -176,18 +176,19 @@ void create_lighting_transparency_pipeline_barrier(
             .buffer_barriers = { },
             .image_barriers = {
                 engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
                         | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    .image = &screen_color,
+                    .image = &target_color,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
                 engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
+                        | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .src_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .src_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,

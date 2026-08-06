@@ -15,7 +15,6 @@ namespace racecar {
 void create_screen_buffer_pipeline_barrier(
     engine::RWImage& screen_color,
     engine::RWImage& screen_buffer,
-    engine::RWImage& gbuffer_depth,
     engine::TaskList& task_list
 )
 {
@@ -44,16 +43,6 @@ void create_screen_buffer_pipeline_barrier(
                     .image = &screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                    .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-                    .image = &gbuffer_depth,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
-                },
             } }
     );
 }
@@ -81,17 +70,14 @@ void create_screen_buffer_present_pipeline_barrier(
     );
 }
 
-void post_processing_passes(
+void pre_transparency_post_passes(
     UniformBuffer<ub_data::Camera>& camera_buffer,
     deferred::GBuffers& gbuffers,
     engine::RWImage& screen_color,
     engine::RWImage& screen_buffer,
-    engine::RWImage& screen_history,
     engine::TaskList& task_list,
-    engine::post::AAPass& aa_pass,
     engine::post::AoPass& ao_pass,
-    engine::post::BloomPass& bloom_pass,
-    engine::post::TonemappingPass& tm_pass
+    engine::post::BloomPass& bloom_pass
 )
 {
     engine::post::add_bloom( &bloom_pass, task_list, screen_color, screen_buffer );
@@ -121,7 +107,19 @@ void post_processing_passes(
         }
     );
     add_ao( ao_pass, task_list );
+}
 
+void post_transparency_post_passes(
+    UniformBuffer<ub_data::Camera>& camera_buffer,
+    deferred::GBuffers& gbuffers,
+    engine::RWImage& screen_color,
+    engine::RWImage& screen_buffer,
+    engine::RWImage& screen_history,
+    engine::TaskList& task_list,
+    engine::post::AAPass& aa_pass,
+    engine::post::TonemappingPass& tm_pass
+)
+{
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
@@ -138,14 +136,24 @@ void post_processing_passes(
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
                 engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                     .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     .image = &screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                    .image = &gbuffers.GBuffer_Depth,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
                 },
             } }
     );

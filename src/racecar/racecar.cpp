@@ -425,36 +425,41 @@ void run( bool use_fullscreen )
     // Car lighting pass, writes to screen_color
     car_lighting_pass( lighting_pass_desc_sets, lighting_pass_pipeline, screen_color, task_list );
 
-    // Lighting -> Transparency image barrier on screen color
-    // GBuffer Depth -> Write
-    create_lighting_transparency_pipeline_barrier(
+    // Transition screen color and screen buffer for post processing
+    create_screen_buffer_pipeline_barrier( screen_color, screen_buffer, task_list );
+
+    engine::post::AAPass aa_pass;
+    engine::post::AoPass ao_pass;
+    engine::post::BloomPass bloom_pass;
+    engine::post::TonemappingPass tm_pass;
+
+    // Bloom and AO only on opaque geometry
+    pre_transparency_post_passes(
+        camera_buffer,
+        gbuffers,
         screen_color,
-        gbuffers.GBuffer_Depth,
-        task_list
+        screen_buffer,
+        task_list,
+        ao_pass,
+        bloom_pass
     );
 
-    // Transparency gfx task
+    // screen_buffer compute write -> colour attachment
+    // GBuffer Depth -> write.
+    create_transparency_pipeline_barrier( screen_buffer, gbuffers.GBuffer_Depth, task_list );
+
     execute_transparency_pass(
         &transparency_pass,
         scene_mesh,
         transparent_prims,
-        &screen_color,
+        &screen_buffer,
         &gbuffers.GBuffer_Depth,
         camera_buffer,
         model_mat_uniform_buffers,
         task_list
     );
 
-    // Transition screen color and screen buffer for post processing
-    // GBuffer Depth -> Read
-    create_screen_buffer_pipeline_barrier( screen_color, screen_buffer, gbuffers.GBuffer_Depth, task_list );
-
-    // Post-processing
-    engine::post::AAPass aa_pass;
-    engine::post::AoPass ao_pass;
-    engine::post::BloomPass bloom_pass;
-    engine::post::TonemappingPass tm_pass;
-    post_processing_passes(
+    post_transparency_post_passes(
         camera_buffer,
         gbuffers,
         screen_color,
@@ -462,8 +467,6 @@ void run( bool use_fullscreen )
         screen_history,
         task_list,
         aa_pass,
-        ao_pass,
-        bloom_pass,
         tm_pass
     );
 
