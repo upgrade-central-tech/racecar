@@ -82,6 +82,10 @@ void update_descriptor_set_sampler(
 #if RACECAR_RAY_TRACING
 void update_descriptor_set_acceleration_structure(
     DescriptorSet& desc_set, VkAccelerationStructureKHR tlas, int binding_idx );
+
+void update_descriptor_set_acceleration_structure_per_frame(
+    DescriptorSet& desc_set, const std::vector<VkAccelerationStructureKHR>& tlases,
+    int binding_idx );
 #endif // RACECAR_RAY_TRACING
 
 } // namespace racecar::engine

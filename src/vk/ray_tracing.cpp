@@ -238,6 +238,31 @@ void build_blas( VkCommandBuffer cmd_buf, AccelerationStructure& blas )
     );
 }
 
+namespace {
+
+VkAccelerationStructureInstanceKHR make_instance( const Object& obj, size_t index )
+{
+    const glm::mat4 row_major_transform = glm::transpose( obj.transform );
+
+    VkTransformMatrixKHR transform_matrix;
+    memcpy( &transform_matrix.matrix, glm::value_ptr( row_major_transform ), sizeof( float ) * 12 );
+
+    VkAccelerationStructureInstanceKHR instance = { };
+    instance.transform = transform_matrix;
+
+    instance.accelerationStructureReference = obj.blas->device_address;
+
+    instance.instanceCustomIndex = static_cast<uint32_t>( index );
+
+    instance.flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+    instance.instanceShaderBindingTableRecordOffset = 0;
+    instance.mask = 0xFF;
+
+    return instance;
+}
+
+}
+
 void alloc_tlas(
     VkDevice device,
     VmaAllocator allocator,
@@ -271,27 +296,7 @@ void alloc_tlas(
             );
         }
 
-        const glm::mat4 row_major_transform = glm::transpose( obj.transform );
-
-        VkTransformMatrixKHR transform_matrix;
-        memcpy(
-            &transform_matrix.matrix,
-            glm::value_ptr( row_major_transform ),
-            sizeof( float ) * 12
-        );
-
-        VkAccelerationStructureInstanceKHR instance = { };
-        instance.transform = transform_matrix;
-
-        instance.accelerationStructureReference = obj.blas->device_address;
-
-        instance.instanceCustomIndex = static_cast<uint32_t>( i );
-
-        instance.flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
-        instance.instanceShaderBindingTableRecordOffset = 0;
-        instance.mask = 0xFF;
-
-        instances.push_back( instance );
+        instances.push_back( make_instance( obj, i ) );
     }
 
     uint32_t instance_count = static_cast<uint32_t>( instances.size() );
@@ -302,13 +307,16 @@ void alloc_tlas(
 
     VkBuffer instance_buffer = VK_NULL_HANDLE;
     VmaAllocation instance_allocation = VK_NULL_HANDLE;
+    VmaAllocationInfo instance_alloc_info = { };
 
     VkBufferCreateInfo instanceBufferCI
         = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .size = instances.size() * sizeof( VkAccelerationStructureInstanceKHR ),
             .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
                 | VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR };
-    VmaAllocationCreateInfo instanceAllocCI = { .usage = VMA_MEMORY_USAGE_CPU_TO_GPU };
+
+    VmaAllocationCreateInfo instanceAllocCI = { .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT,
+                                                .usage = VMA_MEMORY_USAGE_CPU_TO_GPU };
 
     vmaCreateBuffer(
         allocator,
@@ -316,7 +324,7 @@ void alloc_tlas(
         &instanceAllocCI,
         &instance_buffer,
         &instance_allocation,
-        nullptr
+        &instance_alloc_info
     );
     destructor_stack.push_free_vmabuffer(
         allocator,
@@ -326,10 +334,13 @@ void alloc_tlas(
         }
     );
 
-    void* data;
-    vmaMapMemory( allocator, instance_allocation, &data );
-    memcpy( data, instances.data(), instanceBufferCI.size );
-    vmaUnmapMemory( allocator, instance_allocation );
+    memcpy( instance_alloc_info.pMappedData, instances.data(), instanceBufferCI.size );
+    vmaFlushAllocation( allocator, instance_allocation, 0, instanceBufferCI.size );
+
+    tlas.instance_buffer = instance_buffer;
+    tlas.instance_allocation = instance_allocation;
+    tlas.instance_mapped = instance_alloc_info.pMappedData;
+    tlas.instance_count = instance_count;
 
     VkBufferDeviceAddressInfo instanceAddressInfo
         = { .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, .buffer = instance_buffer };
@@ -470,6 +481,31 @@ void alloc_tlas(
     tlas.type = AccelerationStructure::Type::TLAS;
 }
 
+void update_tlas_instances(
+    VmaAllocator allocator, AccelerationStructure& tlas, const std::vector<Object>& objects
+)
+{
+    if ( tlas.instance_mapped == nullptr ) {
+        return;
+    }
+
+    if ( objects.size() != tlas.instance_count ) {
+        throw Exception( "[Update TLAS Instances] Object count changed since the TLAS was "
+                         "allocated" );
+    }
+
+    std::vector<VkAccelerationStructureInstanceKHR> instances;
+    instances.reserve( objects.size() );
+
+    for ( size_t i = 0; i < objects.size(); ++i ) {
+        instances.push_back( make_instance( objects[i], i ) );
+    }
+
+    const size_t byte_size = instances.size() * sizeof( VkAccelerationStructureInstanceKHR );
+    memcpy( tlas.instance_mapped, instances.data(), byte_size );
+    vmaFlushAllocation( allocator, tlas.instance_allocation, 0, byte_size );
+}
+
 void build_tlas( VkCommandBuffer cmd_buf, AccelerationStructure& tlas )
 {
     if ( tlas.handle == VK_NULL_HANDLE ) {
@@ -490,7 +526,8 @@ void build_tlas( VkCommandBuffer cmd_buf, AccelerationStructure& tlas )
     vkCmdPipelineBarrier(
         cmd_buf,
         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, // Source Stage (TLAS build)
-        VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, // Destination Stage (Ready for traceRayEXT)
+        VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+            | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         0,
         1,
         &barrier,

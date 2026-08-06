@@ -196,9 +196,13 @@ void run( bool use_fullscreen )
 
     // Create car acceleration structure descriptor set
     engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set();
-    engine::update_descriptor_set_acceleration_structure(
+    std::vector<VkAccelerationStructureKHR> car_tlas_handles;
+    for ( const vk::rt::AccelerationStructure& tlas : engine.tlas ) {
+        car_tlas_handles.push_back( tlas.handle );
+    }
+    engine::update_descriptor_set_acceleration_structure_per_frame(
         car_tlas_desc_set,
-        engine.tlas.handle,
+        car_tlas_handles,
         0
     );
 
@@ -354,6 +358,12 @@ void run( bool use_fullscreen )
     // ================================================================================================================
 
     engine::TaskList task_list;
+
+#if RACECAR_RAY_TRACING
+    engine::add_gpu_task( task_list, [&]( VkCommandBuffer cmd_buf ) {
+        update_car_tlas( cmd_buf, objects, prims, model_mat_uniform_buffers );
+    } );
+#endif // RACECAR_RAY_TRACING
 
     // Once all of the essential buffers are setup (GBuffer + Screen buffers), we run a pipeline
     // barrier to ensure sync.

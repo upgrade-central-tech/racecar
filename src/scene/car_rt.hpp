@@ -32,6 +32,11 @@ void build_car_blases( VkCommandBuffer& precompute_cmdbuf );
 
 void build_car_tlas( VkCommandBuffer& precompute_cmdbuf );
 
+void update_car_tlas( VkCommandBuffer cmd_buf,
+    std::vector<vk::rt::Object>& objects,
+    const std::vector<const scene::Primitive*>& prims,
+    const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers );
+
 vk::mem::AllocatedBuffer create_padded_vertex_data_buffer(
     geometry::scene::Mesh& scene_mesh );
 

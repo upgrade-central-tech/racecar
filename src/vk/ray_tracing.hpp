@@ -37,6 +37,12 @@ struct AccelerationStructure {
     VkAccelerationStructureGeometryKHR geometry {};
     VkAccelerationStructureBuildGeometryInfoKHR build_info {};
     VkAccelerationStructureBuildRangeInfoKHR range_info {};
+
+    // TLAS only
+    VkBuffer instance_buffer = VK_NULL_HANDLE;
+    VmaAllocation instance_allocation = VK_NULL_HANDLE;
+    void* instance_mapped = nullptr;
+    uint32_t instance_count = 0;
 };
 
 struct MeshData {
@@ -78,6 +84,9 @@ void alloc_tlas(
     const std::vector<Object>& objects,
     DestructorStack& destructor_stack
 );
+
+void update_tlas_instances(
+    VmaAllocator allocator, AccelerationStructure& tlas, const std::vector<Object>& objects );
 
 void build_tlas( VkCommandBuffer cmd_buf, AccelerationStructure& tlas );
 

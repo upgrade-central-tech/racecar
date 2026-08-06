@@ -82,14 +82,19 @@ void alloc_car_tlas( const std::vector<vk::rt::Object>& objects )
 {
     vk::Common& vulkan = vk::Common::GetMut();
     engine::State& engine = engine::State::GetMut();
-    vk::rt::alloc_tlas(
-        vulkan.device,
-        vulkan.allocator,
-        engine.tlas,
-        vulkan.ray_tracing_properties,
-        objects,
-        vulkan.destructor_stack
-    );
+
+    engine.tlas = std::vector<vk::rt::AccelerationStructure>( engine.frame_overlap );
+
+    for ( vk::rt::AccelerationStructure& tlas : engine.tlas ) {
+        vk::rt::alloc_tlas(
+            vulkan.device,
+            vulkan.allocator,
+            tlas,
+            vulkan.ray_tracing_properties,
+            objects,
+            vulkan.destructor_stack
+        );
+    }
 }
 
 void build_car_blases( VkCommandBuffer& precompute_cmdbuf )
@@ -103,7 +108,31 @@ void build_car_blases( VkCommandBuffer& precompute_cmdbuf )
 void build_car_tlas( VkCommandBuffer& precompute_cmdbuf )
 {
     engine::State& engine = engine::State::GetMut();
-    vk::rt::build_tlas( precompute_cmdbuf, engine.tlas );
+    for ( vk::rt::AccelerationStructure& tlas : engine.tlas ) {
+        vk::rt::build_tlas( precompute_cmdbuf, tlas );
+    }
+}
+
+void update_car_tlas(
+    VkCommandBuffer cmd_buf,
+    std::vector<vk::rt::Object>& objects,
+    const std::vector<const scene::Primitive*>& prims,
+    const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers
+)
+{
+    const vk::Common& vulkan = vk::Common::GetConst();
+    engine::State& engine = engine::State::GetMut();
+
+    for ( size_t i = 0; i < objects.size(); ++i ) {
+        objects[i].transform = model_mat_uniform_buffers[static_cast<size_t>( prims[i]->node_id )]
+                                   .get_data()
+                                   .model_mat;
+    }
+
+    vk::rt::AccelerationStructure& tlas = engine.tlas[engine.get_frame_index()];
+
+    vk::rt::update_tlas_instances( vulkan.allocator, tlas, objects );
+    vk::rt::build_tlas( cmd_buf, tlas );
 }
 
 vk::mem::AllocatedBuffer create_padded_vertex_data_buffer( geometry::scene::Mesh& scene_mesh )

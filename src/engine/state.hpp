@@ -52,7 +52,9 @@ struct State {
 
 #if RACECAR_RAY_TRACING
     std::vector<vk::rt::AccelerationStructure> blas;
-    vk::rt::AccelerationStructure tlas;
+    
+    // TLAS is a per-frame resource
+    std::vector<vk::rt::AccelerationStructure> tlas;
 #endif // RACECAR_RAY_TRACING
 
     double time = 0.f; ///< Expressed in seconds.

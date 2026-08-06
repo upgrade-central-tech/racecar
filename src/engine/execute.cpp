@@ -128,6 +128,7 @@ void execute( TaskList& task_list, const gui::Gui& gui )
         size_t cs_ptr = 0;
         size_t blit_ptr = 0;
         size_t cpu_ptr = 0;
+        size_t gpu_ptr = 0;
         for ( task_ptr = 0; task_ptr < task_list.tasks.size(); task_ptr++ ) {
             Task& task = task_list.tasks[task_ptr];
 
@@ -215,6 +216,13 @@ void execute( TaskList& task_list, const gui::Gui& gui )
 
                 // This is not ran on the GPU! This is a purely CPU-side call.
                 descriptor_task.task();
+                break;
+            }
+
+            case Task::GPU_CALL: {
+                GPUTask& gpu_task = task_list.gpu_tasks[gpu_ptr++];
+
+                gpu_task.task( frame.render_cmdbuf );
                 break;
             }
 

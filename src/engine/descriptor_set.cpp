@@ -348,6 +348,38 @@ void update_descriptor_set_acceleration_structure(
         vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
     }
 }
+
+void update_descriptor_set_acceleration_structure_per_frame(
+    DescriptorSet& desc_set, const std::vector<VkAccelerationStructureKHR>& tlases, int binding_idx
+)
+{
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
+
+    if ( tlases.size() != engine.frame_overlap ) {
+        throw Exception( "[Update Descriptor Set Acceleration Structure Per Frame] Expected one "
+                         "acceleration structure per frame in flight" );
+    }
+
+    for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
+        VkWriteDescriptorSetAccelerationStructureKHR desc_as_info
+            = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
+                .pNext = VK_NULL_HANDLE,
+                .accelerationStructureCount = 1,
+                .pAccelerationStructures = &tlases[i] };
+
+        VkWriteDescriptorSet write_desc_set = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .pNext = &desc_as_info,
+            .dstSet = desc_set.descriptor_sets[i],
+            .dstBinding = static_cast<uint32_t>( binding_idx ),
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
+        };
+
+        vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
+    }
+}
 #endif // RACECAR_RAY_TRACING
 
 void update_descriptor_set_const_storage_buffer(
