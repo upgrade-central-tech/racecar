@@ -40,6 +40,7 @@ add_executable(racecar
     ${PASSES_DIR}/lighting_pass.cpp
     ${PASSES_DIR}/post_processing.cpp
     ${PASSES_DIR}/debug_texture_pass.cpp
+    ${PASSES_DIR}/transparency_pass.cpp
 
     ${DEMO_DIR}/car_animation.cpp
 

@@ -32,6 +32,7 @@
 #include "passes/post_processing.hpp"
 #include "passes/reflection_pass.hpp"
 #include "passes/scene_pass.hpp"
+#include "passes/transparency_pass.hpp"
 #include "preset.hpp"
 #include "scene/car_rt.hpp"
 #include "scene/scene.hpp"
@@ -315,6 +316,15 @@ void run( bool use_fullscreen )
 #endif // RACECAR_RAY_TRACING
     );
 
+    // Create transparency pass
+    TransparencyPass transparency_pass;
+    create_transparency_pass_resources(
+        &transparency_pass,
+        scene_mesh,
+        &uniform_desc_set,
+        &model_mat_desc_sets
+    );
+
     // ================================================================================================================
     // PRECOMPUTE
     // ================================================================================================================
@@ -360,7 +370,7 @@ void run( bool use_fullscreen )
     engine::GfxTask prepass_gfx_task = create_prepass_gfx_task( gbuffers );
     add_prim_draw_tasks(
         scene_mesh,
-        prims,
+        opaque_prims,
         ScenePassTarget {
             .pipeline = scene_pipeline,
             .gfx_task = prepass_gfx_task,
@@ -414,8 +424,27 @@ void run( bool use_fullscreen )
     // Car lighting pass, writes to screen_color
     car_lighting_pass( lighting_pass_desc_sets, lighting_pass_pipeline, screen_color, task_list );
 
+    // Lighting -> Transparency image barrier on screen color
+    // GBuffer Depth -> Write
+    create_lighting_transparency_pipeline_barrier(
+        screen_color,
+        gbuffers.GBuffer_Depth,
+        task_list
+    );
+
+    // Transparency gfx task
+    execute_transparency_pass(
+        &transparency_pass,
+        scene_mesh,
+        transparent_prims,
+        &screen_color,
+        &gbuffers.GBuffer_Depth,
+        task_list
+    );
+
     // Transition screen color and screen buffer for post processing
-    create_screen_buffer_pipeline_barrier( screen_color, screen_buffer, task_list );
+    // GBuffer Depth -> Read
+    create_screen_buffer_pipeline_barrier( screen_color, screen_buffer, gbuffers.GBuffer_Depth, task_list );
 
     // Post-processing
     engine::post::AAPass aa_pass;

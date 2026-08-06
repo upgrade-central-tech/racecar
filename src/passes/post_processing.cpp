@@ -13,7 +13,10 @@ namespace racecar {
 // Current limitation assumes that all post-processing calls are done via compute shader
 // hence the VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT stage.
 void create_screen_buffer_pipeline_barrier(
-    engine::RWImage& screen_color, engine::RWImage& screen_buffer, engine::TaskList& task_list
+    engine::RWImage& screen_color,
+    engine::RWImage& screen_buffer,
+    engine::RWImage& gbuffer_depth,
+    engine::TaskList& task_list
 )
 {
     engine::add_pipeline_barrier(
@@ -40,6 +43,16 @@ void create_screen_buffer_pipeline_barrier(
                     .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
                     .image = &screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                },
+                engine::ImageBarrier {
+                    .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                    .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                    .image = &gbuffer_depth,
+                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
                 },
             } }
     );

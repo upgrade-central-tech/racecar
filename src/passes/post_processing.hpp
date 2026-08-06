@@ -13,17 +13,28 @@
 
 namespace racecar {
 
-void post_processing_passes( 
-    UniformBuffer<ub_data::Camera>& camera_buffer, deferred::GBuffers& gbuffers,
-    engine::RWImage& screen_color, engine::RWImage& screen_buffer,
-    engine::RWImage& screen_history, engine::TaskList& task_list, engine::post::AAPass& aa_pass,
-    engine::post::AoPass& ao_pass, engine::post::BloomPass& bloom_pass,
-    engine::post::TonemappingPass& tm_pass );
+void post_processing_passes(
+    UniformBuffer<ub_data::Camera>& camera_buffer,
+    deferred::GBuffers& gbuffers,
+    engine::RWImage& screen_color,
+    engine::RWImage& screen_buffer,
+    engine::RWImage& screen_history,
+    engine::TaskList& task_list,
+    engine::post::AAPass& aa_pass,
+    engine::post::AoPass& ao_pass,
+    engine::post::BloomPass& bloom_pass,
+    engine::post::TonemappingPass& tm_pass
+);
 
 void create_screen_buffer_pipeline_barrier(
-    engine::RWImage& screen_color, engine::RWImage& screen_buffer, engine::TaskList& task_list );
+    engine::RWImage& screen_color,
+    engine::RWImage& screen_buffer,
+    engine::RWImage& gbuffer_depth,
+    engine::TaskList& task_list
+);
 
 void create_screen_buffer_present_pipeline_barrier(
-    engine::RWImage& screen_buffer, engine::TaskList& task_list );
+    engine::RWImage& screen_buffer, engine::TaskList& task_list
+);
 
 }
