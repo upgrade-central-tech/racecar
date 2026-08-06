@@ -59,7 +59,7 @@ VertexOutput vs_main( VertexInput input )
 [shader( "fragment" )]
 float4 fs_main( VertexOutput in ) : SV_Target
 {
-    return float4( 1.0, 0.0, 0.0, 1.0 );
+    return float4( in.normal, 0.2 );
 }
 
 

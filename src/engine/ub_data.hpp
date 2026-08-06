@@ -157,7 +157,8 @@ struct ModelMat {
     glm::mat4 prev_model_mat = {};
 };
 
-constexpr size_t MAX_RT_PRIMITIVES = 104;
+/// Must stay a multiple of 4 (reflections.slang)
+constexpr size_t MAX_RT_PRIMITIVES = 256;
 constexpr size_t MAX_MATERIALS = 104;
 
 struct BLASOffsets {

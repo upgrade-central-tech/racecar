@@ -4,22 +4,35 @@
 #include "../engine/gfx_task.hpp"
 #include "../engine/pipeline.hpp"
 #include "../engine/task_list.hpp"
+#include "../engine/ub_data.hpp"
+#include "../engine/uniform_buffer.hpp"
+#include "../geometry/scene_mesh.hpp"
+
+#include <glm/glm.hpp>
+
+#include <vector>
 
 namespace racecar {
+
+struct TransparentPrimInfo {
+    int32_t index_offset = 0;
+    int node_id = -1;
+    glm::vec3 centroid = { };
+};
 
 struct TransparencyPass {
     engine::Pipeline transparency_pipeline;
 
-    engine::GfxTask transparency_gfx_task;
-    engine::CPUTask depth_sort_cpu_task;
+    engine::DescriptorSet* uniform_desc_set = nullptr;
+    std::vector<engine::DescriptorSet>* model_mat_desc_sets = nullptr;
 
-    engine::DescriptorSet* uniform_desc_set;
-    std::vector<engine::DescriptorSet>* model_mat_desc_sets;
+    std::vector<TransparentPrimInfo> prim_info;
 };
 
 void create_transparency_pass_resources(
     TransparencyPass* transparency_pass,
     const geometry::scene::Mesh& scene_mesh,
+    const std::vector<const scene::Primitive*>& transparent_prims,
     engine::DescriptorSet* uniform_desc_set,
     std::vector<engine::DescriptorSet>* model_mat_desc_sets
 );
@@ -27,16 +40,16 @@ void create_transparency_pass_resources(
 void execute_transparency_pass(
     TransparencyPass* transparency_pass,
     geometry::scene::Mesh& scene_mesh,
-    std::vector<const scene::Primitive*>& transparent_prims,
+    const std::vector<const scene::Primitive*>& transparent_prims,
     engine::RWImage* screen_color,
     engine::RWImage* gbuffer_depth_image,
+    const UniformBuffer<ub_data::Camera>& camera_buffer,
+    const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
     engine::TaskList& task_list
 );
 
 void create_lighting_transparency_pipeline_barrier(
-    engine::RWImage& screen_color,
-    engine::RWImage& gbuffer_depth,
-    engine::TaskList& task_list
+    engine::RWImage& screen_color, engine::RWImage& gbuffer_depth, engine::TaskList& task_list
 );
 
 }

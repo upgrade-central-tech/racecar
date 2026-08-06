@@ -10,16 +10,17 @@ struct VertexOutput {
 };
 
 // It's an int array, but we use uint4 for packing
+// 64 * 4 == MAX_RT_PRIMITIVES in src/engine/ub_data.hpp.
 struct BLASOffsets {
-    uint4 vertex_buffer_offset[26];
-    uint4 index_buffer_offset[26];
-    uint4 material_id[26];
+    uint4 vertex_buffer_offset[64];
+    uint4 index_buffer_offset[64];
+    uint4 material_id[64];
 };
 
 struct RTTextureUniform {
-    int4 albedo_texture_index[26];
-    int4 metallic_roughness_texture_index[26];
-    int4 normal_texture_index[26];
+    int4 albedo_texture_index[64];
+    int4 metallic_roughness_texture_index[64];
+    int4 normal_texture_index[64];
 };
 
 struct PaddedVertex {

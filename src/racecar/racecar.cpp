@@ -321,6 +321,7 @@ void run( bool use_fullscreen )
     create_transparency_pass_resources(
         &transparency_pass,
         scene_mesh,
+        transparent_prims,
         &uniform_desc_set,
         &model_mat_desc_sets
     );
@@ -439,6 +440,8 @@ void run( bool use_fullscreen )
         transparent_prims,
         &screen_color,
         &gbuffers.GBuffer_Depth,
+        camera_buffer,
+        model_mat_uniform_buffers,
         task_list
     );
 

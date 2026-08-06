@@ -287,6 +287,14 @@ void load_model_primitive_material_data(
             const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
 
             for ( const scene::Primitive& prim : mesh->primitives ) {
+                if ( static_cast<size_t>( tex_count ) >= ub_data::MAX_RT_PRIMITIVES ) {
+                    throw Exception( std::format(
+                        "[Load Model Primitive Material Data] Scene has more than {} primitives; "
+                        "raise MAX_RT_PRIMITIVES and the matching array sizes in the shaders",
+                        ub_data::MAX_RT_PRIMITIVES
+                    ) );
+                }
+
                 const scene::Material& current_material
                     = scene.materials[static_cast<size_t>( prim.material_id )];
                 std::vector<std::optional<scene::Texture>> textures_needed;
@@ -395,7 +403,6 @@ void sort_transparent_opaque_prims(
         }
         else {
             transparent_prims->push_back(prim);
-            log::info("Transparent Object");
         }
     }
 }

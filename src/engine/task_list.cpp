@@ -12,7 +12,7 @@ void add_gfx_task( TaskList& task_list, GfxTask task, task_predicate_fn_t predic
     new_task.predicate = predicate;
 
     task_list.tasks.push_back( new_task );
-    task_list.gfx_tasks.push_back( task );
+    task_list.gfx_tasks.push_back( std::move( task ) );
 }
 
 void add_cs_task( TaskList& task_list, ComputeTask task, task_predicate_fn_t predicate )
