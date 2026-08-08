@@ -17,7 +17,6 @@ struct ReflectionPassDescSets {
     engine::DescriptorSet& sampler_desc_set;
     engine::DescriptorSet& gbuffer_desc_set;
     engine::DescriptorSet& car_tlas_desc_set;
-    engine::DescriptorSet& terrain_tlas_desc_set;
     engine::DescriptorSet& car_desc_set;
     engine::DescriptorSet& combined_textures_desc_set;
 };

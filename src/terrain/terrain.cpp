@@ -95,36 +95,6 @@ void initialize_terrain(
         terrain.indices.data()
     );
 
-    for ( size_t z = 0; z < TERRAIN_NUM_TILES; ++z ) {
-        for ( size_t x = 0; x < TERRAIN_NUM_TILES; ++x ) {
-            unsigned int top_left = (unsigned int)( z * ( TERRAIN_NUM_TILES + 1 ) + x );
-            unsigned int top_right = (unsigned int)( top_left + 1 );
-            unsigned int bottom_left = (unsigned int)( ( z + 1 ) * ( TERRAIN_NUM_TILES + 1 ) + x );
-            unsigned int bottom_right = (unsigned int)( bottom_left + 1 );
-
-            terrain.tri_indices.push_back( top_left ); // [0] TL
-            terrain.tri_indices.push_back( bottom_left ); // [2] BL
-            terrain.tri_indices.push_back( top_right ); // [1] TR
-            terrain.tri_indices.push_back( bottom_left ); // [2] BL
-            terrain.tri_indices.push_back( bottom_right ); // [3] BR
-            terrain.tri_indices.push_back( top_right ); // [1] TR
-        }
-    }
-
-    // Create respective mesh buffers using CPU data
-    geometry::create_mesh_buffers(
-        terrain.tri_buffers,
-        sizeof( TerrainVertex ) * terrain.vertices.size(),
-        sizeof( int32_t ) * terrain.tri_indices.size()
-    );
-
-    // Upload to GPU
-    geometry::upload_mesh_buffers(
-        terrain.tri_buffers,
-        terrain.vertices.data(),
-        terrain.tri_indices.data()
-    );
-
     // Build descriptors
     terrain.prepass_uniform_desc_set = engine::generate_descriptor_set(
         {
@@ -160,43 +130,6 @@ void initialize_terrain(
 
     terrain.terrain_noise
         = engine::load_image( TERRAIN_NOISE_PAPTH, 2, VK_FORMAT_R8G8_UNORM, true );
-
-#if RACECAR_RAY_TRACING
-    vk::rt::alloc_blas(
-        vulkan.device,
-        vulkan.allocator,
-        terrain.blas,
-        vulkan.ray_tracing_properties,
-        { .vertex_buffer = terrain.tri_buffers.vertex_buffer.handle,
-          .index_buffer = terrain.tri_buffers.index_buffer.handle,
-          .max_vertex = uint32_t( terrain.vertices.size() ) - 1,
-          .index_count = uint32_t( terrain.tri_indices.size() ),
-          .vertex_offset = uint32_t( 0 ),
-          .index_offset = uint32_t( 0 ),
-          .vertex_stride = sizeof( geometry::TerrainVertex ) },
-        vulkan.destructor_stack
-    );
-
-    vk::rt::alloc_tlas(
-        vulkan.device,
-        vulkan.allocator,
-        terrain.tlas,
-        vulkan.ray_tracing_properties,
-        { vk::rt::Object { .blas = &terrain.blas, .transform = glm::identity<glm::mat4>() } },
-        vulkan.destructor_stack
-    );
-
-    terrain.terrain_tlas_desc_set = engine::generate_descriptor_set(
-        { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR },
-        VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
-    );
-
-    engine::update_descriptor_set_acceleration_structure(
-        terrain.terrain_tlas_desc_set,
-        terrain.tlas.handle,
-        0
-    );
-#endif // RACECAR_RAY_TRACING
 
     // ============================================================================================
     // Prepass resources
@@ -471,10 +404,9 @@ void terrain_precompute(
     [[maybe_unused]] Terrain& terrain, [[maybe_unused]] VkCommandBuffer precompute_cmdbuf
 )
 {
-#if RACECAR_RAY_TRACING
-    vk::rt::build_blas( precompute_cmdbuf, terrain.blas );
-    vk::rt::build_tlas( precompute_cmdbuf, terrain.tlas );
-#endif // RACECAR_RAY_TRACING
+    // Nothing to precompute. The terrain acceleration structures used to be built here, but
+    // they described the flat, undisplaced control grid rather than the surface the domain
+    // shader actually produces, so they were removed.
 }
 
 void draw_terrain_prepass(

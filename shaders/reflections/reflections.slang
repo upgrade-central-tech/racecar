@@ -46,21 +46,21 @@ layout( binding = 6, set = 2 ) Texture2DMS<float> GBuffer_DepthMS;
 layout( binding = 7, set = 2 ) Texture2D<float4> GBuffer_Packed_Data;
 
 #if RACECAR_RAY_TRACING
+// Car AS
 layout( binding = 0, set = 3 ) RaytracingAccelerationStructure sceneBVH;
-layout( binding = 0, set = 4 ) RaytracingAccelerationStructure terrainBVH;
 #endif // RACECAR_RAY_TRACING
 
-layout( binding = 0, set = 5 ) StructuredBuffer<PaddedVertex> vertex_data;
-layout( binding = 1, set = 5 ) StructuredBuffer<uint32_t> index_data;
-layout( binding = 2, set = 5 ) ConstantBuffer<BLASOffsets> blas_offsets;
-layout( binding = 3, set = 5 ) ConstantBuffer<RTTextureUniform> rt_texture_uniform;
-layout( binding = 4, set = 5 ) Texture2D<float2> BRDF_LUT;
-layout( binding = 5, set = 5 ) Texture2D<float4> octahedral_sky_mips;
-layout( binding = 6, set = 5 ) Texture2D<float4> octahedral_sky_irradiance;
-layout( binding = 7, set = 5 ) ConstantBuffer<MaterialTable> material_table;
+layout( binding = 0, set = 4 ) StructuredBuffer<PaddedVertex> vertex_data;
+layout( binding = 1, set = 4 ) StructuredBuffer<uint32_t> index_data;
+layout( binding = 2, set = 4 ) ConstantBuffer<BLASOffsets> blas_offsets;
+layout( binding = 3, set = 4 ) ConstantBuffer<RTTextureUniform> rt_texture_uniform;
+layout( binding = 4, set = 4 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 5, set = 4 ) Texture2D<float4> octahedral_sky_mips;
+layout( binding = 6, set = 4 ) Texture2D<float4> octahedral_sky_irradiance;
+layout( binding = 7, set = 4 ) ConstantBuffer<MaterialTable> material_table;
 
-layout( binding = 0, set = 6 ) Texture2D<float4> albedo_textures[];
-layout( binding = 1, set = 6 ) Texture2D<float4> metallic_roughness_textures[];
+layout( binding = 0, set = 5 ) Texture2D<float4> albedo_textures[];
+layout( binding = 1, set = 5 ) Texture2D<float4> metallic_roughness_textures[];
 
 #include "../car_mat/car_lighting.slang"
 
@@ -68,7 +68,7 @@ layout( binding = 1, set = 6 ) Texture2D<float4> metallic_roughness_textures[];
 static const float3x4 IDENTITY_3X4
     = float3x4( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0 );
 
-bool traceRayClosestHit( float stencil, float3 rayOrigin, float3 rayDir, out float t,
+bool traceRayClosestHit( float3 rayOrigin, float3 rayDir, out float t,
     out int primitiveIndex, out float2 barycentrics, out int instanceIndex,
     out float3x4 objectToWorld, out float3x4 worldToObject )
 {
@@ -82,13 +82,7 @@ bool traceRayClosestHit( float stencil, float3 rayOrigin, float3 rayDir, out flo
 
     uint rayFlags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
 
-    // Terrain pixels reflect the car, and car pixels reflect the car onto itself. Both cases
-    // trace the car TLAS, so both can be resolved through the same car hit shading path.
-    if ( stencil == TERRAIN_ID || stencil == CAR_ID ) {
-        q.TraceRayInline( sceneBVH, rayFlags, 0xff, ray );
-    } else {
-        q.TraceRayInline( terrainBVH, rayFlags, 0xff, ray );
-    }
+    q.TraceRayInline( sceneBVH, rayFlags, 0xff, ray );
 
     while ( q.Proceed() ) { }
 
@@ -130,8 +124,6 @@ float4 fs_main( VertexOutput in )
 
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
 
-    RaytracingAccelerationStructure accel_structure;
-
     if ( stencil == 0 ) {
         return float4( asfloat( -1 ), 0.0, 0.0, 0.0 );
     }
@@ -147,7 +139,7 @@ float4 fs_main( VertexOutput in )
     float2 barycentrics;
     float3x4 object_to_world;
     float3x4 world_to_object;
-    bool hit = traceRayClosestHit( stencil, in_pos, refl_dir, t, prim_idx, barycentrics,
+    bool hit = traceRayClosestHit( in_pos, refl_dir, t, prim_idx, barycentrics,
         instance_idx, object_to_world, world_to_object );
 
     if ( !hit ) {

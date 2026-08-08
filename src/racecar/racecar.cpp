@@ -275,7 +275,6 @@ void run( bool use_fullscreen )
             .sampler_desc_set = sampler_desc_set,
             .gbuffer_desc_set = gbuffers.desc_set,
             .car_tlas_desc_set = car_tlas_desc_set,
-            .terrain_tlas_desc_set = test_terrain.terrain_tlas_desc_set,
             .car_desc_set = car_descriptor_set,
             .combined_textures_desc_set = combined_textures_desc_set,
         },
