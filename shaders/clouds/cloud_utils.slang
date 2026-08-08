@@ -1,3 +1,5 @@
+#pragma once
+
 module cloud_utils;
 
 public uint32_t wang32( uint32_t x )

@@ -1,3 +1,5 @@
+#pragma once
+
 /// Has to be namespaced because we're defining `PI` somewhere else
 namespace math {
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #define m_pi 3.141592
 #define m_i_pi 0.318309
 #define m_i_sqrt_2 0.707106

@@ -1,3 +1,5 @@
+#pragma once
+
 import constants;
 import helpers;
 

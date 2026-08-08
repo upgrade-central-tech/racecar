@@ -1,3 +1,5 @@
+#pragma once
+
 // module car_lighting;
 
 #include "../utils.slang"
