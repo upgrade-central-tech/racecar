@@ -13,6 +13,10 @@ struct Gui;
 
 namespace racecar::geometry {
 
+constexpr float TERRAIN_TILE_WIDTH = 10.0f;
+constexpr size_t TERRAIN_NUM_TILES = 50;
+constexpr float TERRAIN_HALF_WIDTH = ( TERRAIN_NUM_TILES * TERRAIN_TILE_WIDTH ) / 2.0f;
+
 // Keep it simple for now
 struct TerrainVertex {
     glm::vec3 position;

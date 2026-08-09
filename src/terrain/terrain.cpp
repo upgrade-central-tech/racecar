@@ -25,9 +25,6 @@ const std::filesystem::path TEST_ASPHALT_NORMAL_AO_PATH = "../assets/terrain/asp
 
 const std::filesystem::path TERRAIN_NOISE_PAPTH = "../assets/LUT/terrain_noise.jpg";
 
-const float TERRAIN_TILE_WIDTH = 10.0f;
-const size_t TERRAIN_NUM_TILES = 50;
-
 namespace racecar::geometry {
 
 void initialize_terrain(
@@ -47,7 +44,7 @@ void initialize_terrain(
     terrain.vertices.clear();
     terrain.indices.clear();
 
-    const float half_width = ( TERRAIN_NUM_TILES * TERRAIN_TILE_WIDTH ) / 2.0f;
+    const float half_width = TERRAIN_HALF_WIDTH;
 
     // Generate vertices
     for ( size_t z = 0; z <= TERRAIN_NUM_TILES; ++z ) {
