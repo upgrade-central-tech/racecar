@@ -265,6 +265,9 @@ void run( bool use_fullscreen )
     // ================================================================================================================
 
 #if RACECAR_RAY_TRACING
+    TerrainRayTracingInfo terrain_rt;
+    init_terrain_ray_tracing_info( &terrain_rt, &test_terrain );
+
     // Set up reflection data
     engine::RWImage reflection_data;
     engine::Pipeline reflection_pipeline;
@@ -278,15 +281,13 @@ void run( bool use_fullscreen )
             .car_tlas_desc_set = car_tlas_desc_set,
             .car_desc_set = car_descriptor_set,
             .combined_textures_desc_set = combined_textures_desc_set,
+            .terrain_shading_desc_set = terrain_rt.shading_desc_set,
         },
         &reflection_data,
         &reflection_pipeline,
         &reflection_buffer_desc_set,
         &reflection_gfx_task
     );
-
-    TerrainRayTracingInfo terrain_rt;
-    init_terrain_ray_tracing_info(&terrain_rt, &test_terrain.terrain_uniform, &test_terrain.test_layer_mask);
 #endif // RACECAR_RAY_TRACING
 
     DebugTexturePass debug_texture_pass;

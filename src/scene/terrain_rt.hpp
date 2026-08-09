@@ -51,8 +51,10 @@ struct TerrainRayTracingInfo {
     vk::mem::AllocatedBuffer terrain_index_buffer = { };
 
     engine::DescriptorSet tlas_desc_set = { };
+    engine::DescriptorSet shading_desc_set = { };
 
     // borrowed from the raster terrain
+    geometry::Terrain* terrain = nullptr;
     UniformBuffer<ub_data::TerrainData>* terrain_uniform = nullptr;
     vk::mem::AllocatedImage* layer_mask = nullptr;
 
@@ -67,10 +69,7 @@ struct TerrainRayTracingInfo {
 };
 
 void init_terrain_ray_tracing_info(
-    TerrainRayTracingInfo* out_info,
-    UniformBuffer<ub_data::TerrainData>* terrain_uniform,
-    vk::mem::AllocatedImage* layer_mask
-);
+    TerrainRayTracingInfo* out_info, geometry::Terrain* terrain );
 
 void add_terrain_rt_displace_pass( TerrainRayTracingInfo& info, engine::TaskList& task_list );
 

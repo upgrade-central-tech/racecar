@@ -149,6 +149,52 @@ void create_index_buffer( TerrainRayTracingInfo* info )
     } );
 }
 
+void create_shading_desc_set(
+    TerrainRayTracingInfo* info, const std::vector<VkAccelerationStructureKHR>& tlas_handles
+)
+{
+    const vk::Common& vulkan = vk::Common::GetConst();
+    geometry::Terrain& terrain = *info->terrain;
+
+    info->shading_desc_set = engine::generate_descriptor_set(
+        {
+            VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, // terrain TLAS
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // terrain data
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // layer mask
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // grass albedo + roughness
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // grass normal + ao
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // asphalt albedo + roughness
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // asphalt normal + ao
+            VK_DESCRIPTOR_TYPE_SAMPLER, // linear sampler
+        },
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR
+    );
+
+    engine::update_descriptor_set_acceleration_structure_per_frame(
+        info->shading_desc_set,
+        tlas_handles,
+        0
+    );
+
+    engine::update_descriptor_set_uniform( info->shading_desc_set, *info->terrain_uniform, 1 );
+
+    engine::update_descriptor_set_image( info->shading_desc_set, terrain.test_layer_mask, 2 );
+    engine::update_descriptor_set_image( info->shading_desc_set, terrain.grass_albedo_roughness, 3 );
+    engine::update_descriptor_set_image( info->shading_desc_set, terrain.grass_normal_ao, 4 );
+    engine::update_descriptor_set_image(
+        info->shading_desc_set,
+        terrain.asphalt_albedo_roughness,
+        5
+    );
+    engine::update_descriptor_set_image( info->shading_desc_set, terrain.asphalt_normal_ao, 6 );
+
+    engine::update_descriptor_set_sampler(
+        info->shading_desc_set,
+        vulkan.global_samplers.linear_sampler,
+        7
+    );
+}
+
 void create_acceleration_structures( TerrainRayTracingInfo* info )
 {
     vk::Common& vulkan = vk::Common::GetMut();
@@ -203,18 +249,17 @@ void create_acceleration_structures( TerrainRayTracingInfo* info )
         tlas_handles,
         0
     );
+
+    create_shading_desc_set( info, tlas_handles );
 }
 
 }
 
-void init_terrain_ray_tracing_info(
-    TerrainRayTracingInfo* out_info,
-    UniformBuffer<ub_data::TerrainData>* terrain_uniform,
-    vk::mem::AllocatedImage* layer_mask
-)
+void init_terrain_ray_tracing_info( TerrainRayTracingInfo* out_info, geometry::Terrain* terrain )
 {
-    *out_info
-        = TerrainRayTracingInfo { .terrain_uniform = terrain_uniform, .layer_mask = layer_mask };
+    *out_info = TerrainRayTracingInfo { .terrain = terrain,
+                                        .terrain_uniform = &terrain->terrain_uniform,
+                                        .layer_mask = &terrain->test_layer_mask };
 
     create_mesh_buffers( out_info );
     create_grid_uniform( out_info );
@@ -276,6 +321,8 @@ void add_terrain_rt_build_pass( TerrainRayTracingInfo& info, engine::TaskList& t
         const size_t frame = engine.get_frame_index();
 
         vk::rt::build_blas( cmd_buf, info.dynamic_terrain_blas[frame] );
+
+        // lowk unnecessary for now
         vk::rt::build_tlas( cmd_buf, info.tlas[frame] );
     } );
 }

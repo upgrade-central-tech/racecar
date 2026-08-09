@@ -1,5 +1,7 @@
 #include "../common.slang"
 
+#include "../terrain/terrain_common.slang"
+
 struct VertexInput {
     float2 position : POSITION;
 };
@@ -62,14 +64,29 @@ layout( binding = 7, set = 4 ) ConstantBuffer<MaterialTable> material_table;
 layout( binding = 0, set = 5 ) Texture2D<float4> albedo_textures[];
 layout( binding = 1, set = 5 ) Texture2D<float4> metallic_roughness_textures[];
 
+#if RACECAR_RAY_TRACING
+layout( binding = 0, set = 6 ) RaytracingAccelerationStructure terrainBVH;
+layout( binding = 1, set = 6 ) ConstantBuffer<TerrainData> terrain_data;
+layout( binding = 2, set = 6 ) Texture2D<float2> terrain_layer_mask;
+layout( binding = 3, set = 6 ) Texture2D<float4> terrain_grass_albedo_roughness;
+layout( binding = 4, set = 6 ) Texture2D<float4> terrain_grass_normal_ao;
+layout( binding = 5, set = 6 ) Texture2D<float4> terrain_asphalt_albedo_roughness;
+layout( binding = 6, set = 6 ) Texture2D<float4> terrain_asphalt_normal_ao;
+layout( binding = 7, set = 6 ) SamplerState terrain_linear_sampler;
+#endif // RACECAR_RAY_TRACING
+
 #include "../car_mat/car_lighting.slang"
 
 #if RACECAR_RAY_TRACING
+
+// matches terrain spacing in terrain.cpp/terrain_rt.cpp
+static const float TERRAIN_RT_NORMAL_EPS = 500.0f / 255.0f;
+
 static const float3x4 IDENTITY_3X4
     = float3x4( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0 );
 
-bool traceRayClosestHit( float3 rayOrigin, float3 rayDir, out float t,
-    out int primitiveIndex, out float2 barycentrics, out int instanceIndex,
+bool traceRayClosestHit( RaytracingAccelerationStructure bvh, float3 rayOrigin, float3 rayDir,
+    out float t, out int primitiveIndex, out float2 barycentrics, out int instanceIndex,
     out float3x4 objectToWorld, out float3x4 worldToObject )
 {
     RayDesc ray;
@@ -82,7 +99,7 @@ bool traceRayClosestHit( float3 rayOrigin, float3 rayDir, out float t,
 
     uint rayFlags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
 
-    q.TraceRayInline( sceneBVH, rayFlags, 0xff, ray );
+    q.TraceRayInline( bvh, rayFlags, 0xff, ray );
 
     while ( q.Proceed() ) { }
 
@@ -103,6 +120,95 @@ bool traceRayClosestHit( float3 rayOrigin, float3 rayDir, out float t,
     objectToWorld = IDENTITY_3X4;
     worldToObject = IDENTITY_3X4;
     return false;
+}
+
+bool traceTerrainClosestHit( float3 rayOrigin, float3 rayDir, out float t )
+{
+    RayDesc ray;
+    ray.Origin = rayOrigin;
+    ray.TMin = 0.001f;
+    ray.Direction = rayDir;
+    ray.TMax = 1e4f;
+
+    RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES> q;
+
+    uint rayFlags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES;
+
+    q.TraceRayInline( terrainBVH, rayFlags, 0xff, ray );
+
+    while ( q.Proceed() ) { }
+
+    if ( q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ) {
+        t = q.CommittedRayT();
+        return true;
+    }
+
+    t = 0.0f;
+    return false;
+}
+
+TerrainMaps get_terrain_maps()
+{
+    TerrainMaps maps;
+    maps.layer_mask = terrain_layer_mask;
+    maps.grass_albedo_roughness = terrain_grass_albedo_roughness;
+    maps.grass_normal_ao = terrain_grass_normal_ao;
+    maps.asphalt_albedo_roughness = terrain_asphalt_albedo_roughness;
+    maps.asphalt_normal_ao = terrain_asphalt_normal_ao;
+    maps.linear_sampler = terrain_linear_sampler;
+    return maps;
+}
+
+float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
+{
+    float2 scroll = terrain_data.terrain_data1.xy;
+    float snowness = terrain_data.terrain_data0.z;
+    float wetness_toggle = terrain_data.terrain_data0.y;
+
+    float3 base_position = float3( world_position.x, 0.0f, world_position.z );
+    float3 vertex_normal = terrain_height_normal(
+        base_position, scroll, terrain_layer_mask, terrain_linear_sampler, TERRAIN_RT_NORMAL_EPS );
+
+    TerrainUVs uvs = terrain_compute_uvs( world_position, scroll );
+
+    TerrainSurface surface = terrain_evaluate_surface( world_position, vertex_normal, scroll, uvs,
+        snowness, wetness_toggle, get_terrain_maps(), terrain_no_gradients() );
+
+    float3 albedo = surface.albedo;
+    float roughness = surface.roughness;
+    float3 normal = surface.normal;
+    float ao = surface.ao;
+
+    terrain_apply_wetness_exposure( wetness_toggle, albedo, roughness );
+
+    float3 light = normalize( debug_data.sun_direction.rgb );
+    float3 view = -ray_dir;
+    float3 half_vector = normalize( view + light );
+
+    BSDF_Dots dots = get_dots( normal, view, half_vector, light );
+    float n_dot_h_sq = get_NoH_squared( dots.n_dot_l, dots.n_dot_v, dots.v_dot_l, 0.035f );
+    float NDF = min( get_GGX_from_n_dot_h_sq( n_dot_h_sq, roughness * roughness ), 65.0f );
+
+    float3 color
+        = terrain_direct_lighting( albedo, normal, light, NDF, roughness, ao, view, terrain_data );
+
+    float2 oct_uv = oct_encode( normal );
+    float2 oct_refl_uv = oct_encode( normalize( reflect( -view, normal ) ) );
+
+    float3 diffuse_irradiance = filter_float4( octahedral_sky_irradiance, oct_uv ).rgb;
+    float3 specular_irradiance = terrain_sample_glossy_ibl(
+        roughness, oct_refl_uv, octahedral_sky_mips, terrain_linear_sampler );
+
+    float n_dot_v = max( dot( normal, view ), 0.0f );
+    float3 F0 = lerp( float3( 0.04f ), albedo, 0.04f );
+    float2 BRDF = BRDF_LUT.SampleLevel( terrain_linear_sampler, float2( n_dot_v, roughness ), 0.0f );
+    specular_irradiance *= ( F0 * BRDF.x + BRDF.y );
+
+    const float irradiance_strength = 0.5f;
+    color += ( albedo * TERRAIN_INV_PI ) * diffuse_irradiance * irradiance_strength;
+    color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) );
+
+    return color;
 }
 #endif // RACECAR_RAY_TRACING
 
@@ -139,8 +245,20 @@ float4 fs_main( VertexOutput in )
     float2 barycentrics;
     float3x4 object_to_world;
     float3x4 world_to_object;
-    bool hit = traceRayClosestHit( in_pos, refl_dir, t, prim_idx, barycentrics,
+    bool hit = traceRayClosestHit( sceneBVH, in_pos, refl_dir, t, prim_idx, barycentrics,
         instance_idx, object_to_world, world_to_object );
+
+    float terrain_t = 0.0f;
+    bool terrain_hit = false;
+
+    if ( stencil == CAR_ID ) {
+        terrain_hit = traceTerrainClosestHit( in_pos, refl_dir, terrain_t );
+    }
+
+    if ( terrain_hit && ( !hit || terrain_t < t ) ) {
+        float3 terrain_position = in_pos + terrain_t * refl_dir;
+        return float4( shade_terrain_hit( terrain_position, refl_dir ), 1.0f );
+    }
 
     if ( !hit ) {
         return float4( 0.0 );

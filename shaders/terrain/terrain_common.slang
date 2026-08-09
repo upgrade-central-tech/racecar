@@ -250,3 +250,61 @@ void terrain_apply_wetness_exposure( float wetness_toggle, inout float3 albedo,
     albedo = albedo * exp2( lerp( 0.0f, -1.5f, wetness_toggle ) );
     roughness = roughness * exp2( lerp( 0.0f, -1.5f, wetness_toggle ) );
 }
+
+static const float TERRAIN_INV_PI = 0.3183098861837906715377f;
+
+float3 terrain_sample_glossy_ibl( float roughness, float2 direction, Texture2D<float4> sky_mips,
+    SamplerState linear_sampler )
+{
+    float lod = roughness * 5.0f;
+    uint lod0 = uint( floor( roughness * 5.0f ) );
+    uint lod1 = min( lod0 + 1, 5 );
+    float lod_t = lod - lod0;
+
+    float3 glossy_lod0 = sky_mips.SampleLevel( linear_sampler, direction, lod0 ).rgb;
+    float3 glossy_lod1 = sky_mips.SampleLevel( linear_sampler, direction, lod1 ).rgb;
+    return lerp( glossy_lod0, glossy_lod1, lod_t );
+}
+
+float3 terrain_direct_lighting( float3 albedo, float3 normal, float3 light, float NDF,
+    float roughness, float ao, float3 view, TerrainData terrain_data )
+{
+    float3 half_vector = normalize( view + light );
+    BSDF_Dots dots = get_dots( normal, view, half_vector, light );
+
+    // Diffuse properties
+    var diffuse = albedo * TERRAIN_INV_PI;
+
+    // Specular properties
+    float alpha = roughness * roughness;
+
+    float G = GeometrySmith( dots.clamped_n_dot_v, dots.clamped_n_dot_l, alpha );
+    float3 F0 = float3( 0.04f );
+    float3 F = FresnelSchlick( dots.clamped_n_dot_h, F0 );
+
+    float3 specular
+        = ( NDF * G * F ) / ( 4.0f * dots.clamped_n_dot_v * dots.clamped_n_dot_l + 0.001f );
+
+    float shadowing = dot( normal, light );
+
+    bool enable_gt7_ao = terrain_data.packed_floats0.x > 0.5f;
+    if ( enable_gt7_ao ) {
+        // CEDEC 22 GT7 Presentation
+        float shadow_strength = terrain_data.terrain_data0.x;
+        float local_shadows
+            = clamp( dot( normal, light ) - shadow_strength * ( 1.0f - ao ) + 0.5f, 0.0f, 1.0f );
+        shadowing *= local_shadows;
+    } else {
+        shadowing *= ao;
+    }
+
+    // Clamp shadows
+    shadowing = clamp( shadowing, 0.0f, 1.0f );
+
+    bool shadowing_only = terrain_data.packed_floats0.y > 0.5f;
+    if ( shadowing_only ) {
+        return shadowing;
+    }
+
+    return ( ( 1.0f - F ) * diffuse + specular ) * shadowing;
+}

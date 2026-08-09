@@ -19,6 +19,7 @@ struct ReflectionPassDescSets {
     engine::DescriptorSet& car_tlas_desc_set;
     engine::DescriptorSet& car_desc_set;
     engine::DescriptorSet& combined_textures_desc_set;
+    engine::DescriptorSet& terrain_shading_desc_set;
 };
 
 void create_reflection_pass_resources( 

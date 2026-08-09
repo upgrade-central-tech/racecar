@@ -2,6 +2,8 @@
 #include "../utils.slang"
 #include "../clouds/cloud_utils.slang"
 
+#include "terrain_common.slang"
+
 import constants;
 
 layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_data;
@@ -30,61 +32,13 @@ layout( binding = 0, set = 5 ) Texture2D<float4> ReflectionData;
 float3 direct_lighting(
     float3 albedo, float3 normal, float3 light, float NDF, float roughness, float ao, float3 view )
 {
-    float3 half_vector = normalize( view + light );
-    BSDF_Dots dots = get_dots( normal, view, half_vector, light );
-
-    // Diffuse properties
-    var diffuse = albedo * INV_PI;
-
-    // Specular properties
-    float alpha = roughness * roughness;
-
-    float G = GeometrySmith( dots.clamped_n_dot_v, dots.clamped_n_dot_l, alpha );
-    float3 F0 = float3( 0.04f );
-    float3 F = FresnelSchlick( dots.clamped_n_dot_h, F0 );
-
-    float3 specular
-        = ( NDF * G * F ) / ( 4.0f * dots.clamped_n_dot_v * dots.clamped_n_dot_l + 0.001f );
-
-    float shadow_strength = 1.0f;
-    float local_shadows
-        = clamp( dot( normal, light ) - shadow_strength * ( 1.0f - ao ) + 0.5f, 0.0f, 1.0f );
-
-    float shadowing = dot( normal, light );
-
-    bool enable_gt7_ao = terrain_data.packed_floats0.x > 0.5f;
-    if ( enable_gt7_ao ) {
-        // CEDEC 22 GT7 Presentation
-        float shadow_strength
-            = terrain_data.terrain_data0.x; // terrain_data.gt7_local_shadow_strength;
-        float local_shadows
-            = clamp( dot( normal, light ) - shadow_strength * ( 1.0f - ao ) + 0.5f, 0.0f, 1.0f );
-        shadowing *= local_shadows;
-    } else {
-        shadowing *= ao;
-    }
-
-    // Clamp shadows
-    shadowing = clamp( shadowing, 0.0f, 1.0f );
-
-    bool shadowing_only = terrain_data.packed_floats0.y > 0.5f;
-    if ( shadowing_only ) {
-        return shadowing;
-    }
-
-    return ( ( 1.0f - F ) * diffuse + specular ) * shadowing;
+    return terrain_direct_lighting(
+        albedo, normal, light, NDF, roughness, ao, view, terrain_data );
 }
 
 float3 sample_glossy_ibl( float roughness, float2 direction )
 {
-    float lod = roughness * 5.0f;
-    uint lod0 = uint( floor( roughness * 5.0f ) );
-    uint lod1 = min( lod0 + 1, 5 );
-    float lod_t = lod - lod0;
-
-    float3 glossy_lod0 = sky_mips.SampleLevel( sampler, direction, lod0 ).rgb;
-    float3 glossy_lod1 = sky_mips.SampleLevel( sampler, direction, lod1 ).rgb;
-    return lerp( glossy_lod0, glossy_lod1, lod_t );
+    return terrain_sample_glossy_ibl( roughness, direction, sky_mips, sampler );
 }
 
 #if RACECAR_RAY_TRACING
