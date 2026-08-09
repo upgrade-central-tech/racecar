@@ -84,6 +84,7 @@ add_executable(racecar
 
     ${SCENE_DIR}/scene.cpp
     ${SCENE_DIR}/car_rt.cpp
+    ${SCENE_DIR}/terrain_rt.cpp
 
     ${RACECAR_DIR}/racecar.cpp
 )

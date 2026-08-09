@@ -36,6 +36,7 @@
 #include "preset.hpp"
 #include "scene/car_rt.hpp"
 #include "scene/scene.hpp"
+#include "scene/terrain_rt.hpp"
 #include "sdl.hpp"
 #include "window_events.hpp"
 
@@ -283,6 +284,9 @@ void run( bool use_fullscreen )
         &reflection_buffer_desc_set,
         &reflection_gfx_task
     );
+
+    TerrainRayTracingInfo terrain_rt;
+    init_terrain_ray_tracing_info(&terrain_rt, &test_terrain.terrain_uniform, &test_terrain.test_layer_mask);
 #endif // RACECAR_RAY_TRACING
 
     DebugTexturePass debug_texture_pass;
@@ -362,6 +366,9 @@ void run( bool use_fullscreen )
     engine::add_gpu_task( task_list, [&]( VkCommandBuffer cmd_buf ) {
         update_car_tlas( cmd_buf, objects, prims, model_mat_uniform_buffers );
     } );
+
+    add_terrain_rt_displace_pass( terrain_rt, task_list );
+    add_terrain_rt_build_pass( terrain_rt, task_list );
 #endif // RACECAR_RAY_TRACING
 
     // Once all of the essential buffers are setup (GBuffer + Screen buffers), we run a pipeline
