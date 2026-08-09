@@ -9,8 +9,9 @@
 namespace racecar::engine {
 
 struct BufferBarrier {
-    // the buffer to surround the barrier
-    VkBuffer buffer;
+    /// The buffer to surround the barrier
+    /// Per-frame resource
+    std::vector<vk::mem::AllocatedBuffer> buffer;
 
     /// the stage that the previous commands must reach
     VkPipelineStageFlags2 src_stage;
@@ -24,7 +25,7 @@ struct BufferBarrier {
     /// the data read type that the following commands will read it through
     VkAccessFlags2 dst_access;
 
-    VkBufferMemoryBarrier2 get_vk();
+    VkBufferMemoryBarrier2 get_vk( size_t idx ) const;
 };
 
 struct ImageBarrier {

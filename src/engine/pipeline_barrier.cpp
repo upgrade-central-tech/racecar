@@ -17,7 +17,7 @@ void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBu
         barrier.buffer_barriers.begin(),
         barrier.buffer_barriers.end(),
         std::back_inserter( vk_buffer_barriers ),
-        []( BufferBarrier b ) { return b.get_vk(); }
+        [=]( const BufferBarrier& b ) { return b.get_vk( idx ); }
     );
 
     std::transform(
@@ -42,17 +42,21 @@ void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBu
     vkCmdPipelineBarrier2( cmd_buf, &info );
 }
 
-VkBufferMemoryBarrier2 BufferBarrier::get_vk()
+VkBufferMemoryBarrier2 BufferBarrier::get_vk( size_t idx ) const
 {
+    if ( idx >= buffer.size() ) {
+        throw Exception( "[BufferBarrier] Expected one buffer per frame" );
+    }
+
     return VkBufferMemoryBarrier2 { .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
                                     .pNext = VK_NULL_HANDLE,
                                     .srcStageMask = src_stage,
                                     .srcAccessMask = src_access,
-                                    .dstStageMask = src_stage,
+                                    .dstStageMask = dst_stage,
                                     .dstAccessMask = dst_access,
                                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                    .buffer = buffer,
+                                    .buffer = buffer[idx].handle,
                                     .offset = 0,
                                     .size = VK_WHOLE_SIZE };
 }
