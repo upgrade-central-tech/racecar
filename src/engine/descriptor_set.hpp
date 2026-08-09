@@ -53,6 +53,10 @@ void update_descriptor_set_uniform(
 void update_descriptor_set_const_storage_buffer(
     DescriptorSet& desc_set, vk::mem::AllocatedBuffer storage_buffer, int binding_idx );
 
+void update_descriptor_set_storage_buffer_per_frame(
+    DescriptorSet& desc_set, const std::vector<vk::mem::AllocatedBuffer>& storage_buffers,
+    int binding_idx );
+
 void update_descriptor_set_image( DescriptorSet& desc_set,
     const vk::mem::AllocatedImage& img, int binding_idx );
 

@@ -410,4 +410,38 @@ void update_descriptor_set_const_storage_buffer(
     }
 }
 
+// This is temporary and should eventually be replaced with a proper RWBuffer class
+void update_descriptor_set_storage_buffer_per_frame(
+    DescriptorSet& desc_set, const std::vector<vk::mem::AllocatedBuffer>& storage_buffers,
+    int binding_idx
+)
+{
+    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst();
+
+    if ( storage_buffers.size() != engine.frame_overlap ) {
+        throw Exception( "[Update Descriptor Set Storage Buffer Per Frame] Expected one storage "
+                         "buffer per frame in flight" );
+    }
+
+    for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
+        VkDescriptorBufferInfo buffer_info = {
+            .buffer = storage_buffers[i].handle,
+            .offset = 0,
+            .range = VK_WHOLE_SIZE,
+        };
+
+        VkWriteDescriptorSet write = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = desc_set.descriptor_sets[i],
+            .dstBinding = static_cast<uint32_t>( binding_idx ),
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .pBufferInfo = &buffer_info,
+        };
+
+        vkUpdateDescriptorSets( vulkan.device, 1, &write, 0, nullptr );
+    }
+}
+
 } // namespace racecar::engine
