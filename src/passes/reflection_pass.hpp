@@ -22,13 +22,14 @@ struct ReflectionPassDescSets {
     engine::DescriptorSet& terrain_shading_desc_set;
 };
 
-void create_reflection_pass_resources( 
-    ReflectionPassDescSets desc_sets, engine::RWImage* reflection_data,
-    engine::Pipeline* reflection_pipeline, engine::DescriptorSet* reflection_buffer_desc_set,
-    engine::GfxTask* reflection_gfx_task );
+void create_reflection_pass_resources(
+    ReflectionPassDescSets desc_sets, engine::RWImage* reflection_color,
+    engine::RWImage* reflection_data, engine::Pipeline* reflection_pipeline,
+    engine::DescriptorSet* reflection_buffer_desc_set, engine::GfxTask* reflection_gfx_task );
 
 void create_deferred_reflection_pipeline_barrier(
-    engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::RWImage& reflection_data );
+    engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::RWImage& reflection_color,
+    engine::RWImage& reflection_data );
 
 }
 

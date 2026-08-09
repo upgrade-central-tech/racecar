@@ -11,6 +11,29 @@ struct VertexOutput {
     float2 uv;
 };
 
+struct ReflectionOutput {
+    float4 color : SV_Target0;
+
+    // R: hit distance, negative on miss
+    float4 data : SV_Target1;
+};
+
+ReflectionOutput reflection_miss()
+{
+    ReflectionOutput output;
+    output.color = float4( 0.0f );
+    output.data = float4( -1.0f, 0.0f, 0.0f, 0.0f );
+    return output;
+}
+
+ReflectionOutput reflection_hit( float3 color, float hit_distance )
+{
+    ReflectionOutput output;
+    output.color = float4( color, 1.0f );
+    output.data = float4( hit_distance, 0.0f, 0.0f, 0.0f );
+    return output;
+}
+
 // It's an int array, but we use uint4 for packing
 // 64 * 4 == MAX_RT_PRIMITIVES in src/engine/ub_data.hpp.
 struct BLASOffsets {
@@ -222,8 +245,7 @@ VertexOutput vs_main( VertexInput input )
 }
 
 [shader( "fragment" )]
-float4 fs_main( VertexOutput in )
-    : SV_Target0
+ReflectionOutput fs_main( VertexOutput in )
 {
     float3 in_pos = GBuffer_Position.Sample( nearest_sampler, in.uv ).rgb;
     float3 in_nor = GBuffer_Normals.Sample( nearest_sampler, in.uv ).rgb;
@@ -231,7 +253,9 @@ float4 fs_main( VertexOutput in )
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
 
     if ( stencil == 0 ) {
-        return float4( asfloat( -1 ), 0.0, 0.0, 0.0 );
+        ReflectionOutput output = reflection_miss();
+        output.color = float4( asfloat( -1 ), 0.0, 0.0, 0.0 );
+        return output;
     }
 
     float3 world_dir = in_pos - camera_buffer_data.camera_pos.xyz;
@@ -257,11 +281,11 @@ float4 fs_main( VertexOutput in )
 
     if ( terrain_hit && ( !hit || terrain_t < t ) ) {
         float3 terrain_position = in_pos + terrain_t * refl_dir;
-        return float4( shade_terrain_hit( terrain_position, refl_dir ), 1.0f );
+        return reflection_hit( shade_terrain_hit( terrain_position, refl_dir ), terrain_t );
     }
 
     if ( !hit ) {
-        return float4( 0.0 );
+        return reflection_miss();
     }
     
     // return float4( float( instance_idx ) / 40.0f, 1.0 - float( instance_idx ) / 40.0f,
@@ -352,7 +376,7 @@ float4 fs_main( VertexOutput in )
     float3 color = car_bsdf(
         albedo, normal, hit_view_dir, half_vector, light, pbr, g_buffer, 1.0f, refl_input );
 
-    return float4( color, 1.0f );
+    return reflection_hit( color, t );
 
     // int roughness_metallic_index =
     // rt_texture_uniform.metallic_roughness_texture_index[instance_idx / 4][instance_idx %
@@ -370,7 +394,7 @@ float4 fs_main( VertexOutput in )
 
     // return float4( normalize(color), 1.0 );
 #else
-    return float4( 0.0 );
+    return reflection_miss();
 #endif // RACECAR_RAY_TRACING
 }
 

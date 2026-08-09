@@ -26,6 +26,8 @@ layout( binding = 0, set = 3 ) SamplerState sampler;
 #if RACECAR_RAY_TRACING
 layout( binding = 0, set = 4 ) RaytracingAccelerationStructure sceneBVH;
 layout( binding = 0, set = 5 ) Texture2D<float4> ReflectionData;
+// R: hit distance, negative on miss
+layout( binding = 1, set = 5 ) Texture2D<float4> ReflectionRayData;
 #endif // RACECAR_RAY_TRACING
 
 // Misc.

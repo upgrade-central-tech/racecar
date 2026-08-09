@@ -45,6 +45,8 @@ layout( binding = 7, set = 4 ) Texture2D<float4> GBuffer_Packed_Data;
 #if RACECAR_RAY_TRACING
 layout( binding = 0, set = 5 ) RaytracingAccelerationStructure sceneBVH;
 layout( binding = 0, set = 6 ) Texture2D<float4> ReflectionData;
+// R: hit distance, negative on miss
+layout( binding = 1, set = 6 ) Texture2D<float4> ReflectionRayData;
 #endif // RACECAR_RAY_TRACING
 
 // #include "../utils.slang"

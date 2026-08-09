@@ -33,6 +33,7 @@ void car_lighting_pass( LightingPassDescSets desc_sets,
 void create_deferred_lighting_pipeline_barrier( engine::TaskList& task_list,
     deferred::GBuffers& gbuffers,
 #if RACECAR_RAY_TRACING
+    engine::RWImage& reflection_color,
     engine::RWImage& reflection_data,
 #endif // RACECAR_RAY_TRACING
     engine::RWImage& screen_color );

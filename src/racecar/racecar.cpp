@@ -269,6 +269,7 @@ void run( bool use_fullscreen )
     init_terrain_ray_tracing_info( &terrain_rt, &test_terrain );
 
     // Set up reflection data
+    engine::RWImage reflection_color;
     engine::RWImage reflection_data;
     engine::Pipeline reflection_pipeline;
     engine::DescriptorSet reflection_buffer_desc_set;
@@ -283,6 +284,7 @@ void run( bool use_fullscreen )
             .combined_textures_desc_set = combined_textures_desc_set,
             .terrain_shading_desc_set = terrain_rt.shading_desc_set,
         },
+        &reflection_color,
         &reflection_data,
         &reflection_pipeline,
         &reflection_buffer_desc_set,
@@ -293,7 +295,7 @@ void run( bool use_fullscreen )
     DebugTexturePass debug_texture_pass;
     std::vector<const engine::RWImage*> debug_textures;
 #if RACECAR_RAY_TRACING
-    debug_textures.push_back( &reflection_data );
+    debug_textures.push_back( &reflection_color );
 #endif // RACECAR_RAY_TRACING
     initialize_debug_texture_pass( debug_texture_pass, screen_buffer, debug_textures );
 
@@ -420,7 +422,12 @@ void run( bool use_fullscreen )
 
 #if RACECAR_RAY_TRACING
     // Pipeline barrier (gbuffer dependency for reflection compute)
-    create_deferred_reflection_pipeline_barrier( task_list, gbuffers, reflection_data );
+    create_deferred_reflection_pipeline_barrier(
+        task_list,
+        gbuffers,
+        reflection_color,
+        reflection_data
+    );
 
     // Add reflection task
     engine::add_gfx_task( task_list, reflection_gfx_task );
@@ -431,6 +438,7 @@ void run( bool use_fullscreen )
         task_list,
         gbuffers,
 #if RACECAR_RAY_TRACING
+        reflection_color,
         reflection_data,
 #endif // RACECAR_RAY_TRACING
         screen_color
