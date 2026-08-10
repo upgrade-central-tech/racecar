@@ -20,7 +20,7 @@ float3 sample_glossy_ibl( float roughness, float2 direction )
 }
 
 float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 light, Material pbr,
-    GBuffer g_buffer, float sun_V, float4 refl )
+    GBuffer g_buffer, float sun_V, float4 refl, float4 refl_cc )
 {
     // Essential dot products
     float n_dot_v = ( dot( normal, view ) );
@@ -57,7 +57,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 precomputed_lo_specular = sample_glossy_ibl( roughness, encoded_direction );
 
     // reflection value
-    precomputed_lo_specular = lerp( precomputed_lo_specular, refl.rgb, refl.a );
+    precomputed_lo_specular = refl.rgb + precomputed_lo_specular * ( 1.0f - refl.a );
 
     float3 F0 = float3( 0.04f );
     F0 = lerp( F0, base_albedo, pbr.metallic );
@@ -97,6 +97,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 F0_cc = float3( 0.04f );
     float3 F_cc = FresnelSchlickRoughness( clamped_n_dot_v, F0_cc, clearcoat_roughness );
     float3 precomputed_specular_cc = sample_glossy_ibl( clearcoat_roughness, encoded_direction );
+    precomputed_specular_cc
+        = refl_cc.rgb + precomputed_specular_cc * ( 1.0f - refl_cc.a );
     precomputed_specular_cc *= ( F_cc * brdf_cc.x + brdf_cc.y );
 
     float3 clearcoat_specular = clearcoat_weight * 1.0f * precomputed_specular_cc;

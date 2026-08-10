@@ -56,6 +56,37 @@ layout( binding = 1, set = 6 ) Texture2D<float4> ReflectionRayData;
 #include "../car_mat/car_lighting.slang"
 
 #if RACECAR_RAY_TRACING
+// match src/passes/reflection_mip_chain.hpp
+static const float REFLECTION_MAX_MIP = 5.0f;
+
+float4 sample_reflection( float2 uv, float lod )
+{
+    float lod0 = floor( lod );
+    float lod1 = min( lod0 + 1.0f, REFLECTION_MAX_MIP );
+
+    float4 refl0 = ReflectionData.SampleLevel( nearest_sampler, uv, lod0 );
+    float4 refl1 = ReflectionData.SampleLevel( nearest_sampler, uv, lod1 );
+
+    return lerp( refl0, refl1, lod - lod0 );
+}
+
+float reflection_lod( float roughness, float hit_distance, float view_distance, float screen_height )
+{
+    if ( hit_distance < 0.0f ) {
+        return 0.0f;
+    }
+
+    float alpha = roughness * roughness;
+    float cone_radius = hit_distance * alpha;
+
+    float fov_y = camera_buffer_data.camera_constants.w;
+    float proj_scale = 0.5f * screen_height / tan( 0.5f * fov_y );
+
+    float footprint = cone_radius * proj_scale / max( view_distance + hit_distance, 0.001f );
+
+    return clamp( log2( max( footprint, 1.0f ) ), 0.0f, REFLECTION_MAX_MIP );
+}
+
 bool traceRayFirstHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigin, float3 rayDir,
     out float t, out int primitiveIndex )
 {
@@ -104,14 +135,7 @@ float4 fs_main( VertexOutput in )
     float4 in_tangent = GBuffer_Position.Sample( nearest_sampler, in.uv );
     float2 in_uv = GBuffer_UV.Sample( nearest_sampler, in.uv ).rg;
 
-#if RACECAR_RAY_TRACING
-    float4 in_refl = ReflectionData.Sample( nearest_sampler, in.uv );
-#endif // RACECAR_RAY_TRACING
-
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
-
-    // float4 refl = in_refl;
-    float4 refl = float4(0.0);
 
     float2 ddx_uv = float2( GBuffer_Position.Sample( nearest_sampler, in.uv ).a,
         GBuffer_Normals.Sample( nearest_sampler, in.uv ).a );
@@ -148,6 +172,30 @@ float4 fs_main( VertexOutput in )
         metallic_roughness.w // cc weight
     };
 
+    float4 refl = float4( 0.0f );
+    float4 refl_cc = float4( 0.0f );
+
+#if RACECAR_RAY_TRACING
+    {
+        uint refl_width;
+        uint refl_height;
+        ReflectionData.GetDimensions( refl_width, refl_height );
+
+        float hit_distance = ReflectionRayData.SampleLevel( nearest_sampler, in.uv, 0.0f ).r;
+        float view_distance = length( camera_pos - in_pos );
+
+        refl = sample_reflection(
+            in.uv,
+            reflection_lod( roughness, hit_distance, view_distance, float( refl_height ) )
+        );
+        refl_cc = sample_reflection(
+            in.uv,
+            reflection_lod( pbr.clearcoat_roughness, hit_distance, view_distance,
+                float( refl_height ) )
+        );
+    }
+#endif // RACECAR_RAY_TRACING
+
     GBuffer gbuffer = { in_pos, normal, in_tangent, in_uv, ddx_uv, ddy_uv };
 
     bool hit = false;
@@ -162,7 +210,8 @@ float4 fs_main( VertexOutput in )
 #endif // RACECAR_RAY_TRACING
 
     float3 out_color
-        = car_bsdf( base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0, refl );
+        = car_bsdf(
+            base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0, refl, refl_cc );
 
     // DEBUG VIEWS
     switch ( debug_data.debug_view ) {
