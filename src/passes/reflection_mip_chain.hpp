@@ -22,13 +22,18 @@ namespace racecar {
 struct ReflectionMipChain {
     static constexpr uint32_t MIP_COUNT = REFLECTION_MIP_COUNT;
     static constexpr uint32_t DOWNSAMPLE_COUNT = MIP_COUNT - 1;
+    static constexpr uint32_t UPSAMPLE_COUNT = MIP_COUNT - 2;
 
     // Refs to reflection images
     engine::RWImage* reflection_color = nullptr;
     engine::RWImage* reflection_data = nullptr;
 
     std::array<engine::DescriptorSet, DOWNSAMPLE_COUNT> downsample_desc_sets = { };
+    std::array<engine::DescriptorSet, UPSAMPLE_COUNT> upsample_desc_sets = { };
+    engine::DescriptorSet sampler_desc_set = { };
+
     engine::Pipeline downsample_pipeline = { };
+    engine::Pipeline upsample_pipeline = { };
 };
 
 void create_reflection_mip_chain_resources( ReflectionMipChain* chain,
