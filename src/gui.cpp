@@ -1,6 +1,7 @@
 #include "gui.hpp"
 
 #include "log.hpp"
+#include "passes/reflection_mip_chain.hpp"
 
 #include <glm/gtc/constants.hpp>
 #include <imgui_impl_sdl3.h>
@@ -333,6 +334,13 @@ void update(
                     8.0f,
                     "%.2f",
                     ImGuiSliderFlags_Logarithmic
+                );
+                ImGui::SliderFloat(
+                    "Reflection blur",
+                    &gui.debug.texture_blur,
+                    0.0f,
+                    float( REFLECTION_MIP_COUNT - 1 ),
+                    "%.2f"
                 );
                 ImGui::EndDisabled();
 

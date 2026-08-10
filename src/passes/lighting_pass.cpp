@@ -17,10 +17,6 @@ constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferr
 void create_deferred_lighting_pipeline_barrier(
     engine::TaskList& task_list,
     deferred::GBuffers& gbuffers,
-#if RACECAR_RAY_TRACING
-    engine::RWImage& reflection_color,
-    engine::RWImage& reflection_data,
-#endif // RACECAR_RAY_TRACING
     engine::RWImage& screen_color
 )
 {
@@ -54,24 +50,6 @@ void create_deferred_lighting_pipeline_barrier(
                                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
                                        .image = &gbuffers.GBuffer_DepthMS,
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
-#if RACECAR_RAY_TRACING
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                       .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                                       .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                       .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                       .image = &reflection_color,
-                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                       .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                                       .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                       .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                       .image = &reflection_data,
-                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-#endif // RACECAR_RAY_TRACING
                 engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,

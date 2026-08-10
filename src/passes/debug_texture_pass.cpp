@@ -108,13 +108,14 @@ void add_debug_texture_pass( DebugTexturePass& pass, engine::TaskList& task_list
     );
 }
 
-void update_debug_texture_uniform_buffer( DebugTexturePass& pass, float exposure )
+void update_debug_texture_uniform_buffer( DebugTexturePass& pass, float exposure, float blur )
 {
     const engine::State& engine = engine::State::GetConst();
 
     ub_data::DebugTexture ub = pass.buffer.get_data();
     ub.index = RuntimeSettings::GetValue( RacecarSettings::DEBUG_TEXTURE );
     ub.exposure = exposure;
+    ub.blur = blur;
 
     pass.buffer.set_data( ub );
     pass.buffer.update( engine.get_frame_index() );

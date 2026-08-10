@@ -149,6 +149,7 @@ struct AA {
 struct DebugTexture {
     int index = 0;
     float exposure = 1.f;
+    float blur = 0.f;
 };
 
 struct ModelMat {

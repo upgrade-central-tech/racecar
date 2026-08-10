@@ -9,10 +9,12 @@ void execute_gfx_task( const VkCommandBuffer& cmd_buf, GfxTask& gfx_task )
 
     std::vector<VkRenderingAttachmentInfo> color_attachment_infos;
     for ( const RWImage* img : gfx_task.color_attachments ) {
+        const vk::mem::AllocatedImage& attachment = img->images[frame_idx];
         color_attachment_infos.push_back(
             {
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-                .imageView = img->images[frame_idx].image_view,
+                .imageView = attachment.mip_levels.empty() ? attachment.image_view
+                                                           : attachment.mip_levels[0],
                 .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 .loadOp
                 = gfx_task.clear_color ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,

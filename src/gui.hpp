@@ -32,6 +32,7 @@ struct Gui {
         bool load_material_into_gui = true;
 
         float texture_exposure = 1.f;
+        float texture_blur = 0.f;
     } debug = {};
 
     struct DemoData {

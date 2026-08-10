@@ -37,6 +37,7 @@ add_executable(racecar
 
     ${PASSES_DIR}/scene_pass.cpp
     ${PASSES_DIR}/reflection_pass.cpp
+    ${PASSES_DIR}/reflection_mip_chain.cpp
     ${PASSES_DIR}/lighting_pass.cpp
     ${PASSES_DIR}/post_processing.cpp
     ${PASSES_DIR}/debug_texture_pass.cpp

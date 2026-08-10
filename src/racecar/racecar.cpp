@@ -30,6 +30,7 @@
 #include "passes/debug_texture_pass.hpp"
 #include "passes/lighting_pass.hpp"
 #include "passes/post_processing.hpp"
+#include "passes/reflection_mip_chain.hpp"
 #include "passes/reflection_pass.hpp"
 #include "passes/scene_pass.hpp"
 #include "passes/transparency_pass.hpp"
@@ -290,6 +291,13 @@ void run( bool use_fullscreen )
         &reflection_buffer_desc_set,
         &reflection_gfx_task
     );
+
+    ReflectionMipChain reflection_mip_chain;
+    create_reflection_mip_chain_resources(
+        &reflection_mip_chain,
+        reflection_color,
+        reflection_data
+    );
 #endif // RACECAR_RAY_TRACING
 
     DebugTexturePass debug_texture_pass;
@@ -431,18 +439,13 @@ void run( bool use_fullscreen )
 
     // Add reflection task
     engine::add_gfx_task( task_list, reflection_gfx_task );
+
+    // Blur reflection color over mips (rough reflections)
+    add_reflection_mip_chain_pass( reflection_mip_chain, task_list );
 #endif // RACECAR_RAY_TRACING
 
     // Lighting
-    create_deferred_lighting_pipeline_barrier(
-        task_list,
-        gbuffers,
-#if RACECAR_RAY_TRACING
-        reflection_color,
-        reflection_data,
-#endif // RACECAR_RAY_TRACING
-        screen_color
-    );
+    create_deferred_lighting_pipeline_barrier( task_list, gbuffers, screen_color );
 
     // Terrain lighting pass
     geometry::draw_terrain( test_terrain, task_list );
@@ -610,7 +613,11 @@ void run( bool use_fullscreen )
         // Update bloom settings
         engine::post::update_bloom_uniform_buffer( gui, bloom_pass );
 
-        update_debug_texture_uniform_buffer( debug_texture_pass, gui.debug.texture_exposure );
+        update_debug_texture_uniform_buffer(
+            debug_texture_pass,
+            gui.debug.texture_exposure,
+            gui.debug.texture_blur
+        );
 
         gui::update( gui, atms, camera, material_uniform_buffers );
 

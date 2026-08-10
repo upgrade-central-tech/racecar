@@ -25,6 +25,6 @@ void initialize_debug_texture_pass( DebugTexturePass& pass, engine::RWImage& scr
 
 void add_debug_texture_pass( DebugTexturePass& pass, engine::TaskList& task_list );
 
-void update_debug_texture_uniform_buffer( DebugTexturePass& pass, float exposure );
+void update_debug_texture_uniform_buffer( DebugTexturePass& pass, float exposure, float blur );
 
 }

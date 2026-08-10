@@ -15,22 +15,23 @@ struct ReflectionOutput {
     float4 color : SV_Target0;
 
     // R: hit distance, negative on miss
+    // G: stencil of the reflecting pixel.
     float4 data : SV_Target1;
 };
 
-ReflectionOutput reflection_miss()
+ReflectionOutput reflection_miss( float stencil )
 {
     ReflectionOutput output;
     output.color = float4( 0.0f );
-    output.data = float4( -1.0f, 0.0f, 0.0f, 0.0f );
+    output.data = float4( -1.0f, stencil, 0.0f, 0.0f );
     return output;
 }
 
-ReflectionOutput reflection_hit( float3 color, float hit_distance )
+ReflectionOutput reflection_hit( float3 color, float hit_distance, float stencil )
 {
     ReflectionOutput output;
     output.color = float4( color, 1.0f );
-    output.data = float4( hit_distance, 0.0f, 0.0f, 0.0f );
+    output.data = float4( hit_distance, stencil, 0.0f, 0.0f );
     return output;
 }
 
@@ -253,9 +254,7 @@ ReflectionOutput fs_main( VertexOutput in )
     float stencil = GBuffer_Position.Sample( nearest_sampler, in.uv ).a;
 
     if ( stencil == 0 ) {
-        ReflectionOutput output = reflection_miss();
-        output.color = float4( asfloat( -1 ), 0.0, 0.0, 0.0 );
-        return output;
+        return reflection_miss( 0.0f );
     }
 
     float3 world_dir = in_pos - camera_buffer_data.camera_pos.xyz;
@@ -281,11 +280,12 @@ ReflectionOutput fs_main( VertexOutput in )
 
     if ( terrain_hit && ( !hit || terrain_t < t ) ) {
         float3 terrain_position = in_pos + terrain_t * refl_dir;
-        return reflection_hit( shade_terrain_hit( terrain_position, refl_dir ), terrain_t );
+        return reflection_hit(
+            shade_terrain_hit( terrain_position, refl_dir ), terrain_t, stencil );
     }
 
     if ( !hit ) {
-        return reflection_miss();
+        return reflection_miss( stencil );
     }
     
     // return float4( float( instance_idx ) / 40.0f, 1.0 - float( instance_idx ) / 40.0f,
@@ -376,7 +376,7 @@ ReflectionOutput fs_main( VertexOutput in )
     float3 color = car_bsdf(
         albedo, normal, hit_view_dir, half_vector, light, pbr, g_buffer, 1.0f, refl_input );
 
-    return reflection_hit( color, t );
+    return reflection_hit( color, t, stencil );
 
     // int roughness_metallic_index =
     // rt_texture_uniform.metallic_roughness_texture_index[instance_idx / 4][instance_idx %
@@ -394,7 +394,7 @@ ReflectionOutput fs_main( VertexOutput in )
 
     // return float4( normalize(color), 1.0 );
 #else
-    return reflection_miss();
+    return reflection_miss( 0.0f );
 #endif // RACECAR_RAY_TRACING
 }
 

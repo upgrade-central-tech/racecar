@@ -1,0 +1,1 @@
+../../../slang/bin/slangc.exe "$PSScriptRoot\reflection_mips.slang" -target spirv -profile spirv_1_5 -emit-spirv-directly -fvk-use-entrypoint-name -entry cs_reflection_mips -o "$PSScriptRoot\reflection_mips.spv"

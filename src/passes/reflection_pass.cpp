@@ -6,6 +6,7 @@
 #include "../engine/pipeline_barrier.hpp"
 #include "../geometry/quad.hpp"
 #include "../vk/create.hpp"
+#include "reflection_mip_chain.hpp"
 
 namespace racecar {
 
@@ -61,20 +62,24 @@ void create_reflection_pass_resources(
     const engine::State& engine = engine::State::GetConst();
     geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
 
-    *reflection_color = engine::create_rwimage(
+    *reflection_color = engine::create_rwimage_mips(
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
         VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+            | VK_IMAGE_USAGE_STORAGE_BIT,
+        ReflectionMipChain::MIP_COUNT
     );
 
-    *reflection_data = engine::create_rwimage(
+    *reflection_data = engine::create_rwimage_mips(
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
         VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+            | VK_IMAGE_USAGE_STORAGE_BIT,
+        ReflectionMipChain::MIP_COUNT
     );
 
     *reflection_pipeline = engine::create_gfx_pipeline(

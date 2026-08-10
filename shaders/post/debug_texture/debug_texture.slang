@@ -4,6 +4,8 @@ struct DebugTextureSettings {
     // 0 is off, >= 1 is index
     int index;
     float exposure;
+
+    float blur;
 };
 
 layout( binding = 0, set = 0 ) Texture2D<float4> debug_textures[MAX_DEBUG_TEXTURES];
@@ -30,7 +32,7 @@ func cs_debug_texture( uint2 thread_id: SV_DispatchThreadID )->void
     }
 
     let uv = ( float2( pixel ) + 0.5f ) / float2( width, height );
-    let texel = debug_textures[settings.index - 1].SampleLevel( linear_sampler, uv, 0 );
+    let texel = debug_textures[settings.index - 1].SampleLevel( linear_sampler, uv, settings.blur );
 
     out_color[pixel] = float4( texel.rgb * settings.exposure, 1.0f );
 }

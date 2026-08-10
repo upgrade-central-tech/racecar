@@ -37,6 +37,7 @@ vkb::Instance create_instance()
 
 #if RACECAR_DEBUG
     if ( system_info.validation_layers_available ) {
+        log::info("[Vulkan] Enabling validation layers");
         instance_builder.enable_validation_layers().use_default_debug_messenger();
     }
 #endif
