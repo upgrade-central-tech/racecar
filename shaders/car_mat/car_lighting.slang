@@ -4,7 +4,9 @@
 
 #include "../utils.slang"
 
+#ifndef USE_GLINTS
 #define USE_GLINTS 1
+#endif
 #define USE_SH_IRRADIANCE 0
 
 float3 sample_glossy_ibl( float roughness, float2 direction )
@@ -54,6 +56,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     // get this stuff to work with roughness.
 
     float2 encoded_direction = oct_encode( reflect( -view, normal ) );
+    float2 encoded_normal = oct_encode( normal );
     float3 precomputed_lo_specular = sample_glossy_ibl( roughness, encoded_direction );
 
     // reflection value
@@ -131,7 +134,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     //  out_color *= irradiance;
 #else
     float3 diffuse_irradiance
-        = octahedral_sky_irradiance.Sample( nearest_sampler, encoded_direction ).rgb;
+        = octahedral_sky_irradiance.Sample( nearest_sampler, encoded_normal ).rgb;
     diffuse_irradiance *= albedo / PI;
 #endif
     float3 kD_direct = float3( 1.0f ) - F;
