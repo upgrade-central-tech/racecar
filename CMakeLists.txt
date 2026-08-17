@@ -15,6 +15,7 @@ set(SCENE_DIR "${SRC_DIR}/scene")
 set(RACECAR_DIR "${SRC_DIR}/racecar")
 set(PASSES_DIR "${SRC_DIR}/passes")
 set(DEMO_DIR "${SRC_DIR}/demo")
+set(GAME_DIR "${SRC_DIR}/game")
 
 add_executable(racecar
     ${SRC_DIR}/main.cpp
@@ -86,6 +87,8 @@ add_executable(racecar
     ${SCENE_DIR}/scene.cpp
     ${SCENE_DIR}/car_rt.cpp
     ${SCENE_DIR}/terrain_rt.cpp
+
+    ${GAME_DIR}/gamestate.cpp
 
     ${RACECAR_DIR}/racecar.cpp
 )

@@ -5,6 +5,7 @@
 #include "../vk/mem.hpp"
 #include "descriptors.hpp"
 #include "imm_submit.hpp"
+#include "game/gamestate.h"
 
 #include <SDL3/SDL.h>
 
@@ -59,6 +60,8 @@ struct State {
 
     double time = 0.f; ///< Expressed in seconds.
     double delta = 0.f; ///< Expressed in seconds.
+
+    GameState gamestate;
 
     static State& GetMut();
     static const State& GetConst();

@@ -532,6 +532,9 @@ void run( bool use_fullscreen )
             event
         );
 
+        // Update GameState
+        update_game_state();
+
         // Don't draw if we're minimized
         if ( stop_drawing ) {
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
@@ -608,7 +611,7 @@ void run( bool use_fullscreen )
         update_car_transform( gui, scene, model_mat_uniform_buffers, volumetric, discovered );
 
         // wheel rotation
-        update_wheel_transforms( gui, scene, model_mat_uniform_buffers, discovered );
+        update_wheel_transforms( scene, model_mat_uniform_buffers, discovered );
 
         // Update bloom settings
         engine::post::update_bloom_uniform_buffer( gui, bloom_pass );

@@ -61,7 +61,6 @@ struct Gui {
         float gt7_local_shadow_strength = 1.0f;
         float wetness = 0.8f; // temporary param
         float snow = 0.3f;
-        float scrolling_speed = 0.0f;
 
         bool enable_gt7_ao = true;
         bool shadowing_only = false;

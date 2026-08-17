@@ -86,16 +86,17 @@ void update_car_transform(
 }
 
 void update_wheel_transforms(
-    gui::Gui& gui,
     scene::Scene& scene,
     std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
     std::vector<bool>& discovered
 )
 {
+    const engine::State engine = engine::State::GetConst();
+
     // front wheels
     glm::vec3 pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[0] );
     float angle
-        = gui.terrain.scrolling_speed * 30 / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
+        = engine.gamestate.speed * 30 / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
 
     glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
     model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );

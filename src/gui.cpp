@@ -371,7 +371,6 @@ void update(
                 );
                 ImGui::SliderFloat( "Debug wetness", &gui.terrain.wetness, 0.0f, 1.0f );
                 ImGui::SliderFloat( "Debug snow", &gui.terrain.snow, 0.0f, 1.0f );
-                ImGui::SliderFloat( "Scrolling speed", &gui.terrain.scrolling_speed, 0.0f, 0.1f );
                 ImGui::EndTabItem();
             }
 
@@ -464,6 +463,8 @@ void use_preset(
 
     log::info( "[preset] Transitioning to preset \"{}\"", preset.name );
 
+    const engine::State& engine = engine::State::GetConst(); 
+
     Preset before = {
         .version = 1,
         .name = "__before_generated",
@@ -473,7 +474,7 @@ void use_preset(
 
         .wetness = gui.terrain.wetness,
         .snow = gui.terrain.snow,
-        .scrolling_speed = gui.terrain.scrolling_speed,
+        .scrolling_speed = engine.gamestate.speed,
         .bumpiness = gui.demo.bumpiness,
 
         .camera_center = camera.center,

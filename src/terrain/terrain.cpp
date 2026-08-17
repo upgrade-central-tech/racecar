@@ -506,7 +506,7 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
     scroll_direction.x = 0.0f;
     scroll_direction.y = 1.0f;
 
-    glm::vec2 offset_XY = gui.terrain.scrolling_speed * scroll_direction
+    glm::vec2 offset_XY = engine.gamestate.speed * scroll_direction
         + glm::vec2( terrain_ub.terrain_data1.x, terrain_ub.terrain_data1.y );
 
     terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );

@@ -26,7 +26,7 @@ void update_car_transform( gui::Gui& gui, scene::Scene& scene,
     std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
     const volumetric::Volumetric& volumetric, std::vector<bool>& discovered );
 
-void update_wheel_transforms( gui::Gui& gui,
+void update_wheel_transforms(
     scene::Scene& scene, std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
     std::vector<bool>& discovered );
 
