@@ -59,23 +59,78 @@ layout( binding = 1, set = 6 ) Texture2D<float4> ReflectionRayData;
 // match src/passes/reflection_mip_chain.hpp
 static const float REFLECTION_MAX_MIP = 5.0f;
 
+float4 cubic_bspline_weights( float v )
+{
+    float4 n = float4( 1.0f, 2.0f, 3.0f, 4.0f ) - v;
+    float4 s = n * n * n;
+
+    float x = s.x;
+    float y = s.y - 4.0f * s.x;
+    float z = s.z - 4.0f * s.y + 6.0f * s.x;
+    float w = 6.0f - x - y - z;
+
+    return float4( x, y, z, w ) / 6.0f;
+}
+
+float4 sample_bicubic( Texture2D<float4> tex, float2 uv, float lod )
+{
+    uint base_width;
+    uint base_height;
+    tex.GetDimensions( base_width, base_height );
+
+    float2 size = max( floor( float2( float( base_width ), float( base_height ) ) / exp2( lod ) ),
+        float2( 1.0f ) );
+
+    float2 coord = uv * size - 0.5f;
+    float2 f = frac( coord );
+    coord -= f;
+
+    float4 wx = cubic_bspline_weights( f.x );
+    float4 wy = cubic_bspline_weights( f.y );
+
+    float2 sx = float2( wx.x + wx.y, wx.z + wx.w );
+    float2 sy = float2( wy.x + wy.y, wy.z + wy.w );
+
+    float2 ox = ( float2( coord.x - 0.5f, coord.x + 1.5f ) + float2( wx.y, wx.w ) / sx ) / size.x;
+    float2 oy = ( float2( coord.y - 0.5f, coord.y + 1.5f ) + float2( wy.y, wy.w ) / sy ) / size.y;
+
+    float4 s00 = tex.SampleLevel( nearest_sampler, float2( ox.x, oy.x ), lod );
+    float4 s10 = tex.SampleLevel( nearest_sampler, float2( ox.y, oy.x ), lod );
+    float4 s01 = tex.SampleLevel( nearest_sampler, float2( ox.x, oy.y ), lod );
+    float4 s11 = tex.SampleLevel( nearest_sampler, float2( ox.y, oy.y ), lod );
+
+    float tx = sx.x / ( sx.x + sx.y );
+    float ty = sy.x / ( sy.x + sy.y );
+
+    return lerp( lerp( s11, s01, tx ), lerp( s10, s00, tx ), ty );
+}
+
 float4 sample_reflection( float2 uv, float lod )
 {
     float lod0 = floor( lod );
     float lod1 = min( lod0 + 1.0f, REFLECTION_MAX_MIP );
+    float lod_t = lod - lod0;
 
-    float4 refl0 = ReflectionData.SampleLevel( nearest_sampler, uv, lod0 );
-    float4 refl1 = ReflectionData.SampleLevel( nearest_sampler, uv, lod1 );
+    float4 refl0 = sample_bicubic( ReflectionData, uv, lod0 );
+    float4 refl1 = sample_bicubic( ReflectionData, uv, lod1 );
 
-    return lerp( refl0, refl1, lod - lod0 );
+    float coverage0 = sample_bicubic( ReflectionRayData, uv, lod0 ).b;
+    float coverage1 = sample_bicubic( ReflectionRayData, uv, lod1 ).b;
+
+    return lerp( refl0, refl1, lod_t ) * lerp( coverage0, coverage1, lod_t );
+}
+
+static const float REFLECTION_MISS_DISTANCE = 1e4f;
+
+float reflection_hit_distance( float2 uv )
+{
+    float hit_distance = ReflectionRayData.SampleLevel( point_sampler, uv, 0.0f ).r;
+
+    return hit_distance < 0.0f ? REFLECTION_MISS_DISTANCE : hit_distance;
 }
 
 float reflection_lod( float roughness, float hit_distance, float view_distance, float screen_height )
 {
-    if ( hit_distance < 0.0f ) {
-        return 0.0f;
-    }
-
     float alpha = roughness * roughness;
     float cone_radius = hit_distance * alpha;
 
@@ -181,7 +236,7 @@ float4 fs_main( VertexOutput in )
         uint refl_height;
         ReflectionData.GetDimensions( refl_width, refl_height );
 
-        float hit_distance = ReflectionRayData.SampleLevel( nearest_sampler, in.uv, 0.0f ).r;
+        float hit_distance = reflection_hit_distance( in.uv );
         float view_distance = length( camera_pos - in_pos );
 
         refl = sample_reflection(

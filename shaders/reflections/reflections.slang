@@ -16,6 +16,7 @@ struct ReflectionOutput {
 
     // R: hit distance, negative on miss
     // G: stencil of the reflecting pixel.
+    // B: fraction of the texel footprint matching the stencil.
     float4 data : SV_Target1;
 };
 
@@ -23,7 +24,7 @@ ReflectionOutput reflection_miss( float stencil )
 {
     ReflectionOutput output;
     output.color = float4( 0.0f );
-    output.data = float4( -1.0f, stencil, 0.0f, 0.0f );
+    output.data = float4( -1.0f, stencil, 1.0f, 0.0f );
     return output;
 }
 
@@ -31,7 +32,7 @@ ReflectionOutput reflection_hit( float3 color, float hit_distance, float stencil
 {
     ReflectionOutput output;
     output.color = float4( color, 1.0f );
-    output.data = float4( hit_distance, stencil, 0.0f, 0.0f );
+    output.data = float4( hit_distance, stencil, 1.0f, 0.0f );
     return output;
 }
 
@@ -98,6 +99,8 @@ layout( binding = 5, set = 6 ) Texture2D<float4> terrain_asphalt_albedo_roughnes
 layout( binding = 6, set = 6 ) Texture2D<float4> terrain_asphalt_normal_ao;
 layout( binding = 7, set = 6 ) SamplerState terrain_linear_sampler;
 #endif // RACECAR_RAY_TRACING
+
+#define USE_GLINTS 0
 
 #include "../car_mat/car_lighting.slang"
 
@@ -260,26 +263,32 @@ ReflectionOutput fs_main( VertexOutput in )
     float3 world_dir = in_pos - camera_buffer_data.camera_pos.xyz;
     float3 view_dir = normalize( world_dir );
     float3 refl_dir = reflect( view_dir, in_nor );
+    float3 ray_origin = in_pos + 0.01f * normalize( in_nor );
 
 #if RACECAR_RAY_TRACING
-    float t;
-    int prim_idx;
-    int instance_idx;
-    float2 barycentrics;
-    float3x4 object_to_world;
-    float3x4 world_to_object;
-    bool hit = traceRayClosestHit( sceneBVH, in_pos, refl_dir, t, prim_idx, barycentrics,
-        instance_idx, object_to_world, world_to_object );
+    float t = 0.0f;
+    int prim_idx = -1;
+    int instance_idx = -1;
+    float2 barycentrics = float2( 0.0f );
+    float3x4 object_to_world = IDENTITY_3X4;
+    float3x4 world_to_object = IDENTITY_3X4;
+
+    bool hit = false;
+
+    if ( stencil != CAR_ID ) {
+        hit = traceRayClosestHit( sceneBVH, ray_origin, refl_dir, t, prim_idx, barycentrics,
+            instance_idx, object_to_world, world_to_object );
+    }
 
     float terrain_t = 0.0f;
     bool terrain_hit = false;
 
     if ( stencil == CAR_ID ) {
-        terrain_hit = traceTerrainClosestHit( in_pos, refl_dir, terrain_t );
+        terrain_hit = traceTerrainClosestHit( ray_origin, refl_dir, terrain_t );
     }
 
     if ( terrain_hit && ( !hit || terrain_t < t ) ) {
-        float3 terrain_position = in_pos + terrain_t * refl_dir;
+        float3 terrain_position = ray_origin + terrain_t * refl_dir;
         return reflection_hit(
             shade_terrain_hit( terrain_position, refl_dir ), terrain_t, stencil );
     }
