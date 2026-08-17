@@ -62,6 +62,16 @@ float2 oct_encode( float3 n )
     return n.xy * 0.5f + 0.5f;
 }
 
+// terrain occludes everything well below the horizon, so fade the sky contribution out
+// between 30 and 45 degrees below horizontal and drop it entirely past that.
+static const float HORIZON_OCCLUSION_START = -0.5f;
+static const float HORIZON_OCCLUSION_END = -0.70710678f;
+
+float horizon_occlusion( float3 direction )
+{
+    return smoothstep( HORIZON_OCCLUSION_END, HORIZON_OCCLUSION_START, direction.y );
+}
+
 float RadicalInverse_VdC( uint bits )
 {
     bits = ( bits << 16u ) | ( bits >> 16u );
@@ -160,7 +170,8 @@ void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
 
     float3 irradiance = ground * scatter._1 + scatter._0;
 
-    octahedral_sky_irradiance[pixel] = float4( irradiance, 1.0f );
+    octahedral_sky_irradiance[pixel]
+        = float4( irradiance * horizon_occlusion( normal ), 1.0f );
 }
 
 [shader( "compute" )]
@@ -188,7 +199,8 @@ void cs_bake_atmosphere_mips( uint3 thread_id: SV_DispatchThreadID )
         uint2 sample_px
             = uint2( sample_uv * float2( HARDCODED_OCTAHEDRAL_SIZE, HARDCODED_OCTAHEDRAL_SIZE ) );
 
-        octahedral_sky_mip[pixel] = octahedral_sky[sample_px];
+        octahedral_sky_mip[pixel]
+            = float4( octahedral_sky[sample_px].rgb * horizon_occlusion( normal ), 1.0f );
         return;
     }
 
@@ -207,7 +219,8 @@ void cs_bake_atmosphere_mips( uint3 thread_id: SV_DispatchThreadID )
             float2 sample_uv = oct_encode( light );
             uint2 sample_px = uint2(
                 sample_uv * float2( HARDCODED_OCTAHEDRAL_SIZE, HARDCODED_OCTAHEDRAL_SIZE ) );
-            prefiltered_color += octahedral_sky[sample_px].rgb * n_dot_l;
+            prefiltered_color
+                += octahedral_sky[sample_px].rgb * horizon_occlusion( light ) * n_dot_l;
             total_weight += n_dot_l;
         }
     }
