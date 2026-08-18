@@ -124,7 +124,7 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
     float3 view_direction = oct_decode( float2( u, v ) );
 
     // Insert the work to actually derive a 3D global direction from pixel and face
-    float3 sky_color = get_sky_color( view_direction, 0.0001f );
+    float3 sky_color = get_sky_color( view_direction, 0.0f );
 
     float3 origin = float3( 0.0f, 10.0f, 0.0f );
 
@@ -162,7 +162,7 @@ void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
     let sun_sky = get_sun_and_sky_irradiance( irradiance_lut, transmittance_lut, sampler,
         atms_world_position - EARTH_CENTER, normal, light );
 
-    var ground = ( sun_sky._0 + sun_sky._1 );
+    var ground = sun_sky._1;
 
     let atms_camera_pos = float3( 0.0f );
     let scatter = get_sky_radiance_to_point( transmittance_lut, scattering_lut, sampler,
