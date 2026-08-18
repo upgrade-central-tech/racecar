@@ -17,6 +17,9 @@ constexpr std::string_view VOLUMETRIC_SHADER_MODULE_PATH = "../shaders/clouds/cl
 constexpr std::string_view VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH
     = "../shaders/clouds/cloud_composite.spv";
 
+constexpr float CLOUD_TRAVEL_SCALE = 0.2f;
+constexpr float CLOUD_WIND_SPEED = 0.002f;
+
 Volumetric initialize()
 {
     const vk::Common& vulkan = vk::Common::GetConst();
@@ -516,9 +519,12 @@ void update_volumetric_uniform_buffer(
     cloud_ub.inverse_proj = glm::inverse( camera_data.projection );
     cloud_ub.inverse_view = glm::inverse( camera_data.view );
     cloud_ub.camera_position = camera::calculate_eye_position( engine.camera );
-    cloud_ub.cloud_offset_x += 0.0001f;
+    float wind = static_cast<float>( engine.time ) * CLOUD_WIND_SPEED;
+    glm::vec2 travel = engine.gamestate.world_position * CLOUD_TRAVEL_SCALE;
+
+    cloud_ub.cloud_offset_x = wind + travel.x;
     cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
-    cloud_ub.cloud_offset_y += 0.0001f;
+    cloud_ub.cloud_offset_y = wind + travel.y;
 
     volumetric.uniform_buffer.set_data( cloud_ub );
     volumetric.uniform_buffer.update( engine.get_frame_index() );
