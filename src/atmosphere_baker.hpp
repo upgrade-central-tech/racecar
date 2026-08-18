@@ -24,7 +24,6 @@ struct AtmosphereBaker {
 
     engine::Pipeline compute_pipeline;
     engine::Pipeline cs_bake_atmosphere_pipeline;
-    engine::Pipeline cs_sky_irradiance_pipeline;
     engine::Pipeline cs_octahedral_mip_pipeline;
 
     std::vector<UniformBuffer<ub_data::OctahedralData>> mip_data;
@@ -43,10 +42,6 @@ void prebake_octahedral_sky(
 );
 
 void compute_octahedral_sky(
-    AtmosphereBaker& atms_baker, engine::TaskList& task_list
-);
-
-void compute_octahedral_sky_irradiance(
     AtmosphereBaker& atms_baker, engine::TaskList& task_list
 );
 

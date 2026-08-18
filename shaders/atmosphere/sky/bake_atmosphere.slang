@@ -87,6 +87,20 @@ float2 Hammersley( uint i, uint N )
     return float2( float( i ) / float( N ), RadicalInverse_VdC( i ) );
 }
 
+float3 sample_hemisphere_cosine( float2 xi, float3 n )
+{
+    float phi = 2.0f * PI * xi.x;
+    float cos_theta = sqrt( 1.0f - xi.y );
+    float sin_theta = sqrt( xi.y );
+
+    float3 up = select( abs( n.z ) < 0.999, float3( 0.0, 0.0, 1.0 ), float3( 1.0, 0.0, 0.0 ) );
+    float3 tangent = normalize( cross( up, n ) );
+    float3 bitangent = cross( n, tangent );
+
+    return normalize( tangent * ( cos( phi ) * sin_theta )
+        + bitangent * ( sin( phi ) * sin_theta ) + n * cos_theta );
+}
+
 float3 ImportanceSampleGGX( float2 Xi, float3 N, float roughness )
 {
     float a = roughness * roughness;
@@ -140,42 +154,6 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
 
 [shader( "compute" )]
 [numthreads( 8, 8, 8 )]
-void cs_bake_atmosphere_irradiance( uint3 thread_id: SV_DispatchThreadID )
-{
-    // Thread XY represents a direction.
-    uint2 pixel = thread_id.xy;
-    uint face = thread_id.z;
-
-    float u = ( float( pixel.x ) + 0.5f ) / HARDCODED_IRRADIANCE_SIZE;
-    float v = ( float( pixel.y ) + 0.5f ) / HARDCODED_IRRADIANCE_SIZE;
-
-    float3 view_direction = oct_decode( float2( u, v ) );
-
-    float3 normal = normalize( view_direction );
-    float3 up = float3( 0.0f, 1.0f, 0.0f );
-    float3 right = normalize( cross( up, normal ) );
-    up = normalize( cross( normal, right ) );
-
-    float3 light = normalize( uniforms.sun_direction );
-
-    let atms_world_position = float3( 0.0f );
-    let sun_sky = get_sun_and_sky_irradiance( irradiance_lut, transmittance_lut, sampler,
-        atms_world_position - EARTH_CENTER, normal, light );
-
-    var ground = sun_sky._1;
-
-    let atms_camera_pos = float3( 0.0f );
-    let scatter = get_sky_radiance_to_point( transmittance_lut, scattering_lut, sampler,
-        atms_camera_pos - EARTH_CENTER, atms_world_position - EARTH_CENTER, light, true );
-
-    float3 irradiance = ground * scatter._1 + scatter._0;
-
-    octahedral_sky_irradiance[pixel]
-        = float4( irradiance * horizon_occlusion( normal ), 1.0f );
-}
-
-[shader( "compute" )]
-[numthreads( 8, 8, 8 )]
 void cs_bake_atmosphere_mips( uint3 thread_id: SV_DispatchThreadID )
 {
     uint2 pixel = thread_id.xy;
@@ -209,6 +187,23 @@ void cs_bake_atmosphere_mips( uint3 thread_id: SV_DispatchThreadID )
     float total_weight = 0.0f;
     float roughness = octahedral_data.packedfloats0.y;
     float3 prefiltered_color = 0.0f;
+
+    // the last mip doubles as the diffuse source
+    // we convolve with a cosine lobe instead
+    if ( roughness >= 1.0f ) {
+        for ( uint i = 0; i < sample_count; i++ ) {
+            float3 light = sample_hemisphere_cosine( Hammersley( i, sample_count ), normal );
+
+            float2 sample_uv = oct_encode( light );
+            uint2 sample_px = uint2(
+                sample_uv * float2( HARDCODED_OCTAHEDRAL_SIZE, HARDCODED_OCTAHEDRAL_SIZE ) );
+
+            prefiltered_color += octahedral_sky[sample_px].rgb * horizon_occlusion( light );
+        }
+
+        octahedral_sky_mip[pixel] = float4( prefiltered_color / float( sample_count ), 1.0f );
+        return;
+    }
 
     for ( uint i = 0; i < sample_count; i++ ) {
         float2 xi = Hammersley( i, sample_count );

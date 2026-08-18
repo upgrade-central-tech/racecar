@@ -11,9 +11,9 @@
 
 float3 sample_glossy_ibl( float roughness, float2 direction )
 {
-    float lod = roughness * 5.0f;
-    uint lod0 = uint( floor( roughness * 5.0f ) );
-    uint lod1 = min( lod0 + 1, 5 );
+    float lod = roughness * SKY_MAX_MIP;
+    uint lod0 = uint( floor( lod ) );
+    uint lod1 = min( lod0 + 1, uint( SKY_MAX_MIP ) );
     float lod_t = lod - lod0;
 
     float3 glossy_lod0 = octahedral_sky_mips.SampleLevel( nearest_sampler, direction, lod0 ).rgb;
@@ -134,7 +134,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     //  out_color *= irradiance;
 #else
     float3 diffuse_irradiance
-        = octahedral_sky_irradiance.Sample( nearest_sampler, encoded_normal ).rgb;
+        = PI * octahedral_sky_mips.SampleLevel( nearest_sampler, encoded_normal, SKY_MAX_MIP )
+                   .rgb;
     diffuse_irradiance *= albedo / PI;
 #endif
     float3 kD_direct = float3( 1.0f ) - F;

@@ -256,9 +256,9 @@ static const float TERRAIN_INV_PI = 0.3183098861837906715377f;
 float3 terrain_sample_glossy_ibl( float roughness, float2 direction, Texture2D<float4> sky_mips,
     SamplerState linear_sampler )
 {
-    float lod = roughness * 5.0f;
-    uint lod0 = uint( floor( roughness * 5.0f ) );
-    uint lod1 = min( lod0 + 1, 5 );
+    float lod = roughness * SKY_MAX_MIP;
+    uint lod0 = uint( floor( lod ) );
+    uint lod1 = min( lod0 + 1, uint( SKY_MAX_MIP ) );
     float lod_t = lod - lod0;
 
     float3 glossy_lod0 = sky_mips.SampleLevel( linear_sampler, direction, lod0 ).rgb;

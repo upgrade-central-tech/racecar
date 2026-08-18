@@ -222,7 +222,9 @@ float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
     float2 oct_uv = oct_encode( normal );
     float2 oct_refl_uv = oct_encode( normalize( reflect( -view, normal ) ) );
 
-    float3 diffuse_irradiance = filter_float4( octahedral_sky_irradiance, oct_uv ).rgb;
+    float3 diffuse_irradiance
+        = PI
+        * octahedral_sky_mips.SampleLevel( terrain_linear_sampler, oct_uv, SKY_MAX_MIP ).rgb;
     float3 specular_irradiance = terrain_sample_glossy_ibl(
         roughness, oct_refl_uv, octahedral_sky_mips, terrain_linear_sampler );
 

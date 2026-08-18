@@ -38,13 +38,12 @@ layout( binding = 4, set = 3 ) Texture2D<float4> octahedral_sky_mips;
 layout( binding = 0, set = 4 ) SamplerState nearest_sampler;
 
 static const float MIN_GLASS_ROUGHNESS = 0.02f;
-static const float GLOSSY_IBL_MAX_LOD = 5.0f;
 
 float3 sample_glossy_ibl( float roughness, float2 direction )
 {
-    float lod = roughness * GLOSSY_IBL_MAX_LOD;
+    float lod = roughness * SKY_MAX_MIP;
     uint lod0 = uint( floor( lod ) );
-    uint lod1 = min( lod0 + 1, uint( GLOSSY_IBL_MAX_LOD ) );
+    uint lod1 = min( lod0 + 1, uint( SKY_MAX_MIP ) );
     float lod_t = lod - lod0;
 
     float3 glossy_lod0 = octahedral_sky_mips.SampleLevel( nearest_sampler, direction, lod0 ).rgb;

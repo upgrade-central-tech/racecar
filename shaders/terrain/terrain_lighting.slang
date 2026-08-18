@@ -114,14 +114,9 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float2 oct_refl_uv = oct_encode( normalize( reflect( -view, mixed_normal ) ) );
 
     // Irradiance lighting type shizz
-    uint irradiance_width, irradiance_height;
-    sky_irradiance.GetDimensions( irradiance_width, irradiance_height );
-    int2 irradiance_px = int2( oct_uv * float2( irradiance_width, irradiance_height ) );
-    irradiance_px
-        = clamp( irradiance_px, int2( 0, 0 ), int2( irradiance_width - 1, irradiance_height - 1 ) );
-
     float irradiance_strength = 0.5f;
-    float3 diffuse_irradiance = filter_float4( sky_irradiance, oct_uv ).rgb;
+    float3 diffuse_irradiance
+        = PI * sky_mips.SampleLevel( sampler, oct_uv, SKY_MAX_MIP ).rgb;
 
     uint specular_width, specular_height;
     sky.GetDimensions( specular_width, specular_height );

@@ -5,6 +5,10 @@ static const int TERRAIN_ID = 2;
 
 static const float PI = 3.14159265359;
 
+// last level of octahedral_sky_mips
+// cosine convolved so it doubles as diffuse irradiance
+static const float SKY_MAX_MIP = 4.0f;
+
 static const int DEBUG_VIEW_NONE = 0;
 static const int DEBUG_VIEW_ALBEDO_MAP = 1;
 static const int DEBUG_VIEW_NORMAL_MAP = 2;

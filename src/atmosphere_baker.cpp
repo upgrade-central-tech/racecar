@@ -12,8 +12,6 @@ namespace racecar::atmosphere {
 
 static constexpr std::string_view BAKE_ATMS_SHADER_PATH
     = "../shaders/atmosphere/sky/bake_atmosphere.spv";
-static constexpr std::string_view BAKE_ATMS_IRR_SHADER_PATH
-    = "../shaders/atmosphere/sky/bake_atmosphere_irradiance.spv";
 static constexpr std::string_view BAKE_ATMS_MIPS_SHADER_PATH
     = "../shaders/atmosphere/sky/bake_atmosphere_mips.spv";
 
@@ -114,18 +112,6 @@ void initialize_atmosphere_baker(
         "cs_bake_atmosphere"
     );
 
-    atms_baker.cs_sky_irradiance_pipeline = engine::create_compute_pipeline(
-        {
-            atms_baker.atmosphere->uniform_desc_set.layouts[0],
-            atms_baker.atmosphere->lut_desc_set.layouts[0],
-            atms_baker.atmosphere->sampler_desc_set.layouts[0],
-            atms_baker.octahedral_write_desc_set.layouts[0],
-            atms_baker.volumetrics_desc_set.layouts[0],
-        },
-        vk::create::shader_module( BAKE_ATMS_IRR_SHADER_PATH ),
-        "cs_bake_atmosphere_irradiance"
-    );
-
     atms_baker.cs_octahedral_mip_pipeline = engine::create_compute_pipeline(
         {
             // Repeated code everywhere, is there a way to cache this vector?
@@ -200,69 +186,15 @@ void compute_octahedral_sky( AtmosphereBaker& atms_baker, engine::TaskList& task
                 .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
                 .src_access = VK_ACCESS_2_NONE,
                 .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                .dst_access = VK_ACCESS_SHADER_WRITE_BIT,
-                .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 .image = &atms_baker.octahedral_sky_irradiance,
                 .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
     );
 
     engine::add_cs_task( task_list, cs_bake_atmosphere_task );
 }
-
-void compute_octahedral_sky_irradiance( AtmosphereBaker& atms_baker, engine::TaskList& task_list )
-{
-    Atmosphere& atms = *atms_baker.atmosphere;
-    const vk::mem::AllocatedImage& irradiance = atms_baker.octahedral_sky_irradiance.images[0];
-
-    uint32_t x_groups = ( static_cast<uint32_t>( irradiance.image_extent.width ) + 7 ) / 8;
-    uint32_t y_groups = ( static_cast<uint32_t>( irradiance.image_extent.width ) + 7 ) / 8;
-
-    engine::ComputeTask cs_sky_irradiance_task = {
-        atms_baker.cs_sky_irradiance_pipeline,
-        {
-            &atms.uniform_desc_set,
-            &atms.lut_desc_set,
-            &atms.sampler_desc_set,
-            &atms_baker.octahedral_write_desc_set,
-            &atms_baker.volumetrics_desc_set,
-        },
-        glm::ivec3( x_groups, y_groups, 1 ),
-    };
-
-    engine::add_pipeline_barrier(
-        task_list,
-        engine::PipelineBarrierDescriptor {
-            .buffer_barriers = { },
-            .image_barriers = { engine::ImageBarrier {
-                .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                .src_access = VK_ACCESS_2_NONE,
-                .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                .dst_access = VK_ACCESS_SHADER_WRITE_BIT,
-                .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                .image = &atms_baker.octahedral_sky_irradiance,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
-    );
-
-    engine::add_cs_task( task_list, cs_sky_irradiance_task );
-
-    // Read-only from this point on.
-    engine::add_pipeline_barrier(
-        task_list,
-        engine::PipelineBarrierDescriptor {
-            .buffer_barriers = { },
-            .image_barriers = { engine::ImageBarrier {
-                .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                .src_access = VK_ACCESS_SHADER_WRITE_BIT,
-                .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                .dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                .image = &atms_baker.octahedral_sky_irradiance,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
-    );
-};
 
 void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList& task_list )
 {
@@ -382,10 +314,7 @@ void dispatch_atmosphere_baker(
 )
 {
     atmosphere::compute_octahedral_sky( atms_baker, task_list );
-    atmosphere::compute_octahedral_sky_irradiance( atms_baker, task_list );
 
-    // TODO: As shown in Destiny 2 GDC 2018 talk, we can simply substitute the last glossy mip with
-    // this irradiance. It is also possible to simplify glossy irradiance by naive gaussian blur.
     atmosphere::compute_octahedral_sky_mips( atms_baker, task_list );
 
     engine::update_descriptor_set_image(
