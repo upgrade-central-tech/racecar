@@ -32,6 +32,8 @@ const std::unordered_map<std::string, float> wheel_radii = {
 };
 // clang-format on
 
+constexpr float WHEEL_ROTATION_SCALE = 1800.0f;
+
 void apply_demo_camera_motion(
     camera::OrbitCamera& camera,
     const gui::Gui& gui,
@@ -95,8 +97,8 @@ void update_wheel_transforms(
 
     // front wheels
     glm::vec3 pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[0] );
-    float angle
-        = engine.gamestate.speed * 30 / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
+    float angle = engine.gamestate.speed * static_cast<float>( engine.delta )
+        * WHEEL_ROTATION_SCALE / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
 
     glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
     model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
