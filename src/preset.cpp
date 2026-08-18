@@ -181,6 +181,7 @@ void update_preset_transition(
     gui.terrain.wetness = glm::mix( i.wetness, f.wetness, t );
     gui.terrain.snow = glm::mix( i.snow, f.snow, t );
     engine.gamestate.speed = glm::mix( i.scrolling_speed, f.scrolling_speed, t );
+    engine.gamestate.speed_lock = true;
     gui.demo.bumpiness = glm::mix( i.bumpiness, f.bumpiness, t );
 
     for ( size_t idx = 0; idx < i.materials.size(); ++idx ) {

@@ -12,16 +12,16 @@ void update_game_state()
 
     const bool* key_states = SDL_GetKeyboardState( nullptr );
 
-    gamestate.acceleration = key_states[SDL_SCANCODE_UP] ? 0.01f : 0.0f;
-
     if (key_states[SDL_SCANCODE_UP]) {
+        gamestate.speed_lock = false;
         gamestate.acceleration = 0.01f;
     }
     else if (key_states[SDL_SCANCODE_DOWN]) {
+        gamestate.speed_lock = false;
         gamestate.acceleration = -0.05f;
     }
     else {
-        gamestate.acceleration = -0.01f;
+        gamestate.acceleration = gamestate.speed_lock ? 0.0f : -0.01f;
     }
 
     gamestate.speed += float(state.delta) * gamestate.acceleration;

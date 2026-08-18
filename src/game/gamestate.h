@@ -8,6 +8,7 @@ struct GameState {
     float acceleration = 0;
     float speed = 0;
     glm::vec2 world_position = glm::vec2( 0.0f );
+    bool speed_lock = false;
 };
 
 void update_game_state();
