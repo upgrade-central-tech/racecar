@@ -25,6 +25,9 @@ const std::filesystem::path TEST_ASPHALT_NORMAL_AO_PATH = "../assets/terrain/asp
 
 const std::filesystem::path TERRAIN_NOISE_PAPTH = "../assets/LUT/terrain_noise.jpg";
 
+// the scroll offset used to accumulate speed once per frame, so preserve that rate at 60fps
+constexpr float TERRAIN_SCROLL_SCALE = 60.0f;
+
 namespace racecar::geometry {
 
 void initialize_terrain(
@@ -498,16 +501,10 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
         0.0f
     );
 
-    // TODO: Add time-delta here to ensure consistent visuals across-frames
-    glm::vec2 scroll_direction
-        = glm::normalize( glm::vec2( terrain_ub.terrain_data1.z, terrain_ub.terrain_data1.w ) );
-
     //  for now, temp hard-code the UV scrolling direction
-    scroll_direction.x = 0.0f;
-    scroll_direction.y = 1.0f;
+    glm::vec2 scroll_direction = glm::vec2( 0.0f, 1.0f );
 
-    glm::vec2 offset_XY = engine.gamestate.speed * scroll_direction
-        + glm::vec2( terrain_ub.terrain_data1.x, terrain_ub.terrain_data1.y );
+    glm::vec2 offset_XY = engine.gamestate.world_position * TERRAIN_SCROLL_SCALE;
 
     terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );
 

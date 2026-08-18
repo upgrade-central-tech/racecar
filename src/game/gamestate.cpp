@@ -3,6 +3,8 @@
 
 namespace racecar {
 
+static const glm::vec2 FORWARD = glm::vec2( 0.0f, 1.0f );
+
 void update_game_state() 
 {
     engine::State& state = engine::State::GetMut();
@@ -24,6 +26,8 @@ void update_game_state()
 
     gamestate.speed += float(state.delta) * gamestate.acceleration;
     gamestate.speed = glm::clamp(gamestate.speed, 0.0f, 1.0f);
+
+    gamestate.world_position += FORWARD * gamestate.speed * float(state.delta);
 }
 
 }
