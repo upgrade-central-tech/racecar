@@ -25,6 +25,7 @@ add_executable(racecar
     ${SRC_DIR}/stb.cpp
     ${SRC_DIR}/atmosphere.cpp
     ${SRC_DIR}/atmosphere_baker.cpp
+    ${SRC_DIR}/sun_visibility.cpp
     ${SRC_DIR}/volumetrics.cpp
     ${SRC_DIR}/preset.cpp
     ${SRC_DIR}/deferred.cpp
