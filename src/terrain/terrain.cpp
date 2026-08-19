@@ -284,7 +284,6 @@ void initialize_terrain(
     terrain.lut_desc_set = engine::generate_descriptor_set(
         {
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral irradiance
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky mips
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF_LUT
         },
@@ -351,17 +350,11 @@ void initialize_terrain(
     );
     engine::update_descriptor_set_rwimage(
         terrain.lut_desc_set,
-        lighting_info.atmosphere_baker->octahedral_sky_irradiance,
+        lighting_info.atmosphere_baker->octahedral_sky_mips,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
-    engine::update_descriptor_set_rwimage(
-        terrain.lut_desc_set,
-        lighting_info.atmosphere_baker->octahedral_sky_mips,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        2
-    );
-    engine::update_descriptor_set_image( terrain.lut_desc_set, *lighting_info.lut_brdf, 3 );
+    engine::update_descriptor_set_image( terrain.lut_desc_set, *lighting_info.lut_brdf, 2 );
 
     // Sampler assignments
     engine::update_descriptor_set_sampler(

@@ -17,9 +17,8 @@ layout( binding = 3, set = 1 ) Texture2D<float4> gbuffer_packed_data;
 layout( binding = 4, set = 1 ) RWTexture2D<float4> out_color;
 
 layout( binding = 0, set = 2 ) Texture2D<float4> sky;
-layout( binding = 1, set = 2 ) Texture2D<float4> sky_irradiance;
-layout( binding = 2, set = 2 ) Texture2D<float4> sky_mips;
-layout( binding = 3, set = 2 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 1, set = 2 ) Texture2D<float4> sky_mips;
+layout( binding = 2, set = 2 ) Texture2D<float2> BRDF_LUT;
 
 layout( binding = 0, set = 3 ) SamplerState sampler;
 
@@ -116,7 +115,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     // Irradiance lighting type shizz
     float irradiance_strength = 0.5f;
     float3 diffuse_irradiance
-        = PI * sky_mips.SampleLevel( sampler, oct_uv, SKY_MAX_MIP ).rgb;
+        = sky_mips.SampleLevel( sampler, oct_uv, SKY_MAX_MIP ).rgb;
 
     uint specular_width, specular_height;
     sky.GetDimensions( specular_width, specular_height );
@@ -163,7 +162,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     }
 
     // // Irradiance run
-    final_color += ( mixed_albedo * INV_PI ) * diffuse_irradiance * irradiance_strength;
+    final_color += mixed_albedo * diffuse_irradiance * irradiance_strength;
     final_color += clamp( specular_irradiance, float3( 0.f ), float3( 1.f ) );
 
     // Debug returns

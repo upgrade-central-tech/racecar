@@ -11,8 +11,7 @@ enum LUT_INDEX {
     BRDF = 0,
     GLINT = 1,
     OCTAHEDRAL_SKY = 2,
-    OCTAHEDRAL_IRRADIANCE = 3,
-    OCTAHEDRAL_MIPS = 4
+    OCTAHEDRAL_MIPS = 3
 };
 
 void create_lut_sets( engine::DescriptorSet* lut_sets,

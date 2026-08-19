@@ -83,8 +83,7 @@ layout( binding = 2, set = 4 ) ConstantBuffer<BLASOffsets> blas_offsets;
 layout( binding = 3, set = 4 ) ConstantBuffer<RTTextureUniform> rt_texture_uniform;
 layout( binding = 4, set = 4 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 5, set = 4 ) Texture2D<float4> octahedral_sky_mips;
-layout( binding = 6, set = 4 ) Texture2D<float4> octahedral_sky_irradiance;
-layout( binding = 7, set = 4 ) ConstantBuffer<MaterialTable> material_table;
+layout( binding = 6, set = 4 ) ConstantBuffer<MaterialTable> material_table;
 
 layout( binding = 0, set = 5 ) Texture2D<float4> albedo_textures[];
 layout( binding = 1, set = 5 ) Texture2D<float4> metallic_roughness_textures[];

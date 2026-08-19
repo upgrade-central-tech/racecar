@@ -201,7 +201,6 @@ engine::DescriptorSet create_car_desc_set(
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // rt_texture_uniform,
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF_LUT
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // octahedral_sky_mips
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // octahedral_sky_irradiance
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // material_table
         },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
@@ -228,15 +227,8 @@ engine::DescriptorSet create_car_desc_set(
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         5
     );
-    engine::update_descriptor_set_rwimage(
-        car_descriptor_set,
-        atms_baker.octahedral_sky_irradiance,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        6
-    );
-
     engine::update_descriptor_set_uniform( car_descriptor_set, rt_texture_uniform_data, 3 );
-    engine::update_descriptor_set_uniform( car_descriptor_set, material_table, 7 );
+    engine::update_descriptor_set_uniform( car_descriptor_set, material_table, 6 );
 
     return car_descriptor_set;
 }

@@ -15,7 +15,6 @@ struct AtmosphereBaker {
     Atmosphere* atmosphere;
 
     engine::RWImage octahedral_sky_mips;
-    engine::RWImage octahedral_sky_irradiance;
     vk::mem::AllocatedImage octahedral_sky;
 
     engine::DescriptorSet octahedral_write_desc_set;

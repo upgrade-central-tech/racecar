@@ -24,7 +24,6 @@ void create_lut_sets(
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // BRDF LUT
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Glint noise
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky irradiance
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // Octahedral sky with mips
         },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
