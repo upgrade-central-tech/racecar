@@ -25,7 +25,6 @@ void initialize_atmosphere_baker(
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
     uint32_t octahedral_sky_size = 512;
-    uint32_t irradiance_size = 32;
 
     atms_baker.octahedral_sky = engine::allocate_image(
         { octahedral_sky_size, octahedral_sky_size, 1 },
@@ -38,17 +37,8 @@ void initialize_atmosphere_baker(
         false
     );
 
-    atms_baker.octahedral_sky_irradiance = engine::create_rwimage(
-        { irradiance_size, irradiance_size, 1 },
-        VK_FORMAT_R16G16B16A16_SFLOAT,
-        VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
-    );
-
     atms_baker.octahedral_write_desc_set = engine::generate_descriptor_set(
         {
-            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -70,13 +60,6 @@ void initialize_atmosphere_baker(
         atms_baker.octahedral_write_desc_set,
         atms_baker.octahedral_sky,
         0
-    );
-
-    engine::update_descriptor_set_rwimage(
-        atms_baker.octahedral_write_desc_set,
-        atms_baker.octahedral_sky_irradiance,
-        VK_IMAGE_LAYOUT_GENERAL,
-        1
     );
 
     engine::update_descriptor_set_image(
@@ -178,21 +161,6 @@ void compute_octahedral_sky( AtmosphereBaker& atms_baker, engine::TaskList& task
         glm::ivec3( x_groups, y_groups, 1 ),
     };
 
-    engine::add_pipeline_barrier(
-        task_list,
-        engine::PipelineBarrierDescriptor {
-            .buffer_barriers = { },
-            .image_barriers = { engine::ImageBarrier {
-                .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                .src_access = VK_ACCESS_2_NONE,
-                .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                .image = &atms_baker.octahedral_sky_irradiance,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
-    );
-
     engine::add_cs_task( task_list, cs_bake_atmosphere_task );
 }
 
@@ -204,7 +172,6 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
         atms_baker.octahedral_mip_writes.push_back(
             engine::generate_descriptor_set(
                 {
-                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                     VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                     VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -222,7 +189,7 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
             atms_baker.octahedral_mip_writes[mip],
             atms_baker.octahedral_sky_mips,
             VK_IMAGE_LAYOUT_GENERAL,
-            2,
+            1,
             mip
         );
 
@@ -234,7 +201,7 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
         engine::update_descriptor_set_uniform(
             atms_baker.octahedral_mip_writes[mip],
             atms_baker.mip_data[mip],
-            3
+            2
         );
     }
 
@@ -321,12 +288,6 @@ void dispatch_atmosphere_baker(
         lut_sets,
         atms_baker.octahedral_sky,
         LUT_INDEX::OCTAHEDRAL_SKY
-    );
-    engine::update_descriptor_set_rwimage(
-        lut_sets,
-        atms_baker.octahedral_sky_irradiance,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        LUT_INDEX::OCTAHEDRAL_IRRADIANCE
     );
     engine::update_descriptor_set_rwimage(
         lut_sets,

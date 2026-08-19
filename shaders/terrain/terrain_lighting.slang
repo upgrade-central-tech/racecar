@@ -17,9 +17,8 @@ layout( binding = 3, set = 1 ) Texture2D<float4> gbuffer_packed_data;
 layout( binding = 4, set = 1 ) RWTexture2D<float4> out_color;
 
 layout( binding = 0, set = 2 ) Texture2D<float4> sky;
-layout( binding = 1, set = 2 ) Texture2D<float4> sky_irradiance;
-layout( binding = 2, set = 2 ) Texture2D<float4> sky_mips;
-layout( binding = 3, set = 2 ) Texture2D<float2> BRDF_LUT;
+layout( binding = 1, set = 2 ) Texture2D<float4> sky_mips;
+layout( binding = 2, set = 2 ) Texture2D<float2> BRDF_LUT;
 
 layout( binding = 0, set = 3 ) SamplerState sampler;
 

@@ -32,8 +32,7 @@ layout( binding = 0, set = 2 ) ConstantBuffer<ModelMatData> model_mat_data;
 layout( binding = 0, set = 3 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 1, set = 3 ) Texture2D<float4> glint_noise;
 layout( binding = 2, set = 3 ) Texture2D<float4> octahedral_sky;
-layout( binding = 3, set = 3 ) Texture2D<float4> octahedral_sky_irradiance;
-layout( binding = 4, set = 3 ) Texture2D<float4> octahedral_sky_mips;
+layout( binding = 3, set = 3 ) Texture2D<float4> octahedral_sky_mips;
 
 layout( binding = 0, set = 4 ) SamplerState nearest_sampler;
 

@@ -25,10 +25,8 @@ import "../../clouds/cheap_raymarch.slang";
 
 // In atmosphere, the bindings are already there and used for other things.
 layout( binding = 0, set = 3 ) RWTexture2D<float4> octahedral_sky;
-// Octahedral sky used for irradiance
-layout( binding = 1, set = 3 ) RWTexture2D<float4> octahedral_sky_irradiance;
-layout( binding = 2, set = 3 ) RWTexture2D<float4> octahedral_sky_mip;
-layout( binding = 3, set = 3 ) ConstantBuffer<OctahedralData> octahedral_data;
+layout( binding = 1, set = 3 ) RWTexture2D<float4> octahedral_sky_mip;
+layout( binding = 2, set = 3 ) ConstantBuffer<OctahedralData> octahedral_data;
 
 layout( binding = 0, set = 4 ) Texture2D<float> cumulus_map_LUT;
 layout( binding = 1, set = 4 ) Texture3D<float> low_freq_noise_LUT;
