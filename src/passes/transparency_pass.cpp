@@ -44,7 +44,8 @@ void create_transparency_pass_resources(
     std::vector<engine::DescriptorSet>* material_desc_sets,
     std::vector<engine::DescriptorSet>* model_mat_desc_sets,
     engine::DescriptorSet* lut_sets,
-    engine::DescriptorSet* sampler_desc_set
+    engine::DescriptorSet* sampler_desc_set,
+    engine::DescriptorSet* sun_visibility_desc_set
 )
 {
     const engine::State& engine = engine::State::GetConst();
@@ -56,7 +57,8 @@ void create_transparency_pass_resources(
           ( *material_desc_sets )[0].layouts[frame_index],
           ( *model_mat_desc_sets )[0].layouts[frame_index],
           lut_sets->layouts[frame_index],
-          sampler_desc_set->layouts[frame_index] },
+          sampler_desc_set->layouts[frame_index],
+          sun_visibility_desc_set->layouts[frame_index] },
         { VK_FORMAT_R16G16B16A16_SFLOAT },
         VK_SAMPLE_COUNT_1_BIT,
         true,
@@ -70,6 +72,7 @@ void create_transparency_pass_resources(
     transparency_pass->model_mat_desc_sets = model_mat_desc_sets;
     transparency_pass->lut_sets = lut_sets;
     transparency_pass->sampler_desc_set = sampler_desc_set;
+    transparency_pass->sun_visibility_desc_set = sun_visibility_desc_set;
 
     transparency_pass->prim_info.clear();
     transparency_pass->prim_info.reserve( transparent_prims.size() );
@@ -122,6 +125,7 @@ void execute_transparency_pass(
                 &( *transparency_pass->model_mat_desc_sets )[static_cast<size_t>( prim->node_id )],
                 transparency_pass->lut_sets,
                 transparency_pass->sampler_desc_set,
+                transparency_pass->sun_visibility_desc_set,
             },
             .pipeline = transparency_pass->transparency_pipeline,
         });

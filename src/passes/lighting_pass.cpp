@@ -95,9 +95,9 @@ void create_lighting_pass_resources(
           desc_sets.gbuffer_desc_set.layouts[0],
 #if RACECAR_RAY_TRACING
           desc_sets.car_tlas_desc_set.layouts[0],
-          desc_sets.reflection_buffer_desc_set.layouts[0]
+          desc_sets.reflection_buffer_desc_set.layouts[0],
 #endif // RACECAR_RAY_TRACING
-        },
+          desc_sets.sun_visibility_desc_set.layouts[0] },
         { VK_FORMAT_R16G16B16A16_SFLOAT },
         VK_SAMPLE_COUNT_1_BIT,
         true,
@@ -136,8 +136,9 @@ void car_lighting_pass(
                 &desc_sets.gbuffer_desc_set,
 #if RACECAR_RAY_TRACING
                 &desc_sets.car_tlas_desc_set,
-                &desc_sets.reflection_buffer_desc_set
+                &desc_sets.reflection_buffer_desc_set,
 #endif // RACECAR_RAY_TRACING
+                &desc_sets.sun_visibility_desc_set,
             },
             .pipeline = lighting_pass_pipeline,
         });

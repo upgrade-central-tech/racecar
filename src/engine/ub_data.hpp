@@ -104,6 +104,10 @@ struct Atmosphere {
     float radiance_exposure = 0.f;
 };
 
+struct GameStateBuffer {
+    glm::vec4 world_position = {};
+};
+
 struct Clouds {
     glm::mat4 inverse_proj = {};
     glm::mat4 inverse_view = {};

@@ -19,9 +19,13 @@ static const uint32_t mip0_size = 512;
 static const uint32_t mip_levels = 5;
 
 void initialize_atmosphere_baker(
-    AtmosphereBaker& atms_baker, const volumetric::Volumetric& volumetric
+    AtmosphereBaker& atms_baker,
+    const volumetric::Volumetric& volumetric,
+    engine::DescriptorSet& gamestate_desc_set
 )
 {
+    atms_baker.gamestate_desc_set = &gamestate_desc_set;
+
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
     uint32_t octahedral_sky_size = 512;
@@ -90,6 +94,7 @@ void initialize_atmosphere_baker(
             atms_baker.atmosphere->sampler_desc_set.layouts[0],
             atms_baker.octahedral_write_desc_set.layouts[0],
             atms_baker.volumetrics_desc_set.layouts[0],
+            gamestate_desc_set.layouts[0],
         },
         vk::create::shader_module( BAKE_ATMS_SHADER_PATH ),
         "cs_bake_atmosphere"
@@ -157,6 +162,7 @@ void compute_octahedral_sky( AtmosphereBaker& atms_baker, engine::TaskList& task
             &atms.sampler_desc_set,
             &atms_baker.octahedral_write_desc_set,
             &atms_baker.volumetrics_desc_set,
+            atms_baker.gamestate_desc_set,
         },
         glm::ivec3( x_groups, y_groups, 1 ),
     };

@@ -33,6 +33,12 @@ layout( binding = 1, set = 4 ) Texture3D<float> low_freq_noise_LUT;
 layout( binding = 2, set = 4 ) SamplerState linear_mirrored_repeat_sampler;
 layout( binding = 3, set = 4 ) ConstantBuffer<CloudUniformData> clouds_buffer_data;
 
+struct GameStateBuffer {
+    float4 world_position;
+};
+
+layout( binding = 0, set = 5 ) ConstantBuffer<GameStateBuffer> gamestate_data;
+
 float3 oct_decode( float2 f )
 {
     // Map from [0, 1] to [-1, 1]
@@ -138,7 +144,7 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
     // Insert the work to actually derive a 3D global direction from pixel and face
     float3 sky_color = get_sky_color( view_direction, 0.0f );
 
-    float3 origin = float3( 0.0f, 10.0f, 0.0f );
+    float3 origin = gamestate_data.world_position.xyz;
 
     float3 texture_offset
         = float3( clouds_buffer_data.cloud_offset_x, 0, clouds_buffer_data.cloud_offset_y );

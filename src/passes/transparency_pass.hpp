@@ -28,6 +28,7 @@ struct TransparencyPass {
     std::vector<engine::DescriptorSet>* model_mat_desc_sets = nullptr;
     engine::DescriptorSet* lut_sets = nullptr;
     engine::DescriptorSet* sampler_desc_set = nullptr;
+    engine::DescriptorSet* sun_visibility_desc_set = nullptr;
 
     std::vector<TransparentPrimInfo> prim_info;
 };
@@ -40,7 +41,8 @@ void create_transparency_pass_resources(
     std::vector<engine::DescriptorSet>* material_desc_sets,
     std::vector<engine::DescriptorSet>* model_mat_desc_sets,
     engine::DescriptorSet* lut_sets,
-    engine::DescriptorSet* sampler_desc_set
+    engine::DescriptorSet* sampler_desc_set,
+    engine::DescriptorSet* sun_visibility_desc_set
 );
 
 void execute_transparency_pass(

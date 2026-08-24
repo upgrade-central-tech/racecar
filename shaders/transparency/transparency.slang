@@ -29,6 +29,8 @@ layout( binding = 3, set = 1 ) ConstantBuffer<MaterialData> material_data;
 
 layout( binding = 0, set = 2 ) ConstantBuffer<ModelMatData> model_mat_data;
 
+layout( binding = 0, set = 5 ) StructuredBuffer<float> sun_visibility;
+
 layout( binding = 0, set = 3 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 1, set = 3 ) Texture2D<float4> glint_noise;
 layout( binding = 2, set = 3 ) Texture2D<float4> octahedral_sky;
@@ -126,7 +128,8 @@ float4 fs_main( VertexOutput in ) : SV_Target
     float G = GeometrySmith( n_dot_v, n_dot_l, alpha );
     float specular_direct = ( NDF * G * n_dot_l ) / ( 4.0f * n_dot_v * n_dot_l + 1e-4f );
 
-    float3 reflected = specular_indirect + min( specular_direct, 55.0f );
+    float3 reflected
+        = specular_indirect + min( specular_direct, 55.0f ) * sun_visibility[0];
 
     float fresnel = FresnelSchlickRoughness( n_dot_v, F0, roughness ).x;
     float tint_coverage = material_data.base_color.a;

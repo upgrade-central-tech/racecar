@@ -81,6 +81,8 @@ layout( binding = 0, set = 4 ) StructuredBuffer<PaddedVertex> vertex_data;
 layout( binding = 1, set = 4 ) StructuredBuffer<uint32_t> index_data;
 layout( binding = 2, set = 4 ) ConstantBuffer<BLASOffsets> blas_offsets;
 layout( binding = 3, set = 4 ) ConstantBuffer<RTTextureUniform> rt_texture_uniform;
+layout( binding = 0, set = 7 ) StructuredBuffer<float> sun_visibility;
+
 layout( binding = 4, set = 4 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 5, set = 4 ) Texture2D<float4> octahedral_sky_mips;
 layout( binding = 6, set = 4 ) ConstantBuffer<MaterialTable> material_table;
@@ -216,7 +218,8 @@ float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
     float NDF = min( get_GGX_from_n_dot_h_sq( n_dot_h_sq, roughness * roughness ), 65.0f );
 
     float3 color
-        = terrain_direct_lighting( albedo, normal, light, NDF, roughness, ao, view, terrain_data );
+        = terrain_direct_lighting( albedo, normal, light, NDF, roughness, ao, view, terrain_data )
+        * sun_visibility[0];
 
     float2 oct_uv = oct_encode( normal );
     float2 oct_refl_uv = oct_encode( normalize( reflect( -view, normal ) ) );
@@ -383,8 +386,8 @@ ReflectionOutput fs_main( VertexOutput in )
     //
     float4 refl_input
         = float4( 0.0f ); // just use 1-bounce for reflections, sample IBL - mark alpha 0, as such
-    float3 color = car_bsdf( albedo, normal, hit_view_dir, half_vector, light, pbr, g_buffer, 1.0f,
-        refl_input, refl_input );
+    float3 color = car_bsdf( albedo, normal, hit_view_dir, half_vector, light, pbr, g_buffer,
+        sun_visibility[0], refl_input, refl_input );
 
     return reflection_hit( color, t, stencil );
 

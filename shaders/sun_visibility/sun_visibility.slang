@@ -1,23 +1,27 @@
 import constants;
 import "../clouds/cloud_bindings.slang";
-import "../clouds/cloud_raymarch.slang";
+import "../clouds/cheap_raymarch.slang";
 
 // desc set 0, 1, 2 in cloud_bindings.slang
 
 layout( binding = 0, set = 3 ) RWStructuredBuffer<float> sun_visibility;
+
+struct GameStateBuffer {
+    float4 world_position;
+};
+
+layout( binding = 0, set = 4 ) ConstantBuffer<GameStateBuffer> gamestate_data;
 
 static const uint SUN_SAMPLES_PER_SIDE = 8;
 static const uint SUN_SAMPLE_COUNT = SUN_SAMPLES_PER_SIDE * SUN_SAMPLES_PER_SIDE;
 
 static const uint MAX_WAVES = SUN_SAMPLE_COUNT;
 
-static const float3 RAYMARCH_ORIGIN = float3( 0.0f, 10.0f, 0.0f );
-
 static const float CLOUD_LAYER_BOTTOM = 3000.0f;
 static const float CLOUD_LAYER_TOP = 3500.0f;
 static const uint TRANSMITTANCE_STEPS = 32;
 
-static const float SUN_EXTINCTION = 0.002f;
+static const float SUN_EXTINCTION = 0.03f;
 
 groupshared float wave_visibility[MAX_WAVES];
 
@@ -47,8 +51,13 @@ float sun_transmittance( float3 direction )
         return 0.0f;
     }
 
-    float t_min = ( CLOUD_LAYER_BOTTOM - RAYMARCH_ORIGIN.y ) / direction.y;
-    float t_max = ( CLOUD_LAYER_TOP - RAYMARCH_ORIGIN.y ) / direction.y;
+    float3 origin = gamestate_data.world_position.xyz;
+
+    float3 texture_offset
+        = float3( clouds_buffer_data.cloud_offset_x, 0.0f, clouds_buffer_data.cloud_offset_y );
+
+    float t_min = ( CLOUD_LAYER_BOTTOM - origin.y ) / direction.y;
+    float t_max = ( CLOUD_LAYER_TOP - origin.y ) / direction.y;
 
     float step_size = ( t_max - t_min ) / float( TRANSMITTANCE_STEPS );
 
@@ -58,7 +67,7 @@ float sun_transmittance( float3 direction )
         float t = t_min + ( float( i ) + 0.5f ) * step_size;
 
         float density = sample_density( cumulus_map_LUT, low_freq_noise_LUT,
-            linear_mirrored_repeat_sampler, RAYMARCH_ORIGIN + direction * t );
+            linear_mirrored_repeat_sampler, origin + direction * t, texture_offset );
 
         transmittance *= exp( -SUN_EXTINCTION * density * step_size );
 

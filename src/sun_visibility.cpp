@@ -11,12 +11,15 @@ static constexpr std::string_view SUN_VISIBILITY_SHADER_PATH
     = "../shaders/sun_visibility/sun_visibility.spv";
 
 void initialize_sun_visibility(
-    SunVisibilityComputePass& sun_visibility, volumetric::Volumetric& volumetric
+    SunVisibilityComputePass& sun_visibility,
+    volumetric::Volumetric& volumetric,
+    engine::DescriptorSet& gamestate_desc_set
 )
 {
     const engine::State& engine = engine::State::GetConst();
 
     sun_visibility.volumetric = &volumetric;
+    sun_visibility.gamestate_desc_set = &gamestate_desc_set;
 
     sun_visibility.visibility_buffer.clear();
     sun_visibility.visibility_buffer.reserve( engine.frame_overlap );
@@ -35,7 +38,7 @@ void initialize_sun_visibility(
         {
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // sun_visibility
         },
-        VK_SHADER_STAGE_COMPUTE_BIT
+        VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
     engine::update_descriptor_set_storage_buffer_per_frame(
@@ -50,6 +53,7 @@ void initialize_sun_visibility(
             volumetric.lut_desc_set.layouts[0],
             volumetric.sampler_desc_set.layouts[0],
             sun_visibility.visibility_desc_set.layouts[0],
+            gamestate_desc_set.layouts[0],
         },
         vk::create::shader_module( SUN_VISIBILITY_SHADER_PATH ),
         "cs_sun_visibility"
@@ -69,6 +73,7 @@ void compute_sun_visibility(
             &volumetric.lut_desc_set,
             &volumetric.sampler_desc_set,
             &sun_visibility.visibility_desc_set,
+            sun_visibility.gamestate_desc_set,
         },
         glm::ivec3( 1, 1, 1 ),
     };

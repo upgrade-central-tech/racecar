@@ -9,6 +9,7 @@ namespace racecar::atmosphere {
 
 struct SunVisibilityComputePass {
     volumetric::Volumetric* volumetric = nullptr;
+    engine::DescriptorSet* gamestate_desc_set = nullptr;
 
     std::vector<vk::mem::AllocatedBuffer> visibility_buffer;
 
@@ -17,8 +18,8 @@ struct SunVisibilityComputePass {
     engine::Pipeline cs_sun_visibility_pipeline;
 };
 
-void initialize_sun_visibility(
-    SunVisibilityComputePass& sun_visibility, volumetric::Volumetric& volumetric );
+void initialize_sun_visibility( SunVisibilityComputePass& sun_visibility,
+    volumetric::Volumetric& volumetric, engine::DescriptorSet& gamestate_desc_set );
 
 void compute_sun_visibility(
     SunVisibilityComputePass& sun_visibility, engine::TaskList& task_list );

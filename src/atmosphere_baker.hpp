@@ -13,6 +13,7 @@ namespace racecar::atmosphere {
 
 struct AtmosphereBaker {
     Atmosphere* atmosphere;
+    engine::DescriptorSet* gamestate_desc_set = nullptr;
 
     engine::RWImage octahedral_sky_mips;
     vk::mem::AllocatedImage octahedral_sky;
@@ -28,10 +29,8 @@ struct AtmosphereBaker {
     std::vector<UniformBuffer<ub_data::OctahedralData>> mip_data;
 };
 
-void initialize_atmosphere_baker(
-    AtmosphereBaker& atms_baker,
-    const volumetric::Volumetric& volumetric
-);
+void initialize_atmosphere_baker( AtmosphereBaker& atms_baker,
+    const volumetric::Volumetric& volumetric, engine::DescriptorSet& gamestate_desc_set );
 
 void atmosphere_baker_precompute( AtmosphereBaker& atms_baker, VkCommandBuffer precompute_cmdbuf );
 

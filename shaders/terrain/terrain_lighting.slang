@@ -23,6 +23,12 @@ layout( binding = 2, set = 2 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 0, set = 3 ) SamplerState sampler;
 
 #if RACECAR_RAY_TRACING
+layout( binding = 0, set = 6 ) StructuredBuffer<float> sun_visibility;
+#else
+layout( binding = 0, set = 4 ) StructuredBuffer<float> sun_visibility;
+#endif // RACECAR_RAY_TRACING
+
+#if RACECAR_RAY_TRACING
 layout( binding = 0, set = 4 ) RaytracingAccelerationStructure sceneBVH;
 layout( binding = 0, set = 5 ) Texture2D<float4> ReflectionData;
 // R: hit distance, negative on miss
@@ -156,7 +162,8 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     if ( !hit ) {
         final_color = direct_lighting(
-            mixed_albedo, mixed_normal, light, NDF, mixed_roughness, mixed_ao, view );
+                          mixed_albedo, mixed_normal, light, NDF, mixed_roughness, mixed_ao, view )
+            * sun_visibility[0];
     } else {
         final_color = float3( 0.f );
     }

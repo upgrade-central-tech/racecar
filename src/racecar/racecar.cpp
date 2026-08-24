@@ -46,6 +46,7 @@
 #endif
 
 #if ENABLE_VOLUMETRICS
+#include "sun_visibility.hpp"
 #include "volumetrics.hpp"
 #endif
 
@@ -159,7 +160,15 @@ void run( bool use_fullscreen )
     atmosphere::Atmosphere atms = atmosphere::initialize();
     atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
     volumetric::Volumetric volumetric = volumetric::initialize();
-    atmosphere::initialize_atmosphere_baker( atms_baker, volumetric );
+
+    UniformBuffer<ub_data::GameStateBuffer> gamestate_buffer;
+    engine::DescriptorSet gamestate_desc_set;
+    initialize_gamestate_buffer( &gamestate_buffer, &gamestate_desc_set );
+
+    atmosphere::initialize_atmosphere_baker( atms_baker, volumetric, gamestate_desc_set );
+
+    atmosphere::SunVisibilityComputePass sun_visibility;
+    atmosphere::initialize_sun_visibility( sun_visibility, volumetric, gamestate_desc_set );
 
     // ================================================================================================================
     // MODEL LOADING
@@ -284,6 +293,7 @@ void run( bool use_fullscreen )
             .car_desc_set = car_descriptor_set,
             .combined_textures_desc_set = combined_textures_desc_set,
             .terrain_shading_desc_set = terrain_rt.shading_desc_set,
+            .sun_visibility_desc_set = sun_visibility.visibility_desc_set,
         },
         &reflection_color,
         &reflection_data,
@@ -318,6 +328,7 @@ void run( bool use_fullscreen )
         .car_tlas_desc_set = car_tlas_desc_set,
         .reflection_buffer_desc_set = reflection_buffer_desc_set,
 #endif // RACECAR_RAY_TRACING
+        .sun_visibility_desc_set = sun_visibility.visibility_desc_set,
     };
 
     // Create car lighting pass pipeline
@@ -326,7 +337,8 @@ void run( bool use_fullscreen )
 
     // Create terrain draw pipeline
     geometry::initialize_terrain_draw_pipeline(
-        test_terrain
+        test_terrain,
+        sun_visibility.visibility_desc_set
 #if RACECAR_RAY_TRACING
         ,
         car_tlas_desc_set,
@@ -344,7 +356,8 @@ void run( bool use_fullscreen )
         &material_desc_sets,
         &model_mat_desc_sets,
         &lut_sets,
-        &sampler_desc_set
+        &sampler_desc_set,
+        &sun_visibility.visibility_desc_set
     );
 
     // ================================================================================================================
@@ -396,6 +409,9 @@ void run( bool use_fullscreen )
 
     // Running the atmosphere baker
     atmosphere::dispatch_atmosphere_baker( task_list, lut_sets, atms_baker );
+
+    // Sun visibility through the clouds
+    atmosphere::compute_sun_visibility( sun_visibility, task_list );
 
     // Add draw tasks for each primitive to the Prepass Gfx Task and Depth Gfx Task
     engine::GfxTask prepass_gfx_task = create_prepass_gfx_task( gbuffers );
@@ -612,6 +628,9 @@ void run( bool use_fullscreen )
 
         // wheel rotation
         update_wheel_transforms( scene, model_mat_uniform_buffers, discovered );
+
+        // Update the gamestate buffer
+        update_gamestate_buffer( gamestate_buffer );
 
         // Update bloom settings
         engine::post::update_bloom_uniform_buffer( gui, bloom_pass );

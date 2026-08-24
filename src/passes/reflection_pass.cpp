@@ -90,7 +90,8 @@ void create_reflection_pass_resources(
           desc_sets.car_tlas_desc_set.layouts[0],
           desc_sets.car_desc_set.layouts[0],
           desc_sets.combined_textures_desc_set.layouts[0],
-          desc_sets.terrain_shading_desc_set.layouts[0] },
+          desc_sets.terrain_shading_desc_set.layouts[0],
+          desc_sets.sun_visibility_desc_set.layouts[0] },
         { VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT },
         VK_SAMPLE_COUNT_1_BIT,
         false,
@@ -114,7 +115,8 @@ void create_reflection_pass_resources(
                                                    &desc_sets.car_tlas_desc_set,
                                                    &desc_sets.car_desc_set,
                                                    &desc_sets.combined_textures_desc_set,
-                                                   &desc_sets.terrain_shading_desc_set },
+                                                   &desc_sets.terrain_shading_desc_set,
+                                                   &desc_sets.sun_visibility_desc_set },
                                                .pipeline = *reflection_pipeline };
 
     *reflection_buffer_desc_set = engine::generate_descriptor_set(

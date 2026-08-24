@@ -23,6 +23,12 @@ layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_da
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
 // Cubemaps + LUTs
+#if RACECAR_RAY_TRACING
+layout( binding = 0, set = 7 ) StructuredBuffer<float> sun_visibility;
+#else
+layout( binding = 0, set = 5 ) StructuredBuffer<float> sun_visibility;
+#endif // RACECAR_RAY_TRACING
+
 layout( binding = 0, set = 2 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 1, set = 2 ) Texture2D<float4> glint_noise;
 layout( binding = 2, set = 2 ) Texture2D<float4> octahedral_sky;
@@ -265,7 +271,8 @@ float4 fs_main( VertexOutput in )
 
     float3 out_color
         = car_bsdf(
-            base_albedo, normal, view, half, light, pbr, gbuffer, hit ? 0.0 : 1.0, refl, refl_cc );
+            base_albedo, normal, view, half, light, pbr, gbuffer,
+            ( hit ? 0.0f : 1.0f ) * sun_visibility[0], refl, refl_cc );
 
     // DEBUG VIEWS
     switch ( debug_data.debug_view ) {

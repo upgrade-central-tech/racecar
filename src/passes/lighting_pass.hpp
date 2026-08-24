@@ -21,6 +21,7 @@ struct LightingPassDescSets {
     engine::DescriptorSet& car_tlas_desc_set;
     engine::DescriptorSet& reflection_buffer_desc_set;
 #endif // RACECAR_RAY_TRACING
+    engine::DescriptorSet& sun_visibility_desc_set;
 };
 
 void create_lighting_pass_resources( 
