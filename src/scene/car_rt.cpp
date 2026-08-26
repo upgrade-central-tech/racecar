@@ -20,7 +20,10 @@ void alloc_blases(
     vk::Common& vulkan = vk::Common::GetMut();
     engine::State& engine = engine::State::GetMut();
     if ( prims.size() > ub_data::MAX_RT_PRIMITIVES ) {
-        throw Exception( "[Alloc BLASes] Scene has more primitives than the ray tracing lookup tables can address" );
+        throw Exception(
+            "[Alloc BLASes] Scene has more primitives than the ray tracing lookup tables can "
+            "address"
+        );
     }
 
     int blas_count = 0;
@@ -264,8 +267,10 @@ UniformBuffer<ub_data::MaterialTable> create_material_table(
     const engine::State& engine = engine::State::GetConst();
 
     if ( material_uniform_buffers.size() > ub_data::MAX_MATERIALS ) {
-        throw Exception( "[Create Material Table] Scene has more materials than the table can "
-                         "hold; raise MAX_MATERIALS" );
+        throw Exception(
+            "[Create Material Table] Scene has more materials than the table can "
+            "hold; raise MAX_MATERIALS"
+        );
     }
 
     UniformBuffer<ub_data::MaterialTable> material_table

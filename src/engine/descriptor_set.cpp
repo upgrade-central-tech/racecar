@@ -357,8 +357,10 @@ void update_descriptor_set_acceleration_structure_per_frame(
     const engine::State& engine = engine::State::GetConst();
 
     if ( tlases.size() != engine.frame_overlap ) {
-        throw Exception( "[Update Descriptor Set Acceleration Structure Per Frame] Expected one "
-                         "acceleration structure per frame in flight" );
+        throw Exception(
+            "[Update Descriptor Set Acceleration Structure Per Frame] Expected one "
+            "acceleration structure per frame in flight"
+        );
     }
 
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
@@ -412,7 +414,8 @@ void update_descriptor_set_const_storage_buffer(
 
 // This is temporary and should eventually be replaced with a proper RWBuffer class
 void update_descriptor_set_storage_buffer_per_frame(
-    DescriptorSet& desc_set, const std::vector<vk::mem::AllocatedBuffer>& storage_buffers,
+    DescriptorSet& desc_set,
+    const std::vector<vk::mem::AllocatedBuffer>& storage_buffers,
     int binding_idx
 )
 {
@@ -420,8 +423,10 @@ void update_descriptor_set_storage_buffer_per_frame(
     const engine::State& engine = engine::State::GetConst();
 
     if ( storage_buffers.size() != engine.frame_overlap ) {
-        throw Exception( "[Update Descriptor Set Storage Buffer Per Frame] Expected one storage "
-                         "buffer per frame in flight" );
+        throw Exception(
+            "[Update Descriptor Set Storage Buffer Per Frame] Expected one storage "
+            "buffer per frame in flight"
+        );
     }
 
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {

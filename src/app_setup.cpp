@@ -289,11 +289,14 @@ void load_model_primitive_material_data(
 
             for ( const scene::Primitive& prim : mesh->primitives ) {
                 if ( static_cast<size_t>( tex_count ) >= ub_data::MAX_RT_PRIMITIVES ) {
-                    throw Exception( std::format(
-                        "[Load Model Primitive Material Data] Scene has more than {} primitives; "
-                        "raise MAX_RT_PRIMITIVES and the matching array sizes in the shaders",
-                        ub_data::MAX_RT_PRIMITIVES
-                    ) );
+                    throw Exception(
+                        std::format(
+                            "[Load Model Primitive Material Data] Scene has more than {} "
+                            "primitives; "
+                            "raise MAX_RT_PRIMITIVES and the matching array sizes in the shaders",
+                            ub_data::MAX_RT_PRIMITIVES
+                        )
+                    );
                 }
 
                 const scene::Material& current_material
@@ -390,20 +393,19 @@ void load_model_primitive_material_data(
 }
 
 void sort_transparent_opaque_prims(
-    const std::vector<const scene::Primitive*>& prims, 
+    const std::vector<const scene::Primitive*>& prims,
     const std::vector<scene::Material>& materials,
-    std::vector<const scene::Primitive*>* transparent_prims, 
+    std::vector<const scene::Primitive*>* transparent_prims,
     std::vector<const scene::Primitive*>* opaque_prims
 )
 {
-    for (const scene::Primitive* prim : prims) {
+    for ( const scene::Primitive* prim : prims ) {
         const scene::Material& mat = materials[(size_t)prim->material_id];
 
         if ( mat.alpha > 0.99f ) {
-            opaque_prims->push_back(prim);
-        }
-        else {
-            transparent_prims->push_back(prim);
+            opaque_prims->push_back( prim );
+        } else {
+            transparent_prims->push_back( prim );
         }
     }
 }

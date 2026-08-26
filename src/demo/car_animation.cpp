@@ -98,8 +98,8 @@ void update_wheel_transforms(
 
     // front wheels
     glm::vec3 pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[0] );
-    float angle = engine.gamestate.speed * static_cast<float>( engine.delta )
-        * WHEEL_ROTATION_SCALE / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
+    float angle = engine.gamestate.speed * static_cast<float>( engine.delta ) * WHEEL_ROTATION_SCALE
+        / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
 
     glm::vec3 car_up = glm::vec3( 0.0f, 1.0f, 0.0f );
     if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
@@ -117,9 +117,8 @@ void update_wheel_transforms(
         }
 
         // this is also sad :(
-        const glm::mat3 wheel_rotation = glm::mat3(
-            model_mat_uniform_buffers.at( wheel_id.value() ).get_data().model_mat
-        );
+        const glm::mat3 wheel_rotation
+            = glm::mat3( model_mat_uniform_buffers.at( wheel_id.value() ).get_data().model_mat );
         const glm::vec3 steer_axis = glm::inverse( wheel_rotation ) * car_up;
 
         glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );

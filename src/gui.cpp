@@ -463,7 +463,7 @@ void use_preset(
 
     log::info( "[preset] Transitioning to preset \"{}\"", preset.name );
 
-    const engine::State& engine = engine::State::GetConst(); 
+    const engine::State& engine = engine::State::GetConst();
 
     Preset before = {
         .version = 1,

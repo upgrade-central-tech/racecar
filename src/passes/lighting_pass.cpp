@@ -15,9 +15,7 @@ constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferr
 }
 
 void create_deferred_lighting_pipeline_barrier(
-    engine::TaskList& task_list,
-    deferred::GBuffers& gbuffers,
-    engine::RWImage& screen_color
+    engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::RWImage& screen_color
 )
 {
     engine::add_pipeline_barrier(

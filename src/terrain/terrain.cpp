@@ -461,15 +461,16 @@ void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
     // Full-screen quad draw.
     engine::ComputeTask cs_terrain_draw_task = {
         terrain.terrain_lighting_pipeline,
-        { &terrain.uniform_desc_set,
-          &terrain.texture_desc_set,
-          &terrain.lut_desc_set,
-          &terrain.sampler_desc_set,
+        {
+            &terrain.uniform_desc_set,
+            &terrain.texture_desc_set,
+            &terrain.lut_desc_set,
+            &terrain.sampler_desc_set,
 #if RACECAR_RAY_TRACING
-          terrain.car_tlas_desc_set,
-          terrain.reflection_texture_desc_set,
+            terrain.car_tlas_desc_set,
+            terrain.reflection_texture_desc_set,
 #endif // RACECAR_RAY_TRACING
-          terrain.sun_visibility_desc_set,
+            terrain.sun_visibility_desc_set,
         },
         dispatch_dims,
     };

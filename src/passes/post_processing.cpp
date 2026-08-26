@@ -13,9 +13,7 @@ namespace racecar {
 // Current limitation assumes that all post-processing calls are done via compute shader
 // hence the VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT stage.
 void create_screen_buffer_pipeline_barrier(
-    engine::RWImage& screen_color,
-    engine::RWImage& screen_buffer,
-    engine::TaskList& task_list
+    engine::RWImage& screen_color, engine::RWImage& screen_buffer, engine::TaskList& task_list
 )
 {
     engine::add_pipeline_barrier(

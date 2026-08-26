@@ -315,8 +315,8 @@ void alloc_tlas(
             .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
                 | VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR };
 
-    VmaAllocationCreateInfo instanceAllocCI = { .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT,
-                                                .usage = VMA_MEMORY_USAGE_CPU_TO_GPU };
+    VmaAllocationCreateInfo instanceAllocCI
+        = { .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT, .usage = VMA_MEMORY_USAGE_CPU_TO_GPU };
 
     vmaCreateBuffer(
         allocator,
@@ -490,8 +490,10 @@ void update_tlas_instances(
     }
 
     if ( objects.size() != tlas.instance_count ) {
-        throw Exception( "[Update TLAS Instances] Object count changed since the TLAS was "
-                         "allocated" );
+        throw Exception(
+            "[Update TLAS Instances] Object count changed since the TLAS was "
+            "allocated"
+        );
     }
 
     std::vector<VkAccelerationStructureInstanceKHR> instances;

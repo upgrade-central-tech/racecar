@@ -18,7 +18,9 @@ constexpr std::string_view REFLECTION_PASS_SHADER_MODULE_PATH
 }
 
 void create_deferred_reflection_pipeline_barrier(
-    engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::RWImage& reflection_color,
+    engine::TaskList& task_list,
+    deferred::GBuffers& gbuffers,
+    engine::RWImage& reflection_color,
     engine::RWImage& reflection_data
 )
 {

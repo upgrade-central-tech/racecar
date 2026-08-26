@@ -179,7 +179,11 @@ void create_shading_desc_set(
     engine::update_descriptor_set_uniform( info->shading_desc_set, *info->terrain_uniform, 1 );
 
     engine::update_descriptor_set_image( info->shading_desc_set, terrain.test_layer_mask, 2 );
-    engine::update_descriptor_set_image( info->shading_desc_set, terrain.grass_albedo_roughness, 3 );
+    engine::update_descriptor_set_image(
+        info->shading_desc_set,
+        terrain.grass_albedo_roughness,
+        3
+    );
     engine::update_descriptor_set_image( info->shading_desc_set, terrain.grass_normal_ao, 4 );
     engine::update_descriptor_set_image(
         info->shading_desc_set,

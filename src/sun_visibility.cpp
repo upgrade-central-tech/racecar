@@ -60,9 +60,7 @@ void initialize_sun_visibility(
     );
 }
 
-void compute_sun_visibility(
-    SunVisibilityComputePass& sun_visibility, engine::TaskList& task_list
-)
+void compute_sun_visibility( SunVisibilityComputePass& sun_visibility, engine::TaskList& task_list )
 {
     volumetric::Volumetric& volumetric = *sun_visibility.volumetric;
 

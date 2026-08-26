@@ -10,7 +10,8 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view DEBUG_TEXTURE_SHADER_PATH = "../shaders/post/debug_texture/debug_texture.spv";
+constexpr std::string_view DEBUG_TEXTURE_SHADER_PATH
+    = "../shaders/post/debug_texture/debug_texture.spv";
 
 bool debug_texture_is_on()
 {

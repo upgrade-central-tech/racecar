@@ -13,8 +13,8 @@ void execute_gfx_task( const VkCommandBuffer& cmd_buf, GfxTask& gfx_task )
         color_attachment_infos.push_back(
             {
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-                .imageView = attachment.mip_levels.empty() ? attachment.image_view
-                                                           : attachment.mip_levels[0],
+                .imageView
+                = attachment.mip_levels.empty() ? attachment.image_view : attachment.mip_levels[0],
                 .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 .loadOp
                 = gfx_task.clear_color ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
