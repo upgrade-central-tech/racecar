@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cmath>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -93,31 +94,43 @@ void update_wheel_transforms(
     std::vector<bool>& discovered
 )
 {
-    const engine::State engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst();
 
     // front wheels
     glm::vec3 pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[0] );
     float angle = engine.gamestate.speed * static_cast<float>( engine.delta )
         * WHEEL_ROTATION_SCALE / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
 
-    glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
-    model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
-    model = glm::translate( model, -pivot );
-
-    if ( scene.demo_scene_nodes.wheel_front_left_id.has_value() ) {
-        scene::propagate_transform(
-            scene,
-            model_mat_uniform_buffers,
-            scene.demo_scene_nodes.wheel_front_left_id.value(),
-            model,
-            discovered
-        );
+    glm::vec3 car_up = glm::vec3( 0.0f, 1.0f, 0.0f );
+    if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
+        // this is sad, why do we haev to read model_mat_uniform_buffers :(
+        car_up = glm::mat3( model_mat_uniform_buffers
+                                .at( scene.demo_scene_nodes.car_parent_id.value() )
+                                .get_data()
+                                .model_mat )[1];
     }
-    if ( scene.demo_scene_nodes.wheel_front_right_id.has_value() ) {
+
+    for ( std::optional<size_t> wheel_id : { scene.demo_scene_nodes.wheel_front_left_id,
+                                             scene.demo_scene_nodes.wheel_front_right_id } ) {
+        if ( !wheel_id.has_value() ) {
+            continue;
+        }
+
+        // this is also sad :(
+        const glm::mat3 wheel_rotation = glm::mat3(
+            model_mat_uniform_buffers.at( wheel_id.value() ).get_data().model_mat
+        );
+        const glm::vec3 steer_axis = glm::inverse( wheel_rotation ) * car_up;
+
+        glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
+        model = glm::rotate( model, engine.gamestate.wheel_turn_speed, steer_axis );
+        model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
+        model = glm::translate( model, -pivot );
+
         scene::propagate_transform(
             scene,
             model_mat_uniform_buffers,
-            scene.demo_scene_nodes.wheel_front_right_id.value(),
+            wheel_id.value(),
             model,
             discovered
         );
@@ -125,7 +138,7 @@ void update_wheel_transforms(
     // back wheels
     pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[1] );
 
-    model = glm::translate( glm::identity<glm::mat4>(), pivot );
+    glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
     model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
     model = glm::translate( model, -pivot );
 

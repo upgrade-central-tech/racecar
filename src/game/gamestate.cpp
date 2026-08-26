@@ -6,6 +6,8 @@
 namespace racecar {
 
 static const glm::vec2 FORWARD = glm::vec2( 0.0f, 1.0f );
+static const float MAX_WHEEL_ANGLE = glm::radians( 70.0f );
+static const float WHEEL_TURNING_RATE = glm::radians( 300.0f );
 
 void update_game_state() 
 {
@@ -30,6 +32,19 @@ void update_game_state()
     gamestate.speed = glm::clamp(gamestate.speed, 0.0f, 1.0f);
 
     gamestate.world_position += FORWARD * gamestate.speed * float(state.delta);
+
+    // front wheel turning
+    const float steer_input = (key_states[SDL_SCANCODE_LEFT] ? 1.0f : 0.0f)
+        - (key_states[SDL_SCANCODE_RIGHT] ? 1.0f : 0.0f);
+
+    const float prev_wheel_angle = gamestate.wheel_angle;
+
+    gamestate.wheel_angle = glm::clamp(
+        gamestate.wheel_angle + steer_input * WHEEL_TURNING_RATE * float(state.delta),
+        -MAX_WHEEL_ANGLE,
+        MAX_WHEEL_ANGLE
+    );
+    gamestate.wheel_turn_speed = gamestate.wheel_angle - prev_wheel_angle;
 }
 
 

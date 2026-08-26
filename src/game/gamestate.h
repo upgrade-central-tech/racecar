@@ -16,6 +16,9 @@ struct GameState {
     float speed = 0;
     glm::vec2 world_position = glm::vec2( 0.0f );
     bool speed_lock = false;
+
+    float wheel_angle = 0.0f;
+    float wheel_turn_speed = 0.0f;
 };
 
 void update_game_state();
