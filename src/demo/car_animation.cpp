@@ -2,6 +2,7 @@
 
 #include "../scene/scene.hpp"
 #include "car_assets.hpp"
+#include "terrain/terrain.hpp"
 
 #include <glm/ext/matrix_transform.hpp>
 
@@ -33,8 +34,6 @@ const std::unordered_map<std::string, float> wheel_radii = {
 };
 // clang-format on
 
-constexpr float WHEEL_ROTATION_SCALE = 1800.0f;
-
 void apply_demo_camera_motion(
     camera::OrbitCamera& camera,
     const gui::Gui& gui,
@@ -56,9 +55,9 @@ void apply_demo_camera_motion(
 void update_car_transform(
     gui::Gui& gui,
     scene::Scene& scene,
-    std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
+    [[maybe_unused]] std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
     const volumetric::Volumetric& volumetric,
-    std::vector<bool>& discovered
+    [[maybe_unused]] std::vector<bool>& discovered
 )
 {
     if ( !scene.demo_scene_nodes.car_parent_id.has_value() ) {
@@ -75,89 +74,39 @@ void update_car_transform(
         );
     }
 
+    [[maybe_unused]]
     glm::mat4 transform = glm::translate( glm::identity<glm::mat4>(), velocity );
 
     if ( gui.demo.enable_translation ) {
-        scene::propagate_transform(
-            scene,
-            model_mat_uniform_buffers,
-            scene.demo_scene_nodes.car_parent_id.value(),
-            transform,
-            discovered
-        );
+        // nothing here for now, this is scrapped
     }
 }
 
-void update_wheel_transforms(
-    scene::Scene& scene,
-    std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
-    std::vector<bool>& discovered
-)
+void update_wheel_transforms( scene::Scene& scene )
 {
     const engine::State& engine = engine::State::GetConst();
 
-    // front wheels
-    glm::vec3 pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[0] );
-    float angle = engine.gamestate.speed * static_cast<float>( engine.delta ) * WHEEL_ROTATION_SCALE
-        / wheel_radii.at( std::string( GLTF_FILE_PATH ) );
+    const float distance = engine.gamestate.world_position.y * geometry::TERRAIN_SCROLL_SCALE
+        / geometry::TERRAIN_WORLD_SCALE;
+    const float radius = 0.5f * wheel_radii.at( std::string( GLTF_FILE_PATH ) );
 
-    glm::vec3 car_up = glm::vec3( 0.0f, 1.0f, 0.0f );
-    if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
-        // this is sad, why do we haev to read model_mat_uniform_buffers :(
-        car_up = glm::mat3( model_mat_uniform_buffers
-                                .at( scene.demo_scene_nodes.car_parent_id.value() )
-                                .get_data()
-                                .model_mat )[1];
-    }
-
-    for ( std::optional<size_t> wheel_id : { scene.demo_scene_nodes.wheel_front_left_id,
-                                             scene.demo_scene_nodes.wheel_front_right_id } ) {
-        if ( !wheel_id.has_value() ) {
-            continue;
-        }
-
-        // this is also sad :(
-        const glm::mat3 wheel_rotation
-            = glm::mat3( model_mat_uniform_buffers.at( wheel_id.value() ).get_data().model_mat );
-        const glm::vec3 steer_axis = glm::inverse( wheel_rotation ) * car_up;
-
-        glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
-        model = glm::rotate( model, engine.gamestate.wheel_turn_speed, steer_axis );
-        model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
-        model = glm::translate( model, -pivot );
-
-        scene::propagate_transform(
-            scene,
-            model_mat_uniform_buffers,
-            wheel_id.value(),
-            model,
-            discovered
-        );
-    }
-    // back wheels
-    pivot = -glm::vec3( 0.0f, wheel_centers.at( std::string( GLTF_FILE_PATH ) )[1] );
-
-    glm::mat4 model = glm::translate( glm::identity<glm::mat4>(), pivot );
-    model = glm::rotate( model, angle, glm::vec3( 1.0f, 0.0f, 0.0f ) );
-    model = glm::translate( model, -pivot );
+    const glm::mat4 model = glm::rotate(
+        glm::identity<glm::mat4>(),
+        distance / radius,
+        glm::vec3( 1.0f, 0.0f, 0.0f )
+    );
 
     if ( scene.demo_scene_nodes.wheel_back_left_id.has_value() ) {
-        scene::propagate_transform(
-            scene,
-            model_mat_uniform_buffers,
-            scene.demo_scene_nodes.wheel_back_left_id.value(),
-            model,
-            discovered
-        );
+        scene::set_transform( scene, scene.demo_scene_nodes.wheel_back_left_id.value(), model );
     }
     if ( scene.demo_scene_nodes.wheel_back_right_id.has_value() ) {
-        scene::propagate_transform(
-            scene,
-            model_mat_uniform_buffers,
-            scene.demo_scene_nodes.wheel_back_right_id.value(),
-            model,
-            discovered
-        );
+        scene::set_transform( scene, scene.demo_scene_nodes.wheel_back_right_id.value(), model );
+    }
+    if ( scene.demo_scene_nodes.wheel_front_left_id.has_value() ) {
+        scene::set_transform( scene, scene.demo_scene_nodes.wheel_front_left_id.value(), model );
+    }
+    if ( scene.demo_scene_nodes.wheel_front_right_id.has_value() ) {
+        scene::set_transform( scene, scene.demo_scene_nodes.wheel_front_right_id.value(), model );
     }
 }
 

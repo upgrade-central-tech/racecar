@@ -25,9 +25,6 @@ const std::filesystem::path TEST_ASPHALT_NORMAL_AO_PATH = "../assets/terrain/asp
 
 const std::filesystem::path TERRAIN_NOISE_PAPTH = "../assets/LUT/terrain_noise.jpg";
 
-// the scroll offset used to accumulate speed once per frame, so preserve that rate at 60fps
-constexpr float TERRAIN_SCROLL_SCALE = 60.0f;
-
 namespace racecar::geometry {
 
 void initialize_terrain(

@@ -609,38 +609,50 @@ bool load_hdri( std::string file_path, Scene& scene )
     return true;
 }
 
-void propagate_transform(
-    Scene& scene,
+void set_transform( Scene& scene, size_t node_id, glm::mat4 transform )
+{
+    scene.nodes[node_id]->transform = transform;
+    scene.nodes[node_id]->inv_transform = glm::inverse( scene.nodes[node_id]->transform );
+    scene.nodes[node_id]->inv_transpose = glm::inverseTranspose( scene.nodes[node_id]->transform );
+}
+
+void mul_transform( Scene& scene, size_t node_id, glm::mat4 transform )
+{
+    scene.nodes[node_id]->transform = transform * scene.nodes[node_id]->transform;
+    scene.nodes[node_id]->inv_transform = glm::inverse( scene.nodes[node_id]->transform );
+    scene.nodes[node_id]->inv_transpose = glm::inverseTranspose( scene.nodes[node_id]->transform );
+}
+
+void update_model_mat_buffer_node(
+    const Scene& scene,
     std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
-    size_t start_node_id,
-    glm::mat4 transform,
-    std::vector<bool>& discovered
+    const glm::mat4& parent_transform,
+    Node* node
 )
 {
-    const engine::State& engine = engine::State::GetConst();
-    std::vector<size_t> stack;
-    stack.push_back( start_node_id );
+    UniformBuffer<ub_data::ModelMat>& model_mat_buffer = model_mat_uniform_buffers[node->id];
+    ub_data::ModelMat data = model_mat_buffer.get_data();
 
-    while ( !stack.empty() ) {
-        size_t current_node_id = stack.back();
-        stack.pop_back();
+    data.prev_model_mat = data.model_mat;
+    data.model_mat = parent_transform * node->transform;
+    data.inv_model_mat = glm::inverse( data.model_mat );
 
-        UniformBuffer model_mat_buffer = model_mat_uniform_buffers.at( current_node_id );
-        ub_data::ModelMat model_mat_ub = model_mat_buffer.get_data();
+    model_mat_buffer.set_data( data );
+    model_mat_buffer.update( engine::State::GetConst().get_frame_index() );
 
-        if ( !discovered.at( current_node_id ) ) {
-            model_mat_ub.prev_model_mat = model_mat_ub.model_mat;
-            discovered.at( current_node_id ) = true;
-        }
+    for ( Node* child : node->children ) {
+        update_model_mat_buffer_node( scene, model_mat_uniform_buffers, data.model_mat, child );
+    }
+}
 
-        model_mat_ub.model_mat *= transform;
-        model_mat_ub.inv_model_mat = glm::inverse( model_mat_ub.model_mat );
-
-        model_mat_uniform_buffers.at( current_node_id ).set_data( model_mat_ub );
-        model_mat_uniform_buffers.at( current_node_id ).update( engine.get_frame_index() );
-
-        for ( Node* child : scene.nodes.at( current_node_id )->children ) {
-            stack.push_back( child->id );
+void update_model_mat_buffers(
+    const Scene& scene, std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers
+)
+{
+    glm::mat4 identity = glm::identity<glm::mat4>();
+    for ( const auto& node : scene.nodes ) {
+        if ( node->parent == nullptr ) {
+            update_model_mat_buffer_node( scene, model_mat_uniform_buffers, identity, node.get() );
         }
     }
 }

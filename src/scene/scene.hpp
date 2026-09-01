@@ -123,8 +123,9 @@ void load_gltf( std::filesystem::path file_path,
 
 bool load_hdri( std::string file_path, Scene& scene );
 
-void propagate_transform( Scene& scene,
-    std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers, size_t start_node_id,
-    glm::mat4 transform, std::vector<bool>& discovered );
+void set_transform( Scene& scene, size_t node_id, glm::mat4 transform );
+void mul_transform( Scene& scene, size_t node_id, glm::mat4 transform );
+
+void update_model_mat_buffers( const Scene& scene, std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers );
 
 } // namespace racecar::scene

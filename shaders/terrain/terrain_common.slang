@@ -57,7 +57,7 @@ float2 terrain_layer_uv( float3 world_position, float2 scroll )
 
     return ( distortion_offset + float2( world_position.x + 22, world_position.y + 60 ) )
         * TERRAIN_LAYER_MAP_SCALE
-        + scroll;
+        + scroll * ( TERRAIN_LAYER_MAP_SCALE / TERRAIN_WORLD_SCALE );
 }
 
 float2 terrain_world_uv_unwrapped( float3 world_position, float2 scroll )

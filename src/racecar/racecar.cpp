@@ -604,10 +604,6 @@ void run( bool use_fullscreen )
         // update materials
         update_material_uniform_buffers( gui, material_uniform_buffers, num_materials );
 
-        for ( UniformBuffer<ub_data::ModelMat>& model_mat_buffer : model_mat_uniform_buffers ) {
-            model_mat_buffer.update( engine.get_frame_index() );
-        }
-
 #if RACECAR_RAY_TRACING
         // Update ray tracing uniform buffers
         update_rt_uniform_buffers(
@@ -627,7 +623,10 @@ void run( bool use_fullscreen )
         update_car_transform( gui, scene, model_mat_uniform_buffers, volumetric, discovered );
 
         // wheel rotation
-        update_wheel_transforms( scene, model_mat_uniform_buffers, discovered );
+        update_wheel_transforms( scene );
+
+        // compute and update model mat buffers
+        scene::update_model_mat_buffers( scene, model_mat_uniform_buffers );
 
         // Update the gamestate buffer
         update_gamestate_buffer( gamestate_buffer );

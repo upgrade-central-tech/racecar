@@ -16,6 +16,11 @@ namespace racecar::geometry {
 constexpr float TERRAIN_TILE_WIDTH = 10.0f;
 constexpr size_t TERRAIN_NUM_TILES = 50;
 constexpr float TERRAIN_HALF_WIDTH = ( TERRAIN_NUM_TILES * TERRAIN_TILE_WIDTH ) / 2.0f;
+constexpr float TERRAIN_SCROLL_SCALE = 60.0f;
+
+// TERRAIN_WORLD_SCALE in terrain_common.slang
+constexpr float TERRAIN_WORLD_SCALE = 0.05f;
+
 
 // Keep it simple for now
 struct TerrainVertex {
