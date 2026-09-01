@@ -1,2 +1,3 @@
 # Assumes compiler is on your PATH (which it should be)
 ../../../slang/bin/slangc.exe "$PSScriptRoot\world_pos_debug.slang" -target spirv -profile spirv_1_4 -emit-spirv-directly -fvk-use-entrypoint-name -entry vs_main -entry fs_main -o "$PSScriptRoot\world_pos_debug.spv"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

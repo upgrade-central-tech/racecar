@@ -1,3 +1,5 @@
 # Assumes compiler is on your PATH (which it should be)
 ../../../slang/bin/slangc.exe "$PSScriptRoot\irradiance.slang" -target spirv -profile spirv_1_5 -emit-spirv-directly -g2 -fvk-use-entrypoint-name -entry cs_compute_irradiance -entry cs_compute_irradiance_sh -o "$PSScriptRoot\irradiance.spv"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 ../../../slang/bin/slangc.exe "$PSScriptRoot\irradiance.slang" -target spirv -profile spirv_1_5 -emit-spirv-directly -g2 -fvk-use-entrypoint-name -entry cs_compute_irradiance_sh  -capability SPV_EXT_shader_atomic_float_add -o "$PSScriptRoot\irradiance_sh.spv"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

@@ -1,2 +1,3 @@
 # Assumes compiler is on your PATH (which it should be)
 ../../../slang/bin/slangc.exe "$PSScriptRoot\glint_noise_init.slang" -target spirv -profile spirv_1_4 -emit-spirv-directly -g2 -fvk-use-entrypoint-name -entry cs_generate_glint_noise -o "$PSScriptRoot\glint_noise_init.spv"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
