@@ -50,12 +50,13 @@ TerrainGradients terrain_no_gradients()
 float2 terrain_layer_uv( float3 world_position, float2 scroll )
 {
     float rand_s = perlin_noise3D(
-        TERRAIN_DISTORT_SCALE * world_position + float3( scroll.x, 0.0f, scroll.y ) );
+        TERRAIN_DISTORT_SCALE * float3( world_position.x, 0.0f, world_position.z )
+        + float3( scroll.x, 0.0f, scroll.y ) * ( TERRAIN_DISTORT_SCALE / TERRAIN_WORLD_SCALE ) );
 
     float2 distortion_offset = 2.0f * float2( rand_s, rand_s ) * TERRAIN_DISTORT_AMPLITUDE
         - TERRAIN_DISTORT_AMPLITUDE;
 
-    return ( distortion_offset + float2( world_position.x + 22, world_position.y + 60 ) )
+    return ( distortion_offset + float2( world_position.x + 22, world_position.z + 60 ) )
         * TERRAIN_LAYER_MAP_SCALE
         + scroll * ( TERRAIN_LAYER_MAP_SCALE / TERRAIN_WORLD_SCALE );
 }
