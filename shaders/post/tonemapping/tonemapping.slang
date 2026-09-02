@@ -1,3 +1,5 @@
+#include "../../utils.slang"
+
 /// Based on
 /// https://blog.selfshadow.com/publications/s2025-shading-course/pdi/supplemental/gt7_tone_mapping.cpp.
 
