@@ -110,7 +110,7 @@ void initialize_terrain(
         = engine::load_image( TEST_LAYER_MASK_PATH, 2, VK_FORMAT_R8G8_UNORM, false );
 
     terrain.grass_albedo_roughness
-        = engine::load_image( TEST_GRASS_ALBEDO_ROUGHNESS_PATH, 4, VK_FORMAT_R8G8B8A8_UNORM, true );
+        = engine::load_image( TEST_GRASS_ALBEDO_ROUGHNESS_PATH, 4, VK_FORMAT_R8G8B8A8_SRGB, true );
 
     terrain.grass_normal_ao
         = engine::load_image( TEST_GRASS_NORMAL_AO_PATH, 4, VK_FORMAT_R16G16B16A16_SFLOAT, true );
@@ -118,7 +118,7 @@ void initialize_terrain(
     terrain.asphalt_albedo_roughness = engine::load_image(
         TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH,
         4,
-        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_R8G8B8A8_SRGB,
         true
     );
 

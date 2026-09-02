@@ -327,6 +327,23 @@ float LinearDepth01( float perspective_depth, float near, float far )
     return ( linear_depth - near ) / ( far - near );
 }
 
+float linear_to_srgb_channel( float channel )
+{
+    let v = max( channel, 0.f );
+
+    if ( v <= 0.0031308f ) {
+        return v * 12.92f;
+    }
+
+    return 1.055f * pow( v, 1.f / 2.4f ) - 0.055f;
+}
+
+float3 linear_to_srgb( float3 rgb )
+{
+    return float3( linear_to_srgb_channel( rgb.r ), linear_to_srgb_channel( rgb.g ),
+        linear_to_srgb_channel( rgb.b ) );
+}
+
 //=======================================================================================
 // Misc. math
 //=======================================================================================

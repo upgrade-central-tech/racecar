@@ -41,6 +41,9 @@ VkFormat get_vk_format( int bits_per_channel, int num_channels, ColorSpace color
         case 1:
             return VK_FORMAT_R8_UNORM;
         case 3:
+            if ( color_space == ColorSpace::SRGB ) {
+                return VK_FORMAT_R8G8B8_SRGB;
+            }
             return VK_FORMAT_R8G8B8_UNORM;
         case 4:
             if ( color_space == ColorSpace::SRGB ) {
@@ -110,25 +113,27 @@ void load_gltf(
         throw Exception( "[Scene] An error occurred while loading the scene" );
     }
 
+    auto global_texture_index = []( int idx ) -> std::optional<int> {
+        if ( idx == -1 ) {
+            return std::nullopt;
+        }
+        return idx;
+    };
+
     for ( tinygltf::Material& loaded_mat : model.materials ) {
         Material new_mat = { };
 
         new_mat.base_color
             = double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );
-        new_mat.base_color_texture_index = loaded_mat.pbrMetallicRoughness.baseColorTexture.index;
+        new_mat.base_color_texture_index
+            = global_texture_index( loaded_mat.pbrMetallicRoughness.baseColorTexture.index );
         new_mat.alpha = static_cast<float>( loaded_mat.pbrMetallicRoughness.baseColorFactor[3] );
-
-        if ( new_mat.base_color_texture_index.value() == -1 ) {
-            new_mat.base_color_texture_index = std::nullopt;
-        }
 
         new_mat.metallic = static_cast<float>( loaded_mat.pbrMetallicRoughness.metallicFactor );
         new_mat.roughness = static_cast<float>( loaded_mat.pbrMetallicRoughness.roughnessFactor );
-        new_mat.metallic_roughness_texture_index
-            = loaded_mat.pbrMetallicRoughness.metallicRoughnessTexture.index;
-        if ( new_mat.metallic_roughness_texture_index.value() == -1 ) {
-            new_mat.metallic_roughness_texture_index = std::nullopt;
-        }
+        new_mat.metallic_roughness_texture_index = global_texture_index(
+            loaded_mat.pbrMetallicRoughness.metallicRoughnessTexture.index
+        );
 
         if ( loaded_mat.extensions.count( "KHR_materials_specular" ) != 0 ) {
             auto specular = loaded_mat.extensions.find( "KHR_materials_specular" )->second;
@@ -183,20 +188,12 @@ void load_gltf(
                                     ->second.Get( "emissiveStrength" )
                                     .GetNumberAsDouble();
         }
-        new_mat.emmisive_texture_index = loaded_mat.emissiveTexture.index;
-        if ( new_mat.emmisive_texture_index.value() == -1 ) {
-            new_mat.emmisive_texture_index = std::nullopt;
-        }
+        new_mat.emmisive_texture_index = global_texture_index( loaded_mat.emissiveTexture.index );
 
-        new_mat.normal_texture_index = loaded_mat.normalTexture.index;
-        if ( new_mat.normal_texture_index.value() == -1 ) {
-            new_mat.normal_texture_index = std::nullopt;
-        }
+        new_mat.normal_texture_index = global_texture_index( loaded_mat.normalTexture.index );
         new_mat.normal_texture_weight = static_cast<int>( loaded_mat.normalTexture.scale );
-        new_mat.occulusion_texture_index = loaded_mat.occlusionTexture.index;
-        if ( new_mat.occulusion_texture_index.value() == -1 ) {
-            new_mat.occulusion_texture_index = std::nullopt;
-        }
+        new_mat.occulusion_texture_index
+            = global_texture_index( loaded_mat.occlusionTexture.index );
 
         new_mat.double_sided = loaded_mat.doubleSided;
         new_mat.unlit = false;

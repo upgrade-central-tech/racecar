@@ -242,14 +242,14 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     let scene = input.Load( uint3( pixel, 0 ) ).rgb;
 
     if ( settings.mode == 0 ) {
-        output[pixel] = float4( scene, 1.f );
+        output[pixel] = float4( linear_to_srgb( scene ), 1.f );
         return;
     }
 
     // Reinhard
     if ( settings.mode == 3 ) {
         let result = scene / ( scene + 1.f );
-        output[pixel] = float4( result, 1.f );
+        output[pixel] = float4( linear_to_srgb( result ), 1.f );
         return;
     }
 
@@ -259,7 +259,7 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
         aces_color = RRTAndODTFit( aces_color );
         aces_color = mul( ACESOutputMat, aces_color );
         aces_color = saturate( aces_color );
-        output[pixel] = float4( aces_color, 1.f );
+        output[pixel] = float4( linear_to_srgb( aces_color ), 1.f );
         return;
     }
 

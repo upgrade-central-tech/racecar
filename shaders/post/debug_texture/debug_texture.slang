@@ -1,3 +1,5 @@
+#include "../../utils.slang"
+
 static const int MAX_DEBUG_TEXTURES = 8;
 
 struct DebugTextureSettings {
@@ -34,5 +36,5 @@ func cs_debug_texture( uint2 thread_id: SV_DispatchThreadID )->void
     let uv = ( float2( pixel ) + 0.5f ) / float2( width, height );
     let texel = debug_textures[settings.index - 1].SampleLevel( linear_sampler, uv, settings.blur );
 
-    out_color[pixel] = float4( texel.rgb * settings.exposure, 1.0f );
+    out_color[pixel] = float4( linear_to_srgb( texel.rgb * settings.exposure ), 1.0f );
 }
