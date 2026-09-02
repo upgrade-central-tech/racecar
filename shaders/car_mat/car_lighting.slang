@@ -70,7 +70,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float alpha = pbr.roughness * pbr.roughness;
     float NDF = DistributionGGX( clamped_n_dot_h, alpha );
     float G = GeometrySmith( clamped_n_dot_v, clamped_n_dot_l, alpha );
-    float3 F = FresnelSchlick( clamped_n_dot_h, F0 );
+    float3 F = FresnelSchlick( clamped_v_dot_h, F0 );
 
     float2 brdf_uv = float2( clamped_n_dot_v, pbr.roughness );
     float2 brdf = BRDF_LUT.Sample( nearest_sampler, brdf_uv ).rg;
@@ -144,7 +144,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 diffuse_direct = diffuse_final;
 
     float3 specular_direct = min( glint_specular, float3( 55.f ) );
-    float3 specular_indirect = precomputed_lo_specular * ( F_indirect * brdf.x + brdf.y );
+    float3 specular_indirect = precomputed_lo_specular * ( F0 * brdf.x + brdf.y );
 
     float3 clearcoat_indirect = clearcoat_specular;
     // float3 clearcoat_direct
@@ -157,7 +157,8 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 out_color = float3( 0.f );
 
     // Direct lighting
-    out_color += ( kD_direct * diffuse_direct + specular_direct ) * sun_V * clamped_n_dot_l;
+    out_color += ( kD_direct * diffuse_direct + specular_direct ) * SUN_IRRADIANCE * sun_V
+        * clamped_n_dot_l;
 
     // IBL - Removed kD term due to strange shadows
     out_color += ( kD * diffuse_irradiance + specular_indirect );

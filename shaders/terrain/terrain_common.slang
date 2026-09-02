@@ -281,7 +281,7 @@ float3 terrain_direct_lighting( float3 albedo, float3 normal, float3 light, floa
 
     float G = GeometrySmith( dots.clamped_n_dot_v, dots.clamped_n_dot_l, alpha );
     float3 F0 = float3( 0.04f );
-    float3 F = FresnelSchlick( dots.clamped_n_dot_h, F0 );
+    float3 F = FresnelSchlick( dots.clamped_v_dot_h, F0 );
 
     float3 specular
         = ( NDF * G * F ) / ( 4.0f * dots.clamped_n_dot_v * dots.clamped_n_dot_l + 0.001f );
@@ -307,5 +307,5 @@ float3 terrain_direct_lighting( float3 albedo, float3 normal, float3 light, floa
         return shadowing;
     }
 
-    return ( ( 1.0f - F ) * diffuse + specular ) * shadowing;
+    return ( ( 1.0f - F ) * diffuse + specular ) * SUN_IRRADIANCE * shadowing;
 }
