@@ -3,6 +3,8 @@ module cloud_raymarch;
 import cloud_bindings;
 import cloud_utils;
 
+#include "../utils.slang"
+
 public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
     SamplerState linear_mirrored_repeat_sampler, float3 march_pos )
 {
@@ -174,7 +176,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
 
     // simple tonemap (ACES-lite / a gentle clamp)
     color = color / ( color + float3( 1.0, 1.0, 1.0 ) );
-    color = pow( saturate( color ), float3( 1.0 / 2.2 ) ); // gamma
+    color *= PAPER_WHITE;
 
     // make clouds opaque at the sun.
     if ( dot( view, sun_direction ) > 0.9985 ) {

@@ -29,6 +29,11 @@ static const float BLEND_RATIO = 0.6f;
 static const float FADE_START = 0.98f;
 static const float FADE_END = 1.16f;
 
+static const float GT_ALPHA = 0.25f;
+static const float GT_GREY_POINT = 0.538f;
+static const float GT_LINEAR_SECTION = 0.444f;
+static const float GT_TOE_STRENGTH = 1.28f;
+
 namespace jzazbz {
 
 func inverse_eotf_st_2084( v: float, exponent_scale_factor: float )->float
@@ -218,6 +223,19 @@ func apply_tonemapping( rgb: float3, in GTTonemappingCurveV2 curve,
     return output;
 }
 
+// The GT curve and JzAzBz operate in linear Rec.2020 but we are in linear Rec.709.
+static const float3x3 REC709_TO_REC2020 = {
+    { 0.627404f, 0.329283f, 0.043313f },
+    { 0.069097f, 0.919540f, 0.011362f },
+    { 0.016391f, 0.088013f, 0.895596f },
+};
+
+static const float3x3 REC2020_TO_REC709 = {
+    { 1.660491f, -0.587641f, -0.072850f },
+    { -0.124550f, 1.132900f, -0.008350f },
+    { -0.018151f, -0.100579f, 1.118730f },
+};
+
 // Stolen from: https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
 static const float3x3 ACESInputMat = {
     { 0.59719, 0.35458, 0.04823 },
@@ -241,23 +259,26 @@ float3 RRTAndODTFit( float3 v )
 func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
 {
     let pixel = thread_id.xy;
-    let scene = input.Load( uint3( pixel, 0 ) ).rgb;
+    let scene = max( input.Load( uint3( pixel, 0 ) ).rgb, 0.f );
 
     if ( settings.mode == 0 ) {
-        output[pixel] = float4( linear_to_srgb( scene ), 1.f );
+        let exposed = scene / physical_value_to_framebuffer_value( GT_SDR_PAPER_WHITE );
+        output[pixel] = float4( linear_to_srgb( exposed ), 1.f );
         return;
     }
 
     // Reinhard
     if ( settings.mode == 3 ) {
-        let result = scene / ( scene + 1.f );
+        let exposed = scene / physical_value_to_framebuffer_value( GT_SDR_PAPER_WHITE );
+        let result = exposed / ( exposed + 1.f );
         output[pixel] = float4( linear_to_srgb( result ), 1.f );
         return;
     }
 
     // ACES
     if ( settings.mode == 4 ) {
-        float3 aces_color = mul( ACESInputMat, scene );
+        let exposed = scene / physical_value_to_framebuffer_value( GT_SDR_PAPER_WHITE );
+        float3 aces_color = mul( ACESInputMat, exposed );
         aces_color = RRTAndODTFit( aces_color );
         aces_color = mul( ACESOutputMat, aces_color );
         aces_color = saturate( aces_color );
@@ -278,15 +299,17 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     }
 
     let framebuffer_luminance_target = physical_value_to_framebuffer_value( luminance_target );
-    let curve = GTTonemappingCurveV2( framebuffer_luminance_target, 0.25f, 0.538f, 0.444f, 1.28f );
+    let curve = GTTonemappingCurveV2( framebuffer_luminance_target, GT_ALPHA, GT_GREY_POINT,
+        GT_LINEAR_SECTION, GT_TOE_STRENGTH );
 
     let rgb = float3( framebuffer_luminance_target );
     let ucs = jzazbz::from_rgb( rgb );
     let framebuffer_luminance_target_ucs = ucs.r; // Use the first UCS component (Jz) as luminance
 
-    output[pixel] = float4( apply_tonemapping( scene, curve, framebuffer_luminance_target,
-                                framebuffer_luminance_target_ucs, sdr_correction_factor ),
-        1.f );
+    let tonemapped = apply_tonemapping( mul( REC709_TO_REC2020, scene ), curve,
+        framebuffer_luminance_target, framebuffer_luminance_target_ucs, sdr_correction_factor );
+
+    output[pixel] = float4( linear_to_srgb( mul( REC2020_TO_REC709, tonemapped ) ), 1.f );
 }
 
 

@@ -170,7 +170,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     // // Irradiance run
     final_color += mixed_albedo * diffuse_irradiance * irradiance_strength;
-    final_color += clamp( specular_irradiance, float3( 0.f ), float3( 1.f ) );
+    final_color += clamp( specular_irradiance, float3( 0.f ), float3( PAPER_WHITE ) );
 
     // Debug returns
     bool roughness_only = terrain_data.packed_floats0.z > 0.5f;

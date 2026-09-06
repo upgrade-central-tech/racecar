@@ -405,7 +405,7 @@ void update(
             if ( ImGui::BeginTabItem( "Post" ) ) {
                 ImGui::SeparatorText( "Bloom" );
                 RacecarGUI::SettingsCheckbox( "Enable", RacecarSettings::ENABLE_BLOOM );
-                ImGui::SliderFloat( "Threshold", &gui.bloom.threshold, 0.f, 5.f );
+                ImGui::SliderFloat( "Threshold", &gui.bloom.threshold, 0.f, 12.5f );
                 ImGui::SliderFloat( "Filter radius", &gui.bloom.filter_radius, 0.f, 0.025f );
 
                 ImGui::SeparatorText( "Anti-Aliasing" );

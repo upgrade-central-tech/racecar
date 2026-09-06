@@ -72,7 +72,7 @@ struct Gui {
     } tonemapping = {};
 
     struct BloomData {
-        float threshold = 1.2f;
+        float threshold = 3.0f;
         float filter_radius = 0.003f;
     } bloom = {};
 

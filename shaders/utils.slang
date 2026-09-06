@@ -7,7 +7,8 @@ public static const float PI = 3.14159265358979323846f;
 
 }
 
-static const float SUN_IRRADIANCE = math::PI;
+static const float PAPER_WHITE = 2.5f;
+static const float SUN_IRRADIANCE = PAPER_WHITE * math::PI;
 
 //=======================================================================================
 // BSDF Stuff

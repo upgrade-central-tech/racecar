@@ -94,7 +94,7 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
     Setting { .validate = &validate_tonemapping,
               .options = TONEMAPPING_OPTIONS,
               .option_count = (int)std::size( TONEMAPPING_OPTIONS ),
-              .desired = (int)TonemappingMode::GT7_HDR,
+              .desired = (int)TonemappingMode::GT7_SDR,
               .fallback = (int)TonemappingMode::NONE }, // TONEMAPPING_MODE
 
     Setting { .validate_option = &validate_debug_texture_option,

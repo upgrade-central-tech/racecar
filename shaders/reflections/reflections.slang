@@ -237,7 +237,7 @@ float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
 
     const float irradiance_strength = 0.5f;
     color += ( albedo * TERRAIN_INV_PI ) * diffuse_irradiance * irradiance_strength;
-    color += clamp( specular_irradiance, float3( 0.0f ), float3( 1.0f ) );
+    color += clamp( specular_irradiance, float3( 0.0f ), float3( PAPER_WHITE ) );
 
     return color;
 }
