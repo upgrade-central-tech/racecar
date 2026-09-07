@@ -16,7 +16,7 @@
 
 namespace racecar::scene {
 
-static inline glm::vec3 double_array_to_vec3( std::vector<double> arr )
+static inline glm::vec3 double_array_to_vec3( const std::vector<double>& arr )
 {
     return glm::vec3( arr[0], arr[1], arr[2] );
 }
@@ -120,8 +120,15 @@ void load_gltf(
         return idx;
     };
 
-    for ( tinygltf::Material& loaded_mat : model.materials ) {
-        Material new_mat = { };
+    // Reserve vector sizes - low hanging fruit optimization tests
+    {
+        scene.materials.reserve( model.materials.size() );
+        scene.textures.reserve( model.textures.size() );
+        scene.nodes.reserve( model.nodes.size() );
+    }
+
+    for ( const tinygltf::Material& loaded_mat : model.materials ) {
+        Material new_mat = {};
 
         new_mat.base_color
             = double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );
@@ -202,9 +209,9 @@ void load_gltf(
     }
 
     // Textures & Load onto GPU
-    for ( tinygltf::Texture& loaded_tex : model.textures ) {
+    for ( const tinygltf::Texture& loaded_tex : model.textures ) {
         Texture new_tex;
-        tinygltf::Image loaded_img = model.images[size_t( loaded_tex.source )];
+        const tinygltf::Image& loaded_img = model.images[size_t( loaded_tex.source )];
 
         new_tex.width = loaded_img.width;
         new_tex.height = loaded_img.height;
@@ -214,7 +221,7 @@ void load_gltf(
     }
 
     // Mark albedo and emission as SRGB.
-    for ( Material& mat : scene.materials ) {
+    for ( const Material& mat : scene.materials ) {
         if ( mat.base_color_texture_index.has_value() ) {
             scene.textures[size_t( mat.base_color_texture_index.value() )].color_space
                 = ColorSpace::SRGB;
@@ -228,14 +235,14 @@ void load_gltf(
     // Upload textures to the GPU
     for ( size_t i = 0; i < model.textures.size(); i++ ) {
         Texture& texture = scene.textures[i];
-        tinygltf::Texture& loaded_tex = model.textures[i];
-        tinygltf::Image loaded_img = model.images[size_t( loaded_tex.source )];
+        const tinygltf::Texture& loaded_tex = model.textures[i];
+        const tinygltf::Image& loaded_img = model.images[size_t( loaded_tex.source )];
 
         VkFormat image_format
             = get_vk_format( texture.bits_per_channel, texture.num_channels, texture.color_space );
 
         texture.data = engine::create_image(
-            static_cast<void*>( loaded_img.image.data() ),
+            const_cast<void*>( static_cast<const void*>( loaded_img.image.data() ) ),
             { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
             image_format,
             VK_IMAGE_TYPE_2D,
@@ -250,10 +257,11 @@ void load_gltf(
     int default_material_id = -1;
     // Used for pairing children and parents in the scene graph
     std::vector<std::vector<int>> children_lists;
+    children_lists.reserve( model.nodes.size() );
 
     // Load Nodes
     for ( size_t node_idx = 0; node_idx < model.nodes.size(); node_idx++ ) {
-        tinygltf::Node& loaded_node = model.nodes[node_idx];
+        const tinygltf::Node& loaded_node = model.nodes[node_idx];
         std::unique_ptr<Node> new_node = std::make_unique<Node>();
 
         // save relavant nodes for demo
@@ -336,10 +344,11 @@ void load_gltf(
         // the future.
         if ( loaded_node.mesh != -1 ) {
             new_node->mesh = std::make_unique<Mesh>();
-            tinygltf::Mesh loaded_mesh = model.meshes[static_cast<size_t>( loaded_node.mesh )];
+            const tinygltf::Mesh& loaded_mesh
+                = model.meshes[static_cast<size_t>( loaded_node.mesh )];
 
             // Load primitives
-            for ( tinygltf::Primitive& loaded_prim : loaded_mesh.primitives ) {
+            for ( const tinygltf::Primitive& loaded_prim : loaded_mesh.primitives ) {
                 Primitive new_prim;
                 new_prim.node_id = static_cast<int>( node_idx );
                 new_prim.material_id = loaded_prim.material;
@@ -366,8 +375,8 @@ void load_gltf(
                 std::vector<glm::vec2> uv;
 
                 if ( loaded_prim.attributes.count( "POSITION" ) > 0 ) {
-                    int accessor_id = loaded_prim.attributes["POSITION"];
-                    tinygltf::Accessor accessor
+                    int accessor_id = loaded_prim.attributes.at( "POSITION" );
+                    const tinygltf::Accessor& accessor
                         = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
@@ -386,22 +395,22 @@ void load_gltf(
                         );
                     }
 
-                    tinygltf::BufferView buffer_view
+                    const tinygltf::BufferView& buffer_view
                         = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
                     size_t byte_length = accessor.count * 3 * sizeof( float ); // vec3f
 
                     size_t buffer_id = size_t( buffer_view.buffer );
-                    tinygltf::Buffer buffer = model.buffers[buffer_id];
+                    const tinygltf::Buffer& buffer = model.buffers[buffer_id];
 
                     pos.resize( length );
                     std::memcpy( pos.data(), buffer.data.data() + byte_offset, byte_length );
                 }
 
                 if ( loaded_prim.attributes.count( "NORMAL" ) > 0 ) {
-                    int accessor_id = loaded_prim.attributes["NORMAL"];
-                    tinygltf::Accessor accessor
+                    int accessor_id = loaded_prim.attributes.at( "NORMAL" );
+                    const tinygltf::Accessor& accessor
                         = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
@@ -420,14 +429,14 @@ void load_gltf(
                         );
                     }
 
-                    tinygltf::BufferView buffer_view
+                    const tinygltf::BufferView& buffer_view
                         = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
                     size_t byte_length = accessor.count * 3 * sizeof( float ); // vec3f
 
                     size_t buffer_id = size_t( buffer_view.buffer );
-                    tinygltf::Buffer buffer = model.buffers[buffer_id];
+                    const tinygltf::Buffer& buffer = model.buffers[buffer_id];
 
                     nor.resize( length );
                     std::memcpy( nor.data(), buffer.data.data() + byte_offset, byte_length );
@@ -435,8 +444,8 @@ void load_gltf(
 
                 // Currently only accepting one uv coordinate per primative.
                 if ( loaded_prim.attributes.count( "TEXCOORD_0" ) > 0 ) {
-                    int accessor_id = loaded_prim.attributes["TEXCOORD_0"];
-                    tinygltf::Accessor accessor
+                    int accessor_id = loaded_prim.attributes.at( "TEXCOORD_0" );
+                    const tinygltf::Accessor& accessor
                         = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
@@ -456,14 +465,14 @@ void load_gltf(
                         );
                     }
 
-                    tinygltf::BufferView buffer_view
+                    const tinygltf::BufferView& buffer_view
                         = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
                     size_t byte_length = accessor.count * 2 * sizeof( float ); // vec2f
 
                     size_t buffer_id = size_t( buffer_view.buffer );
-                    tinygltf::Buffer buffer = model.buffers[buffer_id];
+                    const tinygltf::Buffer& buffer = model.buffers[buffer_id];
 
                     uv.resize( length );
                     std::memcpy( uv.data(), buffer.data.data() + byte_offset, byte_length );
@@ -500,7 +509,7 @@ void load_gltf(
 
                 if ( loaded_prim.indices != -1 ) {
                     int accessor_id = loaded_prim.indices;
-                    tinygltf::Accessor accessor
+                    const tinygltf::Accessor& accessor
                         = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
 
@@ -512,14 +521,14 @@ void load_gltf(
                         );
                     }
 
-                    tinygltf::BufferView buffer_view
+                    const tinygltf::BufferView& buffer_view
                         = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     new_prim.ind_offset = static_cast<int>( out_global_indices.size() );
                     new_prim.ind_count = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
 
                     size_t buffer_id = size_t( buffer_view.buffer );
-                    tinygltf::Buffer buffer = model.buffers[buffer_id];
+                    const tinygltf::Buffer& buffer = model.buffers[buffer_id];
 
                     if ( accessor.componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT ) {
                         size_t byte_length = accessor.count * sizeof( uint16_t );
@@ -565,7 +574,7 @@ void load_gltf(
     // this function is multithreaded.
     for ( size_t i = 0; i < scene.nodes.size(); i++ ) {
         std::unique_ptr<Node>& node = scene.nodes[i];
-        std::vector<int> children = children_lists[i];
+        const std::vector<int>& children = children_lists[i];
         for ( int child : children ) {
             std::unique_ptr<Node>& child_node = scene.nodes[static_cast<size_t>( child )];
             child_node->parent = node.get();

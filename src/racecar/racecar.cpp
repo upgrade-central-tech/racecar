@@ -69,7 +69,7 @@ void run( bool use_fullscreen )
     gui::Gui gui = gui::initialize( ctx );
 
     // SCENE LOADING/PROCESSING
-    scene::Scene scene;
+    scene::Scene scene = {};
     geometry::scene::Mesh scene_mesh;
     load_scene( &scene, &scene_mesh );
 
@@ -177,7 +177,7 @@ void run( bool use_fullscreen )
     // Load data for each primitive
     std::vector<glm::mat4> transforms;
     std::vector<const scene::Primitive*> prims;
-    ub_data::RTTextureUniform rt_texture_uniform = { };
+    ub_data::RTTextureUniform rt_texture_uniform = {};
     std::vector<vk::mem::AllocatedImage> albedo_textures;
     std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
     load_model_primitive_material_data(
@@ -531,7 +531,7 @@ void run( bool use_fullscreen )
 
     bool will_quit = false;
     bool stop_drawing = false;
-    SDL_Event event = { };
+    SDL_Event event = {};
     std::chrono::steady_clock::time_point current_tick;
 
     while ( !will_quit ) {
