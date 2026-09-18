@@ -11,17 +11,23 @@
 
 namespace racecar::engine::post {
 
-struct AAPass {
+struct TAAPass {
     std::unique_ptr<DescriptorSet> uniform_desc_set;
     std::unique_ptr<DescriptorSet> history_desc_set;
 
     UniformBuffer<ub_data::AA> buffer;
 };
 
-AAPass add_aa( const RWImage& input,
-    const RWImage& GBuffer_Depth, const RWImage& GBuffer_Velocity, RWImage& output,
-    RWImage& history, TaskList& task_list, UniformBuffer<ub_data::Camera>& camera_buffer );
+TAAPass add_taa(
+    const RWImage& input,
+    const RWImage& GBuffer_Depth,
+    const RWImage& GBuffer_Velocity,
+    RWImage& output,
+    RWImage& history,
+    TaskList& task_list,
+    UniformBuffer<ub_data::Camera>& camera_buffer
+);
 
-void update_aa_uniform_buffer( engine::post::AAPass& aa_pass );
+void update_aa_uniform_buffer( engine::post::TAAPass& taa_pass );
 
 }

@@ -19,7 +19,7 @@ void create_screen_buffer_pipeline_barrier(
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = { },
+            .buffer_barriers = {},
             .image_barriers = {
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -52,7 +52,7 @@ void create_screen_buffer_present_pipeline_barrier(
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = { },
+            .buffer_barriers = {},
             .image_barriers = {
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -91,7 +91,7 @@ void pre_transparency_post_passes(
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = { },
+            .buffer_barriers = {},
             .image_barriers = { engine::ImageBarrier {
                 .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                 .src_access = VK_ACCESS_2_SHADER_READ_BIT,
@@ -114,14 +114,14 @@ void post_transparency_post_passes(
     engine::RWImage& screen_buffer,
     engine::RWImage& screen_history,
     engine::TaskList& task_list,
-    engine::post::AAPass& aa_pass,
+    engine::post::TAAPass& taa_pass,
     engine::post::TonemappingPass& tm_pass
 )
 {
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = { },
+            .buffer_barriers = {},
             .image_barriers = {
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -160,7 +160,7 @@ void post_transparency_post_passes(
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = { },
+            .buffer_barriers = {},
             .image_barriers = {
                 engine::ImageBarrier {
                     .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -184,7 +184,7 @@ void post_transparency_post_passes(
                 },
             } }
     );
-    aa_pass = engine::post::add_aa(
+    taa_pass = engine::post::add_taa(
         screen_color,
         gbuffers.GBuffer_Depth,
         gbuffers.GBuffer_Velocity,

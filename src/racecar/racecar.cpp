@@ -14,9 +14,9 @@
 #include "engine/descriptor_set.hpp"
 #include "engine/execute.hpp"
 #include "engine/pipeline.hpp"
-#include "engine/post/anti_aliasing.hpp"
 #include "engine/post/ao.hpp"
 #include "engine/post/bloom.hpp"
+#include "engine/post/temporal_anti_aliasing.hpp"
 #include "engine/post/tonemapping.hpp"
 #include "engine/precompute.hpp"
 #include "engine/prepass.hpp"
@@ -475,7 +475,7 @@ void run( bool use_fullscreen )
     // Transition screen color and screen buffer for post processing
     create_screen_buffer_pipeline_barrier( screen_color, screen_buffer, task_list );
 
-    engine::post::AAPass aa_pass;
+    engine::post::TAAPass taa_pass;
     engine::post::AoPass ao_pass;
     engine::post::BloomPass bloom_pass;
     engine::post::TonemappingPass tm_pass;
@@ -513,7 +513,7 @@ void run( bool use_fullscreen )
         screen_buffer,
         screen_history,
         task_list,
-        aa_pass,
+        taa_pass,
         tm_pass
     );
 
@@ -591,7 +591,7 @@ void run( bool use_fullscreen )
         engine::post::update_tonemapping_uniform_buffer( gui, tm_pass );
 
         // AA update
-        engine::post::update_aa_uniform_buffer( aa_pass );
+        engine::post::update_aa_uniform_buffer( taa_pass );
 
 #if ENABLE_VOLUMETRICS
         // Update volumetric camera buffer

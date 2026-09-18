@@ -1,4 +1,4 @@
-#include "anti_aliasing.hpp"
+#include "temporal_anti_aliasing.hpp"
 
 #include "../../settings.h"
 #include "../../vk/create.hpp"
@@ -10,7 +10,7 @@ namespace racecar::engine::post {
 static constexpr std::string_view ANTI_ALIASING_SHADER_PATH = "../shaders/post/aa/aa.spv";
 static constexpr std::string_view HISTORY_SHADER_PATH = "../shaders/post/aa/history_aa.spv";
 
-AAPass add_aa(
+TAAPass add_taa(
     const RWImage& input,
     const RWImage& GBuffer_Depth,
     const RWImage& GBuffer_Velocity,
@@ -22,9 +22,9 @@ AAPass add_aa(
 {
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
-    AAPass pass;
+    TAAPass pass;
     {
-        pass.buffer = create_uniform_buffer<ub_data::AA>( { }, engine.frame_overlap );
+        pass.buffer = create_uniform_buffer<ub_data::AA>( {}, engine.frame_overlap );
 
         engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set(
             {
@@ -127,7 +127,7 @@ AAPass add_aa(
     // cs_write_history samples output and stores to history.
     add_pipeline_barrier(
         task_list,
-        PipelineBarrierDescriptor { .buffer_barriers = { },
+        PipelineBarrierDescriptor { .buffer_barriers = {},
                                     .image_barriers = {
                                         ImageBarrier {
                                             .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -172,7 +172,7 @@ AAPass add_aa(
     // Ensure write for the proper transition before... uh... the blit. Leave history readable
     add_pipeline_barrier(
         task_list,
-        PipelineBarrierDescriptor { .buffer_barriers = { },
+        PipelineBarrierDescriptor { .buffer_barriers = {},
                                     .image_barriers = {
                                         ImageBarrier {
                                             .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -200,13 +200,13 @@ AAPass add_aa(
     return pass;
 }
 
-void update_aa_uniform_buffer( engine::post::AAPass& aa_pass )
+void update_aa_uniform_buffer( engine::post::TAAPass& taa_pass )
 {
     const engine::State& engine = engine::State::GetConst();
-    ub_data::AA aa_ub = aa_pass.buffer.get_data();
+    ub_data::AA aa_ub = taa_pass.buffer.get_data();
     aa_ub.mode = RuntimeSettings::GetValue( RacecarSettings::AA_MODE );
-    aa_pass.buffer.set_data( aa_ub );
-    aa_pass.buffer.update( engine.get_frame_index() );
+    taa_pass.buffer.set_data( aa_ub );
+    taa_pass.buffer.update( engine.get_frame_index() );
 }
 
 }
