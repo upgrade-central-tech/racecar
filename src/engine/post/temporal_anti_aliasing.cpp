@@ -121,7 +121,8 @@ TAAPass add_taa(
                 ( engine.swapchain.extent.height + 7 ) / 8,
                 1
             ),
-        }
+        },
+        "TAA Resolve"
     );
 
     // cs_write_history samples output and stores to history.
@@ -166,7 +167,8 @@ TAAPass add_taa(
                 ( engine.swapchain.extent.height + 7 ) / 8,
                 1
             ),
-        }
+        },
+        "TAA Write History"
     );
 
     // Ensure write for the proper transition before... uh... the blit. Leave history readable

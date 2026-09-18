@@ -176,10 +176,11 @@ void execute_transparency_pass(
                         < b.draw_resource_descriptor.index_offset;
                 }
             );
-        }
+        },
+        "Transparency Depth Sort"
     );
 
-    engine::add_gfx_task( task_list, std::move( transparency_gfx_task ) );
+    engine::add_gfx_task( task_list, std::move( transparency_gfx_task ), "Transparency" );
 }
 
 void create_transparency_pipeline_barrier(

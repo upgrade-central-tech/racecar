@@ -215,7 +215,7 @@ void draw_atmosphere(
                 .pipeline = atmosphere_pipeline,
             } );
 
-    engine::add_gfx_task( task_list, atmosphere_gfx_task );
+    engine::add_gfx_task( task_list, atmosphere_gfx_task, "Atmosphere" );
 }
 
 void update_atmosphere_uniform_buffer(

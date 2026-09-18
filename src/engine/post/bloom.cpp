@@ -120,7 +120,8 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                 .group_size = { ( engine.swapchain.extent.width + 7 ) / 8,
                                 ( engine.swapchain.extent.height + 7 ) / 8,
                                 1 },
-            }
+            },
+            "Bloom Threshold"
         );
     }
 
@@ -195,7 +196,8 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                                      pass.sampler_desc_set.get() },
                 .group_size
                 = { ( output_extent.width + 7 ) / 8, ( output_extent.height + 7 ) / 8, 1 },
-            }
+            },
+            "Bloom Downsample"
         );
     }
 
@@ -273,7 +275,8 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                                      pass.sampler_desc_set.get() },
                 .group_size
                 = { ( output_extent.width + 7 ) / 8, ( output_extent.height + 7 ) / 8, 1 },
-            }
+            },
+            "Bloom Upsample"
         );
     }
 

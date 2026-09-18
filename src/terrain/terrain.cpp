@@ -439,7 +439,7 @@ void draw_terrain_prepass(
         .pipeline = terrain.terrain_prepass_pipeline,
     } );
 
-    engine::add_gfx_task( task_list, terrain.terrain_prepass_task );
+    engine::add_gfx_task( task_list, terrain.terrain_prepass_task, "Terrain Prepass" );
 
     // ATM the terrain does not draw to the depth multisampled prepass
     // PushDepthPrepassMS( depth_prepass_ms_task, draw_descriptor );
@@ -472,7 +472,7 @@ void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
         dispatch_dims,
     };
 
-    engine::add_cs_task( task_list, cs_terrain_draw_task );
+    engine::add_cs_task( task_list, cs_terrain_draw_task, "Terrain Draw" );
 }
 
 void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )

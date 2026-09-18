@@ -76,7 +76,7 @@ void compute_sun_visibility( SunVisibilityComputePass& sun_visibility, engine::T
         glm::ivec3( 1, 1, 1 ),
     };
 
-    engine::add_cs_task( task_list, cs_sun_visibility_task );
+    engine::add_cs_task( task_list, cs_sun_visibility_task, "Sun Visibility" );
 
     engine::add_pipeline_barrier(
         task_list,

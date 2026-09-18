@@ -389,7 +389,7 @@ void run( bool use_fullscreen )
 #if RACECAR_RAY_TRACING
     engine::add_gpu_task( task_list, [&]( VkCommandBuffer cmd_buf ) {
         update_car_tlas( cmd_buf, objects, prims, model_mat_uniform_buffers );
-    } );
+    }, "Update Car TLAS" );
 
     add_terrain_rt_displace_pass( terrain_rt, task_list );
     add_terrain_rt_build_pass( terrain_rt, task_list );
@@ -435,14 +435,14 @@ void run( bool use_fullscreen )
     );
 
     // Add our car prepass into the task list
-    engine::add_gfx_task( task_list, prepass_gfx_task );
+    engine::add_gfx_task( task_list, prepass_gfx_task, "Prepass" );
 
     // Add draw tasks for terrain to its own terrain_prepass_task (submitted internally), and to
     // depth_prepass_ms
     geometry::draw_terrain_prepass( test_terrain, depth_prepass_ms, task_list );
 
     // Submit depth prepass (car primitives + terrain)
-    engine::add_gfx_task( task_list, depth_prepass_ms.depth_ms_gfx_task );
+    engine::add_gfx_task( task_list, depth_prepass_ms.depth_ms_gfx_task, "Depth Prepass MS" );
 
 #if RACECAR_RAY_TRACING
     // Pipeline barrier (gbuffer dependency for reflection compute)
@@ -454,7 +454,7 @@ void run( bool use_fullscreen )
     );
 
     // Add reflection task
-    engine::add_gfx_task( task_list, reflection_gfx_task );
+    engine::add_gfx_task( task_list, reflection_gfx_task, "Reflections" );
 
     // Blur reflection color over mips (rough reflections)
     add_reflection_mip_chain_pass( reflection_mip_chain, task_list );
@@ -523,7 +523,7 @@ void run( bool use_fullscreen )
     create_screen_buffer_present_pipeline_barrier( screen_buffer, task_list );
 
     // Blit screen buffer to the swapchain, ready for presentation
-    engine::add_blit_task( task_list, { &screen_buffer } );
+    engine::add_blit_task( task_list, { &screen_buffer }, "Blit To Swapchain" );
 
     // ================================================================================================================
     // MAIN RUNNER LOOP
@@ -640,7 +640,7 @@ void run( bool use_fullscreen )
             gui.debug.texture_blur
         );
 
-        gui::update( gui, atms, camera, material_uniform_buffers );
+        gui::update( gui, atms, camera, material_uniform_buffers, task_list );
 
         engine::execute( task_list, gui );
         engine.rendered_frames = engine.rendered_frames + 1;

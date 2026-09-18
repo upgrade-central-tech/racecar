@@ -1,5 +1,6 @@
 #include "gui.hpp"
 
+#include "engine/task_list.hpp"
 #include "log.hpp"
 #include "passes/reflection_mip_chain.hpp"
 
@@ -217,7 +218,8 @@ void update(
     Gui& gui,
     atmosphere::Atmosphere& atms,
     camera::OrbitCamera& camera,
-    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers,
+    [[maybe_unused]] const engine::TaskList& task_list
 )
 {
     if ( !gui.show_window ) {
@@ -431,6 +433,24 @@ void update(
 
                 ImGui::EndTabItem();
             }
+
+#if RACECAR_DEV
+            if ( ImGui::BeginTabItem( "Task List" ) ) {
+                for ( const engine::Task& task : task_list.tasks ) {
+                    const bool is_disabled = ( task.predicate != nullptr ) && !task.predicate();
+
+                    if ( is_disabled ) {
+                        ImGui::BeginDisabled();
+                    }
+                    ImGui::TextUnformatted( task.name.c_str() );
+                    if ( is_disabled ) {
+                        ImGui::EndDisabled();
+                    }
+                }
+
+                ImGui::EndTabItem();
+            }
+#endif
 
             ImGui::EndTabBar();
         }

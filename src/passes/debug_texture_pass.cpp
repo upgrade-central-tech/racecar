@@ -105,6 +105,7 @@ void add_debug_texture_pass( DebugTexturePass& pass, engine::TaskList& task_list
                 1
             ),
         },
+        "Debug Texture",
         &debug_texture_is_on
     );
 }

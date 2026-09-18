@@ -4,6 +4,7 @@ project(racecar VERSION 1.0.0 LANGUAGES CXX)
 
 option(RACECAR_ENABLE_ASAN "Build racecar with AddressSanitizer" OFF)
 option(RACECAR_ENABLE_RAY_TRACING "Build racecar with ray tracing (ray query) support" ON)
+option(RACECAR_ENABLE_DEV "Build racecar with development-only tooling" ON)
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(VK_DIR "${SRC_DIR}/vk")
@@ -123,6 +124,12 @@ if (RACECAR_ENABLE_RAY_TRACING)
     target_compile_definitions(racecar PRIVATE RACECAR_RAY_TRACING=1)
 else()
     target_compile_definitions(racecar PRIVATE RACECAR_RAY_TRACING=0)
+endif()
+
+if (RACECAR_ENABLE_DEV)
+    target_compile_definitions(racecar PRIVATE RACECAR_DEV=1)
+else()
+    target_compile_definitions(racecar PRIVATE RACECAR_DEV=0)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

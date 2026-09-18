@@ -167,7 +167,7 @@ void compute_octahedral_sky( AtmosphereBaker& atms_baker, engine::TaskList& task
         glm::ivec3( x_groups, y_groups, 1 ),
     };
 
-    engine::add_cs_task( task_list, cs_bake_atmosphere_task );
+    engine::add_cs_task( task_list, cs_bake_atmosphere_task, "Bake Octahedral Sky" );
 }
 
 void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList& task_list )
@@ -251,7 +251,7 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
                                             },
                                             glm::ivec3( dims, 1 ) };
 
-        engine::add_cs_task( task_list, cs_mip_task );
+        engine::add_cs_task( task_list, cs_mip_task, "Octahedral Sky Mip" );
     }
 
     engine::add_pipeline_barrier(

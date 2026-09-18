@@ -243,7 +243,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
                     static_cast<int32_t>( ( extent.height + 7 ) / 8 ),
                     1
                 ),
-            }
+            },
+            "Reflection Mip Downsample"
         );
 
         engine::add_pipeline_barrier(
@@ -279,7 +280,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
                     static_cast<int32_t>( ( extent.height + 7 ) / 8 ),
                     1
                 ),
-            }
+            },
+            "Reflection Mip Upsample"
         );
 
         engine::add_pipeline_barrier(

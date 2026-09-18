@@ -57,7 +57,8 @@ TonemappingPass add_tonemapping( const RWImage& input, const RWImage& output, Ta
                 ( engine.swapchain.extent.height + 7 ) / 8,
                 1
             ),
-        }
+        },
+        "Tonemapping"
     );
 
     return pass;

@@ -5,6 +5,8 @@
 #include "gfx_task.hpp"
 #include "pipeline_barrier.hpp"
 
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace racecar::engine {
@@ -22,6 +24,10 @@ struct Task {
     bool is_single_run = false;
 
     task_predicate_fn_t predicate = nullptr;
+
+#if RACECAR_DEV
+    std::string name = "[unnamed]";
+#endif
 
     /// This allows you to skip writing "Type" e.g. you can just write `Task::GFX` or `Task::COMP`.
     using enum Type;
@@ -47,11 +53,16 @@ struct TaskList {
     std::vector<std::pair<int, PipelineBarrierDescriptor>> pipeline_barriers;
 };
 
-void add_gfx_task( TaskList& task_list, GfxTask task, task_predicate_fn_t predicate = nullptr );
-void add_cs_task( TaskList& task_list, ComputeTask task, task_predicate_fn_t predicate = nullptr );
-void add_blit_task( TaskList& task_list, BlitTask task, task_predicate_fn_t predicate = nullptr );
+void add_gfx_task( TaskList& task_list, GfxTask task, std::string_view name = "[unnamed]",
+    task_predicate_fn_t predicate = nullptr );
+void add_cs_task( TaskList& task_list, ComputeTask task, std::string_view name = "[unnamed]",
+    task_predicate_fn_t predicate = nullptr );
+void add_blit_task( TaskList& task_list, BlitTask task, std::string_view name = "[unnamed]",
+    task_predicate_fn_t predicate = nullptr );
 void add_pipeline_barrier( TaskList& task_list, PipelineBarrierDescriptor barrier );
-void add_cpu_task( TaskList& task_list, std::function<void()> task );
-void add_gpu_task( TaskList& task_list, std::function<void( VkCommandBuffer )> task );
+void add_cpu_task(
+    TaskList& task_list, std::function<void()> task, std::string_view name = "[unnamed]" );
+void add_gpu_task( TaskList& task_list, std::function<void( VkCommandBuffer )> task,
+    std::string_view name = "[unnamed]" );
 
 } // namespace racecar::engine

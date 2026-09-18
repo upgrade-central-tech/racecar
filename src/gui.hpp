@@ -16,6 +16,10 @@
 #include <optional>
 #include <vector>
 
+namespace racecar::engine {
+struct TaskList;
+}
+
 namespace racecar::gui {
 
 /// Stores GUI state. Add more fields here for data that you wish to keep track of
@@ -106,7 +110,8 @@ void update(
     Gui& gui,
     atmosphere::Atmosphere& atms,
     camera::OrbitCamera& camera,
-    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers
+    const std::vector<UniformBuffer<ub_data::Material>>& material_buffers,
+    const engine::TaskList& task_list
 );
 void free();
 

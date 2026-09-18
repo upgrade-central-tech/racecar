@@ -436,7 +436,7 @@ void draw_volumetric(
             .pipeline = volumetric_pipeline,
         } );
 
-    engine::add_gfx_task( task_list, volumetric_gfx_task );
+    engine::add_gfx_task( task_list, volumetric_gfx_task, "Volumetric Clouds" );
 
     // Transition the cloud_buffer to a read-only
     engine::add_pipeline_barrier(
@@ -505,7 +505,7 @@ void draw_volumetric(
             .pipeline = volumetric_composite_pipeline,
         } );
 
-    engine::add_gfx_task( task_list, volumetric_composite_task );
+    engine::add_gfx_task( task_list, volumetric_composite_task, "Cloud Composite" );
 }
 
 void update_volumetric_uniform_buffer(

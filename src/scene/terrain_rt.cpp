@@ -301,7 +301,7 @@ void add_terrain_rt_displace_pass( TerrainRayTracingInfo& info, engine::TaskList
         glm::ivec3( groups_per_side, groups_per_side, 1 ),
     };
 
-    engine::add_cs_task( task_list, displace_task );
+    engine::add_cs_task( task_list, displace_task, "Terrain RT Displace" );
 }
 
 void add_terrain_rt_build_pass( TerrainRayTracingInfo& info, engine::TaskList& task_list )
@@ -328,7 +328,7 @@ void add_terrain_rt_build_pass( TerrainRayTracingInfo& info, engine::TaskList& t
 
         // lowk unnecessary for now
         vk::rt::build_tlas( cmd_buf, info.tlas[frame] );
-    } );
+    }, "Terrain RT Build" );
 }
 
 }

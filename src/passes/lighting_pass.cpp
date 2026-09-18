@@ -141,7 +141,7 @@ void car_lighting_pass(
             .pipeline = lighting_pass_pipeline,
         });
 
-    engine::add_gfx_task( task_list, lighting_pass_gfx_task );
+    engine::add_gfx_task( task_list, lighting_pass_gfx_task, "Lighting" );
 }
 
 }

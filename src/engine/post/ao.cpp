@@ -89,7 +89,7 @@ void add_ao( AoPass& ao_pass, TaskList& task_list )
         glm::ivec3( dim_x, dim_y, 1 ),
     };
 
-    engine::add_cs_task( task_list, cs_ao_task );
+    engine::add_cs_task( task_list, cs_ao_task, "AO" );
 
     return;
 }
