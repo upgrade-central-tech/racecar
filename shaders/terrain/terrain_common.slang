@@ -155,12 +155,11 @@ TerrainSurface terrain_evaluate_surface( float3 world_position, float3 vertex_no
     float2 world_uv_unwrapped = uvs.world_uv_unwrapped;
     float2 world_uv = uvs.world_uv;
 
-    float3 world_position_uvw = float3( world_position.x, 0.0f, world_position.z );
+    float3 world_uvw_unwrapped = float3( world_uv_unwrapped.x, 0.0f, world_uv_unwrapped.y );
 
     // Snow
-    float snow_map = perlin_noise3D(
-                         0.075f * world_position_uvw + 0.23f + float3( scroll.x, 0.0f, scroll.y ) )
-        + 0.50f;
+    float snow_map
+        = perlin_noise3D( ( 0.075f / TERRAIN_WORLD_SCALE ) * world_uvw_unwrapped + 0.23f ) + 0.50f;
     snow_map = lerp( clamp_range( snow_map, 0.50f, 0.80f ), 1.0f, snowness );
 
     // Distribute the wetness around da world...
