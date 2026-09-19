@@ -70,6 +70,20 @@ glm::vec3 calculate_eye_position( const OrbitCamera& cam )
     return glm::vec3( x, y, z );
 }
 
+void set_eye_position( OrbitCamera& cam, glm::vec3 eye )
+{
+    const glm::vec3 offset = eye - cam.center;
+
+    cam.radius = std::max( glm::length( offset ), MIN_RADIUS );
+    cam.zenith = glm::clamp(
+        std::asin( glm::clamp( offset.y / cam.radius, -1.f, 1.f ) ),
+        -MAX_POLAR_ANGLE,
+        MAX_POLAR_ANGLE
+    );
+    cam.azimuth = 0.f;
+    rotate_azimuth( cam, std::atan2( offset.z, offset.x ) );
+}
+
 glm::mat4 calculate_proj_matrix( const OrbitCamera& cam )
 {
     return glm::perspective( cam.fov_y, cam.aspect_ratio, cam.near_plane, cam.far_plane );

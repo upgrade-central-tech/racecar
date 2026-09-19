@@ -348,7 +348,10 @@ void update(
 
                 ImGui::SeparatorText( "Demo Settings" );
                 ImGui::Checkbox( "Enable car translation", &gui.demo.enable_translation );
+                ImGui::Checkbox( "Unlocked camera", &gui.demo.enable_unlocked_camera );
+                ImGui::BeginDisabled( gui.demo.enable_unlocked_camera );
                 ImGui::Checkbox( "Enable camera lock on car", &gui.demo.enable_camera_lock_on_car );
+                ImGui::EndDisabled();
                 ImGui::SliderFloat( "Bumpiness", &gui.demo.bumpiness, 0.0f, 0.01f );
 
                 ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );

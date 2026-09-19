@@ -42,6 +42,7 @@ struct Gui {
     struct DemoData {
         bool enable_translation = false;
         bool enable_camera_lock_on_car = false;
+        bool enable_unlocked_camera = false;
         bool rotate_on = false;
         float rotate_speed = 0.005f;
         float bumpiness = 0.0f;

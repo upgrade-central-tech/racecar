@@ -34,6 +34,13 @@ const std::unordered_map<std::string, float> wheel_radii = {
 };
 // clang-format on
 
+// this is awful
+namespace {
+
+std::optional<glm::vec2> unlocked_camera_prev_world_position;
+
+}
+
 void apply_demo_camera_motion(
     camera::OrbitCamera& camera,
     const gui::Gui& gui,
@@ -42,10 +49,37 @@ void apply_demo_camera_motion(
     const volumetric::Volumetric& volumetric
 )
 {
-    if ( scene.demo_scene_nodes.car_parent_id.has_value() && gui.demo.enable_camera_lock_on_car ) {
-        camera.center = model_mat_uniform_buffers.at( scene.demo_scene_nodes.car_parent_id.value() )
-                            .get_data()
-                            .model_mat[3];
+    std::optional<glm::vec3> car_position;
+    if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
+        car_position = glm::vec3(
+            model_mat_uniform_buffers.at( scene.demo_scene_nodes.car_parent_id.value() )
+                .get_data()
+                .model_mat[3]
+        );
+    }
+
+    if ( gui.demo.enable_unlocked_camera ) {
+        const engine::State& engine = engine::State::GetConst();
+        const glm::vec2 world_position = engine.gamestate.world_position;
+        const glm::vec2 travel
+            = world_position - unlocked_camera_prev_world_position.value_or( world_position );
+        unlocked_camera_prev_world_position = world_position;
+
+        const glm::vec3 eye = camera::calculate_eye_position( camera )
+            - glm::vec3( travel.x, 0.f, travel.y )
+                * ( geometry::TERRAIN_SCROLL_SCALE / geometry::TERRAIN_WORLD_SCALE );
+
+        if ( car_position.has_value() ) {
+            camera.center = car_position.value();
+        }
+        camera::set_eye_position( camera, eye );
+        return;
+    }
+
+    unlocked_camera_prev_world_position.reset();
+
+    if ( car_position.has_value() && gui.demo.enable_camera_lock_on_car ) {
+        camera.center = car_position.value();
     }
 
     camera.center.y += gui.demo.bumpiness

@@ -41,6 +41,8 @@ glm::mat4 calculate_proj_matrix( const OrbitCamera& cam );
 glm::mat4 calculate_view_proj_matrix( const OrbitCamera& cam );
 glm::vec3 calculate_eye_position( const OrbitCamera& cam );
 
+void set_eye_position( OrbitCamera& cam, glm::vec3 eye );
+
 void process_event(
     const Context& ctx, const SDL_Event* event, OrbitCamera& cam, bool show_window );
 void process_input( OrbitCamera& cam );
