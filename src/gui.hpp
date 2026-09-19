@@ -111,7 +111,7 @@ void update(
     atmosphere::Atmosphere& atms,
     camera::OrbitCamera& camera,
     const std::vector<UniformBuffer<ub_data::Material>>& material_buffers,
-    const engine::TaskList& task_list
+    engine::TaskList& task_list
 );
 void free();
 

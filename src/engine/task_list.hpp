@@ -27,6 +27,7 @@ struct Task {
 
 #if RACECAR_DEV
     std::string name = "[unnamed]";
+    bool is_enabled = true;
 #endif
 
     /// This allows you to skip writing "Type" e.g. you can just write `Task::GFX` or `Task::COMP`.

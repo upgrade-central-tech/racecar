@@ -11,6 +11,19 @@
 
 namespace racecar::engine {
 
+namespace {
+
+bool is_task_enabled( [[maybe_unused]] const Task& task )
+{
+#if RACECAR_DEV
+    return task.is_enabled;
+#else
+    return true;
+#endif
+}
+
+} // namespace
+
 void begin_frame()
 {
     const engine::State& engine = engine::State::GetConst();
@@ -162,6 +175,10 @@ void execute( TaskList& task_list, const gui::Gui& gui )
             case Task::GFX: {
                 GfxTask& gfx_task = task_list.gfx_tasks[gfx_ptr++];
 
+                if ( !is_task_enabled( task ) ) {
+                    break;
+                }
+
                 // Brain-dead solution. We need to ensure the pointers advance
                 if ( task.is_single_run && task.is_ran ) {
                     break;
@@ -178,6 +195,10 @@ void execute( TaskList& task_list, const gui::Gui& gui )
             case Task::COMP: {
                 ComputeTask& cs_task = task_list.cs_tasks[cs_ptr++];
 
+                if ( !is_task_enabled( task ) ) {
+                    break;
+                }
+
                 // Brain-dead solution. We need to ensure the pointers advance
                 if ( task.is_single_run && task.is_ran ) {
                     break;
@@ -193,6 +214,10 @@ void execute( TaskList& task_list, const gui::Gui& gui )
 
             case Task::BLIT: {
                 BlitTask& blit_task = task_list.blit_tasks[blit_ptr++];
+
+                if ( !is_task_enabled( task ) ) {
+                    break;
+                }
 
                 // Brain-dead solution. We need to ensure the pointers advance
                 if ( task.is_single_run && task.is_ran ) {
@@ -214,6 +239,10 @@ void execute( TaskList& task_list, const gui::Gui& gui )
             case Task::CPU_CALL: {
                 CPUTask& descriptor_task = task_list.cpu_tasks[cpu_ptr++];
 
+                if ( !is_task_enabled( task ) ) {
+                    break;
+                }
+
                 // This is not ran on the GPU! This is a purely CPU-side call.
                 descriptor_task.task();
                 break;
@@ -221,6 +250,10 @@ void execute( TaskList& task_list, const gui::Gui& gui )
 
             case Task::GPU_CALL: {
                 GPUTask& gpu_task = task_list.gpu_tasks[gpu_ptr++];
+
+                if ( !is_task_enabled( task ) ) {
+                    break;
+                }
 
                 gpu_task.task( frame.render_cmdbuf );
                 break;

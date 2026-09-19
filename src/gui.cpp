@@ -219,7 +219,7 @@ void update(
     atmosphere::Atmosphere& atms,
     camera::OrbitCamera& camera,
     const std::vector<UniformBuffer<ub_data::Material>>& material_buffers,
-    [[maybe_unused]] const engine::TaskList& task_list
+    [[maybe_unused]] engine::TaskList& task_list
 )
 {
     if ( !gui.show_window ) {
@@ -436,8 +436,15 @@ void update(
 
 #if RACECAR_DEV
             if ( ImGui::BeginTabItem( "Task List" ) ) {
-                for ( const engine::Task& task : task_list.tasks ) {
-                    const bool is_disabled = ( task.predicate != nullptr ) && !task.predicate();
+                for ( size_t i = 0; i < task_list.tasks.size(); ++i ) {
+                    engine::Task& task = task_list.tasks[i];
+                    const bool is_disabled = !task.is_enabled
+                        || ( ( task.predicate != nullptr ) && !task.predicate() );
+
+                    ImGui::PushID( static_cast<int>( i ) );
+                    ImGui::Checkbox( "##enabled", &task.is_enabled );
+                    ImGui::PopID();
+                    ImGui::SameLine();
 
                     if ( is_disabled ) {
                         ImGui::BeginDisabled();
