@@ -17,9 +17,9 @@ set(RACECAR_DIR "${SRC_DIR}/racecar")
 set(PASSES_DIR "${SRC_DIR}/passes")
 set(DEMO_DIR "${SRC_DIR}/demo")
 set(GAME_DIR "${SRC_DIR}/game")
+set(EXEC_DIR "${SRC_DIR}/exec")
 
-add_executable(racecar
-    ${SRC_DIR}/main.cpp
+set(RACECAR_SOURCES
     ${SRC_DIR}/sdl.cpp
     ${SRC_DIR}/orbit_camera.cpp
     ${SRC_DIR}/gui.cpp
@@ -95,11 +95,6 @@ add_executable(racecar
     ${RACECAR_DIR}/racecar.cpp
 )
 
-target_include_directories(racecar PRIVATE ${SRC_DIR})
-
-target_compile_features(racecar PRIVATE cxx_std_20)
-set_target_properties(racecar PROPERTIES CXX_EXTENSIONS OFF)
-
 # Third party libraries not part of our vcpkg system
 set(THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 set(IMGUI_DIR "${THIRD_PARTY_DIR}/imgui")
@@ -114,64 +109,6 @@ add_library(imgui
     ${IMGUI_DIR}/imgui.cpp
 )
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(racecar PRIVATE RACECAR_DEBUG=1)
-else()
-    target_compile_definitions(racecar PRIVATE RACECAR_DEBUG=0)
-endif()
-
-if (RACECAR_ENABLE_RAY_TRACING)
-    target_compile_definitions(racecar PRIVATE RACECAR_RAY_TRACING=1)
-else()
-    target_compile_definitions(racecar PRIVATE RACECAR_RAY_TRACING=0)
-endif()
-
-if (RACECAR_ENABLE_DEV)
-    target_compile_definitions(racecar PRIVATE RACECAR_DEV=1)
-else()
-    target_compile_definitions(racecar PRIVATE RACECAR_DEV=0)
-endif()
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(racecar PRIVATE /EHsc /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
-else()
-    target_compile_options(racecar PRIVATE)
-endif()
-
-if (RACECAR_ENABLE_ASAN)
-    target_compile_options(racecar PRIVATE /fsanitize=address /Od)
-
-    target_compile_definitions(racecar PRIVATE
-        _DISABLE_STRING_ANNOTATION=1
-        _DISABLE_VECTOR_ANNOTATION=1
-    )
-
-    execute_process(
-        COMMAND "${CMAKE_CXX_COMPILER}" --print-resource-dir
-        OUTPUT_VARIABLE RACECAR_CLANG_RESOURCE_DIR
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    target_link_directories(racecar PRIVATE
-        "${RACECAR_CLANG_RESOURCE_DIR}/lib/windows"
-    )
-    target_link_libraries(racecar PRIVATE
-        clang_rt.asan_dynamic-x86_64
-        clang_rt.asan_dynamic_runtime_thunk-x86_64
-    )
-    target_link_options(racecar PRIVATE
-        "/wholearchive:clang_rt.asan_dynamic_runtime_thunk-x86_64.lib"
-        "/INCLUDE:__asan_seh_interceptor"
-    )
-
-    add_custom_command(TARGET racecar POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${RACECAR_CLANG_RESOURCE_DIR}/lib/windows/clang_rt.asan_dynamic-x86_64.dll"
-            "$<TARGET_FILE_DIR:racecar>"
-        COMMENT "Copying AddressSanitizer runtime DLL next to racecar.exe"
-    )
-    message(STATUS "AddressSanitizer enabled for racecar (runtime: ${RACECAR_CLANG_RESOURCE_DIR}/lib/windows)")
-endif()
-
 find_package(volk CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
@@ -184,31 +121,20 @@ find_package(nlohmann_json CONFIG REQUIRED)
 # ImGui has to use volk, otherwise it won't find the correct function pointers
 target_link_libraries(imgui PRIVATE volk::volk)
 
-target_link_libraries(racecar PRIVATE
-    imgui
-    volk::volk
-    GPUOpen::VulkanMemoryAllocator
-    glm::glm
-    SDL3::SDL3
-    vk-bootstrap::vk-bootstrap
-    nlohmann_json::nlohmann_json
-)
+if (RACECAR_ENABLE_ASAN)
+    execute_process(
+        COMMAND "${CMAKE_CXX_COMPILER}" --print-resource-dir
+        OUTPUT_VARIABLE RACECAR_CLANG_RESOURCE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    message(STATUS "AddressSanitizer enabled (runtime: ${RACECAR_CLANG_RESOURCE_DIR}/lib/windows)")
+endif()
 
 # Enable RACECAR_MACOS macro if compiling on macOS
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     # On macOS we have to explicitly link to the C++ Standard Library
-    target_link_libraries(racecar PRIVATE -lc++)
     message(STATUS "Explicitly linking C++ Standard Library on macOS")
-    target_compile_definitions(racecar PRIVATE RACECAR_MACOS=1)
-else()
-    target_compile_definitions(racecar PRIVATE RACECAR_MACOS=0)
 endif()
-
-target_include_directories(racecar PRIVATE
-    ${IMGUI_DIR}
-    ${TINYGLTF_INCLUDE_DIRS}
-    ${Stb_INCLUDE_DIR}
-)
 
 set(SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 
@@ -245,10 +171,101 @@ if (WIN32)
         )
 
         add_custom_target(shaders DEPENDS ${RACECAR_SHADER_STAMP})
-        add_dependencies(racecar shaders)
     else()
         message(WARNING "PowerShell not found; shaders will not be compiled automatically")
     endif()
 else()
     message(STATUS "Automatic shader compilation is Windows-only; run shaders/compile_all.ps1 manually")
 endif()
+
+function(racecar_configure_target TARGET)
+    target_include_directories(${TARGET} PRIVATE ${SRC_DIR})
+
+    target_compile_features(${TARGET} PRIVATE cxx_std_20)
+    set_target_properties(${TARGET} PROPERTIES CXX_EXTENSIONS OFF)
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        target_compile_definitions(${TARGET} PRIVATE RACECAR_DEBUG=1)
+    else()
+        target_compile_definitions(${TARGET} PRIVATE RACECAR_DEBUG=0)
+    endif()
+
+    if (RACECAR_ENABLE_RAY_TRACING)
+        target_compile_definitions(${TARGET} PRIVATE RACECAR_RAY_TRACING=1)
+    else()
+        target_compile_definitions(${TARGET} PRIVATE RACECAR_RAY_TRACING=0)
+    endif()
+
+    if (RACECAR_ENABLE_DEV)
+        target_compile_definitions(${TARGET} PRIVATE RACECAR_DEV=1)
+    else()
+        target_compile_definitions(${TARGET} PRIVATE RACECAR_DEV=0)
+    endif()
+
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(${TARGET} PRIVATE /EHsc /W4 /WX -Wconversion -fcolor-diagnostics -Wno-missing-designated-field-initializers)
+    else()
+        target_compile_options(${TARGET} PRIVATE)
+    endif()
+
+    if (RACECAR_ENABLE_ASAN)
+        target_compile_options(${TARGET} PRIVATE /fsanitize=address /Od)
+
+        target_compile_definitions(${TARGET} PRIVATE
+            _DISABLE_STRING_ANNOTATION=1
+            _DISABLE_VECTOR_ANNOTATION=1
+        )
+
+        target_link_directories(${TARGET} PRIVATE
+            "${RACECAR_CLANG_RESOURCE_DIR}/lib/windows"
+        )
+        target_link_libraries(${TARGET} PRIVATE
+            clang_rt.asan_dynamic-x86_64
+            clang_rt.asan_dynamic_runtime_thunk-x86_64
+        )
+        target_link_options(${TARGET} PRIVATE
+            "/wholearchive:clang_rt.asan_dynamic_runtime_thunk-x86_64.lib"
+            "/INCLUDE:__asan_seh_interceptor"
+        )
+
+        add_custom_command(TARGET ${TARGET} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${RACECAR_CLANG_RESOURCE_DIR}/lib/windows/clang_rt.asan_dynamic-x86_64.dll"
+                "$<TARGET_FILE_DIR:${TARGET}>"
+            COMMENT "Copying AddressSanitizer runtime DLL next to ${TARGET}"
+        )
+    endif()
+
+    target_link_libraries(${TARGET} PRIVATE
+        imgui
+        volk::volk
+        GPUOpen::VulkanMemoryAllocator
+        glm::glm
+        SDL3::SDL3
+        vk-bootstrap::vk-bootstrap
+        nlohmann_json::nlohmann_json
+    )
+
+    if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        target_link_libraries(${TARGET} PRIVATE -lc++)
+        target_compile_definitions(${TARGET} PRIVATE RACECAR_MACOS=1)
+    else()
+        target_compile_definitions(${TARGET} PRIVATE RACECAR_MACOS=0)
+    endif()
+
+    target_include_directories(${TARGET} PRIVATE
+        ${IMGUI_DIR}
+        ${TINYGLTF_INCLUDE_DIRS}
+        ${Stb_INCLUDE_DIR}
+    )
+
+    if (TARGET shaders)
+        add_dependencies(${TARGET} shaders)
+    endif()
+endfunction()
+
+add_executable(racecar
+    ${EXEC_DIR}/main.cpp
+    ${RACECAR_SOURCES}
+)
+racecar_configure_target(racecar)
