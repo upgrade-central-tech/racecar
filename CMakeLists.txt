@@ -139,44 +139,109 @@ endif()
 
 set(SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 
-if (WIN32)
-    find_program(RACECAR_POWERSHELL NAMES powershell pwsh)
+find_program(RACECAR_SLANGC NAMES slangc
+    HINTS "${CMAKE_CURRENT_SOURCE_DIR}/../slang/bin"
+)
 
-    if (RACECAR_POWERSHELL)
-        file(GLOB_RECURSE RACECAR_SHADER_SOURCES CONFIGURE_DEPENDS
-            "${SHADER_DIR}/*.slang"
-            "${SHADER_DIR}/*.hlsl"
-        )
-        file(GLOB_RECURSE RACECAR_SHADER_SCRIPTS CONFIGURE_DEPENDS
-            "${SHADER_DIR}/*.ps1"
-        )
+if (RACECAR_SLANGC)
+    set(RACECAR_SLANGC_FLAGS
+        -target spirv
+        -profile spirv_1_5
+        -emit-spirv-directly
+        -g2
+        -fvk-use-entrypoint-name
+        -I "${SHADER_DIR}/atmosphere"
+        -I "${SHADER_DIR}/clouds"
+        -capability SPV_EXT_shader_atomic_float_add
+        -Wno-41012
+    )
 
-        set(RACECAR_SHADER_STAMP "${CMAKE_CURRENT_BINARY_DIR}/shaders.stamp")
+    if (RACECAR_ENABLE_RAY_TRACING)
+        list(APPEND RACECAR_SLANGC_FLAGS -DRACECAR_RAY_TRACING=1 -capability spvRayQueryKHR)
+    else()
+        list(APPEND RACECAR_SLANGC_FLAGS -DRACECAR_RAY_TRACING=0)
+    endif()
 
-        set(RACECAR_SHADER_SCRIPT_ARGS -File "${SHADER_DIR}/compile_all.ps1")
+    set(RACECAR_SHADER_OUTPUTS)
 
-        if(RACECAR_ENABLE_RAY_TRACING)
-            list(APPEND RACECAR_SHADER_SCRIPT_ARGS -RayTracing)
-        endif()
+    function(racecar_add_shader OUTPUT SOURCE)
+        set(OUTPUT_PATH "${SHADER_DIR}/${OUTPUT}")
+        set(DEPFILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/shader_deps/${OUTPUT}.d")
+        get_filename_component(DEPFILE_DIR "${DEPFILE_PATH}" DIRECTORY)
+        file(MAKE_DIRECTORY "${DEPFILE_DIR}")
+
+        set(ENTRY_ARGS)
+        foreach(ENTRY IN LISTS ARGN)
+            list(APPEND ENTRY_ARGS -entry ${ENTRY})
+        endforeach()
 
         add_custom_command(
-            OUTPUT ${RACECAR_SHADER_STAMP}
-            COMMAND "${RACECAR_POWERSHELL}" -NoProfile -ExecutionPolicy Bypass
-                    ${RACECAR_SHADER_SCRIPT_ARGS}
-            COMMAND ${CMAKE_COMMAND} -E touch "${RACECAR_SHADER_STAMP}"
-            DEPENDS ${RACECAR_SHADER_SOURCES} ${RACECAR_SHADER_SCRIPTS}
+            OUTPUT "${OUTPUT_PATH}"
+            COMMAND "${RACECAR_SLANGC}" "${SHADER_DIR}/${SOURCE}" ${RACECAR_SLANGC_FLAGS}
+                    ${ENTRY_ARGS} -depfile "${DEPFILE_PATH}" -o "${OUTPUT_PATH}"
+            DEPENDS "${SHADER_DIR}/${SOURCE}"
+            DEPFILE "${DEPFILE_PATH}"
             WORKING_DIRECTORY "${SHADER_DIR}"
-            COMMENT "Compiling shaders (shaders/compile_all.ps1)"
-            USES_TERMINAL
+            COMMENT "Compiling shader ${OUTPUT}"
             VERBATIM
         )
 
-        add_custom_target(shaders DEPENDS ${RACECAR_SHADER_STAMP})
-    else()
-        message(WARNING "PowerShell not found; shaders will not be compiled automatically")
-    endif()
+        list(APPEND RACECAR_SHADER_OUTPUTS "${OUTPUT_PATH}")
+        set(RACECAR_SHADER_OUTPUTS ${RACECAR_SHADER_OUTPUTS} PARENT_SCOPE)
+    endfunction()
+
+    racecar_add_shader(atmosphere/sky/atmosphere.spv atmosphere/sky/main.slang)
+    racecar_add_shader(atmosphere/sky/bake_atmosphere.spv atmosphere/sky/bake_atmosphere.slang cs_bake_atmosphere)
+    racecar_add_shader(atmosphere/sky/bake_atmosphere_mips.spv atmosphere/sky/bake_atmosphere.slang cs_bake_atmosphere_mips)
+
+    racecar_add_shader(clouds/clouds.spv clouds/clouds.slang vs_main fs_main)
+    racecar_add_shader(clouds/cs_generate_low_frequency.spv clouds/cloud_noise.slang cs_generate_low_frequency)
+    racecar_add_shader(clouds/cs_generate_high_frequency.spv clouds/cloud_noise.slang cs_generate_high_frequency)
+    racecar_add_shader(clouds/cs_generate_cumulus.spv clouds/cloud_noise.slang cs_generate_cumulus)
+    racecar_add_shader(clouds/cloud_composite.spv clouds/cloud_composite.slang vs_main fs_main)
+
+    racecar_add_shader(deferred/prepass.spv deferred/prepass.slang vs_main fs_main)
+    racecar_add_shader(deferred/lighting.spv deferred/lighting.slang vs_main fs_main)
+    racecar_add_shader(deferred/depth_prepass.spv deferred/depth_prepass.slang vs_main fs_main)
+    racecar_add_shader(deferred/pp_test.spv deferred/pp_test.slang cs_pp_test)
+
+    racecar_add_shader(glint/glint_noise_init.spv glint/glint_noise_init.slang cs_generate_glint_noise)
+
+    racecar_add_shader(pbr/pbr.spv pbr/pbr.slang vs_main fs_main)
+
+    racecar_add_shader(post/aa/aa.spv post/aa/aa.slang cs_main)
+    racecar_add_shader(post/aa/history_aa.spv post/aa/aa.slang cs_write_history)
+    racecar_add_shader(post/ao/ao.spv post/ao/ao.slang cs_ao)
+    racecar_add_shader(post/bloom/threshold.spv post/bloom/threshold.slang threshold)
+    racecar_add_shader(post/bloom/downsample.spv post/bloom/downsample.slang downsample)
+    racecar_add_shader(post/bloom/upsample.spv post/bloom/upsample.slang upsample)
+    racecar_add_shader(post/debug_texture/debug_texture.spv post/debug_texture/debug_texture.slang cs_debug_texture)
+    racecar_add_shader(post/tonemapping/tonemapping.spv post/tonemapping/tonemapping.slang cs_main)
+
+    racecar_add_shader(prefilter/irradiance.spv prefilter/irradiance.slang cs_compute_irradiance cs_compute_irradiance_sh)
+    racecar_add_shader(prefilter/irradiance_sh.spv prefilter/irradiance.slang cs_compute_irradiance_sh)
+
+    racecar_add_shader(raymarch/raymarch.spv raymarch/raymarch.slang vs_main fs_main)
+
+    racecar_add_shader(raytracing/shadow.spv raytracing/shadow.slang vs_main fs_main)
+
+    racecar_add_shader(reflections/reflections.spv reflections/reflections.slang vs_main fs_main)
+    racecar_add_shader(reflections/reflection_mips.spv reflections/reflection_mips.slang cs_reflection_mips)
+    racecar_add_shader(reflections/reflection_upsample.spv reflections/reflection_upsample.slang cs_reflection_upsample)
+
+    racecar_add_shader(sun_visibility/sun_visibility.spv sun_visibility/sun_visibility.slang cs_sun_visibility)
+
+    racecar_add_shader(terrain/cs_terrain_draw.spv terrain/terrain_lighting.slang cs_terrain_draw)
+    racecar_add_shader(terrain/terrain_prepass.spv terrain/terrain_prepass.slang vs_main fs_main ts_control_main ts_eval_main)
+    racecar_add_shader(terrain/terrain_rt_displace.spv terrain/terrain_rt_displace.slang cs_terrain_rt_displace)
+
+    racecar_add_shader(transparency/transparency.spv transparency/transparency.slang vs_main fs_main)
+
+    racecar_add_shader(world_pos_debug/world_pos_debug.spv world_pos_debug/world_pos_debug.slang vs_main fs_main)
+
+    add_custom_target(shaders DEPENDS ${RACECAR_SHADER_OUTPUTS})
 else()
-    message(STATUS "Automatic shader compilation is Windows-only; run shaders/compile_all.ps1 manually")
+    message(WARNING "slangc not found; shaders will not be compiled automatically")
 endif()
 
 function(racecar_configure_target TARGET)
