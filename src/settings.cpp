@@ -26,6 +26,12 @@ struct Setting {
 
     // If desired choice is invalid
     int fallback = 0;
+
+    // Non-empty range means this is a float setting
+    float min = 0.f;
+    float max = 0.f;
+    float desired_float = 0.f;
+    float fallback_float = 0.f;
 };
 
 // -------------------------------------------------------------------
@@ -102,6 +108,16 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
               .option_count = (int)std::size( DEBUG_TEXTURE_OPTIONS ),
               .desired = (int)DebugTexture::NONE,
               .fallback = (int)DebugTexture::NONE }, // DEBUG_TEXTURE
+
+    Setting { .min = 0.f,
+              .max = 2.f,
+              .desired_float = 1.f,
+              .fallback_float = 1.f }, // TERRAIN_IRRADIANCE_STRENGTH
+
+    Setting { .min = 0.f,
+              .max = 2.f,
+              .desired_float = 1.f,
+              .fallback_float = 1.f }, // CAR_IRRADIANCE_STRENGTH
 };
 
 }
@@ -130,6 +146,24 @@ int GetValue( RacecarSettings s )
 }
 
 void SetValue( RacecarSettings s, int value ) { settings[(size_t)s].desired = value; }
+
+float GetFloat( RacecarSettings s )
+{
+    const Setting& setting = settings[(size_t)s];
+    return GetValid( s ) ? setting.desired_float : setting.fallback_float;
+}
+
+void SetFloat( RacecarSettings s, float value )
+{
+    Setting& setting = settings[(size_t)s];
+    setting.desired_float = value < setting.min ? setting.min
+        : value > setting.max                   ? setting.max
+                                                : value;
+}
+
+float GetFloatMin( RacecarSettings s ) { return settings[(size_t)s].min; }
+
+float GetFloatMax( RacecarSettings s ) { return settings[(size_t)s].max; }
 
 bool GetEnabled( RacecarSettings s ) { return GetValue( s ) != 0; }
 

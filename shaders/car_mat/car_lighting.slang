@@ -136,7 +136,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 diffuse_irradiance
         = PI * octahedral_sky_mips.SampleLevel( nearest_sampler, encoded_normal, SKY_MAX_MIP )
                    .rgb;
-    diffuse_irradiance *= albedo / PI;
+    diffuse_irradiance *= albedo / PI * debug_data.car_irradiance_strength;
 #endif
     float3 kD_direct = float3( 1.0f ) - F;
     kD_direct *= 1.0f - metallic;

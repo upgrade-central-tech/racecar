@@ -394,6 +394,14 @@ void update(
                 ImGui::SliderFloat( "Sun azimuth", &atms.sun_azimuth, 0.f, glm::two_pi<float>() );
                 ImGui::SliderFloat( "Radiance exposure", &gui.atms.radiance_exposure, 0.f, 20.f );
 
+                ImGui::SeparatorText( "Sky irradiance" );
+                RacecarGUI::SettingsSliderFloat(
+                    "Terrain strength", RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH
+                );
+                RacecarGUI::SettingsSliderFloat(
+                    "Car strength", RacecarSettings::CAR_IRRADIANCE_STRENGTH
+                );
+
                 ImGui::EndTabItem();
             }
 

@@ -29,6 +29,8 @@ struct Debug {
 
     uint32_t debug_view = 0;
     uint32_t ray_traced_shadows = 0;
+    float terrain_irradiance_strength = 0.f;
+    float car_irradiance_strength = 0.f;
 };
 
 struct AOData {

@@ -235,7 +235,7 @@ float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
     float2 BRDF = BRDF_LUT.SampleLevel( terrain_linear_sampler, float2( n_dot_v, roughness ), 0.0f );
     specular_irradiance *= ( F0 * BRDF.x + BRDF.y );
 
-    const float irradiance_strength = 0.5f;
+    const float irradiance_strength = debug_data.terrain_irradiance_strength;
     color += ( albedo * TERRAIN_INV_PI ) * diffuse_irradiance * irradiance_strength;
     color += clamp( specular_irradiance, float3( 0.0f ), float3( PAPER_WHITE ) );
 

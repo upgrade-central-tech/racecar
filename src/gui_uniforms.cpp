@@ -23,6 +23,9 @@ void update_debug_uniform_buffer(
 
         .debug_view = (uint32_t)RuntimeSettings::GetValue( RacecarSettings::DEBUG_VIEW ),
         .ray_traced_shadows = gui.debug.ray_traced_shadows,
+        .terrain_irradiance_strength
+        = RuntimeSettings::Get<RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH>(),
+        .car_irradiance_strength = RuntimeSettings::Get<RacecarSettings::CAR_IRRADIANCE_STRENGTH>(),
     };
 
     debug_buffer.set_data( debug_ub );

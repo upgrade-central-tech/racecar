@@ -57,6 +57,9 @@ public struct DebugData {
     int debug_view;
 
     bool ray_traced_shadows;
+
+    float terrain_irradiance_strength;
+    float car_irradiance_strength;
 }
 
 struct TerrainData {

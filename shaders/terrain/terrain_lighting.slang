@@ -119,7 +119,8 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float2 oct_refl_uv = oct_encode( normalize( reflect( -view, mixed_normal ) ) );
 
     // Irradiance lighting type shizz
-    float irradiance_strength = 0.5f;
+    // float irradiance_strength = 0.5f;
+    float irradiance_strength = scene_data.terrain_irradiance_strength;
     float3 diffuse_irradiance
         = sky_mips.SampleLevel( sampler, oct_uv, SKY_MAX_MIP ).rgb;
 

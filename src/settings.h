@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 // -------------------------------------------------------------------
 // -----------------------ENUM SETTING DOMAINS------------------------
 // -------------------------------------------------------------------
@@ -39,6 +41,8 @@ enum class RacecarSettings {
     AA_MODE,
     TONEMAPPING_MODE,
     DEBUG_TEXTURE,
+    TERRAIN_IRRADIANCE_STRENGTH,
+    CAR_IRRADIANCE_STRENGTH,
     RACECAR_SETTINGS_LENGTH
 };
 
@@ -49,6 +53,12 @@ void SetEnabled( RacecarSettings s, bool enabled );
 
 int GetValue( RacecarSettings s );
 void SetValue( RacecarSettings s, int value );
+
+float GetFloat( RacecarSettings s );
+void SetFloat( RacecarSettings s, float value );
+
+float GetFloatMin( RacecarSettings s );
+float GetFloatMax( RacecarSettings s );
 
 bool GetValid( RacecarSettings s );
 
@@ -75,14 +85,30 @@ template <> struct SettingValue<RacecarSettings::DEBUG_TEXTURE> {
     using type = DebugTexture;
 };
 
+template <> struct SettingValue<RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH> {
+    using type = float;
+};
+
+template <> struct SettingValue<RacecarSettings::CAR_IRRADIANCE_STRENGTH> {
+    using type = float;
+};
+
 template <RacecarSettings S> typename SettingValue<S>::type Get()
 {
-    return static_cast<typename SettingValue<S>::type>( GetValue( S ) );
+    if constexpr ( std::is_same_v<typename SettingValue<S>::type, float> ) {
+        return GetFloat( S );
+    } else {
+        return static_cast<typename SettingValue<S>::type>( GetValue( S ) );
+    }
 }
 
 template <RacecarSettings S> void Set( typename SettingValue<S>::type value )
 {
-    SetValue( S, static_cast<int>( value ) );
+    if constexpr ( std::is_same_v<typename SettingValue<S>::type, float> ) {
+        SetFloat( S, value );
+    } else {
+        SetValue( S, static_cast<int>( value ) );
+    }
 }
 
 }

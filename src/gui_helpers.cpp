@@ -42,4 +42,18 @@ void SettingsCombo( const char* label, RacecarSettings s )
     ImGui::EndDisabled();
 }
 
+void SettingsSliderFloat( const char* label, RacecarSettings s )
+{
+    bool valid = RuntimeSettings::GetValid( s );
+    float value = RuntimeSettings::GetFloat( s );
+
+    ImGui::BeginDisabled( !valid );
+    if ( ImGui::SliderFloat(
+             label, &value, RuntimeSettings::GetFloatMin( s ), RuntimeSettings::GetFloatMax( s )
+         ) ) {
+        RuntimeSettings::SetFloat( s, value );
+    }
+    ImGui::EndDisabled();
+}
+
 }

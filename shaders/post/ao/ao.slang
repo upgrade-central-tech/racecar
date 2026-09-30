@@ -108,7 +108,7 @@ float3 SSAO( float3 view_position, float3 view_normal, float2 size )
         samples += 1.0f;
     }
 
-    float thickness = 1.5f * ao_data.packed_floats0.y;
+    float thickness = 1.5f * ao_data.packed_floats0.x;
     float ao = saturate( 1.0f - ( occlusion / samples ) * ( 1.0f + thickness ) );
 
     return float3( ao );

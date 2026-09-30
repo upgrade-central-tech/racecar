@@ -8,4 +8,6 @@ void SettingsCheckbox( const char* label, RacecarSettings s );
 
 void SettingsCombo( const char* label, RacecarSettings s );
 
+void SettingsSliderFloat( const char* label, RacecarSettings s );
+
 }
