@@ -91,7 +91,8 @@
                 "CMAKE_MAKE_PROGRAM": "ninja",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_COLOR_DIAGNOSTICS": "ON",
-                "RACECAR_ENABLE_DEV": "ON"
+                "RACECAR_ENABLE_DEV": "ON",
+                "RACECAR_ENABLE_RAY_TRACING": "ON"
             }
         },
         {

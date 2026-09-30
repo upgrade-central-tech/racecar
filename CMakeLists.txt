@@ -93,6 +93,7 @@ set(RACECAR_SOURCES
     ${GAME_DIR}/gamestate.cpp
 
     ${RACECAR_DIR}/racecar.cpp
+    ${RACECAR_DIR}/furnace.cpp
 )
 
 # Third party libraries not part of our vcpkg system
@@ -269,3 +270,9 @@ add_executable(racecar
     ${RACECAR_SOURCES}
 )
 racecar_configure_target(racecar)
+
+add_executable(furnace
+    ${EXEC_DIR}/main_furnace.cpp
+    ${RACECAR_SOURCES}
+)
+racecar_configure_target(furnace)
