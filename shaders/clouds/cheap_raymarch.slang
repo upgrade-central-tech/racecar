@@ -90,7 +90,6 @@ static const float AMBIENT_INTENSITY = 0.2; // ambient skylight
 static const float ALBEDO = 0.9; // single-scattering albedo
 static const float SIGMA_T = 4.0; // extinction coefficient (tune for opacity)
 static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forward scattering
-static const float PI = 3.141592654f;
 
 public float hash11( float n ) { return frac( sin( n ) * 43758.5453 ); }
 
@@ -98,7 +97,6 @@ public float offset_sphere_intersection(
     float3 view, float3 origin, float surface_level, float rad )
 {
     // a Triangle forms between the earth's core, the current position, and the intersection point
-    float PI = 3.141592654;
     float obtuse_angle = PI;
     if ( length( float3( view.x, 0, view.z ) ) > 0.01 ) {
         float3 ground_vector = normalize( float3( view.x, 0, view.z ) );

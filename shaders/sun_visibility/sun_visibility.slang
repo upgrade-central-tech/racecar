@@ -2,6 +2,8 @@ import constants;
 import "../clouds/cloud_bindings.slang";
 import "../clouds/cheap_raymarch.slang";
 
+#include "../common.slang"
+
 // desc set 0, 1, 2 in cloud_bindings.slang
 
 layout( binding = 0, set = 3 ) RWStructuredBuffer<float> sun_visibility;

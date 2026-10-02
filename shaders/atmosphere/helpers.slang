@@ -2,6 +2,8 @@ module helpers;
 
 import constants;
 
+#include "../common.slang"
+
 /// Maps `[0, 1]` to texture space and centers samples in texel centers.
 public func normalize_to_uv( x: float, texture_size: int )->float
 {

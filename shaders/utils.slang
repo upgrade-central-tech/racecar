@@ -1,14 +1,9 @@
 #pragma once
 
-/// Has to be namespaced because we're defining `PI` somewhere else
-namespace math {
-
-public static const float PI = 3.14159265358979323846f;
-
-}
+#include "common.slang"
 
 static const float PAPER_WHITE = 2.5f;
-static const float SUN_IRRADIANCE = PAPER_WHITE * math::PI;
+static const float SUN_IRRADIANCE = PAPER_WHITE * PI;
 
 //=======================================================================================
 // BSDF Stuff
@@ -174,7 +169,7 @@ float get_GGX_from_n_dot_h_sq( float n_dot_h_sq, float alpha )
 {
     float alpha_squared = alpha * alpha;
     float partial_denom = n_dot_h_sq * ( alpha_squared - 1.0f ) + 1.0f;
-    return alpha_squared / ( math.PI * partial_denom * partial_denom );
+    return alpha_squared / ( PI * partial_denom * partial_denom );
 }
 
 float3 evaluate_spherical_area_GGX(
@@ -216,14 +211,14 @@ float DistributionGGX( float n_dot_h, float alpha )
     float n_dot_h_2 = n_dot_h * n_dot_h;
     float denom = ( n_dot_h_2 ) * ( alpha2 - 1.0f ) + 1.0f;
 
-    return alpha2 / ( math::PI * denom * denom );
+    return alpha2 / ( PI * denom * denom );
 }
 
 float DistributionGTR( float alpha, float h_dot_l )
 {
     float alpha_2 = alpha * alpha;
     return ( alpha_2 - 1.0f )
-        / ( math::PI * log( alpha_2 ) * ( 1.0f + ( alpha_2 - 1.0f ) * ( h_dot_l * h_dot_l ) ) );
+        / ( PI * log( alpha_2 ) * ( 1.0f + ( alpha_2 - 1.0f ) * ( h_dot_l * h_dot_l ) ) );
 }
 
 //=======================================================================================

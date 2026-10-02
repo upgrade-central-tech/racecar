@@ -1,11 +1,11 @@
+#include "../common.slang"
+
 layout( binding = 0, set = 0 ) public TextureCube<float4> cubemap;
 layout( binding = 1, set = 0 ) public RWTexture2DArray<float4> irradiance_cubemap;
 
 layout( binding = 0, set = 1 ) public SamplerState nearest_sampler;
 
 layout( binding = 0, set = 2 ) public RWTexture2D<float4> sh_coefficients;
-
-public static const float PI = 3.14159265358979323846f;
 
 float4 get_cube_direction( uint2 pixel, uint face, float face_size ) {
     float px = (float) pixel.x;

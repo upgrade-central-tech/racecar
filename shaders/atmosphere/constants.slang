@@ -79,9 +79,6 @@ public static const int SCATTERING_LUT_NU_SIZE = 8;
 public static const int TRANSMITTANCE_LUT_W = 256;
 public static const int TRANSMITTANCE_LUT_H = 64;
 
-public static const float PI = 3.14159265358979323846f;
-public static const float INV_PI = 0.3183098861837906715377f;
-
 /// Expressed in radians.
 public static const float SUN_ANGULAR_RADIUS = 0.02f;
 public static const float SUN_SIZE = cos( SUN_ANGULAR_RADIUS );

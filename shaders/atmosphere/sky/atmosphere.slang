@@ -4,6 +4,8 @@ import helpers;
 import bindings;
 import constants;
 
+#include "../../common.slang"
+
 /// Stores the result of atmospheric scattering.
 public struct SkySample {
     public float3 radiance; ///< In-scattered light, i.e. the sky glow

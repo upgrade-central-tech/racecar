@@ -22,6 +22,7 @@ import constants;
 import "../../clouds/cheap_raymarch.slang";
 
 #include "../atmosphere/geo/atms_geo.slang"
+#include "../../common.slang"
 
 // In atmosphere, the bindings are already there and used for other things.
 layout( binding = 0, set = 3 ) RWTexture2D<float4> octahedral_sky;

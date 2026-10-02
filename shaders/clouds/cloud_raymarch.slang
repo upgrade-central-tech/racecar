@@ -4,6 +4,7 @@ import cloud_bindings;
 import cloud_utils;
 
 #include "../utils.slang"
+#include "../common.slang"
 
 public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
     SamplerState linear_mirrored_repeat_sampler, float3 march_pos )
@@ -95,7 +96,6 @@ static const float AMBIENT_INTENSITY = 0.2; // ambient skylight
 static const float ALBEDO = 0.9; // single-scattering albedo
 static const float SIGMA_T = 200.0; // extinction coefficient (tune for opacity)
 static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forward scattering
-static const float PI = 3.141592654f;
 
 public float hash11( float n ) { return frac( sin( n ) * 43758.5453 ); }
 

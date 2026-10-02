@@ -3,6 +3,7 @@
 // module car_lighting;
 
 #include "../utils.slang"
+#include "../common.slang"
 
 #ifndef USE_GLINTS
 #define USE_GLINTS 1

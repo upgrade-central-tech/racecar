@@ -1,9 +1,10 @@
 #pragma once
 
+static const float PI = 3.14159265358979323846f;
+static const float INV_PI = 0.3183098861837906715377f;
+
 static const int CAR_ID = 1;
 static const int TERRAIN_ID = 2;
-
-static const float PI = 3.14159265359;
 
 // last level of octahedral_sky_mips
 // cosine convolved so it doubles as diffuse irradiance
