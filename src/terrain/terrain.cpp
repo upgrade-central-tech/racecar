@@ -6,6 +6,7 @@
 #include "../geometry/gpu_mesh_buffers.hpp"
 #include "../gui.hpp"
 #include "../vk/create.hpp"
+#include "engine/descriptor_set.hpp"
 
 const std::filesystem::path TERRAIN_SHADER_PREPASS_MODULE_PATH
     = "../shaders/terrain/terrain_prepass.spv";
@@ -227,6 +228,8 @@ void initialize_terrain(
     );
     engine::update_descriptor_set_image( terrain.prepass_lut_desc_set, terrain.terrain_noise, 1 );
 
+    terrain.gamestate_desc_set = prepass_info.gamestate_desc_set;
+
     try {
         terrain.terrain_prepass_pipeline = engine::create_gfx_pipeline(
             engine::get_vertex_input_state_create_info( terrain ),
@@ -235,6 +238,7 @@ void initialize_terrain(
                 terrain.prepass_texture_desc_set.layouts[0],
                 terrain.prepass_sampler_desc_set.layouts[0],
                 terrain.prepass_lut_desc_set.layouts[0],
+                terrain.gamestate_desc_set->layouts[0],
             },
             {
                 VK_FORMAT_R16G16B16A16_SFLOAT, // POSITION
@@ -435,6 +439,7 @@ void draw_terrain_prepass(
             &terrain.prepass_texture_desc_set,
             &terrain.prepass_sampler_desc_set,
             &terrain.prepass_lut_desc_set,
+            terrain.gamestate_desc_set
         },
         .pipeline = terrain.terrain_prepass_pipeline,
     } );
@@ -467,7 +472,7 @@ void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
             terrain.car_tlas_desc_set,
             terrain.reflection_texture_desc_set,
 #endif // RACECAR_RAY_TRACING
-            terrain.sun_visibility_desc_set,
+            terrain.sun_visibility_desc_set
         },
         dispatch_dims,
     };
@@ -499,7 +504,7 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
     //  for now, temp hard-code the UV scrolling direction
     glm::vec2 scroll_direction = glm::vec2( 0.0f, 1.0f );
 
-    glm::vec2 offset_XY = engine.gamestate.world_position * TERRAIN_SCROLL_SCALE;
+    glm::vec2 offset_XY = engine.gamestate.world_position * TERRAIN_WORLD_SCALE;
 
     terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );
 

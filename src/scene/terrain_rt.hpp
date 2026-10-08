@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/descriptor_set.hpp"
 #if RACECAR_RAY_TRACING
 
 #include "../engine/descriptor_set.hpp"
@@ -64,6 +65,8 @@ struct TerrainRayTracingInfo {
     engine::DescriptorSet texture_desc_set = { };
     engine::DescriptorSet sampler_desc_set = { };
     engine::DescriptorSet mesh_buffer_desc_set = { };
+
+    engine::DescriptorSet* gamestate_desc_set;
 
     engine::Pipeline displace_pipeline = { };
 };

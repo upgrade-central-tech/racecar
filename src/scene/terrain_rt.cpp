@@ -263,7 +263,8 @@ void init_terrain_ray_tracing_info( TerrainRayTracingInfo* out_info, geometry::T
 {
     *out_info = TerrainRayTracingInfo { .terrain = terrain,
                                         .terrain_uniform = &terrain->terrain_uniform,
-                                        .layer_mask = &terrain->test_layer_mask };
+                                        .layer_mask = &terrain->test_layer_mask,
+                                        .gamestate_desc_set = terrain->gamestate_desc_set };
 
     create_mesh_buffers( out_info );
     create_grid_uniform( out_info );
@@ -275,6 +276,7 @@ void init_terrain_ray_tracing_info( TerrainRayTracingInfo* out_info, geometry::T
             out_info->texture_desc_set.layouts[0],
             out_info->sampler_desc_set.layouts[0],
             out_info->mesh_buffer_desc_set.layouts[0],
+            out_info->gamestate_desc_set->layouts[0]
         },
         vk::create::shader_module( TERRAIN_RT_DISPLACE_SHADER_MODULE_PATH ),
         "cs_terrain_rt_displace"
@@ -297,6 +299,7 @@ void add_terrain_rt_displace_pass( TerrainRayTracingInfo& info, engine::TaskList
             &info.texture_desc_set,
             &info.sampler_desc_set,
             &info.mesh_buffer_desc_set,
+            info.gamestate_desc_set,
         },
         glm::ivec3( groups_per_side, groups_per_side, 1 ),
     };

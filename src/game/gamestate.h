@@ -21,6 +21,11 @@ struct GameState {
 
     float wheel_angle = 0.0f;
     float wheel_turn_speed = 0.0f;
+
+    glm::vec3 spline_positions[2] = {
+        glm::vec3(0.0, 0.0, -100.0f),
+        glm::vec3(0.0, 0.0, +100.0f),
+    };
 };
 
 void update_game_state();
@@ -31,4 +36,4 @@ void initialize_gamestate_buffer(
 
 void update_gamestate_buffer( UniformBuffer<ub_data::GameStateBuffer>& buffer );
 
-}
+} 

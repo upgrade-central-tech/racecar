@@ -90,10 +90,11 @@ layout( binding = 6, set = 4 ) ConstantBuffer<MaterialTable> material_table;
 layout( binding = 0, set = 5 ) Texture2D<float4> albedo_textures[];
 layout( binding = 1, set = 5 ) Texture2D<float4> metallic_roughness_textures[];
 
+layout( binding = 0, set = 8 ) ConstantBuffer<GameStateBuffer> gamestate_data;
+
 #if RACECAR_RAY_TRACING
 layout( binding = 0, set = 6 ) RaytracingAccelerationStructure terrainBVH;
 layout( binding = 1, set = 6 ) ConstantBuffer<TerrainData> terrain_data;
-layout( binding = 2, set = 6 ) Texture2D<float2> terrain_layer_mask;
 layout( binding = 3, set = 6 ) Texture2D<float4> terrain_grass_albedo_roughness;
 layout( binding = 4, set = 6 ) Texture2D<float4> terrain_grass_normal_ao;
 layout( binding = 5, set = 6 ) Texture2D<float4> terrain_asphalt_albedo_roughness;
@@ -178,7 +179,6 @@ bool traceTerrainClosestHit( float3 rayOrigin, float3 rayDir, out float t )
 TerrainMaps get_terrain_maps()
 {
     TerrainMaps maps;
-    maps.layer_mask = terrain_layer_mask;
     maps.grass_albedo_roughness = terrain_grass_albedo_roughness;
     maps.grass_normal_ao = terrain_grass_normal_ao;
     maps.asphalt_albedo_roughness = terrain_asphalt_albedo_roughness;
@@ -195,12 +195,12 @@ float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
 
     float3 base_position = float3( world_position.x, 0.0f, world_position.z );
     float3 vertex_normal = terrain_height_normal(
-        base_position, scroll, terrain_layer_mask, terrain_linear_sampler, TERRAIN_RT_NORMAL_EPS );
+        base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, terrain_linear_sampler, TERRAIN_RT_NORMAL_EPS );
 
     TerrainUVs uvs = terrain_compute_uvs( world_position, scroll );
 
     TerrainSurface surface = terrain_evaluate_surface( world_position, vertex_normal, scroll, uvs,
-        snowness, wetness_toggle, get_terrain_maps(), terrain_no_gradients() );
+        snowness, wetness_toggle, get_terrain_maps(), terrain_no_gradients(), gamestate_data.spline_positions, gamestate_data.world_position );
 
     float3 albedo = surface.albedo;
     float roughness = surface.roughness;

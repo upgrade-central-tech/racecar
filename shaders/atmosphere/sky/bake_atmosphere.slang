@@ -34,10 +34,6 @@ layout( binding = 1, set = 4 ) Texture3D<float> low_freq_noise_LUT;
 layout( binding = 2, set = 4 ) SamplerState linear_mirrored_repeat_sampler;
 layout( binding = 3, set = 4 ) ConstantBuffer<CloudUniformData> clouds_buffer_data;
 
-struct GameStateBuffer {
-    float4 world_position;
-};
-
 layout( binding = 0, set = 5 ) ConstantBuffer<GameStateBuffer> gamestate_data;
 
 float3 oct_decode( float2 f )

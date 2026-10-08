@@ -66,8 +66,7 @@ void apply_demo_camera_motion(
         unlocked_camera_prev_world_position = world_position;
 
         const glm::vec3 eye = camera::calculate_eye_position( camera )
-            - glm::vec3( travel.x, 0.f, travel.y )
-                * ( geometry::TERRAIN_SCROLL_SCALE / geometry::TERRAIN_WORLD_SCALE );
+            - glm::vec3( travel.x, 0.f, travel.y );
 
         if ( car_position.has_value() ) {
             camera.center = car_position.value();
@@ -120,8 +119,7 @@ void update_wheel_transforms( scene::Scene& scene )
 {
     const engine::State& engine = engine::State::GetConst();
 
-    const float distance = engine.gamestate.world_position.y * geometry::TERRAIN_SCROLL_SCALE
-        / geometry::TERRAIN_WORLD_SCALE;
+    const float distance = engine.gamestate.world_position.y;
     const float radius = 0.5f * wheel_radii.at( std::string( GLTF_FILE_PATH ) );
 
     const glm::mat4 model = glm::rotate(

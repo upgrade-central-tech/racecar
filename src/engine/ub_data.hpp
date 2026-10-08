@@ -108,6 +108,9 @@ struct Atmosphere {
 
 struct GameStateBuffer {
     glm::vec4 world_position = {};
+
+    // these need to be vec4 because of layout fuckery
+    glm::vec4 spline_positions[2] = {};
 };
 
 struct Clouds {

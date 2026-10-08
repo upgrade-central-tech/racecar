@@ -127,4 +127,9 @@ struct ModelMatData {
     float4x4 prev_model_mat;
 };
 
+struct GameStateBuffer {
+    float4 world_position;
 
+    // these take up 16 bytes so they are correspondant to glm::vec4 on the host
+    float3[2] spline_positions;
+};

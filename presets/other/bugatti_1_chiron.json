@@ -4,7 +4,7 @@
     "sunAzimuth": 2.863,
     "wetness": 0.890,
     "snow": 0.30,
-    "scrollingSpeed": 0.01,
+    "scrollingSpeed": 0.2,
     "bumpiness": 0.0,
     "materials": [
         {

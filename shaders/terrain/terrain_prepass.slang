@@ -42,7 +42,7 @@ layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_buffer_da
 layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 layout( binding = 2, set = 0 ) ConstantBuffer<TerrainData> terrain_data;
 
-layout( binding = 0, set = 1 ) Texture2D<float2> layer_test_mask;
+// layout( binding = 0, set = 1 ) Texture2D<float2> layer_test_mask;
 // Specific material stuff
 layout( binding = 1, set = 1 ) Texture2D<float4> grass_albedo_roughness;
 layout( binding = 2, set = 1 ) Texture2D<float4> grass_normal_ao;
@@ -55,6 +55,8 @@ layout( binding = 0, set = 2 ) SamplerState linear_sampler;
 // LUT descs
 layout( binding = 0, set = 3 ) Texture2D<float4> glint_noise;
 layout( binding = 1, set = 3 ) Texture2D<float> terrain_noise;
+
+layout( binding = 0, set = 4 ) ConstantBuffer<GameStateBuffer> gamestate_data;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )
@@ -157,7 +159,7 @@ DomainOutput ts_eval_main(
         + patch[3].uv * ( uv.x ) * ( uv.y ) + patch[2].uv * ( 1 - uv.x ) * ( uv.y );
 
     float2 uv_scrolling_offset = terrain_data.terrain_data1.xy;
-    p = terrain_displace( p, uv_scrolling_offset, layer_test_mask, linear_sampler );
+    p = terrain_displace( p, gamestate_data.world_position.xyz, uv_scrolling_offset, gamestate_data.spline_positions, linear_sampler );
 
     outVal.sv_position = mul( camera_buffer_data.mvp, float4( p, 1.0 ) );
     outVal.position = p;
@@ -172,7 +174,6 @@ DomainOutput ts_eval_main(
 TerrainMaps get_terrain_maps()
 {
     TerrainMaps maps;
-    maps.layer_mask = layer_test_mask;
     maps.grass_albedo_roughness = grass_albedo_roughness;
     maps.grass_normal_ao = grass_normal_ao;
     maps.asphalt_albedo_roughness = asphalt_albedo_roughnes;
@@ -220,7 +221,7 @@ FragmentOutput fs_main( DomainOutput in )
     gradients.material_ddy = ddy( uvs.world_uv );
 
     TerrainSurface surface = terrain_evaluate_surface( world_position, normal,
-        uv_scrolling_offset, uvs, snowness, wetness_toggle, get_terrain_maps(), gradients );
+        uv_scrolling_offset, uvs, snowness, wetness_toggle, get_terrain_maps(), gradients, gamestate_data.spline_positions, gamestate_data.world_position );
 
     float3 mixed_albedo = surface.albedo;
     float3 mixed_normal = surface.normal;

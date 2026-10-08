@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/descriptor_set.hpp"
 #if RACECAR_RAY_TRACING
 
 #include "../context.hpp"
@@ -21,6 +22,7 @@ struct ReflectionPassDescSets {
     engine::DescriptorSet& combined_textures_desc_set;
     engine::DescriptorSet& terrain_shading_desc_set;
     engine::DescriptorSet& sun_visibility_desc_set;
+    engine::DescriptorSet& gamestate_desc_set;
 };
 
 void create_reflection_pass_resources(

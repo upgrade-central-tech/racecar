@@ -17,7 +17,8 @@ constexpr std::string_view VOLUMETRIC_SHADER_MODULE_PATH = "../shaders/clouds/cl
 constexpr std::string_view VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH
     = "../shaders/clouds/cloud_composite.spv";
 
-constexpr float CLOUD_TRAVEL_SCALE = 0.2f;
+// artistic exaggeration. Default is 0.00005
+constexpr float CLOUD_TRAVEL_SCALE = 0.0002f;
 constexpr float CLOUD_WIND_SPEED = 0.002f;
 
 Volumetric initialize()

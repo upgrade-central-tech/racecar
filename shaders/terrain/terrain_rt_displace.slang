@@ -20,11 +20,11 @@ struct TerrainRTVertex {
 layout( binding = 0, set = 0 ) ConstantBuffer<TerrainData> terrain_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<TerrainRTGrid> grid;
 
-layout( binding = 0, set = 1 ) Texture2D<float2> layer_test_mask;
-
 layout( binding = 0, set = 2 ) SamplerState linear_sampler;
 
 layout( binding = 0, set = 3 ) RWStructuredBuffer<TerrainRTVertex> out_vertices;
+
+layout( binding = 0, set = 4 ) ConstantBuffer<GameStateBuffer> gamestate_data;
 
 [shader( "compute" )]
 [numthreads( 8, 8, 1 )]
@@ -44,9 +44,9 @@ void cs_terrain_rt_displace( uint3 thread_id: SV_DispatchThreadID )
     float2 spacing = grid.world_size / float2( grid.vertex_count - uint2( 1 ) );
 
     TerrainRTVertex vertex;
-    vertex.position = terrain_displace( base_position, scroll, layer_test_mask, linear_sampler );
+    vertex.position = terrain_displace( base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, linear_sampler );
     vertex.normal = terrain_height_normal(
-        base_position, scroll, layer_test_mask, linear_sampler, spacing.x );
+        base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, linear_sampler, spacing.x );
     vertex._pad0 = 0.0f;
     vertex._pad1 = 0.0f;
 

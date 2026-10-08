@@ -261,10 +261,11 @@ void run( bool use_fullscreen )
         &debug_buffer,
         &gbuffers,
         &glint_noise,
+        &gamestate_desc_set
     };
 
     geometry::TerrainLightingInfo terrain_lighting_info = {
-        &camera_buffer, &debug_buffer, &atms_baker, &gbuffers, &screen_color, &lut_brdf,
+        &camera_buffer, &debug_buffer, &atms_baker, &gbuffers, &screen_color, &lut_brdf
     };
 
     geometry::Terrain test_terrain;
@@ -294,6 +295,7 @@ void run( bool use_fullscreen )
             .combined_textures_desc_set = combined_textures_desc_set,
             .terrain_shading_desc_set = terrain_rt.shading_desc_set,
             .sun_visibility_desc_set = sun_visibility.visibility_desc_set,
+            .gamestate_desc_set = gamestate_desc_set
         },
         &reflection_color,
         &reflection_data,

@@ -6,6 +6,7 @@
 #include "../engine/task_list.hpp"
 #include "../engine/ub_data.hpp"
 #include "../engine/uniform_buffer.hpp"
+#include "engine/descriptor_set.hpp"
 
 namespace racecar::gui {
 struct Gui;
@@ -16,7 +17,6 @@ namespace racecar::geometry {
 constexpr float TERRAIN_TILE_WIDTH = 10.0f;
 constexpr size_t TERRAIN_NUM_TILES = 50;
 constexpr float TERRAIN_HALF_WIDTH = ( TERRAIN_NUM_TILES * TERRAIN_TILE_WIDTH ) / 2.0f;
-constexpr float TERRAIN_SCROLL_SCALE = 60.0f;
 
 // TERRAIN_WORLD_SCALE in terrain_common.slang
 constexpr float TERRAIN_WORLD_SCALE = 0.05f;
@@ -57,6 +57,8 @@ struct TerrainPrepassInfo {
     // engine::RWImage* GBuffer_Velocity;
 
     vk::mem::AllocatedImage* glint_noise;
+    
+    engine::DescriptorSet* gamestate_desc_set;
 };
 
 struct Terrain {
@@ -78,6 +80,7 @@ struct Terrain {
     engine::DescriptorSet* reflection_texture_desc_set;
 #endif // RACECAR_RAY_TRACING
     engine::DescriptorSet* sun_visibility_desc_set = nullptr;
+    engine::DescriptorSet* gamestate_desc_set = nullptr;
 
     engine::GfxTask terrain_prepass_task;
     engine::Pipeline terrain_prepass_pipeline;

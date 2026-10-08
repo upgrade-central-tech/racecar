@@ -8,10 +8,6 @@ import "../clouds/cheap_raymarch.slang";
 
 layout( binding = 0, set = 3 ) RWStructuredBuffer<float> sun_visibility;
 
-struct GameStateBuffer {
-    float4 world_position;
-};
-
 layout( binding = 0, set = 4 ) ConstantBuffer<GameStateBuffer> gamestate_data;
 
 static const uint SUN_SAMPLES_PER_SIDE = 8;
