@@ -242,7 +242,24 @@ if (RACECAR_SLANGC)
     add_custom_target(shaders DEPENDS ${RACECAR_SHADER_OUTPUTS})
 else()
     message(WARNING "slangc not found; shaders will not be compiled automatically")
+    set(SLANG_LAYOUT_CHECK_ENABLE OFF)
 endif()
+
+include(FetchContent)
+FetchContent_Declare(slang_layout_check
+    GIT_REPOSITORY https://github.com/seabiscuit-iv/slang-layout-check.git
+    GIT_TAG        main
+)
+FetchContent_MakeAvailable(slang_layout_check)
+
+file(GLOB_RECURSE RACECAR_LAYOUT_CHECK_HEADERS CONFIGURE_DEPENDS
+    "${SRC_DIR}/*.h"
+    "${SRC_DIR}/*.hpp"
+    "${SRC_DIR}/*.cpp"
+)
+file(GLOB_RECURSE RACECAR_LAYOUT_CHECK_SHADERS CONFIGURE_DEPENDS
+    "${SHADER_DIR}/*.slang"
+)
 
 function(racecar_configure_target TARGET)
     target_include_directories(${TARGET} PRIVATE ${SRC_DIR})
@@ -328,6 +345,14 @@ function(racecar_configure_target TARGET)
     if (TARGET shaders)
         add_dependencies(${TARGET} shaders)
     endif()
+
+    slang_layout_check(${TARGET}
+        HEADERS      ${RACECAR_LAYOUT_CHECK_HEADERS}
+        SHADERS      ${RACECAR_LAYOUT_CHECK_SHADERS}
+        SLANGC       ${RACECAR_SLANGC}
+        SLANG_FLAGS  ${RACECAR_SLANGC_FLAGS}
+        SLANG_BUFFER constant
+    )
 endfunction()
 
 add_executable(racecar
