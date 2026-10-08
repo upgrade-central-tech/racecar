@@ -1,8 +1,10 @@
 #include "gui.hpp"
 
 #include "engine/task_list.hpp"
+#include "imgui.h"
 #include "log.hpp"
 #include "passes/reflection_mip_chain.hpp"
+#include "settings.h"
 
 #include <glm/gtc/constants.hpp>
 #include <imgui_impl_sdl3.h>
@@ -362,6 +364,10 @@ void update(
             }
 
             if ( ImGui::BeginTabItem( "Terrain" ) ) {
+                ImGui::SeparatorText( "Parameters" );
+                RacecarGUI::SettingsSliderFloat("Road Width", RacecarSettings::TERRAIN_ROAD_WIDTH);
+                RacecarGUI::SettingsSliderFloat("Blend Width", RacecarSettings::TERRAIN_BLEND_WIDTH);
+
                 ImGui::SeparatorText( "Debug" );
                 ImGui::Checkbox( "Enable GT7 AO/local shadows", &gui.terrain.enable_gt7_ao );
                 ImGui::Checkbox( "Shadowing only", &gui.terrain.shadowing_only );

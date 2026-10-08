@@ -82,13 +82,13 @@ float dist_to_spline( float3 position, float3[2] spline_positions, float3 world_
 }
 
 float terrain_height( float3 base_position, float2 scroll, float3[2] spline_positions,
-    SamplerState linear_sampler, float3 world_position )
+    SamplerState linear_sampler, float3 world_position, float road_width, float blend_width )
 {
     float2 layer_uv = terrain_layer_uv( base_position, scroll );
     float2 world_uv_unwrapped = terrain_world_uv_unwrapped( base_position, scroll );
 
     float dist = dist_to_spline( base_position, spline_positions, world_position );
-    float layer = saturate( dist * 0.1f );
+    float layer = saturate( smoothstep( road_width, road_width + blend_width, dist ) );
 
     float x_dist = clamp( abs( base_position.x / TERRAIN_HEIGHT_FALLOFF_WIDTH ), 0.0f, 1.0f );
 
@@ -101,23 +101,23 @@ float terrain_height( float3 base_position, float2 scroll, float3[2] spline_posi
 }
 
 float3 terrain_displace( float3 base_position, float3 world_position, float2 scroll, float3[2] spline_positions,
-    SamplerState linear_sampler )
+    SamplerState linear_sampler, float road_width, float blend_width )
 {
     float3 displaced = base_position;
-    displaced.y = terrain_height( base_position, scroll, spline_positions, linear_sampler, world_position );
+    displaced.y = terrain_height( base_position, scroll, spline_positions, linear_sampler, world_position, road_width, blend_width );
     return displaced;
 }
 
 float3 terrain_height_normal( float3 base_position, float3 world_position, float2 scroll, float3[2] spline_positions,
-    SamplerState linear_sampler, float epsilon )
+    SamplerState linear_sampler, float epsilon, float road_width, float blend_width )
 {
     float3 dx = float3( epsilon, 0.0f, 0.0f );
     float3 dz = float3( 0.0f, 0.0f, epsilon );
 
-    float height_x0 = terrain_height( base_position - dx, scroll, spline_positions, linear_sampler, world_position );
-    float height_x1 = terrain_height( base_position + dx, scroll, spline_positions, linear_sampler, world_position );
-    float height_z0 = terrain_height( base_position - dz, scroll, spline_positions, linear_sampler, world_position );
-    float height_z1 = terrain_height( base_position + dz, scroll, spline_positions, linear_sampler, world_position );
+    float height_x0 = terrain_height( base_position - dx, scroll, spline_positions, linear_sampler, world_position, road_width, blend_width );
+    float height_x1 = terrain_height( base_position + dx, scroll, spline_positions, linear_sampler, world_position, road_width, blend_width );
+    float height_z0 = terrain_height( base_position - dz, scroll, spline_positions, linear_sampler, world_position, road_width, blend_width );
+    float height_z1 = terrain_height( base_position + dz, scroll, spline_positions, linear_sampler, world_position, road_width, blend_width );
 
     float3 tangent_x = float3( 2.0f * epsilon, height_x1 - height_x0, 0.0f );
     float3 tangent_z = float3( 0.0f, height_z1 - height_z0, 2.0f * epsilon );
@@ -155,7 +155,7 @@ struct TerrainSurface {
 
 TerrainSurface terrain_evaluate_surface( float3 position, float3 vertex_normal, float2 scroll,
     TerrainUVs uvs, float snowness, float wetness_toggle, TerrainMaps maps,
-    TerrainGradients gradients, float3[2] spline_positions, float4 gamestate_world_position )
+    TerrainGradients gradients, float3[2] spline_positions, float4 gamestate_world_position, float road_width, float blend_width )
 {
     float2 layer_uv = uvs.layer_uv;
     float2 world_uv_unwrapped = uvs.world_uv_unwrapped;
@@ -182,7 +182,7 @@ TerrainSurface terrain_evaluate_surface( float3 position, float3 vertex_normal, 
     // R - Asphalt
     // G - Grass/Terrain mask
     float road_dist = dist_to_spline( position, spline_positions, gamestate_world_position.xyz );
-    float layer = saturate( smoothstep(10.0, 18.0f, road_dist) );
+    float layer = saturate( smoothstep( road_width, road_width + blend_width, road_dist ) );
     float2 layers = float2( 1.0 - layer, layer );
 
     float4 grass_color_roughness = maps.grass_albedo_roughness.SampleGrad(

@@ -77,6 +77,10 @@ struct TerrainData {
     // debug info
     // stores: enable_gt7_ao, shadowing_only, roughness_only, null
     float4 packed_floats0;
+
+    // terrain params
+    // stores: road_width, blend_width
+    float4 packed_floats1;
 }
 
 struct MaterialData {

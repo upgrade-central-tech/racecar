@@ -7,6 +7,8 @@
 #include "../gui.hpp"
 #include "../vk/create.hpp"
 #include "engine/descriptor_set.hpp"
+#include "settings.h"
+#include <glm/ext/vector_float4.hpp>
 
 const std::filesystem::path TERRAIN_SHADER_PREPASS_MODULE_PATH
     = "../shaders/terrain/terrain_prepass.spv";
@@ -487,7 +489,7 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
 
     // Final param packs the offset
 
-    terrain_ub.packed_data0 = glm::vec4(
+    terrain_ub.packed_floats0 = glm::vec4(
         gui.terrain.enable_gt7_ao ? 1.0f : 0.0f,
         gui.terrain.shadowing_only ? 1.0f : 0.0f,
         gui.terrain.roughness_only ? 1.0f : 0.0f,
@@ -507,6 +509,10 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
     glm::vec2 offset_XY = engine.gamestate.world_position * TERRAIN_WORLD_SCALE;
 
     terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );
+
+    float road_width = RuntimeSettings::GetFloat(RacecarSettings::TERRAIN_ROAD_WIDTH);
+    float blend_width = RuntimeSettings::GetFloat(RacecarSettings::TERRAIN_BLEND_WIDTH);
+    terrain_ub.packed_floats1 = glm::vec4(road_width, blend_width, 0.0f, 0.0f);
 
     terrain.terrain_uniform.set_data( terrain_ub );
     terrain.terrain_uniform.update( engine.get_frame_index() );

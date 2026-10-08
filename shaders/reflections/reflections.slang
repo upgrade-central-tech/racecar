@@ -195,12 +195,12 @@ float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
 
     float3 base_position = float3( world_position.x, 0.0f, world_position.z );
     float3 vertex_normal = terrain_height_normal(
-        base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, terrain_linear_sampler, TERRAIN_RT_NORMAL_EPS );
+        base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, terrain_linear_sampler, TERRAIN_RT_NORMAL_EPS, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
 
     TerrainUVs uvs = terrain_compute_uvs( world_position, scroll );
 
     TerrainSurface surface = terrain_evaluate_surface( world_position, vertex_normal, scroll, uvs,
-        snowness, wetness_toggle, get_terrain_maps(), terrain_no_gradients(), gamestate_data.spline_positions, gamestate_data.world_position );
+        snowness, wetness_toggle, get_terrain_maps(), terrain_no_gradients(), gamestate_data.spline_positions, gamestate_data.world_position, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
 
     float3 albedo = surface.albedo;
     float roughness = surface.roughness;

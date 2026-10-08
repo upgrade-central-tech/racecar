@@ -118,6 +118,16 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
               .max = 2.f,
               .desired_float = 1.f,
               .fallback_float = 1.f }, // CAR_IRRADIANCE_STRENGTH
+
+    Setting { .min = 0.0f,
+            .max = 30.0f,
+            .desired_float = 10.0f,
+            .fallback_float = 10.0f }, // TERRAIN_ROAD_WIDTH
+
+    Setting { .min = 0.0f,
+            .max = 30.0f,
+            .desired_float = 8.0f,
+            .fallback_float = 8.0f }, // TERRAIN_BLEND_WIDTH
 };
 
 }

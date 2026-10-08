@@ -44,9 +44,9 @@ void cs_terrain_rt_displace( uint3 thread_id: SV_DispatchThreadID )
     float2 spacing = grid.world_size / float2( grid.vertex_count - uint2( 1 ) );
 
     TerrainRTVertex vertex;
-    vertex.position = terrain_displace( base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, linear_sampler );
+    vertex.position = terrain_displace( base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, linear_sampler, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
     vertex.normal = terrain_height_normal(
-        base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, linear_sampler, spacing.x );
+        base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, linear_sampler, spacing.x, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
     vertex._pad0 = 0.0f;
     vertex._pad1 = 0.0f;
 

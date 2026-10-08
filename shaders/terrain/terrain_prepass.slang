@@ -159,7 +159,7 @@ DomainOutput ts_eval_main(
         + patch[3].uv * ( uv.x ) * ( uv.y ) + patch[2].uv * ( 1 - uv.x ) * ( uv.y );
 
     float2 uv_scrolling_offset = terrain_data.terrain_data1.xy;
-    p = terrain_displace( p, gamestate_data.world_position.xyz, uv_scrolling_offset, gamestate_data.spline_positions, linear_sampler );
+    p = terrain_displace( p, gamestate_data.world_position.xyz, uv_scrolling_offset, gamestate_data.spline_positions, linear_sampler, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
 
     outVal.sv_position = mul( camera_buffer_data.mvp, float4( p, 1.0 ) );
     outVal.position = p;
@@ -221,7 +221,7 @@ FragmentOutput fs_main( DomainOutput in )
     gradients.material_ddy = ddy( uvs.world_uv );
 
     TerrainSurface surface = terrain_evaluate_surface( world_position, normal,
-        uv_scrolling_offset, uvs, snowness, wetness_toggle, get_terrain_maps(), gradients, gamestate_data.spline_positions, gamestate_data.world_position );
+        uv_scrolling_offset, uvs, snowness, wetness_toggle, get_terrain_maps(), gradients, gamestate_data.spline_positions, gamestate_data.world_position, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
 
     float3 mixed_albedo = surface.albedo;
     float3 mixed_normal = surface.normal;

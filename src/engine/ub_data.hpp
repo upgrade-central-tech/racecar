@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <slang_check.h>
 
 /// Stores all uniform buffer structs used for different layouts and shaders. Ensure that all
 /// uniform structs are 16 byte aligned!
@@ -122,7 +123,7 @@ struct Clouds {
     float cloud_offset_y = 0.f;
 };
 
-struct TerrainData {
+struct [[slang_check("TerrainData")]] TerrainData {
     // Store:
     // float gt7_local_shadow_strength;
     // float wetness = 0.0f;
@@ -137,7 +138,11 @@ struct TerrainData {
     // bool enable_gt7_ao;
     // bool shadowing_only;
     // bool roughness_only;
-    glm::vec4 packed_data0;
+    glm::vec4 packed_floats0;
+
+    // terrain params
+    // stores: road_width, blend_width
+    glm::vec4 packed_floats1;
 };
 
 struct Tonemapping {
