@@ -2,6 +2,11 @@
 
 #include <type_traits>
 
+#define RACECAR_SETTINGS_TYPEDECL(KEY, TYPE) \
+template <> struct SettingValue<KEY> { \
+    using type = TYPE; \
+}
+
 // -------------------------------------------------------------------
 // -----------------------ENUM SETTING DOMAINS------------------------
 // -------------------------------------------------------------------
@@ -69,29 +74,13 @@ const char* GetOptionLabel( RacecarSettings s, int value );
 
 template <RacecarSettings S> struct SettingValue;
 
-template <> struct SettingValue<RacecarSettings::AA_MODE> {
-    using type = AAMode;
-};
-
-template <> struct SettingValue<RacecarSettings::DEBUG_VIEW> {
-    using type = DebugView;
-};
-
-template <> struct SettingValue<RacecarSettings::TONEMAPPING_MODE> {
-    using type = TonemappingMode;
-};
-
-template <> struct SettingValue<RacecarSettings::DEBUG_TEXTURE> {
-    using type = DebugTexture;
-};
-
-template <> struct SettingValue<RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH> {
-    using type = float;
-};
-
-template <> struct SettingValue<RacecarSettings::CAR_IRRADIANCE_STRENGTH> {
-    using type = float;
-};
+// Defined templates for each setting
+RACECAR_SETTINGS_TYPEDECL(RacecarSettings::AA_MODE, AAMode);
+RACECAR_SETTINGS_TYPEDECL(RacecarSettings::DEBUG_VIEW, DebugView);
+RACECAR_SETTINGS_TYPEDECL(RacecarSettings::TONEMAPPING_MODE, TonemappingMode);
+RACECAR_SETTINGS_TYPEDECL(RacecarSettings::DEBUG_TEXTURE, DebugTexture);
+RACECAR_SETTINGS_TYPEDECL(RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH, float);
+RACECAR_SETTINGS_TYPEDECL(RacecarSettings::CAR_IRRADIANCE_STRENGTH, float);
 
 template <RacecarSettings S> typename SettingValue<S>::type Get()
 {
