@@ -34,7 +34,7 @@ vk::mem::AllocatedImage create_fallback_texture()
 Context initialize_context( bool use_fullscreen )
 {
     Context ctx;
-    ctx.window = sdl::initialize( constant::SCREEN_W, constant::SCREEN_H, use_fullscreen );
+    ctx.window = sdl::initialize( use_fullscreen );
     vk::initialize( ctx.window );
     return ctx;
 }

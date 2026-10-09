@@ -318,6 +318,8 @@ void initialize( Context& ctx )
         create_frame_data();
         create_depth_images();
 
+        float aspect = static_cast<float>( engine.swapchain.extent.width ) / static_cast<float>( engine.swapchain.extent.height );
+
         engine.camera = {
             .center = glm::vec3( 2.5f, 2.5f, 1.f ),
             .radius = 8.f,
@@ -325,7 +327,7 @@ void initialize( Context& ctx )
             .zenith = 0.f,
             .up = glm::vec3( 0.f, 1.f, 0.f ),
             .fov_y = float( glm::radians( 60.0 ) ),
-            .aspect_ratio = static_cast<float>( constant::SCREEN_W ) / constant::SCREEN_H,
+            .aspect_ratio = aspect,
             .near_plane = 0.1f,
             .far_plane = 1000.f,
         };

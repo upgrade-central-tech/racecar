@@ -34,6 +34,9 @@ struct State {
     std::vector<VkImageView> swapchain_image_views;
     std::vector<vk::mem::AllocatedImage> depth_images;
 
+    float screen_width;
+    float screen_height;
+
     camera::OrbitCamera camera;
 
     uint32_t frame_overlap = 1;

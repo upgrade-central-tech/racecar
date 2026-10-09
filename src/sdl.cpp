@@ -1,5 +1,6 @@
 #include "sdl.hpp"
 
+#include "constants.hpp"
 #include "exception.hpp"
 #include "log.hpp"
 
@@ -13,7 +14,7 @@ namespace racecar::sdl {
 static constexpr std::string_view LIBVULKAN_PATH = "/usr/local/lib/libvulkan.1.dylib";
 #endif
 
-SDL_Window* initialize( int screen_w, int screen_h, bool fullscreen )
+SDL_Window* initialize( bool fullscreen )
 {
     if ( !SDL_Init( SDL_INIT_VIDEO ) ) {
         log::error( "SDL_Init failed: {}", SDL_GetError() );
@@ -36,7 +37,8 @@ SDL_Window* initialize( int screen_w, int screen_h, bool fullscreen )
     }
 #endif
 
-    if ( SDL_Window* window = SDL_CreateWindow( "RACECAR", screen_w, screen_h, flags ); !window ) {
+    // width and height are effectively fallbacks if not fullscreen
+    if ( SDL_Window* window = SDL_CreateWindow( "RACECAR", racecar::constant::FALLBACK_SCREEN_W, racecar::constant::FALLBACK_SCREEN_H, flags ); !window ) {
         log::error( "SDL_CreateWindow failed: {}", SDL_GetError() );
         throw Exception( "Failed to initialize SDL" );
     } else {
