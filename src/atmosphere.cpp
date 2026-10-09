@@ -149,7 +149,7 @@ Atmosphere initialize()
 
     // Some default states
     atms.sun_azimuth = 2.9f;
-    atms.sun_zenith = 1.3f;
+    atms.sun_zenith = -0.8f;
 
     return atms;
 }

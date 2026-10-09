@@ -94,7 +94,7 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
     Setting { .validate = &validate_aa,
               .options = AA_OPTIONS,
               .option_count = (int)std::size( AA_OPTIONS ),
-              .desired = (int)AAMode::TAA,
+              .desired = (int)AAMode::NONE,
               .fallback = (int)AAMode::NONE }, // AA_MODE
 
     Setting { .validate = &validate_tonemapping,
