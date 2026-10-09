@@ -38,14 +38,11 @@ void update_game_state()
     const float steer_input = ( key_states[SDL_SCANCODE_LEFT] ? 1.0f : 0.0f )
         - ( key_states[SDL_SCANCODE_RIGHT] ? 1.0f : 0.0f );
 
-    const float prev_wheel_angle = gamestate.wheel_angle;
-
     gamestate.wheel_angle = glm::clamp(
         gamestate.wheel_angle + steer_input * WHEEL_TURNING_RATE * float( state.delta ),
         -MAX_WHEEL_ANGLE,
         MAX_WHEEL_ANGLE
     );
-    gamestate.wheel_turn_speed = gamestate.wheel_angle - prev_wheel_angle;
 
     glm::vec3 world_pos_v3 = glm::vec3(gamestate.world_position.x, 0.0f, gamestate.world_position.y);
 

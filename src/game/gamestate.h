@@ -20,7 +20,6 @@ struct GameState {
     bool speed_lock = false;
 
     float wheel_angle = 0.0f;
-    float wheel_turn_speed = 0.0f;
 
     glm::vec3 spline_positions[2] = {
         glm::vec3(0.0, 0.0, -100.0f),

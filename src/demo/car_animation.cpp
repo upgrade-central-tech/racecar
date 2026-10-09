@@ -128,6 +128,12 @@ void update_wheel_transforms( scene::Scene& scene )
         glm::vec3( 1.0f, 0.0f, 0.0f )
     );
 
+    const glm::mat4 turn = glm::rotate(
+        glm::identity<glm::mat4>(),
+        engine.gamestate.wheel_angle,
+        glm::vec3( 0.0f, 1.0f, 0.0f )
+    );
+
     if ( scene.demo_scene_nodes.wheel_back_left_id.has_value() ) {
         scene::set_transform( scene, scene.demo_scene_nodes.wheel_back_left_id.value(), model );
     }
@@ -135,10 +141,10 @@ void update_wheel_transforms( scene::Scene& scene )
         scene::set_transform( scene, scene.demo_scene_nodes.wheel_back_right_id.value(), model );
     }
     if ( scene.demo_scene_nodes.wheel_front_left_id.has_value() ) {
-        scene::set_transform( scene, scene.demo_scene_nodes.wheel_front_left_id.value(), model );
+        scene::set_transform( scene, scene.demo_scene_nodes.wheel_front_left_id.value(), turn * model );
     }
     if ( scene.demo_scene_nodes.wheel_front_right_id.has_value() ) {
-        scene::set_transform( scene, scene.demo_scene_nodes.wheel_front_right_id.value(), model );
+        scene::set_transform( scene, scene.demo_scene_nodes.wheel_front_right_id.value(), turn * model );
     }
 }
 
