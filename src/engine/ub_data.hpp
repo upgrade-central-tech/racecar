@@ -107,7 +107,7 @@ struct Atmosphere {
     float radiance_exposure = 0.f;
 };
 
-constexpr size_t ROAD_NUM_POINTS = 6;
+constexpr size_t ROAD_NUM_POINTS = 14;
 
 struct GameStateBuffer {
     glm::vec4 world_position = {};

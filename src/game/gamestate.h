@@ -22,6 +22,7 @@ struct Scene;
 namespace racecar {
 
 constexpr float ROAD_POINT_SPACING = 100.0f;
+constexpr size_t ROAD_CENTER_SEGMENT = ( ub_data::ROAD_NUM_POINTS - 2 ) / 2;
 
 struct GameState {
     float acceleration = 0;
@@ -37,7 +38,7 @@ struct GameState {
             float sign = i % 2 == 0 ? -1.0f : 1.0f;
 
             points[i] = glm::vec3(
-                50.0f * sign, 0.0f, ( float( i ) - 2.5f ) * ROAD_POINT_SPACING
+                50.0f * sign, 0.0f, ( float( i ) - float( ROAD_CENTER_SEGMENT ) - 0.5f ) * ROAD_POINT_SPACING
             );
         }
         return points;

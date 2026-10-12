@@ -131,7 +131,7 @@ struct ModelMatData {
     float4x4 prev_model_mat;
 };
 
-static const int ROAD_NUM_POINTS = 6;
+static const int ROAD_NUM_POINTS = 14;
 
 struct GameStateBuffer {
     float4 world_position;

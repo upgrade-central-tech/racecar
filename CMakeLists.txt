@@ -91,6 +91,7 @@ set(RACECAR_SOURCES
     ${SCENE_DIR}/terrain_rt.cpp
 
     ${GAME_DIR}/gamestate.cpp
+    ${GAME_DIR}/roadgen.cpp
 
     ${RACECAR_DIR}/racecar.cpp
     ${RACECAR_DIR}/furnace.cpp
