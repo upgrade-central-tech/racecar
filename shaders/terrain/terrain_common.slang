@@ -90,7 +90,7 @@ float terrain_height( float3 base_position, float2 scroll, float3[2] spline_posi
     float dist = dist_to_spline( base_position, spline_positions, world_position );
     float layer = saturate( smoothstep( road_width, road_width + blend_width, dist ) );
 
-    float x_dist = clamp( abs( base_position.x / TERRAIN_HEIGHT_FALLOFF_WIDTH ), 0.0f, 1.0f );
+    float x_dist = clamp( abs( ( base_position.x + world_position.x ) / TERRAIN_HEIGHT_FALLOFF_WIDTH ), 0.0f, 1.0f );
 
     float ridge = perlin_noise3D(
                       float3( world_uv_unwrapped.x * 0.5f, 0.0f, world_uv_unwrapped.y * 0.5f ) )
