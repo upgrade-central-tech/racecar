@@ -74,15 +74,69 @@ TerrainUVs terrain_compute_uvs( float3 world_position, float2 scroll )
     return uvs;
 }
 
-float dist_to_spline( float3 position, float3[ROAD_NUM_POINTS] spline_positions, float3 world_offset ) {
-    float min_dist = 1e30f;
-    for ( int i = 0; i < ROAD_NUM_POINTS - 1; i++ ) {
-        float3 spline_vec = spline_positions[i + 1] - spline_positions[i];
-        float3 pos_vec = position + world_offset - spline_positions[i];
-        float t = saturate( dot( pos_vec, spline_vec ) / max( dot( spline_vec, spline_vec ), 1e-8f ) );
-        min_dist = min( min_dist, length( pos_vec - t * spline_vec ) );
+float dist_sq_to_segment( float2 a, float2 b )
+{
+    float2 ab = b - a;
+    float t = saturate( -dot( a, ab ) / max( dot( ab, ab ), 1e-8f ) );
+    float2 closest = a + t * ab;
+    return dot( closest, closest );
+}
+
+// https://iquilezles.org/articles/distfunctions2d/
+float dist_sq_to_quadratic_bezier( float2 A, float2 B, float2 C )
+{
+    float2 a = B - A;
+    float2 b = A - 2.0f * B + C;
+    float2 c = 2.0f * a;
+    float2 d = A;
+
+    float bb = dot( b, b );
+    if ( bb < 1e-6f * max( dot( a, a ), 1e-8f ) ) {
+        return dist_sq_to_segment( A, C );
     }
-    return min_dist;
+
+    float kk = 1.0f / bb;
+    float kx = kk * dot( a, b );
+    float ky = kk * ( 2.0f * dot( a, a ) + dot( d, b ) ) / 3.0f;
+    float kz = kk * dot( d, a );
+
+    float p = ky - kx * kx;
+    float q = kx * ( 2.0f * kx * kx - 3.0f * ky ) + kz;
+    float h = q * q + 4.0f * p * p * p;
+
+    if ( h >= 0.0f ) {
+        h = sqrt( h );
+        float2 x = ( float2( h, -h ) - q ) / 2.0f;
+        float2 uv = sign( x ) * pow( abs( x ), float2( 1.0f / 3.0f ) );
+        float t = saturate( uv.x + uv.y - kx );
+        float2 q0 = d + ( c + b * t ) * t;
+        return dot( q0, q0 );
+    }
+
+    float z = sqrt( -p );
+    float v = acos( clamp( q / ( p * z * 2.0f ), -1.0f, 1.0f ) ) / 3.0f;
+    float m = cos( v );
+    float n = sin( v ) * 1.732050808f;
+    float2 t = saturate( float2( m + m, -n - m ) * z - kx );
+    float2 q0 = d + ( c + b * t.x ) * t.x;
+    float2 q1 = d + ( c + b * t.y ) * t.y;
+    return min( dot( q0, q0 ), dot( q1, q1 ) );
+}
+
+float dist_to_spline( float3 position, float3[ROAD_NUM_POINTS] spline_positions, float3 world_offset ) {
+    float2 p = position.xz + world_offset.xz;
+
+    float min_dist_sq = 1e30f;
+    for ( int i = 0; i < ROAD_NUM_POINTS - 2; i++ ) {
+        float2 p0 = spline_positions[i].xz - p;
+        float2 p1 = spline_positions[i + 1].xz - p;
+        float2 p2 = spline_positions[i + 2].xz - p;
+
+        min_dist_sq = min(
+            min_dist_sq, dist_sq_to_quadratic_bezier( 0.5f * ( p0 + p1 ), p1, 0.5f * ( p1 + p2 ) )
+        );
+    }
+    return sqrt( min_dist_sq );
 }
 
 float terrain_height( float3 base_position, float2 scroll, float3[ROAD_NUM_POINTS] spline_positions,
