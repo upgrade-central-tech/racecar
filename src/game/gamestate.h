@@ -11,6 +11,12 @@ struct DescriptorSet;
 
 }
 
+namespace racecar::scene {
+
+struct Scene;
+
+}
+
 namespace racecar {
 
 struct GameState {
@@ -25,9 +31,12 @@ struct GameState {
         glm::vec3(0.0, 0.0, -100.0f),
         glm::vec3(0.0, 0.0, +100.0f),
     };
+
+    float yaw = 0.0f;
+    float integrated_distance_traveled = 0.0f;
 };
 
-void update_game_state();
+void update_game_state( const scene::Scene& scene );
 
 void initialize_gamestate_buffer(
     UniformBuffer<ub_data::GameStateBuffer>* out_buffer, engine::DescriptorSet* out_desc_set

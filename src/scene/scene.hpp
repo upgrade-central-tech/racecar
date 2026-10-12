@@ -106,6 +106,9 @@ struct DemoSceneNodes {
     std::optional<size_t> wheel_front_left_id = std::nullopt;
     std::optional<size_t> wheel_back_right_id = std::nullopt;
     std::optional<size_t> wheel_back_left_id = std::nullopt;
+
+    float front_axle_local_z;
+    float back_axle_local_z;
 };
 
 struct Scene {
@@ -125,6 +128,8 @@ bool load_hdri( std::string file_path, Scene& scene );
 
 void set_transform( Scene& scene, size_t node_id, glm::mat4 transform );
 void mul_transform( Scene& scene, size_t node_id, glm::mat4 transform );
+
+glm::vec3 get_position_in_scene( const Scene& scene, size_t node_idx );
 
 void update_model_mat_buffers( const Scene& scene, std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers );
 

@@ -4,6 +4,8 @@
 #include "../log.hpp"
 
 #include <SDL3/SDL.h>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/geometric.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL // Needed for quaternion.hpp
@@ -581,6 +583,10 @@ void load_gltf(
             node->children.push_back( child_node.get() );
         }
     }
+
+    // setting some constants. this should probably be cleaned up later
+    scene.demo_scene_nodes.back_axle_local_z = get_position_in_scene(scene, scene.demo_scene_nodes.wheel_back_left_id.value() ).z;
+    scene.demo_scene_nodes.front_axle_local_z = get_position_in_scene(scene, scene.demo_scene_nodes.wheel_front_left_id.value() ).z;
 }
 
 bool load_hdri( std::string file_path, Scene& scene )
@@ -661,6 +667,20 @@ void update_model_mat_buffers(
             update_model_mat_buffer_node( scene, model_mat_uniform_buffers, identity, node.get() );
         }
     }
+}
+
+glm::vec3 get_position_in_scene( const Scene& scene, size_t node_idx ) {
+    glm::mat4 transform = glm::identity<glm::mat4>();
+
+    size_t idx = node_idx;
+
+    // we need to fix the nodes to be necessary
+    while ( idx != scene.demo_scene_nodes.car_parent_id.value() ) {
+        transform = scene.nodes[idx]->transform * transform;
+        idx = scene.nodes[idx]->parent->id;
+    }
+
+    return glm::vec3(transform * glm::vec4(0.0, 0.0, 0.0, 1.0));
 }
 
 } // namespace racecar::scene

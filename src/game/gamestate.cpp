@@ -2,17 +2,22 @@
 
 #include "../engine/descriptor_set.hpp"
 #include "../engine/state.hpp"
+#include "../scene/scene.hpp"
+#include <glm/common.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/scalar_constants.hpp>
 #include <glm/geometric.hpp>
 #include <vulkan/vulkan_core.h>
 
 namespace racecar {
 
-static const glm::vec2 FORWARD = glm::vec2( 0.0f, 1.0f );
 static const float MAX_SPEED = 80.0f;
-static const float MAX_WHEEL_ANGLE = glm::radians( 70.0f );
-static const float WHEEL_TURNING_RATE = glm::radians( 300.0f );
+static const float MAX_WHEEL_ANGLE = glm::radians( 40.0f );
+static const float WHEEL_TURNING_RATE = glm::radians( 50.0f );
+static const float MAX_LATERAL_ACCELERATION = 15.0f;
+static const float TURNING_DRAG = 0.1f;
 
-void update_game_state()
+void update_game_state( const scene::Scene& scene )
 {
     engine::State& state = engine::State::GetMut();
     GameState& gamestate = state.gamestate;
@@ -32,16 +37,49 @@ void update_game_state()
     gamestate.speed += float( state.delta ) * gamestate.acceleration;
     gamestate.speed = glm::clamp( gamestate.speed, 0.0f, MAX_SPEED );
 
-    gamestate.world_position += FORWARD * gamestate.speed * float( state.delta );
 
     // front wheel turning
-    const float steer_input = ( key_states[SDL_SCANCODE_LEFT] ? 1.0f : 0.0f )
-        - ( key_states[SDL_SCANCODE_RIGHT] ? 1.0f : 0.0f );
+    bool wheel_turn_input = key_states[SDL_SCANCODE_LEFT] || key_states[SDL_SCANCODE_RIGHT];
 
-    gamestate.wheel_angle = glm::clamp(
-        gamestate.wheel_angle + steer_input * WHEEL_TURNING_RATE * float( state.delta ),
-        -MAX_WHEEL_ANGLE,
-        MAX_WHEEL_ANGLE
+    if (wheel_turn_input) {
+        const float steer_input = ( key_states[SDL_SCANCODE_LEFT] ? 1.0f : 0.0f )
+            - ( key_states[SDL_SCANCODE_RIGHT] ? 1.0f : 0.0f );
+
+        gamestate.wheel_angle = glm::clamp(
+            gamestate.wheel_angle + steer_input * WHEEL_TURNING_RATE * float( state.delta ),
+            -MAX_WHEEL_ANGLE,
+            MAX_WHEEL_ANGLE
+        );
+    }
+    else {
+        if (glm::abs(gamestate.wheel_angle) > glm::epsilon<float>()) {
+            if (gamestate.wheel_angle > 0.0f) {
+                gamestate.wheel_angle = glm::clamp(gamestate.wheel_angle - WHEEL_TURNING_RATE * float( state.delta ),
+                    0.0f,
+                    MAX_WHEEL_ANGLE
+                );
+            }
+            else {
+                gamestate.wheel_angle = glm::clamp(gamestate.wheel_angle + WHEEL_TURNING_RATE * float( state.delta ),
+                    -MAX_WHEEL_ANGLE,
+                    0.0f
+                );
+            }
+        }
+    }
+
+    const float back_axle_z = scene.demo_scene_nodes.back_axle_local_z;
+    const float wheelbase = scene.demo_scene_nodes.front_axle_local_z - back_axle_z;
+
+    const float speed_sq = gamestate.speed * gamestate.speed;
+    if ( speed_sq > 0.0f ) {
+        const float grip_wheel_angle = glm::atan( wheelbase * MAX_LATERAL_ACCELERATION / speed_sq );
+        gamestate.wheel_angle = glm::clamp( gamestate.wheel_angle, -grip_wheel_angle, grip_wheel_angle );
+    }
+
+    const float lateral_acceleration = speed_sq * glm::abs( glm::tan( gamestate.wheel_angle ) ) / wheelbase;
+    gamestate.speed = glm::max(
+        gamestate.speed - TURNING_DRAG * lateral_acceleration * float( state.delta ), 0.0f
     );
 
     glm::vec3 world_pos_v3 = glm::vec3(gamestate.world_position.x, 0.0f, gamestate.world_position.y);
@@ -50,6 +88,18 @@ void update_game_state()
         gamestate.spline_positions[0] = gamestate.spline_positions[1];
         gamestate.spline_positions[1] = gamestate.spline_positions[1] + glm::vec3(0.0, 0.0, 100.0f);
     }
+
+    // car movement with steering
+    const float distance = gamestate.speed * static_cast<float>(state.delta);
+    gamestate.integrated_distance_traveled += distance;
+
+    glm::vec2 heading = glm::vec2(glm::sin(gamestate.yaw), glm::cos(gamestate.yaw));
+    glm::vec2 back_axle_position = gamestate.world_position + back_axle_z * heading + heading * distance;
+
+    gamestate.yaw += distance * glm::tan(gamestate.wheel_angle) / wheelbase;
+
+    heading = glm::vec2(glm::sin(gamestate.yaw), glm::cos(gamestate.yaw));
+    gamestate.world_position = back_axle_position - back_axle_z * heading;
 }
 
 void initialize_gamestate_buffer(

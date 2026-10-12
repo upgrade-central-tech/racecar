@@ -38,6 +38,7 @@ const std::unordered_map<std::string, float> wheel_radii = {
 namespace {
 
 std::optional<glm::vec2> unlocked_camera_prev_world_position;
+std::optional<glm::mat4> car_root_base_transform;
 
 }
 
@@ -113,13 +114,30 @@ void update_car_transform(
     if ( gui.demo.enable_translation ) {
         // nothing here for now, this is scrapped
     }
+
+    const size_t car_id = scene.demo_scene_nodes.car_parent_id.value();
+    if ( !car_root_base_transform.has_value() ) {
+        car_root_base_transform = scene.nodes[car_id]->transform;
+    }
+
+    const glm::mat4& base = car_root_base_transform.value();
+    const glm::vec3 pivot = glm::vec3( base[3] );
+    const glm::mat4 yaw_rotation = glm::translate( glm::identity<glm::mat4>(), pivot )
+        * glm::rotate(
+            glm::identity<glm::mat4>(),
+            engine::State::GetConst().gamestate.yaw,
+            glm::vec3( 0.0f, 1.0f, 0.0f )
+        )
+        * glm::translate( glm::identity<glm::mat4>(), -pivot );
+
+    scene::set_transform( scene, car_id, yaw_rotation * base );
 }
 
 void update_wheel_transforms( scene::Scene& scene )
 {
     const engine::State& engine = engine::State::GetConst();
 
-    const float distance = engine.gamestate.world_position.y;
+    const float distance = engine.gamestate.integrated_distance_traveled;
     const float radius = 0.5f * wheel_radii.at( std::string( GLTF_FILE_PATH ) );
 
     const glm::mat4 model = glm::rotate(

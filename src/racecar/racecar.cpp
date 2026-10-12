@@ -551,7 +551,7 @@ void run( bool use_fullscreen )
         );
 
         // Update GameState
-        update_game_state();
+        update_game_state( scene );
 
         // Don't draw if we're minimized
         if ( stop_drawing ) {
