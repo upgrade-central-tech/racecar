@@ -107,11 +107,13 @@ struct Atmosphere {
     float radiance_exposure = 0.f;
 };
 
+constexpr size_t ROAD_NUM_POINTS = 6;
+
 struct GameStateBuffer {
     glm::vec4 world_position = {};
 
     // these need to be vec4 because of layout fuckery
-    glm::vec4 spline_positions[2] = {};
+    glm::vec4 spline_positions[ROAD_NUM_POINTS] = {};
 };
 
 struct Clouds {

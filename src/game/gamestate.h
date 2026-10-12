@@ -5,6 +5,8 @@
 
 #include <glm/glm.hpp>
 
+#include <array>
+
 namespace racecar::engine {
 
 struct DescriptorSet;
@@ -19,6 +21,8 @@ struct Scene;
 
 namespace racecar {
 
+constexpr float ROAD_POINT_SPACING = 100.0f;
+
 struct GameState {
     float acceleration = 0;
     float speed = 0;
@@ -27,10 +31,17 @@ struct GameState {
 
     float wheel_angle = 0.0f;
 
-    glm::vec3 spline_positions[2] = {
-        glm::vec3(0.0, 0.0, -100.0f),
-        glm::vec3(0.0, 0.0, +100.0f),
-    };
+    std::array<glm::vec3, ub_data::ROAD_NUM_POINTS> spline_positions = [] {
+        std::array<glm::vec3, ub_data::ROAD_NUM_POINTS> points;
+        for ( size_t i = 0; i < points.size(); i++ ) {
+            float sign = i % 2 == 0 ? -1.0f : 1.0f;
+
+            points[i] = glm::vec3(
+                50.0f * sign, 0.0f, ( float( i ) - 2.5f ) * ROAD_POINT_SPACING
+            );
+        }
+        return points;
+    }();
 
     float yaw = 0.0f;
     float integrated_distance_traveled = 0.0f;

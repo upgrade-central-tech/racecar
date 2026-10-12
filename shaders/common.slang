@@ -131,9 +131,11 @@ struct ModelMatData {
     float4x4 prev_model_mat;
 };
 
+static const int ROAD_NUM_POINTS = 6;
+
 struct GameStateBuffer {
     float4 world_position;
 
     // these take up 16 bytes so they are correspondant to glm::vec4 on the host
-    float3[2] spline_positions;
+    float3[ROAD_NUM_POINTS] spline_positions;
 };

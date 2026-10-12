@@ -74,14 +74,18 @@ TerrainUVs terrain_compute_uvs( float3 world_position, float2 scroll )
     return uvs;
 }
 
-float dist_to_spline( float3 position, float3[2] spline_positions, float3 world_offset ) {
-    float3 spline_vec = spline_positions[1] - spline_positions[0];
-    float3 pos_vec = position + world_offset - spline_positions[0];
-    float t = saturate( dot( pos_vec, spline_vec ) / max( dot( spline_vec, spline_vec ), 1e-8f ) );
-    return length( pos_vec - t * spline_vec );
+float dist_to_spline( float3 position, float3[ROAD_NUM_POINTS] spline_positions, float3 world_offset ) {
+    float min_dist = 1e30f;
+    for ( int i = 0; i < ROAD_NUM_POINTS - 1; i++ ) {
+        float3 spline_vec = spline_positions[i + 1] - spline_positions[i];
+        float3 pos_vec = position + world_offset - spline_positions[i];
+        float t = saturate( dot( pos_vec, spline_vec ) / max( dot( spline_vec, spline_vec ), 1e-8f ) );
+        min_dist = min( min_dist, length( pos_vec - t * spline_vec ) );
+    }
+    return min_dist;
 }
 
-float terrain_height( float3 base_position, float2 scroll, float3[2] spline_positions,
+float terrain_height( float3 base_position, float2 scroll, float3[ROAD_NUM_POINTS] spline_positions,
     SamplerState linear_sampler, float3 world_position, float road_width, float blend_width )
 {
     float2 layer_uv = terrain_layer_uv( base_position, scroll );
@@ -100,7 +104,7 @@ float terrain_height( float3 base_position, float2 scroll, float3[2] spline_posi
     return TERRAIN_HEIGHT_AMPLITUDE * x_dist * layer * ridge;
 }
 
-float3 terrain_displace( float3 base_position, float3 world_position, float2 scroll, float3[2] spline_positions,
+float3 terrain_displace( float3 base_position, float3 world_position, float2 scroll, float3[ROAD_NUM_POINTS] spline_positions,
     SamplerState linear_sampler, float road_width, float blend_width )
 {
     float3 displaced = base_position;
@@ -108,7 +112,7 @@ float3 terrain_displace( float3 base_position, float3 world_position, float2 scr
     return displaced;
 }
 
-float3 terrain_height_normal( float3 base_position, float3 world_position, float2 scroll, float3[2] spline_positions,
+float3 terrain_height_normal( float3 base_position, float3 world_position, float2 scroll, float3[ROAD_NUM_POINTS] spline_positions,
     SamplerState linear_sampler, float epsilon, float road_width, float blend_width )
 {
     float3 dx = float3( epsilon, 0.0f, 0.0f );
@@ -155,7 +159,7 @@ struct TerrainSurface {
 
 TerrainSurface terrain_evaluate_surface( float3 position, float3 vertex_normal, float2 scroll,
     TerrainUVs uvs, float snowness, float wetness_toggle, TerrainMaps maps,
-    TerrainGradients gradients, float3[2] spline_positions, float4 gamestate_world_position, float road_width, float blend_width )
+    TerrainGradients gradients, float3[ROAD_NUM_POINTS] spline_positions, float4 gamestate_world_position, float road_width, float blend_width )
 {
     float2 layer_uv = uvs.layer_uv;
     float2 world_uv_unwrapped = uvs.world_uv_unwrapped;
