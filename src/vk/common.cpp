@@ -154,6 +154,9 @@ vkb::Device pick_and_create_device()
 
     VkPhysicalDeviceFeatures required_features = {
         .tessellationShader = VK_TRUE,
+#if RACECAR_DEV
+        .fillModeNonSolid = VK_TRUE,
+#endif
         .shaderInt16 = VK_TRUE,
     };
 
