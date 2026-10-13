@@ -100,6 +100,7 @@ void create_reflection_pass_resources(
         false,
         false,
         vk::create::shader_module( REFLECTION_PASS_SHADER_MODULE_PATH ),
+        engine::ShaderEntryPointStrings::defaults(),
         false
     );
 

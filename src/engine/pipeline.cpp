@@ -4,14 +4,11 @@
 #include "../vk/create.hpp"
 #include "state.hpp"
 
+#include <vulkan/vulkan_core.h>
+
 #include <array>
 
 namespace racecar::engine {
-
-constexpr std::string_view VERTEX_ENTRY_NAME = "vs_main";
-constexpr std::string_view TESS_CONTROL_ENTRY_NAME = "ts_control_main";
-constexpr std::string_view TESS_EVAL_ENTRY_NAME = "ts_eval_main";
-constexpr std::string_view FRAGMENT_ENTRY_NAME = "fs_main";
 
 Pipeline create_gfx_pipeline(
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
@@ -21,6 +18,7 @@ Pipeline create_gfx_pipeline(
     bool blend,
     bool depth_test,
     VkShaderModule shader_module,
+    ShaderEntryPointStrings shader_entry_point_strings,
     bool enable_tessellation_shaders
 )
 {
@@ -145,12 +143,12 @@ Pipeline create_gfx_pipeline(
             vk::create::pipeline_shader_stage_info(
                 VK_SHADER_STAGE_VERTEX_BIT,
                 shader_module,
-                VERTEX_ENTRY_NAME
+                shader_entry_point_strings.vertex_entry_name
             ),
             vk::create::pipeline_shader_stage_info(
                 VK_SHADER_STAGE_FRAGMENT_BIT,
                 shader_module,
-                FRAGMENT_ENTRY_NAME
+                shader_entry_point_strings.fragment_entry_name
             ),
         };
     } else {
@@ -158,22 +156,22 @@ Pipeline create_gfx_pipeline(
             vk::create::pipeline_shader_stage_info(
                 VK_SHADER_STAGE_VERTEX_BIT,
                 shader_module,
-                VERTEX_ENTRY_NAME
+                shader_entry_point_strings.vertex_entry_name
             ),
             vk::create::pipeline_shader_stage_info(
                 VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
                 shader_module,
-                TESS_CONTROL_ENTRY_NAME
+                shader_entry_point_strings.tess_control_entry_name
             ),
             vk::create::pipeline_shader_stage_info(
                 VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
                 shader_module,
-                TESS_EVAL_ENTRY_NAME
+                shader_entry_point_strings.tess_eval_entry_name
             ),
             vk::create::pipeline_shader_stage_info(
                 VK_SHADER_STAGE_FRAGMENT_BIT,
                 shader_module,
-                FRAGMENT_ENTRY_NAME
+                shader_entry_point_strings.fragment_entry_name
             ),
         };
     }

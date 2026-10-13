@@ -1,5 +1,7 @@
 #include "atmosphere.hpp"
 
+#include "engine/pipeline.hpp"
+
 #define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
 #include "camera_data.hpp"
 #include "engine/images.hpp"
@@ -193,6 +195,7 @@ void draw_atmosphere(
             false,
             true,
             vk::create::shader_module( atmosphere::SHADER_PATH ),
+            engine::ShaderEntryPointStrings::defaults(),
             false
         );
     } catch ( const Exception& ex ) {

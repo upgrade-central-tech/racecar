@@ -49,6 +49,7 @@ void create_scene_gfx_pipeline(
             false,
             true,
             vk::create::shader_module( SHADER_MODULE_PATH ),
+            engine::ShaderEntryPointStrings::defaults(),
             false
         );
     } catch ( const Exception& ex ) {

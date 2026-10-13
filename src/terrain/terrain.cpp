@@ -254,6 +254,7 @@ void initialize_terrain(
             false,
             true,
             vk::create::shader_module( TERRAIN_SHADER_PREPASS_MODULE_PATH ),
+            engine::ShaderEntryPointStrings::defaults(),
             true
         );
     } catch ( const Exception& ex ) {

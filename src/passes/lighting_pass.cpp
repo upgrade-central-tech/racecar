@@ -101,6 +101,7 @@ void create_lighting_pass_resources(
         true,
         false,
         vk::create::shader_module( LIGHTING_PASS_SHADER_MODULE_PATH ),
+        engine::ShaderEntryPointStrings::defaults(),
         false
     );
 }
