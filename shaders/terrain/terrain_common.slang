@@ -10,7 +10,6 @@ static const float TERRAIN_LAYER_MAP_SCALE = 0.025f;
 static const float TERRAIN_WORLD_SCALE = 0.05f;
 
 static const float TERRAIN_HEIGHT_AMPLITUDE = 5.0f;
-static const float TERRAIN_HEIGHT_FALLOFF_WIDTH = 50.0f;
 
 static const float TERRAIN_PUDDLE_SCALE = 0.5f;
 static const float TERRAIN_PUDDLE_SPEED = 13.333f;
@@ -148,14 +147,12 @@ float terrain_height( float3 base_position, float2 scroll, float3[ROAD_NUM_POINT
     float dist = dist_to_spline( base_position, spline_positions, world_position );
     float layer = saturate( smoothstep( road_width, road_width + blend_width, dist ) );
 
-    float x_dist = clamp( abs( ( base_position.x + world_position.x ) / TERRAIN_HEIGHT_FALLOFF_WIDTH ), 0.0f, 1.0f );
-
     float ridge = perlin_noise3D(
                       float3( world_uv_unwrapped.x * 0.5f, 0.0f, world_uv_unwrapped.y * 0.5f ) )
             * 2.0f
         + 1.0f;
 
-    return TERRAIN_HEIGHT_AMPLITUDE * x_dist * layer * ridge;
+    return TERRAIN_HEIGHT_AMPLITUDE * layer * ridge;
 }
 
 float3 terrain_displace( float3 base_position, float3 world_position, float2 scroll, float3[ROAD_NUM_POINTS] spline_positions,
