@@ -86,7 +86,11 @@ void update_game_state( const scene::Scene& scene )
         0.0f
     );
 
-    recenter_road( gamestate.spline_positions, gamestate.world_position );
+    recenter_road(
+        gamestate.spline_positions,
+        gamestate.world_position,
+        &gamestate.road_integrated_dist
+    );
 
     // car movement with steering
     const float distance = gamestate.speed * static_cast<float>( state.delta );

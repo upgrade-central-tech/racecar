@@ -1,9 +1,18 @@
 #include "roadgen.hpp"
 
+#include "engine/ub_data.hpp"
 #include "gamestate.h"
+
+#include <glm/ext/matrix_float4x4.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/vector_float3.hpp>
+#include <glm/geometric.hpp>
+#include <glm/gtc/noise.hpp>
+#include <glm/trigonometric.hpp>
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <limits>
 
 namespace racecar {
@@ -82,13 +91,25 @@ size_t closest_road_segment(
     return best_segment;
 }
 
-glm::vec3 generate_road_point( const glm::vec3& neighbor, float direction )
+glm::vec3
+generate_road_point( const glm::vec3 previous_heading, float road_integrated_dist, float sign )
 {
-    const float sign = neighbor.x > 0.0f ? -1.0f : 1.0f;
-    return glm::vec3( sign * 50.0f, 0.0f, neighbor.z + direction * ROAD_POINT_SPACING );
+    float n = glm::perlin( glm::vec2( road_integrated_dist * 0.00343f, 0.5f ) );
+    return glm::vec3(
+        glm::rotate(
+            glm::identity<glm::mat4>(),
+            n * glm::radians( ROAD_MAX_TURNING_ANGLE ) * sign,
+            glm::vec3( 0.0f, 1.0f, 0.0f )
+        )
+        * glm::vec4( previous_heading, 0.0f )
+    );
 }
 
-void recenter_road( std::array<glm::vec3, ub_data::ROAD_NUM_POINTS>& points, glm::vec2 position )
+void recenter_road(
+    std::array<glm::vec3, ub_data::ROAD_NUM_POINTS>& points,
+    glm::vec2 position,
+    float* road_integrated_dist
+)
 {
     const size_t segment = closest_road_segment( points, position );
 
@@ -100,7 +121,15 @@ void recenter_road( std::array<glm::vec3, ub_data::ROAD_NUM_POINTS>& points, glm
             points.begin()
         );
         for ( size_t i = points.size() - shift; i < points.size(); i++ ) {
-            points[i] = generate_road_point( points[i - 1], 1.0f );
+            glm::vec3 last_heading = points[i - 1] - points[i - 2];
+            points[i] = points[i - 1]
+                + ROAD_POINT_SPACING
+                    * generate_road_point(
+                        glm::normalize( last_heading ),
+                        *road_integrated_dist,
+                        1.0f
+                    );
+            *road_integrated_dist += ROAD_POINT_SPACING;
         }
     } else if ( segment < ROAD_CENTER_SEGMENT ) {
         const size_t shift = ROAD_CENTER_SEGMENT - segment;
@@ -110,7 +139,15 @@ void recenter_road( std::array<glm::vec3, ub_data::ROAD_NUM_POINTS>& points, glm
             points.end()
         );
         for ( size_t i = shift; i-- > 0; ) {
-            points[i] = generate_road_point( points[i + 1], -1.0f );
+            glm::vec3 last_heading = points[i + 1] - points[i + 2];
+            points[i] = points[i + 1]
+                + ROAD_POINT_SPACING
+                    * generate_road_point(
+                        glm::normalize( last_heading ),
+                        *road_integrated_dist - ROAD_POINT_SPACING * ub_data::ROAD_NUM_POINTS,
+                        -1.0f
+                    );
+            *road_integrated_dist -= ROAD_POINT_SPACING;
         }
     }
 }

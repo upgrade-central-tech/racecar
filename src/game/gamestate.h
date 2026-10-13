@@ -48,6 +48,9 @@ struct GameState {
 
     float yaw = 0.0f;
     float integrated_distance_traveled = 0.0f;
+
+    // road state
+    float road_integrated_dist = 0.0f;
 };
 
 void update_game_state( const scene::Scene& scene );
