@@ -233,7 +233,7 @@ if (RACECAR_SLANGC)
     racecar_add_shader(sun_visibility/sun_visibility.spv sun_visibility/sun_visibility.slang cs_sun_visibility)
 
     racecar_add_shader(terrain/cs_terrain_draw.spv terrain/terrain_lighting.slang cs_terrain_draw)
-    racecar_add_shader(terrain/terrain_prepass.spv terrain/terrain_prepass.slang vs_main fs_main ts_control_main ts_eval_main)
+    racecar_add_shader(terrain/terrain_prepass.spv terrain/terrain_prepass.slang vs_main fs_main ts_control_main ts_eval_main line_white)
     racecar_add_shader(terrain/terrain_rt_displace.spv terrain/terrain_rt_displace.slang cs_terrain_rt_displace)
 
     racecar_add_shader(transparency/transparency.spv transparency/transparency.slang vs_main fs_main)

@@ -7,6 +7,7 @@
 #include "../engine/ub_data.hpp"
 #include "../engine/uniform_buffer.hpp"
 #include "engine/descriptor_set.hpp"
+#include "engine/pipeline.hpp"
 
 namespace racecar::gui {
 struct Gui;
@@ -86,6 +87,10 @@ struct Terrain {
     engine::Pipeline terrain_prepass_pipeline;
     engine::Pipeline terrain_lighting_pipeline;
 
+#if RACECAR_DEV
+    engine::Pipeline terrain_wireframe_pipeline;
+#endif
+
     UniformBuffer<ub_data::TerrainData> terrain_uniform;
 
     // Crap-ton of images. We need a bindless-texture solution or something.
@@ -130,6 +135,10 @@ void draw_terrain_prepass( Terrain& terrain,
     [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
 
 void draw_terrain( Terrain& terrain, engine::TaskList& task_list );
+
+#if RACECAR_DEV
+void draw_terrain_wireframe( Terrain& terrain, engine::TaskList& task_list, engine::RWImage& screen_color );
+#endif
 
 void update_terrain_uniform_buffer(
     gui::Gui& gui, geometry::Terrain& terrain );

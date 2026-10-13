@@ -37,7 +37,7 @@ Pipeline create_gfx_pipeline(
     std::optional<VkPipelineVertexInputStateCreateInfo> vertex_input_state_create_info,
     const std::vector<VkDescriptorSetLayout>& layouts,
     const std::vector<VkFormat> color_attachment_formats, VkSampleCountFlagBits samples, bool blend,
-    bool depth_test, VkShaderModule shader_module, ShaderEntryPointStrings shader_entry_point_strings, bool enable_tessellation_shaders );
+    bool depth_test, VkShaderModule shader_module, ShaderEntryPointStrings shader_entry_point_strings, bool enable_tessellation_shaders, bool wireframe );
 
 Pipeline create_compute_pipeline(
     const std::vector<VkDescriptorSetLayout>& layouts, VkShaderModule shader_module,

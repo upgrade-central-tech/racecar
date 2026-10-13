@@ -416,6 +416,7 @@ void draw_volumetric(
             true,
             vk::create::shader_module( VOLUMETRIC_SHADER_MODULE_PATH ),
             engine::ShaderEntryPointStrings::defaults(),
+            false,
             false
         );
     } catch ( const Exception& ex ) {
@@ -479,6 +480,7 @@ void draw_volumetric(
             true,
             vk::create::shader_module( VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH ),
             engine::ShaderEntryPointStrings::defaults(),
+            false,
             false
         );
     } catch ( const Exception& ex ) {

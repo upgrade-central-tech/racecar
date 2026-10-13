@@ -270,4 +270,9 @@ FragmentOutput fs_main( DomainOutput in )
     return output;
 }
 
+[shader( "fragment" )]
+float4 line_white( DomainOutput in ) : SV_Target0
+{
+    return float4(1.0, 1.0, 1.0, 1.0);
+}
 

@@ -7,6 +7,9 @@
 #include "../gui.hpp"
 #include "../vk/create.hpp"
 #include "engine/descriptor_set.hpp"
+#include "engine/gfx_task.hpp"
+#include "engine/pipeline.hpp"
+#include "engine/state.hpp"
 #include "settings.h"
 
 #include <glm/ext/vector_float4.hpp>
@@ -255,12 +258,39 @@ void initialize_terrain(
             true,
             vk::create::shader_module( TERRAIN_SHADER_PREPASS_MODULE_PATH ),
             engine::ShaderEntryPointStrings::defaults(),
-            true
+            true,
+            false
         );
     } catch ( const Exception& ex ) {
         log::error( "Failed to create terrain prepass graphics pipeline: {}", ex.what() );
         throw;
     }
+
+#if RACECAR_DEV
+    terrain.terrain_wireframe_pipeline = engine::create_gfx_pipeline(
+        engine::get_vertex_input_state_create_info( terrain ),
+        {
+            terrain.prepass_uniform_desc_set.layouts[0],
+            terrain.prepass_texture_desc_set.layouts[0],
+            terrain.prepass_sampler_desc_set.layouts[0],
+            terrain.prepass_lut_desc_set.layouts[0],
+            terrain.gamestate_desc_set->layouts[0],
+        },
+        {
+            VK_FORMAT_R16G16B16A16_SFLOAT, // SWAPCHAIN
+        },
+        VK_SAMPLE_COUNT_1_BIT,
+        false,
+        false,
+        vk::create::shader_module( TERRAIN_SHADER_PREPASS_MODULE_PATH ),
+        { .vertex_entry_name = engine::DEFAULT_VERTEX_ENTRY_NAME,
+          .tess_control_entry_name = engine::DEFAULT_TESS_CONTROL_ENTRY_NAME,
+          .tess_eval_entry_name = engine::DEFAULT_TESS_EVAL_ENTRY_NAME,
+          .fragment_entry_name = "line_white" },
+        true,
+        true
+    );
+#endif
 
     // ============================================================================================
     // Lighting pass resources
@@ -401,6 +431,18 @@ void initialize_terrain_draw_pipeline(
     );
 }
 
+// Predication functions
+namespace {
+
+bool terrain_wireframe_is_on()
+{
+    return RuntimeSettings::GetEnabled( RacecarSettings::TERRAIN_WIREFRAME_VIEW );
+}
+
+bool terrain_wireframe_is_off() { return !terrain_wireframe_is_on(); }
+
+}
+
 void terrain_precompute(
     [[maybe_unused]] Terrain& terrain, [[maybe_unused]] VkCommandBuffer precompute_cmdbuf
 )
@@ -448,7 +490,12 @@ void draw_terrain_prepass(
         }
     );
 
-    engine::add_gfx_task( task_list, terrain.terrain_prepass_task, "Terrain Prepass" );
+    engine::add_gfx_task(
+        task_list,
+        terrain.terrain_prepass_task,
+        "Terrain Prepass",
+        &terrain_wireframe_is_off
+    );
 
     // ATM the terrain does not draw to the depth multisampled prepass
     // PushDepthPrepassMS( depth_prepass_ms_task, draw_descriptor );
@@ -479,8 +526,50 @@ void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
         dispatch_dims,
     };
 
-    engine::add_cs_task( task_list, cs_terrain_draw_task, "Terrain Draw" );
+    engine::add_cs_task(
+        task_list,
+        cs_terrain_draw_task,
+        "Terrain Draw",
+        &terrain_wireframe_is_off
+    );
 }
+
+#if RACECAR_DEV
+void draw_terrain_wireframe(
+    Terrain& terrain, engine::TaskList& task_list, engine::RWImage& screen_color
+)
+{
+    engine::GfxTask terrain_wireframe_gfx_task
+        = { .color_attachments = { &screen_color },
+            .extent = engine::State::GetConst().swapchain.extent };
+
+    engine::DrawResourceDescriptor draw_descriptor = {
+        .vertex_buffers = { terrain.mesh_buffers.vertex_buffer.handle },
+        .index_buffer = terrain.mesh_buffers.index_buffer.handle,
+        .vertex_buffer_offsets = { 0 },
+        .index_count = static_cast<uint32_t>( terrain.indices.size() ),
+    };
+
+    terrain_wireframe_gfx_task.draw_tasks.push_back(
+        {
+            .draw_resource_descriptor = draw_descriptor,
+            .descriptor_sets = { &terrain.prepass_uniform_desc_set,
+                                 &terrain.prepass_texture_desc_set,
+                                 &terrain.prepass_sampler_desc_set,
+                                 &terrain.prepass_lut_desc_set,
+                                 terrain.gamestate_desc_set },
+            .pipeline = terrain.terrain_wireframe_pipeline,
+        }
+    );
+
+    engine::add_gfx_task(
+        task_list,
+        terrain_wireframe_gfx_task,
+        "Terrain Wireframe Draw",
+        &terrain_wireframe_is_on
+    );
+}
+#endif
 
 void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
 {

@@ -439,6 +439,10 @@ void run( bool use_fullscreen )
     // depth_prepass_ms
     geometry::draw_terrain_prepass( test_terrain, depth_prepass_ms, task_list );
 
+#if RACECAR_DEV
+    geometry::draw_terrain_wireframe( test_terrain, task_list, screen_color );
+#endif
+
     // Submit depth prepass (car primitives + terrain)
     engine::add_gfx_task( task_list, depth_prepass_ms.depth_ms_gfx_task, "Depth Prepass MS" );
 

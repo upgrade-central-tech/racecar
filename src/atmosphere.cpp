@@ -196,6 +196,7 @@ void draw_atmosphere(
             true,
             vk::create::shader_module( atmosphere::SHADER_PATH ),
             engine::ShaderEntryPointStrings::defaults(),
+            false,
             false
         );
     } catch ( const Exception& ex ) {

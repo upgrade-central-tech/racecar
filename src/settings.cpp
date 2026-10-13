@@ -79,6 +79,8 @@ bool validate_debug_texture_option( int option )
     return true;
 }
 
+bool validate_terrain_wireframe_view() { return RACECAR_DEV; }
+
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
@@ -128,6 +130,8 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
               .max = 30.0f,
               .desired_float = 8.0f,
               .fallback_float = 8.0f }, // TERRAIN_BLEND_WIDTH
+
+    Setting { .validate = &validate_terrain_wireframe_view }, // TERRAIN_WIREFRAME_VIEW
 };
 
 }

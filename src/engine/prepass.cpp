@@ -72,6 +72,7 @@ void create_depth_ms_prepass(
             true,
             vk::create::shader_module( DEPTH_PREPASS_SHADER_MODULE_PATH ),
             engine::ShaderEntryPointStrings::defaults(),
+            false,
             false
         );
     } catch ( const Exception& ex ) {

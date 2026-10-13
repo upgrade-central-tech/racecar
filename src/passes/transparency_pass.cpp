@@ -65,6 +65,7 @@ void create_transparency_pass_resources(
         true,
         vk::create::shader_module( TRANSPARENCY_SHADER_MODULE_PATH ),
         engine::ShaderEntryPointStrings::defaults(),
+        false,
         false
     );
 
