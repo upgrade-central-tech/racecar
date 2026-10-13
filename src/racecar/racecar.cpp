@@ -563,7 +563,9 @@ void run( bool use_fullscreen )
         }
 
         // Camera input, then demo-driven camera motion, then the derived matrices
-        camera::process_input( engine.camera );
+        if ( !racing_camera_active( gui ) ) {
+            camera::process_input( engine.camera );
+        }
         apply_demo_camera_motion(
             engine.camera,
             gui,

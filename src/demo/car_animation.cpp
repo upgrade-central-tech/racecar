@@ -5,6 +5,7 @@
 #include "terrain/terrain.hpp"
 
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
 
 #include <array>
 #include <cmath>
@@ -39,7 +40,35 @@ namespace {
 
 std::optional<glm::vec2> unlocked_camera_prev_world_position;
 std::optional<glm::mat4> car_root_base_transform;
+std::optional<float> racing_camera_yaw;
 
+const float RACING_CAMERA_RADIUS = 16.0f;
+const float RACING_CAMERA_ZENITH = glm::radians( 25.0f );
+const float RACING_CAMERA_YAW_SLACK = glm::radians( 10.0f );
+
+void apply_racing_camera( camera::OrbitCamera& camera, glm::vec3 car_position )
+{
+    const float car_yaw = engine::State::GetConst().gamestate.yaw;
+    const float yaw_offset
+        = std::remainder( car_yaw - racing_camera_yaw.value_or( car_yaw ), glm::two_pi<float>() );
+    racing_camera_yaw
+        = car_yaw - glm::clamp( yaw_offset, -RACING_CAMERA_YAW_SLACK, RACING_CAMERA_YAW_SLACK );
+
+    camera.center = car_position;
+    camera.radius = RACING_CAMERA_RADIUS;
+    camera.zenith = RACING_CAMERA_ZENITH;
+    camera.azimuth = 0.f;
+    camera::rotate_azimuth(
+        camera,
+        std::atan2( -std::cos( racing_camera_yaw.value() ), -std::sin( racing_camera_yaw.value() ) )
+    );
+}
+
+}
+
+bool racing_camera_active( const gui::Gui& gui )
+{
+    return gui.demo.enable_racing_camera && !gui.demo.enable_unlocked_camera;
 }
 
 void apply_demo_camera_motion(
@@ -77,8 +106,10 @@ void apply_demo_camera_motion(
 
     unlocked_camera_prev_world_position.reset();
 
-    if ( car_position.has_value() && gui.demo.enable_camera_lock_on_car ) {
-        camera.center = car_position.value();
+    if ( car_position.has_value() && racing_camera_active( gui ) ) {
+        apply_racing_camera( camera, car_position.value() );
+    } else {
+        racing_camera_yaw.reset();
     }
 
     camera.center.y += gui.demo.bumpiness

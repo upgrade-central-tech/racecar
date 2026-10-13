@@ -13,6 +13,8 @@
 
 namespace racecar {
 
+bool racing_camera_active( const gui::Gui& gui );
+
 /*
  * Demo-driven camera motion: locks the camera onto the car when enabled, then applies the
  * bumpiness bob. Must run after camera::process_input, whose result it overrides.

@@ -1,5 +1,7 @@
 #include "window_events.hpp"
 
+#include "demo/car_animation.hpp"
+
 namespace racecar {
 
 void handle_sdl_window_events(
@@ -15,7 +17,9 @@ void handle_sdl_window_events(
     engine::State& engine = engine::State::GetMut();
     while ( SDL_PollEvent( &event ) ) {
         gui::process_event( gui, &event, atms, engine.camera, material_uniform_buffers );
-        camera::process_event( ctx, &event, engine.camera, gui.show_window );
+        if ( !racing_camera_active( gui ) ) {
+            camera::process_event( ctx, &event, engine.camera, gui.show_window );
+        }
 
         if ( event.type == SDL_EVENT_QUIT ) {
             will_quit = true;
