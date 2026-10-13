@@ -8,6 +8,7 @@
 #include "../vk/create.hpp"
 #include "engine/descriptor_set.hpp"
 #include "settings.h"
+
 #include <glm/ext/vector_float4.hpp>
 
 const std::filesystem::path TERRAIN_SHADER_PREPASS_MODULE_PATH
@@ -434,17 +435,17 @@ void draw_terrain_prepass(
         .index_count = static_cast<uint32_t>( terrain.indices.size() ),
     };
 
-    terrain.terrain_prepass_task.draw_tasks.push_back( {
-        .draw_resource_descriptor = draw_descriptor,
-        .descriptor_sets = {
-            &terrain.prepass_uniform_desc_set,
-            &terrain.prepass_texture_desc_set,
-            &terrain.prepass_sampler_desc_set,
-            &terrain.prepass_lut_desc_set,
-            terrain.gamestate_desc_set
-        },
-        .pipeline = terrain.terrain_prepass_pipeline,
-    } );
+    terrain.terrain_prepass_task.draw_tasks.push_back(
+        {
+            .draw_resource_descriptor = draw_descriptor,
+            .descriptor_sets = { &terrain.prepass_uniform_desc_set,
+                                 &terrain.prepass_texture_desc_set,
+                                 &terrain.prepass_sampler_desc_set,
+                                 &terrain.prepass_lut_desc_set,
+                                 terrain.gamestate_desc_set },
+            .pipeline = terrain.terrain_prepass_pipeline,
+        }
+    );
 
     engine::add_gfx_task( task_list, terrain.terrain_prepass_task, "Terrain Prepass" );
 
@@ -465,17 +466,15 @@ void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
     // Full-screen quad draw.
     engine::ComputeTask cs_terrain_draw_task = {
         terrain.terrain_lighting_pipeline,
-        {
-            &terrain.uniform_desc_set,
-            &terrain.texture_desc_set,
-            &terrain.lut_desc_set,
-            &terrain.sampler_desc_set,
+        { &terrain.uniform_desc_set,
+          &terrain.texture_desc_set,
+          &terrain.lut_desc_set,
+          &terrain.sampler_desc_set,
 #if RACECAR_RAY_TRACING
-            terrain.car_tlas_desc_set,
-            terrain.reflection_texture_desc_set,
+          terrain.car_tlas_desc_set,
+          terrain.reflection_texture_desc_set,
 #endif // RACECAR_RAY_TRACING
-            terrain.sun_visibility_desc_set
-        },
+          terrain.sun_visibility_desc_set },
         dispatch_dims,
     };
 
@@ -510,9 +509,9 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
 
     terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );
 
-    float road_width = RuntimeSettings::GetFloat(RacecarSettings::TERRAIN_ROAD_WIDTH);
-    float blend_width = RuntimeSettings::GetFloat(RacecarSettings::TERRAIN_BLEND_WIDTH);
-    terrain_ub.packed_floats1 = glm::vec4(road_width, blend_width, 0.0f, 0.0f);
+    float road_width = RuntimeSettings::GetFloat( RacecarSettings::TERRAIN_ROAD_WIDTH );
+    float blend_width = RuntimeSettings::GetFloat( RacecarSettings::TERRAIN_BLEND_WIDTH );
+    terrain_ub.packed_floats1 = glm::vec4( road_width, blend_width, 0.0f, 0.0f );
 
     terrain.terrain_uniform.set_data( terrain_ub );
     terrain.terrain_uniform.update( engine.get_frame_index() );

@@ -52,11 +52,10 @@ void apply_demo_camera_motion(
 {
     std::optional<glm::vec3> car_position;
     if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
-        car_position = glm::vec3(
-            model_mat_uniform_buffers.at( scene.demo_scene_nodes.car_parent_id.value() )
-                .get_data()
-                .model_mat[3]
-        );
+        car_position = glm::vec3( model_mat_uniform_buffers
+                                      .at( scene.demo_scene_nodes.car_parent_id.value() )
+                                      .get_data()
+                                      .model_mat[3] );
     }
 
     if ( gui.demo.enable_unlocked_camera ) {
@@ -66,8 +65,8 @@ void apply_demo_camera_motion(
             = world_position - unlocked_camera_prev_world_position.value_or( world_position );
         unlocked_camera_prev_world_position = world_position;
 
-        const glm::vec3 eye = camera::calculate_eye_position( camera )
-            - glm::vec3( travel.x, 0.f, travel.y );
+        const glm::vec3 eye
+            = camera::calculate_eye_position( camera ) - glm::vec3( travel.x, 0.f, travel.y );
 
         if ( car_position.has_value() ) {
             camera.center = car_position.value();
@@ -123,11 +122,9 @@ void update_car_transform(
     const glm::mat4& base = car_root_base_transform.value();
     const glm::vec3 pivot = glm::vec3( base[3] );
     const glm::mat4 yaw_rotation = glm::translate( glm::identity<glm::mat4>(), pivot )
-        * glm::rotate(
-            glm::identity<glm::mat4>(),
-            engine::State::GetConst().gamestate.yaw,
-            glm::vec3( 0.0f, 1.0f, 0.0f )
-        )
+        * glm::rotate( glm::identity<glm::mat4>(),
+                       engine::State::GetConst().gamestate.yaw,
+                       glm::vec3( 0.0f, 1.0f, 0.0f ) )
         * glm::translate( glm::identity<glm::mat4>(), -pivot );
 
     scene::set_transform( scene, car_id, yaw_rotation * base );
@@ -159,10 +156,18 @@ void update_wheel_transforms( scene::Scene& scene )
         scene::set_transform( scene, scene.demo_scene_nodes.wheel_back_right_id.value(), model );
     }
     if ( scene.demo_scene_nodes.wheel_front_left_id.has_value() ) {
-        scene::set_transform( scene, scene.demo_scene_nodes.wheel_front_left_id.value(), turn * model );
+        scene::set_transform(
+            scene,
+            scene.demo_scene_nodes.wheel_front_left_id.value(),
+            turn * model
+        );
     }
     if ( scene.demo_scene_nodes.wheel_front_right_id.has_value() ) {
-        scene::set_transform( scene, scene.demo_scene_nodes.wheel_front_right_id.value(), turn * model );
+        scene::set_transform(
+            scene,
+            scene.demo_scene_nodes.wheel_front_right_id.value(),
+            turn * model
+        );
     }
 }
 

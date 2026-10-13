@@ -130,7 +130,7 @@ void load_gltf(
     }
 
     for ( const tinygltf::Material& loaded_mat : model.materials ) {
-        Material new_mat = {};
+        Material new_mat = { };
 
         new_mat.base_color
             = double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );
@@ -585,8 +585,10 @@ void load_gltf(
     }
 
     // setting some constants. this should probably be cleaned up later
-    scene.demo_scene_nodes.back_axle_local_z = get_position_in_scene(scene, scene.demo_scene_nodes.wheel_back_left_id.value() ).z;
-    scene.demo_scene_nodes.front_axle_local_z = get_position_in_scene(scene, scene.demo_scene_nodes.wheel_front_left_id.value() ).z;
+    scene.demo_scene_nodes.back_axle_local_z
+        = get_position_in_scene( scene, scene.demo_scene_nodes.wheel_back_left_id.value() ).z;
+    scene.demo_scene_nodes.front_axle_local_z
+        = get_position_in_scene( scene, scene.demo_scene_nodes.wheel_front_left_id.value() ).z;
 }
 
 bool load_hdri( std::string file_path, Scene& scene )
@@ -669,7 +671,8 @@ void update_model_mat_buffers(
     }
 }
 
-glm::vec3 get_position_in_scene( const Scene& scene, size_t node_idx ) {
+glm::vec3 get_position_in_scene( const Scene& scene, size_t node_idx )
+{
     glm::mat4 transform = glm::identity<glm::mat4>();
 
     size_t idx = node_idx;
@@ -680,7 +683,7 @@ glm::vec3 get_position_in_scene( const Scene& scene, size_t node_idx ) {
         idx = scene.nodes[idx]->parent->id;
     }
 
-    return glm::vec3(transform * glm::vec4(0.0, 0.0, 0.0, 1.0));
+    return glm::vec3( transform * glm::vec4( 0.0, 0.0, 0.0, 1.0 ) );
 }
 
 } // namespace racecar::scene

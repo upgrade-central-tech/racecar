@@ -1,12 +1,12 @@
 #include "roadgen.hpp"
 
+#include "gamestate.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-#include "gamestate.h"
-
-namespace racecar{
+namespace racecar {
 
 struct ClosestPointData {
     float dist_sq;
@@ -28,7 +28,9 @@ ClosestPointData closest_point_on_quadratic_bezier( glm::vec2 A, glm::vec2 B, gl
     const float bb = glm::dot( b, b );
     if ( bb < 1e-6f * glm::max( glm::dot( a, a ), 1e-8f ) ) {
         const glm::vec2 ac = C - A;
-        return point_at( glm::clamp( -glm::dot( A, ac ) / glm::max( glm::dot( ac, ac ), 1e-8f ), 0.0f, 1.0f ) );
+        return point_at(
+            glm::clamp( -glm::dot( A, ac ) / glm::max( glm::dot( ac, ac ), 1e-8f ), 0.0f, 1.0f )
+        );
     }
 
     const float kk = 1.0f / bb;
@@ -92,14 +94,20 @@ void recenter_road( std::array<glm::vec3, ub_data::ROAD_NUM_POINTS>& points, glm
 
     if ( segment > ROAD_CENTER_SEGMENT ) {
         const size_t shift = segment - ROAD_CENTER_SEGMENT;
-        std::copy( points.begin() + static_cast<std::ptrdiff_t>( shift ), points.end(), points.begin() );
+        std::copy(
+            points.begin() + static_cast<std::ptrdiff_t>( shift ),
+            points.end(),
+            points.begin()
+        );
         for ( size_t i = points.size() - shift; i < points.size(); i++ ) {
             points[i] = generate_road_point( points[i - 1], 1.0f );
         }
     } else if ( segment < ROAD_CENTER_SEGMENT ) {
         const size_t shift = ROAD_CENTER_SEGMENT - segment;
         std::copy_backward(
-            points.begin(), points.end() - static_cast<std::ptrdiff_t>( shift ), points.end()
+            points.begin(),
+            points.end() - static_cast<std::ptrdiff_t>( shift ),
+            points.end()
         );
         for ( size_t i = shift; i-- > 0; ) {
             points[i] = generate_road_point( points[i + 1], -1.0f );

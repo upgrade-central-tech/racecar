@@ -94,8 +94,7 @@ void create_reflection_pass_resources(
           desc_sets.combined_textures_desc_set.layouts[0],
           desc_sets.terrain_shading_desc_set.layouts[0],
           desc_sets.sun_visibility_desc_set.layouts[0],
-          desc_sets.gamestate_desc_set.layouts[0]
-        },
+          desc_sets.gamestate_desc_set.layouts[0] },
         { VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT },
         VK_SAMPLE_COUNT_1_BIT,
         false,

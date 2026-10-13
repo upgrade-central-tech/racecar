@@ -65,9 +65,7 @@ vkb::Swapchain create_swapchain( SDL_Window* window )
         = swapchain_builder.set_desired_extent( swap_extent.width, swap_extent.height )
               .set_desired_min_image_count( capabilities.minImageCount )
               .set_desired_present_mode( present_mode )
-              .set_desired_format(
-                  { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }
-              )
+              .set_desired_format( { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } )
               .set_image_usage_flags(
                   VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
                   | VK_IMAGE_USAGE_TRANSFER_DST_BIT
@@ -84,7 +82,8 @@ vkb::Swapchain create_swapchain( SDL_Window* window )
     if ( swapchain.image_format == VK_FORMAT_B8G8R8A8_SRGB
          || swapchain.image_format == VK_FORMAT_R8G8B8A8_SRGB ) {
         log::warn(
-            "[engine] Swapchain format {} is sRGB; the blit will encode a second (tonemapping.slang)",
+            "[engine] Swapchain format {} is sRGB; the blit will encode a second "
+            "(tonemapping.slang)",
             static_cast<int>( swapchain.image_format )
         );
     }
@@ -318,7 +317,8 @@ void initialize( Context& ctx )
         create_frame_data();
         create_depth_images();
 
-        float aspect = static_cast<float>( engine.swapchain.extent.width ) / static_cast<float>( engine.swapchain.extent.height );
+        float aspect = static_cast<float>( engine.swapchain.extent.width )
+            / static_cast<float>( engine.swapchain.extent.height );
 
         engine.camera = {
             .center = glm::vec3( 2.5f, 2.5f, 1.f ),

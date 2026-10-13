@@ -365,8 +365,14 @@ void update(
 
             if ( ImGui::BeginTabItem( "Terrain" ) ) {
                 ImGui::SeparatorText( "Parameters" );
-                RacecarGUI::SettingsSliderFloat("Road Width", RacecarSettings::TERRAIN_ROAD_WIDTH);
-                RacecarGUI::SettingsSliderFloat("Blend Width", RacecarSettings::TERRAIN_BLEND_WIDTH);
+                RacecarGUI::SettingsSliderFloat(
+                    "Road Width",
+                    RacecarSettings::TERRAIN_ROAD_WIDTH
+                );
+                RacecarGUI::SettingsSliderFloat(
+                    "Blend Width",
+                    RacecarSettings::TERRAIN_BLEND_WIDTH
+                );
 
                 ImGui::SeparatorText( "Debug" );
                 ImGui::Checkbox( "Enable GT7 AO/local shadows", &gui.terrain.enable_gt7_ao );
@@ -402,10 +408,12 @@ void update(
 
                 ImGui::SeparatorText( "Sky irradiance" );
                 RacecarGUI::SettingsSliderFloat(
-                    "Terrain strength", RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH
+                    "Terrain strength",
+                    RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH
                 );
                 RacecarGUI::SettingsSliderFloat(
-                    "Car strength", RacecarSettings::CAR_IRRADIANCE_STRENGTH
+                    "Car strength",
+                    RacecarSettings::CAR_IRRADIANCE_STRENGTH
                 );
 
                 ImGui::EndTabItem();

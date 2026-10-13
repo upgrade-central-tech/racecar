@@ -62,7 +62,7 @@ void furnace( bool use_fullscreen )
     gui::Gui gui = gui::initialize( ctx );
 
     // Scene loading
-    scene::Scene scene = {};
+    scene::Scene scene = { };
     geometry::scene::Mesh scene_mesh;
     scene::load_gltf( FURNACE_SPHERE_FILE_PATH, scene, scene_mesh.vertices, scene_mesh.indices );
     geometry::scene::generate_tangents( scene_mesh );
@@ -185,7 +185,7 @@ void furnace( bool use_fullscreen )
 
     std::vector<glm::mat4> transforms;
     std::vector<const scene::Primitive*> prims;
-    ub_data::RTTextureUniform rt_texture_uniform = {};
+    ub_data::RTTextureUniform rt_texture_uniform = { };
     std::vector<vk::mem::AllocatedImage> albedo_textures;
     std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
     load_model_primitive_material_data(
@@ -273,8 +273,8 @@ void furnace( bool use_fullscreen )
 
     // Background: the same radiance the sky texture holds
     engine::GfxTask background_gfx_task = {
-        .clear_color = VkClearColorValue {
-            { FURNACE_RADIANCE, FURNACE_RADIANCE, FURNACE_RADIANCE, 1.f } },
+        .clear_color
+        = VkClearColorValue { { FURNACE_RADIANCE, FURNACE_RADIANCE, FURNACE_RADIANCE, 1.f } },
         .color_attachments = { &screen_color },
         .extent = engine.swapchain.extent,
     };
@@ -350,7 +350,7 @@ void furnace( bool use_fullscreen )
 
     bool will_quit = false;
     bool stop_drawing = false;
-    SDL_Event event = {};
+    SDL_Event event = { };
     std::chrono::steady_clock::time_point current_tick;
 
     while ( !will_quit ) {

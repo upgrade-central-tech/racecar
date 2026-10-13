@@ -4,6 +4,7 @@
 #include "../engine/state.hpp"
 #include "../scene/scene.hpp"
 #include "roadgen.hpp"
+
 #include <glm/common.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/scalar_constants.hpp>
@@ -38,11 +39,10 @@ void update_game_state( const scene::Scene& scene )
     gamestate.speed += float( state.delta ) * gamestate.acceleration;
     gamestate.speed = glm::clamp( gamestate.speed, 0.0f, MAX_SPEED );
 
-
     // front wheel turning
     bool wheel_turn_input = key_states[SDL_SCANCODE_LEFT] || key_states[SDL_SCANCODE_RIGHT];
 
-    if (wheel_turn_input) {
+    if ( wheel_turn_input ) {
         const float steer_input = ( key_states[SDL_SCANCODE_LEFT] ? 1.0f : 0.0f )
             - ( key_states[SDL_SCANCODE_RIGHT] ? 1.0f : 0.0f );
 
@@ -51,17 +51,17 @@ void update_game_state( const scene::Scene& scene )
             -MAX_WHEEL_ANGLE,
             MAX_WHEEL_ANGLE
         );
-    }
-    else {
-        if (glm::abs(gamestate.wheel_angle) > glm::epsilon<float>()) {
-            if (gamestate.wheel_angle > 0.0f) {
-                gamestate.wheel_angle = glm::clamp(gamestate.wheel_angle - WHEEL_TURNING_RATE * float( state.delta ),
+    } else {
+        if ( glm::abs( gamestate.wheel_angle ) > glm::epsilon<float>() ) {
+            if ( gamestate.wheel_angle > 0.0f ) {
+                gamestate.wheel_angle = glm::clamp(
+                    gamestate.wheel_angle - WHEEL_TURNING_RATE * float( state.delta ),
                     0.0f,
                     MAX_WHEEL_ANGLE
                 );
-            }
-            else {
-                gamestate.wheel_angle = glm::clamp(gamestate.wheel_angle + WHEEL_TURNING_RATE * float( state.delta ),
+            } else {
+                gamestate.wheel_angle = glm::clamp(
+                    gamestate.wheel_angle + WHEEL_TURNING_RATE * float( state.delta ),
                     -MAX_WHEEL_ANGLE,
                     0.0f
                 );
@@ -75,26 +75,30 @@ void update_game_state( const scene::Scene& scene )
     const float speed_sq = gamestate.speed * gamestate.speed;
     if ( speed_sq > 0.0f ) {
         const float grip_wheel_angle = glm::atan( wheelbase * MAX_LATERAL_ACCELERATION / speed_sq );
-        gamestate.wheel_angle = glm::clamp( gamestate.wheel_angle, -grip_wheel_angle, grip_wheel_angle );
+        gamestate.wheel_angle
+            = glm::clamp( gamestate.wheel_angle, -grip_wheel_angle, grip_wheel_angle );
     }
 
-    const float lateral_acceleration = speed_sq * glm::abs( glm::tan( gamestate.wheel_angle ) ) / wheelbase;
+    const float lateral_acceleration
+        = speed_sq * glm::abs( glm::tan( gamestate.wheel_angle ) ) / wheelbase;
     gamestate.speed = glm::max(
-        gamestate.speed - TURNING_DRAG * lateral_acceleration * float( state.delta ), 0.0f
+        gamestate.speed - TURNING_DRAG * lateral_acceleration * float( state.delta ),
+        0.0f
     );
 
     recenter_road( gamestate.spline_positions, gamestate.world_position );
 
     // car movement with steering
-    const float distance = gamestate.speed * static_cast<float>(state.delta);
+    const float distance = gamestate.speed * static_cast<float>( state.delta );
     gamestate.integrated_distance_traveled += distance;
 
-    glm::vec2 heading = glm::vec2(glm::sin(gamestate.yaw), glm::cos(gamestate.yaw));
-    glm::vec2 back_axle_position = gamestate.world_position + back_axle_z * heading + heading * distance;
+    glm::vec2 heading = glm::vec2( glm::sin( gamestate.yaw ), glm::cos( gamestate.yaw ) );
+    glm::vec2 back_axle_position
+        = gamestate.world_position + back_axle_z * heading + heading * distance;
 
-    gamestate.yaw += distance * glm::tan(gamestate.wheel_angle) / wheelbase;
+    gamestate.yaw += distance * glm::tan( gamestate.wheel_angle ) / wheelbase;
 
-    heading = glm::vec2(glm::sin(gamestate.yaw), glm::cos(gamestate.yaw));
+    heading = glm::vec2( glm::sin( gamestate.yaw ), glm::cos( gamestate.yaw ) );
     gamestate.world_position = back_axle_position - back_axle_z * heading;
 }
 
@@ -110,7 +114,8 @@ void initialize_gamestate_buffer(
         {
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // gamestate
         },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
+            | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     );
 
     engine::update_descriptor_set_uniform( *out_desc_set, *out_buffer, 0 );

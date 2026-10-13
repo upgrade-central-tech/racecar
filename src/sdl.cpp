@@ -38,7 +38,13 @@ SDL_Window* initialize( bool fullscreen )
 #endif
 
     // width and height are effectively fallbacks if not fullscreen
-    if ( SDL_Window* window = SDL_CreateWindow( "RACECAR", racecar::constant::FALLBACK_SCREEN_W, racecar::constant::FALLBACK_SCREEN_H, flags ); !window ) {
+    if ( SDL_Window* window = SDL_CreateWindow(
+             "RACECAR",
+             racecar::constant::FALLBACK_SCREEN_W,
+             racecar::constant::FALLBACK_SCREEN_H,
+             flags
+         );
+         !window ) {
         log::error( "SDL_CreateWindow failed: {}", SDL_GetError() );
         throw Exception( "Failed to initialize SDL" );
     } else {

@@ -38,7 +38,9 @@ struct GameState {
             float sign = i % 2 == 0 ? -1.0f : 1.0f;
 
             points[i] = glm::vec3(
-                50.0f * sign, 0.0f, ( float( i ) - float( ROAD_CENTER_SEGMENT ) - 0.5f ) * ROAD_POINT_SPACING
+                50.0f * sign,
+                0.0f,
+                ( float( i ) - float( ROAD_CENTER_SEGMENT ) - 0.5f ) * ROAD_POINT_SPACING
             );
         }
         return points;
@@ -56,4 +58,4 @@ void initialize_gamestate_buffer(
 
 void update_gamestate_buffer( UniformBuffer<ub_data::GameStateBuffer>& buffer );
 
-} 
+}

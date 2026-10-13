@@ -271,13 +271,11 @@ void init_terrain_ray_tracing_info( TerrainRayTracingInfo* out_info, geometry::T
     create_descriptor_sets( out_info );
 
     out_info->displace_pipeline = engine::create_compute_pipeline(
-        {
-            out_info->uniform_desc_set.layouts[0],
-            out_info->texture_desc_set.layouts[0],
-            out_info->sampler_desc_set.layouts[0],
-            out_info->mesh_buffer_desc_set.layouts[0],
-            out_info->gamestate_desc_set->layouts[0]
-        },
+        { out_info->uniform_desc_set.layouts[0],
+          out_info->texture_desc_set.layouts[0],
+          out_info->sampler_desc_set.layouts[0],
+          out_info->mesh_buffer_desc_set.layouts[0],
+          out_info->gamestate_desc_set->layouts[0] },
         vk::create::shader_module( TERRAIN_RT_DISPLACE_SHADER_MODULE_PATH ),
         "cs_terrain_rt_displace"
     );
@@ -323,15 +321,19 @@ void add_terrain_rt_build_pass( TerrainRayTracingInfo& info, engine::TaskList& t
         }
     );
 
-    engine::add_gpu_task( task_list, [&info]( VkCommandBuffer cmd_buf ) {
-        const engine::State& engine = engine::State::GetConst();
-        const size_t frame = engine.get_frame_index();
+    engine::add_gpu_task(
+        task_list,
+        [&info]( VkCommandBuffer cmd_buf ) {
+            const engine::State& engine = engine::State::GetConst();
+            const size_t frame = engine.get_frame_index();
 
-        vk::rt::build_blas( cmd_buf, info.dynamic_terrain_blas[frame] );
+            vk::rt::build_blas( cmd_buf, info.dynamic_terrain_blas[frame] );
 
-        // lowk unnecessary for now
-        vk::rt::build_tlas( cmd_buf, info.tlas[frame] );
-    }, "Terrain RT Build" );
+            // lowk unnecessary for now
+            vk::rt::build_tlas( cmd_buf, info.tlas[frame] );
+        },
+        "Terrain RT Build"
+    );
 }
 
 }

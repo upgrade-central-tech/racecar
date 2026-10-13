@@ -24,7 +24,7 @@ TAAPass add_taa(
     const engine::State& engine = engine::State::GetConst();
     TAAPass pass;
     {
-        pass.buffer = create_uniform_buffer<ub_data::AA>( {}, engine.frame_overlap );
+        pass.buffer = create_uniform_buffer<ub_data::AA>( { }, engine.frame_overlap );
 
         engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set(
             {
@@ -128,7 +128,7 @@ TAAPass add_taa(
     // cs_write_history samples output and stores to history.
     add_pipeline_barrier(
         task_list,
-        PipelineBarrierDescriptor { .buffer_barriers = {},
+        PipelineBarrierDescriptor { .buffer_barriers = { },
                                     .image_barriers = {
                                         ImageBarrier {
                                             .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -174,7 +174,7 @@ TAAPass add_taa(
     // Ensure write for the proper transition before... uh... the blit. Leave history readable
     add_pipeline_barrier(
         task_list,
-        PipelineBarrierDescriptor { .buffer_barriers = {},
+        PipelineBarrierDescriptor { .buffer_barriers = { },
                                     .image_barriers = {
                                         ImageBarrier {
                                             .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,

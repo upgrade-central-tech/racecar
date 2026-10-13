@@ -69,7 +69,7 @@ void run( bool use_fullscreen )
     gui::Gui gui = gui::initialize( ctx );
 
     // SCENE LOADING/PROCESSING
-    scene::Scene scene = {};
+    scene::Scene scene = { };
     geometry::scene::Mesh scene_mesh;
     load_scene( &scene, &scene_mesh );
 
@@ -177,7 +177,7 @@ void run( bool use_fullscreen )
     // Load data for each primitive
     std::vector<glm::mat4> transforms;
     std::vector<const scene::Primitive*> prims;
-    ub_data::RTTextureUniform rt_texture_uniform = {};
+    ub_data::RTTextureUniform rt_texture_uniform = { };
     std::vector<vk::mem::AllocatedImage> albedo_textures;
     std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
     load_model_primitive_material_data(
@@ -256,17 +256,11 @@ void run( bool use_fullscreen )
     // TERRAIN init
     // ================================================================================================================
 
-    geometry::TerrainPrepassInfo prepass_terrain_info = {
-        &camera_buffer,
-        &debug_buffer,
-        &gbuffers,
-        &glint_noise,
-        &gamestate_desc_set
-    };
+    geometry::TerrainPrepassInfo prepass_terrain_info
+        = { &camera_buffer, &debug_buffer, &gbuffers, &glint_noise, &gamestate_desc_set };
 
-    geometry::TerrainLightingInfo terrain_lighting_info = {
-        &camera_buffer, &debug_buffer, &atms_baker, &gbuffers, &screen_color, &lut_brdf
-    };
+    geometry::TerrainLightingInfo terrain_lighting_info
+        = { &camera_buffer, &debug_buffer, &atms_baker, &gbuffers, &screen_color, &lut_brdf };
 
     geometry::Terrain test_terrain;
     geometry::initialize_terrain( test_terrain, prepass_terrain_info, terrain_lighting_info );
@@ -286,17 +280,15 @@ void run( bool use_fullscreen )
     engine::DescriptorSet reflection_buffer_desc_set;
     engine::GfxTask reflection_gfx_task;
     create_reflection_pass_resources(
-        ReflectionPassDescSets {
-            .uniform_desc_set = uniform_desc_set,
-            .sampler_desc_set = sampler_desc_set,
-            .gbuffer_desc_set = gbuffers.desc_set,
-            .car_tlas_desc_set = car_tlas_desc_set,
-            .car_desc_set = car_descriptor_set,
-            .combined_textures_desc_set = combined_textures_desc_set,
-            .terrain_shading_desc_set = terrain_rt.shading_desc_set,
-            .sun_visibility_desc_set = sun_visibility.visibility_desc_set,
-            .gamestate_desc_set = gamestate_desc_set
-        },
+        ReflectionPassDescSets { .uniform_desc_set = uniform_desc_set,
+                                 .sampler_desc_set = sampler_desc_set,
+                                 .gbuffer_desc_set = gbuffers.desc_set,
+                                 .car_tlas_desc_set = car_tlas_desc_set,
+                                 .car_desc_set = car_descriptor_set,
+                                 .combined_textures_desc_set = combined_textures_desc_set,
+                                 .terrain_shading_desc_set = terrain_rt.shading_desc_set,
+                                 .sun_visibility_desc_set = sun_visibility.visibility_desc_set,
+                                 .gamestate_desc_set = gamestate_desc_set },
         &reflection_color,
         &reflection_data,
         &reflection_pipeline,
@@ -389,9 +381,13 @@ void run( bool use_fullscreen )
     engine::TaskList task_list;
 
 #if RACECAR_RAY_TRACING
-    engine::add_gpu_task( task_list, [&]( VkCommandBuffer cmd_buf ) {
-        update_car_tlas( cmd_buf, objects, prims, model_mat_uniform_buffers );
-    }, "Update Car TLAS" );
+    engine::add_gpu_task(
+        task_list,
+        [&]( VkCommandBuffer cmd_buf ) {
+            update_car_tlas( cmd_buf, objects, prims, model_mat_uniform_buffers );
+        },
+        "Update Car TLAS"
+    );
 
     add_terrain_rt_displace_pass( terrain_rt, task_list );
     add_terrain_rt_build_pass( terrain_rt, task_list );
@@ -533,7 +529,7 @@ void run( bool use_fullscreen )
 
     bool will_quit = false;
     bool stop_drawing = false;
-    SDL_Event event = {};
+    SDL_Event event = { };
     std::chrono::steady_clock::time_point current_tick;
 
     while ( !will_quit ) {

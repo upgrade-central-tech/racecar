@@ -49,7 +49,10 @@ void SettingsSliderFloat( const char* label, RacecarSettings s )
 
     ImGui::BeginDisabled( !valid );
     if ( ImGui::SliderFloat(
-             label, &value, RuntimeSettings::GetFloatMin( s ), RuntimeSettings::GetFloatMax( s )
+             label,
+             &value,
+             RuntimeSettings::GetFloatMin( s ),
+             RuntimeSettings::GetFloatMax( s )
          ) ) {
         RuntimeSettings::SetFloat( s, value );
     }

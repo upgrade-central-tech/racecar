@@ -2,10 +2,10 @@
 
 #include <type_traits>
 
-#define RACECAR_SETTINGS_TYPEDECL(KEY, TYPE) \
-template <> struct SettingValue<KEY> { \
-    using type = TYPE; \
-}
+#define RACECAR_SETTINGS_TYPEDECL( KEY, TYPE )                                                     \
+    template <> struct SettingValue<KEY> {                                                         \
+        using type = TYPE;                                                                         \
+    }
 
 // -------------------------------------------------------------------
 // -----------------------ENUM SETTING DOMAINS------------------------
@@ -77,14 +77,14 @@ const char* GetOptionLabel( RacecarSettings s, int value );
 template <RacecarSettings S> struct SettingValue;
 
 // Defined templates for each setting
-RACECAR_SETTINGS_TYPEDECL(RacecarSettings::AA_MODE, AAMode);
-RACECAR_SETTINGS_TYPEDECL(RacecarSettings::DEBUG_VIEW, DebugView);
-RACECAR_SETTINGS_TYPEDECL(RacecarSettings::TONEMAPPING_MODE, TonemappingMode);
-RACECAR_SETTINGS_TYPEDECL(RacecarSettings::DEBUG_TEXTURE, DebugTexture);
-RACECAR_SETTINGS_TYPEDECL(RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH, float);
-RACECAR_SETTINGS_TYPEDECL(RacecarSettings::CAR_IRRADIANCE_STRENGTH, float);
-RACECAR_SETTINGS_TYPEDECL(RacecarSettings::TERRAIN_ROAD_WIDTH, float);
-RACECAR_SETTINGS_TYPEDECL(RacecarSettings::TERRAIN_BLEND_WIDTH, float);
+RACECAR_SETTINGS_TYPEDECL( RacecarSettings::AA_MODE, AAMode );
+RACECAR_SETTINGS_TYPEDECL( RacecarSettings::DEBUG_VIEW, DebugView );
+RACECAR_SETTINGS_TYPEDECL( RacecarSettings::TONEMAPPING_MODE, TonemappingMode );
+RACECAR_SETTINGS_TYPEDECL( RacecarSettings::DEBUG_TEXTURE, DebugTexture );
+RACECAR_SETTINGS_TYPEDECL( RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH, float );
+RACECAR_SETTINGS_TYPEDECL( RacecarSettings::CAR_IRRADIANCE_STRENGTH, float );
+RACECAR_SETTINGS_TYPEDECL( RacecarSettings::TERRAIN_ROAD_WIDTH, float );
+RACECAR_SETTINGS_TYPEDECL( RacecarSettings::TERRAIN_BLEND_WIDTH, float );
 
 template <RacecarSettings S> typename SettingValue<S>::type Get()
 {
