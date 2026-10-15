@@ -81,8 +81,7 @@ float tess_factor( float3 p, float padding )
     float dist = distance( p, camera_buffer_data.camera_pos.xyz );
     float f = lerp( 32.0, 2.0, saturate( dist / 100.0 ) );
     float r = lerp( 2.0, 32.0, terrain_tessellation_weight( p, gamestate_data.world_position.xyz, gamestate_data.spline_positions, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y, padding ) );
-    // return max( f, r );
-    return r;
+    return max( f, r );
 }
 
 float edge_tess_factor( float3 v0, float3 v1 )
