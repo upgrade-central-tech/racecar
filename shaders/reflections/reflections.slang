@@ -108,9 +108,6 @@ layout( binding = 7, set = 6 ) SamplerState terrain_linear_sampler;
 
 #if RACECAR_RAY_TRACING
 
-// matches terrain spacing in terrain.cpp/terrain_rt.cpp
-static const float TERRAIN_RT_NORMAL_EPS = 500.0f / 255.0f;
-
 static const float3x4 IDENTITY_3X4
     = float3x4( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0 );
 
@@ -195,7 +192,7 @@ float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
 
     float3 base_position = float3( world_position.x, 0.0f, world_position.z );
     float3 vertex_normal = terrain_height_normal(
-        base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, terrain_linear_sampler, TERRAIN_RT_NORMAL_EPS, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
+        base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, terrain_linear_sampler, TERRAIN_HEIGHT_NORMAL_EPS, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
 
     TerrainUVs uvs = terrain_compute_uvs( world_position, scroll );
 

@@ -11,6 +11,14 @@ static const float TERRAIN_WORLD_SCALE = 0.05f;
 
 static const float TERRAIN_HEIGHT_AMPLITUDE = 5.0f;
 
+// matches terrain spacing in terrain.cpp/terrain_rt.cpp
+static const float TERRAIN_HEIGHT_NORMAL_EPS = 500.0f / 255.0f;
+
+static const float TERRAIN_TRIPLANAR_SHARPNESS = 4.0f;
+
+static const float2x2 TERRAIN_GRASS_TANGENT_FRAME = float2x2( 0.0f, 1.0f, 1.0f, 0.0f );
+static const float2x2 TERRAIN_ASPHALT_TANGENT_FRAME = float2x2( 1.0f, 0.0f, 0.0f, -1.0f );
+
 static const float TERRAIN_PUDDLE_SCALE = 0.5f;
 static const float TERRAIN_PUDDLE_SPEED = 13.333f;
 
@@ -25,14 +33,13 @@ struct TerrainMaps {
 struct TerrainGradients {
     float2 layer_ddx;
     float2 layer_ddy;
-    float2 material_ddx;
-    float2 material_ddy;
+    float3 position_ddx;
+    float3 position_ddy;
 };
 
 struct TerrainUVs {
     float2 layer_uv;
     float2 world_uv_unwrapped;
-    float2 world_uv;
 };
 
 TerrainGradients terrain_no_gradients()
@@ -40,8 +47,8 @@ TerrainGradients terrain_no_gradients()
     TerrainGradients gradients;
     gradients.layer_ddx = float2( 0.0f );
     gradients.layer_ddy = float2( 0.0f );
-    gradients.material_ddx = float2( 0.0f );
-    gradients.material_ddy = float2( 0.0f );
+    gradients.position_ddx = float3( 0.0f );
+    gradients.position_ddy = float3( 0.0f );
     return gradients;
 }
 
@@ -69,8 +76,92 @@ TerrainUVs terrain_compute_uvs( float3 world_position, float2 scroll )
     TerrainUVs uvs;
     uvs.layer_uv = terrain_layer_uv( world_position, scroll );
     uvs.world_uv_unwrapped = terrain_world_uv_unwrapped( world_position, scroll );
-    uvs.world_uv = uvs.world_uv_unwrapped - floor( uvs.world_uv_unwrapped );
     return uvs;
+}
+
+struct TerrainTriplanarPlane {
+    float2 uv;
+    float2 uv_ddx;
+    float2 uv_ddy;
+    float3 u_axis;
+    float3 v_axis;
+};
+
+struct TerrainTriplanar {
+    TerrainTriplanarPlane planes[3];
+    float3 weights;
+};
+
+TerrainTriplanarPlane terrain_triplanar_plane( float2 uv_unwrapped, float2 uv_ddx, float2 uv_ddy,
+    float3 u_axis, float3 v_axis )
+{
+    TerrainTriplanarPlane plane;
+    plane.uv = uv_unwrapped - floor( uv_unwrapped );
+    plane.uv_ddx = uv_ddx;
+    plane.uv_ddy = uv_ddy;
+    plane.u_axis = u_axis;
+    plane.v_axis = v_axis;
+    return plane;
+}
+
+TerrainTriplanar terrain_compute_triplanar(
+    float3 position, float3 surface_normal, float2 scroll, TerrainGradients gradients )
+{
+    float3 p = position * TERRAIN_WORLD_SCALE;
+    float3 p_ddx = gradients.position_ddx * TERRAIN_WORLD_SCALE;
+    float3 p_ddy = gradients.position_ddy * TERRAIN_WORLD_SCALE;
+
+    TerrainTriplanar triplanar;
+    triplanar.planes[0] = terrain_triplanar_plane( float2( p.z + scroll.y, p.y ), p_ddx.zy,
+        p_ddy.zy, float3( 0.0f, 0.0f, 1.0f ), float3( 0.0f, 1.0f, 0.0f ) );
+    triplanar.planes[1] = terrain_triplanar_plane( p.xz + scroll, p_ddx.xz, p_ddy.xz,
+        float3( 1.0f, 0.0f, 0.0f ), float3( 0.0f, 0.0f, 1.0f ) );
+    triplanar.planes[2] = terrain_triplanar_plane( float2( p.x + scroll.x, p.y ), p_ddx.xy,
+        p_ddy.xy, float3( 1.0f, 0.0f, 0.0f ), float3( 0.0f, 1.0f, 0.0f ) );
+
+    float3 weights = pow( abs( surface_normal ), TERRAIN_TRIPLANAR_SHARPNESS );
+    triplanar.weights = weights / ( weights.x + weights.y + weights.z );
+    return triplanar;
+}
+
+float4 terrain_triplanar_sample(
+    Texture2D<float4> map, SamplerState linear_sampler, TerrainTriplanar triplanar )
+{
+    float4 result = float4( 0.0f );
+    [unroll]
+    for ( int i = 0; i < 3; i++ ) {
+        TerrainTriplanarPlane plane = triplanar.planes[i];
+        result += triplanar.weights[i]
+            * map.SampleGrad( linear_sampler, plane.uv, plane.uv_ddx, plane.uv_ddy );
+    }
+    return result;
+}
+
+float4 terrain_triplanar_sample_normal_ao( Texture2D<float4> map, SamplerState linear_sampler,
+    TerrainTriplanar triplanar, float3 surface_normal, float2x2 tangent_frame )
+{
+    float3 normal = normalize( surface_normal );
+    float3 blended_normal = float3( 0.0f );
+    float ao = 0.0f;
+
+    [unroll]
+    for ( int i = 0; i < 3; i++ ) {
+        TerrainTriplanarPlane plane = triplanar.planes[i];
+        float4 normal_map_ao
+            = map.SampleGrad( linear_sampler, plane.uv, plane.uv_ddx, plane.uv_ddy );
+
+        float3 tangent = tangent_frame[0].x * plane.u_axis + tangent_frame[0].y * plane.v_axis;
+        float3 bitangent = tangent_frame[1].x * plane.u_axis + tangent_frame[1].y * plane.v_axis;
+        float3 normal_tangent = 2.0f * normal_map_ao.rgb - 1.0f;
+
+        float3 plane_normal = normalize(
+            tangent * normal_tangent.x + bitangent * normal_tangent.y + normal * normal_tangent.z );
+
+        blended_normal += triplanar.weights[i] * plane_normal;
+        ao += triplanar.weights[i] * normal_map_ao.a;
+    }
+
+    return float4( normalize( blended_normal ), ao );
 }
 
 float dist_sq_to_segment( float2 a, float2 b )
@@ -187,8 +278,8 @@ float3 terrain_height_normal( float3 base_position, float3 world_position, float
 }
 
 /// https://advances.realtimerendering.com/other/2016/naughty_dog/NaughtyDog_TechArt_Final.pdf
-void evaluate_wetness( float wetness, float porosity, inout float3 color, inout float roughness,
-    inout float ao, inout float3 world_normal )
+void evaluate_wetness( float wetness, float porosity, float3 vertex_normal, inout float3 color,
+    inout float roughness, inout float ao, inout float3 world_normal )
 {
     float3 color_sq = color * color;
     color = lerp( color, color_sq, clamp_range( wetness, 0.1f, 0.35f ) * porosity );
@@ -198,7 +289,7 @@ void evaluate_wetness( float wetness, float porosity, inout float3 color, inout 
     // GBuffer doesn't store the vertex normal, so we'll treat 0.45 case and 0.98 case identically.
     // Uncharted 4, however, uses frag normal for 0.45 and vert for 0.98.
     world_normal = normalize(
-        lerp( world_normal, float3( 0.0f, 1.0f, 0.0f ), clamp_range( wetness, 0.45f, 1.0f ) ) );
+        lerp( world_normal, normalize( vertex_normal ), clamp_range( wetness, 0.45f, 1.0f ) ) );
 }
 
 struct TerrainSurface {
@@ -220,7 +311,6 @@ TerrainSurface terrain_evaluate_surface( float3 position, float3 vertex_normal, 
 {
     float2 layer_uv = uvs.layer_uv;
     float2 world_uv_unwrapped = uvs.world_uv_unwrapped;
-    float2 world_uv = uvs.world_uv;
 
     float3 world_uvw_unwrapped = float3( world_uv_unwrapped.x, 0.0f, world_uv_unwrapped.y );
 
@@ -246,25 +336,26 @@ TerrainSurface terrain_evaluate_surface( float3 position, float3 vertex_normal, 
     float layer = saturate( smoothstep( road_width, road_width + blend_width, road_dist ) );
     float2 layers = float2( 1.0 - layer, layer );
 
-    float4 grass_color_roughness = maps.grass_albedo_roughness.SampleGrad(
-        maps.linear_sampler, world_uv, gradients.material_ddx, gradients.material_ddy );
-    float4 grass_normal_map_ao = maps.grass_normal_ao.SampleGrad(
-        maps.linear_sampler, world_uv, gradients.material_ddx, gradients.material_ddy );
+    TerrainTriplanar triplanar
+        = terrain_compute_triplanar( position, normalize( vertex_normal ), scroll, gradients );
+
+    float4 grass_color_roughness
+        = terrain_triplanar_sample( maps.grass_albedo_roughness, maps.linear_sampler, triplanar );
+    float4 grass_normal_and_ao = terrain_triplanar_sample_normal_ao( maps.grass_normal_ao,
+        maps.linear_sampler, triplanar, vertex_normal, TERRAIN_GRASS_TANGENT_FRAME );
 
     float3 grass_color = grass_color_roughness.rgb;
-    float3 grass_normal
-        = normalize( map_normals( grass_normal_map_ao.rgb, float4( 0, 0, 1, -1 ), vertex_normal ) );
-    float grass_ao = grass_normal_map_ao.a;
+    float3 grass_normal = grass_normal_and_ao.xyz;
+    float grass_ao = grass_normal_and_ao.w;
 
-    float4 asphalt_color_roughness = maps.asphalt_albedo_roughness.SampleGrad(
-        maps.linear_sampler, world_uv, gradients.material_ddx, gradients.material_ddy );
-    float4 asphalt_normal_map_ao = maps.asphalt_normal_ao.SampleGrad(
-        maps.linear_sampler, world_uv, gradients.material_ddx, gradients.material_ddy );
+    float4 asphalt_color_roughness = terrain_triplanar_sample(
+        maps.asphalt_albedo_roughness, maps.linear_sampler, triplanar );
+    float4 asphalt_normal_and_ao = terrain_triplanar_sample_normal_ao( maps.asphalt_normal_ao,
+        maps.linear_sampler, triplanar, vertex_normal, TERRAIN_ASPHALT_TANGENT_FRAME );
 
     float3 asphalt_color = asphalt_color_roughness.rgb;
-    float3 asphalt_normal = normalize(
-        map_normals( asphalt_normal_map_ao.rgb, float4( 1, 0, 0, -1 ), vertex_normal ) );
-    float asphalt_ao = asphalt_normal_map_ao.a;
+    float3 asphalt_normal = asphalt_normal_and_ao.xyz;
+    float asphalt_ao = asphalt_normal_and_ao.w;
 
     float asphalt_roughness = 1.0f - asphalt_color_roughness.a;
     float grass_roughness = 1.0f - grass_color_roughness.a;
@@ -297,8 +388,8 @@ TerrainSurface terrain_evaluate_surface( float3 position, float3 vertex_normal, 
     // THE WORLD IS ALL WET.
     float mixed_wetness = lerp( 0.0f, wetness, wetness_toggle );
     float mixed_porosity = 0.0f;
-    evaluate_wetness(
-        mixed_wetness, mixed_porosity, mixed_albedo, mixed_roughness, mixed_ao, mixed_normal );
+    evaluate_wetness( mixed_wetness, mixed_porosity, vertex_normal, mixed_albedo, mixed_roughness,
+        mixed_ao, mixed_normal );
 
     TerrainSurface surface;
     surface.albedo = mixed_albedo;

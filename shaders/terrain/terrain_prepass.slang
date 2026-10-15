@@ -154,10 +154,6 @@ DomainOutput ts_eval_main(
         + patch[1].position * ( uv.x ) * ( 1 - uv.y ) + patch[3].position * ( uv.x ) * ( uv.y )
         + patch[2].position * ( 1 - uv.x ) * ( uv.y );
 
-    float3 n = patch[0].normal * ( 1 - uv.x ) * ( 1 - uv.y )
-        + patch[1].normal * ( uv.x ) * ( 1 - uv.y ) + patch[3].normal * ( uv.x ) * ( uv.y )
-        + patch[2].normal * ( 1 - uv.x ) * ( uv.y );
-
     float4 tan = patch[0].tangent * ( 1 - uv.x ) * ( 1 - uv.y )
         + patch[1].tangent * ( uv.x ) * ( 1 - uv.y ) + patch[3].tangent * ( uv.x ) * ( uv.y )
         + patch[2].tangent * ( 1 - uv.x ) * ( uv.y );
@@ -166,6 +162,7 @@ DomainOutput ts_eval_main(
         + patch[3].uv * ( uv.x ) * ( uv.y ) + patch[2].uv * ( 1 - uv.x ) * ( uv.y );
 
     float2 uv_scrolling_offset = terrain_data.terrain_data1.xy;
+    float3 n = terrain_height_normal( p, gamestate_data.world_position.xyz, uv_scrolling_offset, gamestate_data.spline_positions, linear_sampler, TERRAIN_HEIGHT_NORMAL_EPS, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
     p = terrain_displace( p, gamestate_data.world_position.xyz, uv_scrolling_offset, gamestate_data.spline_positions, linear_sampler, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
 
     outVal.sv_position = mul( camera_buffer_data.mvp, float4( p, 1.0 ) );
@@ -224,8 +221,8 @@ FragmentOutput fs_main( DomainOutput in )
     TerrainGradients gradients;
     gradients.layer_ddx = ddx( uvs.layer_uv );
     gradients.layer_ddy = ddy( uvs.layer_uv );
-    gradients.material_ddx = ddx( uvs.world_uv );
-    gradients.material_ddy = ddy( uvs.world_uv );
+    gradients.position_ddx = ddx( world_position );
+    gradients.position_ddy = ddy( world_position );
 
     TerrainSurface surface = terrain_evaluate_surface( world_position, normal,
         uv_scrolling_offset, uvs, snowness, wetness_toggle, get_terrain_maps(), gradients, gamestate_data.spline_positions, gamestate_data.world_position, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
