@@ -163,6 +163,12 @@ float3 terrain_displace( float3 base_position, float3 world_position, float2 scr
     return displaced;
 }
 
+float terrain_tessellation_weight( float3 base_position, float3 world_position, float3[ROAD_NUM_POINTS] spline_positions, float road_width, float blend_width, float padding )
+{
+    float dist = dist_to_spline( base_position, spline_positions, world_position );
+    return ( 1.0f - saturate( smoothstep( road_width + blend_width * 0.5f + padding, road_width + blend_width + padding, dist ) ) ) * step( road_width - padding, dist );
+}
+
 float3 terrain_height_normal( float3 base_position, float3 world_position, float2 scroll, float3[ROAD_NUM_POINTS] spline_positions,
     SamplerState linear_sampler, float epsilon, float road_width, float blend_width )
 {

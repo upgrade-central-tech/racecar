@@ -76,12 +76,18 @@ VertexOutput vs_main( VertexInput input )
     return output;
 }
 
+float tess_factor( float3 p, float padding )
+{
+    float dist = distance( p, camera_buffer_data.camera_pos.xyz );
+    float f = lerp( 32.0, 2.0, saturate( dist / 100.0 ) );
+    float r = lerp( 2.0, 32.0, terrain_tessellation_weight( p, gamestate_data.world_position.xyz, gamestate_data.spline_positions, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y, padding ) );
+    // return max( f, r );
+    return r;
+}
+
 float edge_tess_factor( float3 v0, float3 v1 )
 {
-    float3 mid = 0.5 * ( v0 + v1 );
-    float dist = distance( mid, camera_buffer_data.camera_pos.xyz );
-    float f = lerp( 32.0, 2.0, saturate( dist / 100.0 ) );
-    return f;
+    return tess_factor( 0.5 * ( v0 + v1 ), 0.5 * distance( v0, v1 ) );
 }
 
 [patchconstantfunc( "constants" )]
@@ -104,8 +110,10 @@ PatchConstantOutput constants( InputPatch<VertexOutput, 4> patch )
     float3 center
         = 0.25 * ( patch[0].position + patch[1].position + patch[2].position + patch[3].position );
 
-    pc.inside[0] = edge_tess_factor( center, center );
-    pc.inside[1] = edge_tess_factor( center, center );
+    float half_diagonal = 0.5 * distance( patch[0].position, patch[3].position );
+
+    pc.inside[0] = tess_factor( center, half_diagonal );
+    pc.inside[1] = tess_factor( center, half_diagonal );
 
     return pc;
 }
