@@ -170,6 +170,8 @@ func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
     float3 ao = SSAO( view_pos, view_normal, size );
 
     bool enable_debug = ao_data.packed_floats0.w > 0.5f;
+
+    // note, this needs to be changed to only affect ambient lighting, not direct.
     float3 result = select( enable_debug, ao, ao * scene_color[pixel].rgb );
 
     output[pixel] = float4( result, 1.f );
