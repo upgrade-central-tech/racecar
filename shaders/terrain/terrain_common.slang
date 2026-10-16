@@ -21,6 +21,7 @@ static const float2x2 TERRAIN_ASPHALT_TANGENT_FRAME = float2x2( 1.0f, 0.0f, 0.0f
 
 static const float TERRAIN_PUDDLE_SCALE = 0.5f;
 static const float TERRAIN_PUDDLE_SPEED = 13.333f;
+static const float TERRAIN_SLOPE_MAX_WETNESS = 0.4f;
 
 struct TerrainMaps {
     Texture2D<float4> grass_albedo_roughness;
@@ -328,6 +329,8 @@ TerrainSurface terrain_evaluate_surface( float3 position, float3 vertex_normal, 
 
     float wetness = clamp_range( big_puddle_map, 0.35f, 0.75f )
         + clamp_range( small_puddle_map, 0.1f, 0.95f );
+    float flatness = smoothstep( 0.9f, 0.98f, normalize( vertex_normal ).y );
+    wetness = min( wetness, lerp( TERRAIN_SLOPE_MAX_WETNESS, 2.0f, flatness ) );
 
     // Material property gather
     // R - Asphalt
