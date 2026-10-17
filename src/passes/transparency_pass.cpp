@@ -1,6 +1,7 @@
 #include "transparency_pass.hpp"
 
 #include "vk/create.hpp"
+#include <vulkan/vulkan_core.h>
 
 #include <algorithm>
 #include <limits>
@@ -195,9 +196,9 @@ void create_transparency_pipeline_barrier(
             .buffer_barriers = { },
             .image_barriers = {
                 engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .src_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                    .src_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                    .src_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                     .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
                         | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,

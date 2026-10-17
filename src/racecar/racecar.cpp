@@ -484,12 +484,9 @@ void run( bool use_fullscreen )
 
     // Bloom and AO only on opaque geometry
     pre_transparency_post_passes(
-        camera_buffer,
-        gbuffers,
         screen_color,
         screen_buffer,
         task_list,
-        ao_pass,
         bloom_pass
     );
 

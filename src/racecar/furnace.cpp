@@ -316,12 +316,9 @@ void furnace( bool use_fullscreen )
     engine::post::TonemappingPass tm_pass;
 
     pre_transparency_post_passes(
-        camera_buffer,
-        gbuffers,
         screen_color,
         screen_buffer,
         task_list,
-        ao_pass,
         bloom_pass
     );
 

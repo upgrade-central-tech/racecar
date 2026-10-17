@@ -15,12 +15,9 @@ namespace racecar {
 
 /// Bloom and AO
 void pre_transparency_post_passes(
-    UniformBuffer<ub_data::Camera>& camera_buffer,
-    deferred::GBuffers& gbuffers,
     engine::RWImage& screen_color,
     engine::RWImage& screen_buffer,
     engine::TaskList& task_list,
-    engine::post::AoPass& ao_pass,
     engine::post::BloomPass& bloom_pass
 );
 
