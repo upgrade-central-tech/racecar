@@ -39,7 +39,7 @@ void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBu
         .pImageMemoryBarriers = vk_image_barriers.data(),
     };
 
-#if RACECAR_DEV
+#if RACECAR_DEBUG
     if (!barrier.label.empty()) {
         VkDebugUtilsLabelEXT label = {
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
@@ -50,7 +50,7 @@ void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBu
     }
 #endif
     vkCmdPipelineBarrier2( cmd_buf, &info );
-#if RACECAR_DEV
+#if RACECAR_DEBUG
     if (!barrier.label.empty()) {
         vkCmdEndDebugUtilsLabelEXT(cmd_buf);
     }
