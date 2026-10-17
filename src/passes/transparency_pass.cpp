@@ -219,7 +219,8 @@ void create_transparency_pipeline_barrier(
                     .image = &gbuffer_depth,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
                 },
-            } }
+            },
+            .label = "Transparency Pipeline Barrier" }
     );
 }
 

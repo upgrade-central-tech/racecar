@@ -48,7 +48,8 @@ void create_deferred_reflection_pipeline_barrier(
                                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                        .image = &reflection_data,
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-            } }
+            },
+            .label = "Deferred Reflection Pipeline Barrier" }
     );
 }
 

@@ -49,7 +49,8 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                       .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                       .image = &pass.images[i],
                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                  } } }
+                  } },
+                  .label = "Bloom Mips Init Pipeline Barrier" }
             );
 
             // Each progressive image has half resolution
@@ -153,7 +154,8 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                         .image = &pass.images[i],
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
-                } }
+                },
+                .label = "Bloom Downsample Pipeline Barrier" }
         );
 
         const RWImage& input_image = i == 0 ? write_only : pass.images[i - 1];
@@ -231,7 +233,8 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                         .image = i == 0 ? &inout : &pass.images[i - 1],
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
-                } }
+                },
+                .label = "Bloom Upsample Pipeline Barrier" }
         );
 
         const RWImage& output_image = i == 0 ? inout : pass.images[i - 1];
@@ -294,6 +297,7 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                 .image = &inout,
                 .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
             } },
+            .label = "Bloom Output Pipeline Barrier",
         }
     );
 

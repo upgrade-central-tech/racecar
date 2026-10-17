@@ -228,7 +228,8 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
                                                     .levelCount = mip_levels,
                                                     .baseArrayLayer = 0,
                                                     .layerCount = 1,
-                                                } } } }
+                                                } } },
+            .label = "Octahedral Sky Mips Init Pipeline Barrier" }
     );
 
     for ( size_t mip = 0; mip < mip_levels; mip++ ) {
@@ -272,7 +273,8 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
                                            .levelCount = mip_levels,
                                            .baseArrayLayer = 0,
                                            .layerCount = 1,
-                                       } } } }
+                                       } } },
+            .label = "Octahedral Sky Mips to Shader Read Pipeline Barrier" }
     );
 }
 

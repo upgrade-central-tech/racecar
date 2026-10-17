@@ -45,7 +45,8 @@ void create_screen_buffer_pipeline_barrier(
                     .image = &screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
-            } }
+            },
+            .label = "Scene Color to Post Processing Pipeline Barrier" }
     );
 }
 
@@ -68,7 +69,8 @@ void create_screen_buffer_present_pipeline_barrier(
                     .image = &screen_buffer,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
-            } }
+            },
+            .label = "Screen Buffer to Present Pipeline Barrier" }
     );
 }
 
@@ -159,7 +161,8 @@ void post_transparency_post_passes(
                     .image = &gbuffers.GBuffer_Depth,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
                 },
-            } }
+            },
+            .label = "Transparency to Tonemapping Pipeline Barrier" }
     );
     tm_pass = engine::post::add_tonemapping( screen_buffer, screen_color, task_list );
 
@@ -188,7 +191,8 @@ void post_transparency_post_passes(
                     .image = &screen_color,
                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                 },
-            } }
+            },
+            .label = "Tonemapping to TAA Pipeline Barrier" }
     );
     taa_pass = engine::post::add_taa(
         screen_color,

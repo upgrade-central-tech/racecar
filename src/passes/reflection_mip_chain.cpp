@@ -226,7 +226,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
                 color_write_to_compute_read( chain.reflection_data ),
                 undefined_to_compute_write( chain.reflection_color ),
                 undefined_to_compute_write( chain.reflection_data ),
-            } }
+            },
+            .label = "Reflection Mip Chain Init Pipeline Barrier" }
     );
 
     for ( uint32_t i = 0; i < ReflectionMipChain::DOWNSAMPLE_COUNT; ++i ) {
@@ -254,7 +255,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
                 .image_barriers = {
                     compute_write_to_compute_read( chain.reflection_color, dst_mip ),
                     compute_write_to_compute_read( chain.reflection_data, dst_mip ),
-                } }
+                },
+                .label = "Reflection Mip Downsample Pipeline Barrier" }
         );
     }
 
@@ -267,7 +269,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
             engine::PipelineBarrierDescriptor {
                 .buffer_barriers = { },
                 .image_barriers
-                = { compute_read_to_compute_write( chain.reflection_color, dst_mip ) } }
+                = { compute_read_to_compute_write( chain.reflection_color, dst_mip ) },
+                .label = "Reflection Mip Pre-Upsample Pipeline Barrier" }
         );
 
         engine::add_cs_task(
@@ -289,7 +292,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
             engine::PipelineBarrierDescriptor {
                 .buffer_barriers = { },
                 .image_barriers
-                = { compute_write_to_compute_read( chain.reflection_color, dst_mip ) } }
+                = { compute_write_to_compute_read( chain.reflection_color, dst_mip ) },
+                .label = "Reflection Mip Upsample Pipeline Barrier" }
         );
     }
 }

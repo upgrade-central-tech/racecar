@@ -56,7 +56,8 @@ void create_deferred_lighting_pipeline_barrier(
                                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
                                        .image = &screen_color,
                                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-            } }
+            },
+            .label = "GBuffer to Deferred Lighting Pipeline Barrier" }
     );
 }
 
@@ -76,7 +77,8 @@ void create_terrain_car_screen_pipeline_barrier(
                 .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                 .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 .image = &screen_color,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
+                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
+            .label = "Terrain to Car Lighting Pipeline Barrier" }
     );
 }
 

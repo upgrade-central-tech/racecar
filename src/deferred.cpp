@@ -198,6 +198,7 @@ void create_top_pipeline_barriers(
 )
 {
     top_pipeline_barrier_desc->buffer_barriers = { };
+    top_pipeline_barrier_desc->label = "GBuffer and Scene Color Init Pipeline Barrier";
 
     // All GBuffer barriers are for VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
     top_pipeline_barrier_desc->image_barriers = deferred::init_gbuffer_image_barriers( gbuffers );

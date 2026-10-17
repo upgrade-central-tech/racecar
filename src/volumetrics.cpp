@@ -384,7 +384,8 @@ void draw_volumetric(
                 .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                 .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                 .image = &volumetric.cloud_buffer,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
+                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
+            .label = "Cloud Buffer to Attachment Pipeline Barrier" }
     );
 
     const geometry::quad::Mesh& volumetric_mesh = volumetric.scene_mesh;
@@ -454,7 +455,8 @@ void draw_volumetric(
                 .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                 .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 .image = &volumetric.cloud_buffer,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } } }
+                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
+            .label = "Cloud Buffer to Shader Read Pipeline Barrier" }
     );
 
     // Prepare composite stage

@@ -318,6 +318,7 @@ void add_terrain_rt_build_pass( TerrainRayTracingInfo& info, engine::TaskList& t
                 .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
             } },
             .image_barriers = { },
+            .label = "Terrain RT Build Pipeline Barrier",
         }
     );
 

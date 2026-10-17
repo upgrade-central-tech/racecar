@@ -89,6 +89,7 @@ void compute_sun_visibility( SunVisibilityComputePass& sun_visibility, engine::T
                                             | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                                         .dst_access = VK_ACCESS_2_SHADER_READ_BIT } },
             .image_barriers = { },
+            .label = "Sun Visibility Buffer Pipeline Barrier",
         }
     );
 }
