@@ -105,8 +105,7 @@ void pre_transparency_post_passes(
                                     .image = &screen_buffer,
                                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                                 } },
-            .label = "Post Processing to Transparency Pipeline Barrier"
-        }
+            .label = "Post Processing to Transparency Pipeline Barrier" }
     );
 
     // this is an unnecessary blit task that we should definitely remove when we clean
