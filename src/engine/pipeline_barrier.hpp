@@ -57,6 +57,7 @@ struct ImageBarrier {
 struct PipelineBarrierDescriptor {
     std::vector<BufferBarrier> buffer_barriers;
     std::vector<ImageBarrier> image_barriers;
+    std::string_view label;
 };
 
 void run_pipeline_barrier(

@@ -6,11 +6,44 @@
 
 #include <SDL3/SDL_vulkan.h>
 
+#include <cstdio>
 #include <format>
 
 namespace racecar::vk {
 
 namespace {
+
+#if RACECAR_DEBUG
+VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+    VkDebugUtilsMessageTypeFlagsEXT message_type,
+    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
+    void*
+)
+{
+    std::string message = std::format(
+        "\n[{}: {}]",
+        vkb::to_string_message_severity( message_severity ),
+        vkb::to_string_message_type( message_type )
+    );
+
+    if ( message_type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+         && callback_data->pMessageIdName != nullptr ) {
+        message += std::format( " - {}", callback_data->pMessageIdName );
+    }
+
+    for ( uint32_t i = 0; i < callback_data->cmdBufLabelCount; ++i ) {
+        const char* label_name = callback_data->pCmdBufLabels[i].pLabelName;
+        message += std::format( "\n[LABEL: {}]", label_name != nullptr ? label_name : "" );
+    }
+
+    message += std::format( "\n{}\n", callback_data->pMessage );
+
+    std::fputs( message.c_str(), stdout );
+
+    return VK_FALSE;
+}
+#endif
 
 vkb::Instance create_instance()
 {
@@ -38,7 +71,7 @@ vkb::Instance create_instance()
 #if RACECAR_DEBUG
     if ( system_info.validation_layers_available ) {
         log::info( "[Vulkan] Enabling validation layers" );
-        instance_builder.enable_validation_layers().use_default_debug_messenger();
+        instance_builder.enable_validation_layers().set_debug_callback( debug_callback );
     }
 #endif
 

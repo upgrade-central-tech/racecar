@@ -39,7 +39,22 @@ void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBu
         .pImageMemoryBarriers = vk_image_barriers.data(),
     };
 
+#if RACECAR_DEV
+    if (!barrier.label.empty()) {
+        VkDebugUtilsLabelEXT label = {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+            .pLabelName = barrier.label.data(),
+            .color = {1, 0, 0, 1},
+        };
+        vkCmdBeginDebugUtilsLabelEXT(cmd_buf, &label);
+    }
+#endif
     vkCmdPipelineBarrier2( cmd_buf, &info );
+#if RACECAR_DEV
+    if (!barrier.label.empty()) {
+        vkCmdEndDebugUtilsLabelEXT(cmd_buf);
+    }
+#endif
 }
 
 VkBufferMemoryBarrier2 BufferBarrier::get_vk( size_t idx ) const
