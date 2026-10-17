@@ -3,6 +3,7 @@
 #include "../engine/pipeline_barrier.hpp"
 #include "engine/blit_task.hpp"
 #include "engine/task_list.hpp"
+
 #include <vulkan/vulkan_core.h>
 
 namespace racecar {
@@ -84,37 +85,32 @@ void pre_transparency_post_passes(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = { 
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                    .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = &screen_color,    
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                },
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                    .dst_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    .image = &screen_buffer,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                }
-            },
+            .image_barriers = { engine::ImageBarrier {
+                                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                    .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                    .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
+                                    .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                    .image = &screen_color,
+                                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                                },
+                                engine::ImageBarrier {
+                                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                    .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                                    .dst_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                                    .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                    .image = &screen_buffer,
+                                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                                } },
         }
     );
 
     // this is an unnecessary blit task that we should definitely remove when we clean
     // up post process. It's leftover from removing SSAO here.
-    engine::add_blit_task(task_list, {
-       .in_color = &screen_color,
-       .out_color = &screen_buffer 
-    });
+    engine::add_blit_task( task_list, { .in_color = &screen_color, .out_color = &screen_buffer } );
 }
 
 void post_transparency_post_passes(

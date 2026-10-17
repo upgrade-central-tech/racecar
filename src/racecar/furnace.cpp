@@ -315,12 +315,7 @@ void furnace( bool use_fullscreen )
     engine::post::BloomPass bloom_pass;
     engine::post::TonemappingPass tm_pass;
 
-    pre_transparency_post_passes(
-        screen_color,
-        screen_buffer,
-        task_list,
-        bloom_pass
-    );
+    pre_transparency_post_passes( screen_color, screen_buffer, task_list, bloom_pass );
 
     create_transparency_pipeline_barrier( screen_buffer, gbuffers.GBuffer_Depth, task_list );
 

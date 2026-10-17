@@ -1,6 +1,7 @@
 #include "transparency_pass.hpp"
 
 #include "vk/create.hpp"
+
 #include <vulkan/vulkan_core.h>
 
 #include <algorithm>

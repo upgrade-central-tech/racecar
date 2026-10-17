@@ -483,12 +483,7 @@ void run( bool use_fullscreen )
     engine::post::TonemappingPass tm_pass;
 
     // Bloom and AO only on opaque geometry
-    pre_transparency_post_passes(
-        screen_color,
-        screen_buffer,
-        task_list,
-        bloom_pass
-    );
+    pre_transparency_post_passes( screen_color, screen_buffer, task_list, bloom_pass );
 
     // screen_buffer compute write -> colour attachment
     // GBuffer Depth -> write.
