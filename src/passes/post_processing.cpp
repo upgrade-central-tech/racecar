@@ -112,7 +112,7 @@ void pre_transparency_post_passes(
 
     // this is an unnecessary blit task that we should definitely remove when we clean
     // up post process. It's leftover from removing SSAO here.
-    engine::add_blit_task( task_list, { .in_color = &screen_color, .out_color = &screen_buffer } );
+    engine::add_blit_task( task_list, { .in_color = &screen_color, .out_color = &screen_buffer }, "Screen Color to Screen Buffer Blit" );
 }
 
 void post_transparency_post_passes(
