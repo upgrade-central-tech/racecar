@@ -23,7 +23,7 @@ float3 sample_glossy_ibl( float roughness, float2 direction )
 }
 
 float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 light, Material pbr,
-    GBuffer g_buffer, float sun_V, float4 refl, float4 refl_cc )
+    GBuffer g_buffer, float sun_V, float4 refl, float4 refl_cc, float ao )
 {
     // Essential dot products
     float n_dot_v = ( dot( normal, view ) );
@@ -162,7 +162,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
         * clamped_n_dot_l;
 
     // IBL - Removed kD term due to strange shadows
-    out_color += ( kD * diffuse_irradiance + specular_indirect );
+    out_color += ( kD * diffuse_irradiance * ao + specular_indirect );
     out_color += clearcoat_indirect;
 
     return out_color;

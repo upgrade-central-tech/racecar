@@ -25,8 +25,10 @@ layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 // Cubemaps + LUTs
 #if RACECAR_RAY_TRACING
 layout( binding = 0, set = 7 ) StructuredBuffer<float> sun_visibility;
+layout( binding = 0, set = 8 ) Texture2D<float4> ao_read;
 #else
 layout( binding = 0, set = 5 ) StructuredBuffer<float> sun_visibility;
+layout( binding = 0, set = 6 ) Texture2D<float4> ao_read;
 #endif // RACECAR_RAY_TRACING
 
 layout( binding = 0, set = 2 ) Texture2D<float2> BRDF_LUT;
@@ -256,6 +258,8 @@ float4 fs_main( VertexOutput in )
     }
 #endif // RACECAR_RAY_TRACING
 
+    float ao = ao_read.Sample( nearest_sampler, in.uv ).r;
+
     GBuffer gbuffer = { in_pos, normal, in_tangent, in_uv, ddx_uv, ddy_uv };
 
     bool hit = false;
@@ -272,7 +276,7 @@ float4 fs_main( VertexOutput in )
     float3 out_color
         = car_bsdf(
             base_albedo, normal, view, half, light, pbr, gbuffer,
-            ( hit ? 0.0f : 1.0f ) * sun_visibility[0], refl, refl_cc );
+            ( hit ? 0.0f : 1.0f ) * sun_visibility[0], refl, refl_cc, ao );
 
     // DEBUG VIEWS
     switch ( debug_data.debug_view ) {

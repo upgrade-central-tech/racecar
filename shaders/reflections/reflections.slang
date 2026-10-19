@@ -384,7 +384,7 @@ ReflectionOutput fs_main( VertexOutput in )
     float4 refl_input
         = float4( 0.0f ); // just use 1-bounce for reflections, sample IBL - mark alpha 0, as such
     float3 color = car_bsdf( albedo, normal, hit_view_dir, half_vector, light, pbr, g_buffer,
-        sun_visibility[0], refl_input, refl_input );
+        sun_visibility[0], refl_input, refl_input, 1.0f );
 
     return reflection_hit( color, t, stencil );
 

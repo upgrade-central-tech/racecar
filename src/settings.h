@@ -34,6 +34,7 @@ enum class TonemappingMode : int { NONE = 0, GT7_SDR, GT7_HDR, REINHARD, ACES };
 enum class DebugTexture : int {
     NONE = 0,
     REFLECTIONS,
+    AO,
 };
 
 // -------------------------------------------------------------------

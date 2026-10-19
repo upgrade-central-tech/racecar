@@ -5,9 +5,8 @@ layout( binding = 0, set = 0 ) ConstantBuffer<CameraBufferData> camera_data;
 layout( binding = 1, set = 0 ) ConstantBuffer<AOData> ao_data;
 
 layout( binding = 0, set = 1 ) RWTexture2D<float4> output;
-layout( binding = 1, set = 1 ) Texture2D<float4> scene_color;
-layout( binding = 2, set = 1 ) Texture2D<float4> gbuffer_normal;
-layout( binding = 3, set = 1 ) Texture2D<float4> gbuffer_depth;
+layout( binding = 1, set = 1 ) Texture2D<float4> gbuffer_normal;
+layout( binding = 2, set = 1 ) Texture2D<float4> gbuffer_depth;
 
 const static uint SLICES = 20;
 const static float RADIUS = 1;
@@ -142,7 +141,7 @@ func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
     uint2 pixel = thread_id.xy;
 
     if ( !enable_ao ) {
-        output[pixel] = scene_color[pixel];
+        output[pixel] = float4(1.0, 1.0, 1.0, 1.0);
         return;
     }
 
@@ -152,7 +151,7 @@ func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
     // Hardcoded screen dimensions
     uint width;
     uint height;
-    scene_color.GetDimensions( width, height );
+    output.GetDimensions( width, height );
     let size = float2( width, height );
     float2 uv = ( float2( pixel ) + 0.5f ) / size;
 
@@ -172,7 +171,7 @@ func cs_ao( uint2 thread_id: SV_DispatchThreadID )->void
     bool enable_debug = ao_data.packed_floats0.w > 0.5f;
 
     // note, this needs to be changed to only affect ambient lighting, not direct.
-    float3 result = select( enable_debug, ao, ao * scene_color[pixel].rgb );
+    float3 result = ao;
 
     output[pixel] = float4( result, 1.f );
 }

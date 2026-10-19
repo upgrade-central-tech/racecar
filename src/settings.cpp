@@ -51,10 +51,7 @@ constexpr const char* TONEMAPPING_OPTIONS[] = {
     "None", "GT7 SDR", "GT7 HDR", "Reinhard", "ACES",
 };
 
-constexpr const char* DEBUG_TEXTURE_OPTIONS[] = {
-    "None",
-    "Reflections",
-};
+constexpr const char* DEBUG_TEXTURE_OPTIONS[] = { "None", "Reflections", "AO" };
 
 // -------------------------------------------------------------------
 // -------------------RUNTIME VALIDATION FUNCTIONS--------------------

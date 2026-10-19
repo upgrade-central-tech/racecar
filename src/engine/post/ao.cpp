@@ -2,6 +2,12 @@
 
 #include "../../gui.hpp"
 #include "../../vk/create.hpp"
+#include "engine/descriptor_set.hpp"
+#include "engine/pipeline_barrier.hpp"
+#include "engine/rwimage.hpp"
+#include "engine/task_list.hpp"
+
+#include <vulkan/vulkan_core.h>
 
 const std::filesystem::path AO_SHADER_MODULE_PATH = "../shaders/post/ao/ao.spv";
 
@@ -28,7 +34,6 @@ void initialize_ao_pass( AoPass& ao_pass )
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
         },
         VK_SHADER_STAGE_COMPUTE_BIT
     );
@@ -36,29 +41,44 @@ void initialize_ao_pass( AoPass& ao_pass )
     engine::update_descriptor_set_uniform( ao_pass.uniform_desc_set, *ao_pass.camera_buffer, 0 );
     engine::update_descriptor_set_uniform( ao_pass.uniform_desc_set, ao_pass.ao_buffer, 1 );
 
+    ao_pass.ao_output = engine::create_rwimage(
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
+        VkImageType::VK_IMAGE_TYPE_2D,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
+    );
+
     engine::update_descriptor_set_rwimage(
         ao_pass.texture_desc_set,
-        *ao_pass.out_color,
+        ao_pass.ao_output,
         VK_IMAGE_LAYOUT_GENERAL,
         0
     );
 
     engine::update_descriptor_set_rwimage(
         ao_pass.texture_desc_set,
-        *ao_pass.in_color,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        1
-    );
-    engine::update_descriptor_set_rwimage(
-        ao_pass.texture_desc_set,
         *ao_pass.GBuffer_Normal,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        2
+        1
     );
     engine::update_descriptor_set_depth_image(
         ao_pass.texture_desc_set,
         *ao_pass.GBuffer_Depth,
-        3
+        2
+    );
+
+    // for reading AO as a texture
+    ao_pass.ao_read_descriptor_set = engine::generate_descriptor_set(
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+    );
+
+    engine::update_descriptor_set_rwimage(
+        ao_pass.ao_read_descriptor_set,
+        ao_pass.ao_output,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        0
     );
 
     return;
@@ -66,8 +86,6 @@ void initialize_ao_pass( AoPass& ao_pass )
 
 void add_ao( AoPass& ao_pass, TaskList& task_list )
 {
-    initialize_ao_pass( ao_pass );
-
     engine::Pipeline cs_ao_pipeline = engine::create_compute_pipeline(
         {
             ao_pass.uniform_desc_set.layouts[0],
@@ -77,8 +95,24 @@ void add_ao( AoPass& ao_pass, TaskList& task_list )
         "cs_ao"
     );
 
-    size_t dim_x = ( ao_pass.out_color->images[0].image_extent.width + 7 ) / 8;
-    size_t dim_y = ( ao_pass.out_color->images[0].image_extent.height + 7 ) / 8;
+    size_t dim_x = ( ao_pass.ao_output.images[0].image_extent.width + 7 ) / 8;
+    size_t dim_y = ( ao_pass.ao_output.images[0].image_extent.height + 7 ) / 8;
+
+    // pre-compute task transition ao_output to general
+    engine::add_pipeline_barrier(
+        task_list,
+        { .buffer_barriers = { },
+          .image_barriers
+          = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                     .src_access = VK_ACCESS_2_NONE,
+                                     .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                     .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                                     .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                                     .image = &ao_pass.ao_output,
+                                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
+          .label = "AO Output Pre-Pass Pipeline Barrier" }
+    );
 
     engine::ComputeTask cs_ao_task = {
         cs_ao_pipeline,
@@ -90,6 +124,23 @@ void add_ao( AoPass& ao_pass, TaskList& task_list )
     };
 
     engine::add_cs_task( task_list, cs_ao_task, "AO" );
+
+    // post-compute task transition ao_output to shader read only
+    engine::add_pipeline_barrier(
+        task_list,
+        { .buffer_barriers = { },
+          .image_barriers
+          = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                     .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                                     .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT
+                                         | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                                     .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                     .image = &ao_pass.ao_output,
+                                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
+          .label = "AO Output Post-Pass Pipeline Barrier" }
+    );
 
     return;
 }

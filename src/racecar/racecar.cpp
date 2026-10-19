@@ -304,26 +304,25 @@ void run( bool use_fullscreen )
     );
 #endif // RACECAR_RAY_TRACING
 
-    DebugTexturePass debug_texture_pass;
-    std::vector<const engine::RWImage*> debug_textures;
-#if RACECAR_RAY_TRACING
-    debug_textures.push_back( &reflection_color );
-#endif // RACECAR_RAY_TRACING
-    initialize_debug_texture_pass( debug_texture_pass, screen_buffer, debug_textures );
+    // AO Post Processing
+    engine::post::AoPass ao_pass { .camera_buffer = &camera_buffer,
+                                   .GBuffer_Normal = &gbuffers.GBuffer_Normal,
+                                   .GBuffer_Depth = &gbuffers.GBuffer_Depth };
+    initialize_ao_pass( ao_pass );
 
     // Set up car lighting pass
-    LightingPassDescSets lighting_pass_desc_sets = {
-        .uniform_desc_set = uniform_desc_set,
-        .material_desc_sets = material_desc_sets,
-        .lut_sets = lut_sets,
-        .sampler_desc_set = sampler_desc_set,
-        .gbuffer_desc_set = gbuffers.desc_set,
+    LightingPassDescSets lighting_pass_desc_sets
+        = { .uniform_desc_set = uniform_desc_set,
+            .material_desc_sets = material_desc_sets,
+            .lut_sets = lut_sets,
+            .sampler_desc_set = sampler_desc_set,
+            .gbuffer_desc_set = gbuffers.desc_set,
 #if RACECAR_RAY_TRACING
-        .car_tlas_desc_set = car_tlas_desc_set,
-        .reflection_buffer_desc_set = reflection_buffer_desc_set,
+            .car_tlas_desc_set = car_tlas_desc_set,
+            .reflection_buffer_desc_set = reflection_buffer_desc_set,
 #endif // RACECAR_RAY_TRACING
-        .sun_visibility_desc_set = sun_visibility.visibility_desc_set,
-    };
+            .sun_visibility_desc_set = sun_visibility.visibility_desc_set,
+            .ao_read_desc_set = ao_pass.ao_read_descriptor_set };
 
     // Create car lighting pass pipeline
     engine::Pipeline lighting_pass_pipeline;
@@ -353,6 +352,22 @@ void run( bool use_fullscreen )
         &sampler_desc_set,
         &sun_visibility.visibility_desc_set
     );
+
+    // ================================================================================================================
+    // DEBUG TEXTURE_PASS
+    // ================================================================================================================
+
+    DebugTexturePass debug_texture_pass;
+    std::vector<const engine::RWImage*> debug_textures;
+#if RACECAR_RAY_TRACING
+    debug_textures.push_back( &reflection_color );
+#else
+    // we need some placeholder texture here, so we are just putting this here. It won't ever be
+    // visible
+    debug_textures.push_back( &ao_pass.ao_output );
+#endif // RACECAR_RAY_TRACING
+    debug_textures.push_back( &ao_pass.ao_output );
+    initialize_debug_texture_pass( debug_texture_pass, screen_buffer, debug_textures );
 
     // ================================================================================================================
     // PRECOMPUTE
@@ -465,6 +480,9 @@ void run( bool use_fullscreen )
     // Lighting
     create_deferred_lighting_pipeline_barrier( task_list, gbuffers, screen_color );
 
+    // AO compute, reads geometry
+    engine::post::add_ao( ao_pass, task_list );
+
     // Terrain lighting pass
     geometry::draw_terrain( test_terrain, task_list );
 
@@ -478,7 +496,6 @@ void run( bool use_fullscreen )
     create_screen_buffer_pipeline_barrier( screen_color, screen_buffer, task_list );
 
     engine::post::TAAPass taa_pass;
-    engine::post::AoPass ao_pass;
     engine::post::BloomPass bloom_pass;
     engine::post::TonemappingPass tm_pass;
 

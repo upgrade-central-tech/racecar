@@ -236,18 +236,23 @@ void furnace( bool use_fullscreen )
     engine::update_descriptor_set_image( reflection_buffer_desc_set, empty_reflection, 1 );
 #endif // RACECAR_RAY_TRACING
 
-    LightingPassDescSets lighting_pass_desc_sets = {
-        .uniform_desc_set = uniform_desc_set,
-        .material_desc_sets = material_desc_sets,
-        .lut_sets = lut_sets,
-        .sampler_desc_set = sampler_desc_set,
-        .gbuffer_desc_set = gbuffers.desc_set,
+    engine::post::AoPass ao_pass { .camera_buffer = &camera_buffer,
+                                   .GBuffer_Normal = &gbuffers.GBuffer_Normal,
+                                   .GBuffer_Depth = &gbuffers.GBuffer_Depth };
+    initialize_ao_pass( ao_pass );
+
+    LightingPassDescSets lighting_pass_desc_sets
+        = { .uniform_desc_set = uniform_desc_set,
+            .material_desc_sets = material_desc_sets,
+            .lut_sets = lut_sets,
+            .sampler_desc_set = sampler_desc_set,
+            .gbuffer_desc_set = gbuffers.desc_set,
 #if RACECAR_RAY_TRACING
-        .car_tlas_desc_set = car_tlas_desc_set,
-        .reflection_buffer_desc_set = reflection_buffer_desc_set,
+            .car_tlas_desc_set = car_tlas_desc_set,
+            .reflection_buffer_desc_set = reflection_buffer_desc_set,
 #endif // RACECAR_RAY_TRACING
-        .sun_visibility_desc_set = sun_visibility_desc_set,
-    };
+            .sun_visibility_desc_set = sun_visibility_desc_set,
+            .ao_read_desc_set = ao_pass.ao_read_descriptor_set };
 
     engine::Pipeline lighting_pass_pipeline;
     create_lighting_pass_resources( lighting_pass_desc_sets, &lighting_pass_pipeline );
@@ -304,6 +309,9 @@ void furnace( bool use_fullscreen )
 
     // Round-trips screen_color through the layout the terrain pass would have left it in
     create_deferred_lighting_pipeline_barrier( task_list, gbuffers, screen_color );
+
+    engine::post::add_ao( ao_pass, task_list );
+
     create_terrain_car_screen_pipeline_barrier( task_list, screen_color );
 
     car_lighting_pass( lighting_pass_desc_sets, lighting_pass_pipeline, screen_color, task_list );
@@ -311,7 +319,6 @@ void furnace( bool use_fullscreen )
     create_screen_buffer_pipeline_barrier( screen_color, screen_buffer, task_list );
 
     engine::post::TAAPass taa_pass;
-    engine::post::AoPass ao_pass;
     engine::post::BloomPass bloom_pass;
     engine::post::TonemappingPass tm_pass;
 

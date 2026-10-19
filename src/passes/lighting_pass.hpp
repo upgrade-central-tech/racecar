@@ -6,6 +6,7 @@
 #include "../engine/pipeline.hpp"
 #include "../engine/state.hpp"
 #include "../engine/task_list.hpp"
+#include "engine/descriptor_set.hpp"
 
 #include <vector>
 
@@ -22,6 +23,7 @@ struct LightingPassDescSets {
     engine::DescriptorSet& reflection_buffer_desc_set;
 #endif // RACECAR_RAY_TRACING
     engine::DescriptorSet& sun_visibility_desc_set;
+    engine::DescriptorSet& ao_read_desc_set;
 };
 
 void create_lighting_pass_resources( 
