@@ -331,7 +331,8 @@ void run( bool use_fullscreen )
     // Create terrain draw pipeline
     geometry::initialize_terrain_draw_pipeline(
         test_terrain,
-        sun_visibility.visibility_desc_set
+        sun_visibility.visibility_desc_set,
+        ao_pass.ao_read_descriptor_set
 #if RACECAR_RAY_TRACING
         ,
         car_tlas_desc_set,

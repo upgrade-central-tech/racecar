@@ -401,7 +401,8 @@ void initialize_terrain(
 
 void initialize_terrain_draw_pipeline(
     Terrain& terrain,
-    engine::DescriptorSet& sun_visibility_desc_set
+    engine::DescriptorSet& sun_visibility_desc_set,
+    engine::DescriptorSet& ao_read_desc_set
 #if RACECAR_RAY_TRACING
     ,
     engine::DescriptorSet& car_tlas_desc_set,
@@ -410,6 +411,7 @@ void initialize_terrain_draw_pipeline(
 )
 {
     terrain.sun_visibility_desc_set = &sun_visibility_desc_set;
+    terrain.ao_read_desc_set = &ao_read_desc_set;
 
 #if RACECAR_RAY_TRACING
     terrain.car_tlas_desc_set = &car_tlas_desc_set;
@@ -425,7 +427,8 @@ void initialize_terrain_draw_pipeline(
           terrain.car_tlas_desc_set->layouts[0],
           terrain.reflection_texture_desc_set->layouts[0],
 #endif // RACECAR_RAY_TRACING
-          terrain.sun_visibility_desc_set->layouts[0] },
+          terrain.sun_visibility_desc_set->layouts[0],
+          terrain.ao_read_desc_set->layouts[0] },
         vk::create::shader_module( TERRAIN_SHADER_LIGHTING_MODULE_PATH ),
         "cs_terrain_draw"
     );
@@ -522,7 +525,8 @@ void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
           terrain.car_tlas_desc_set,
           terrain.reflection_texture_desc_set,
 #endif // RACECAR_RAY_TRACING
-          terrain.sun_visibility_desc_set },
+          terrain.sun_visibility_desc_set,
+          terrain.ao_read_desc_set },
         dispatch_dims,
     };
 

@@ -24,8 +24,10 @@ layout( binding = 0, set = 3 ) SamplerState sampler;
 
 #if RACECAR_RAY_TRACING
 layout( binding = 0, set = 6 ) StructuredBuffer<float> sun_visibility;
+layout( binding = 0, set = 7 ) Texture2D<float4> ao_read;
 #else
 layout( binding = 0, set = 4 ) StructuredBuffer<float> sun_visibility;
+layout( binding = 0, set = 5 ) Texture2D<float4> ao_read;
 #endif // RACECAR_RAY_TRACING
 
 #if RACECAR_RAY_TRACING
@@ -100,6 +102,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float4 packed_gbuffer_normal = gbuffer_normal_ao[pixel];
     float3 mixed_normal = packed_gbuffer_normal.rgb;
     float mixed_ao = packed_gbuffer_normal.a;
+    float ssao = ao_read[pixel].r;
 
     float4 packed_gbuffer_data = gbuffer_packed_data[pixel];
 
@@ -130,7 +133,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     sky_px = clamp( sky_px, int2( 0, 0 ), int2( specular_width - 1, specular_height - 1 ) );
 
     float specular_strength = 0.75f;
-    float3 specular_irradiance = sample_glossy_ibl( mixed_roughness, oct_refl_uv );
+    float3 specular_irradiance = sample_glossy_ibl( mixed_roughness, oct_refl_uv ) * ssao;
 
 #if RACECAR_RAY_TRACING
     specular_irradiance = lerp( specular_irradiance, 2.0f * refl.rgb, refl.a );
@@ -170,7 +173,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     }
 
     // // Irradiance run
-    final_color += mixed_albedo * diffuse_irradiance * irradiance_strength;
+    final_color += mixed_albedo * diffuse_irradiance * irradiance_strength * ssao;
     final_color += clamp( specular_irradiance, float3( 0.f ), float3( PAPER_WHITE ) );
 
     // Debug returns

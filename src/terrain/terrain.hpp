@@ -81,6 +81,7 @@ struct Terrain {
     engine::DescriptorSet* reflection_texture_desc_set;
 #endif // RACECAR_RAY_TRACING
     engine::DescriptorSet* sun_visibility_desc_set = nullptr;
+    engine::DescriptorSet* ao_read_desc_set = nullptr;
     engine::DescriptorSet* gamestate_desc_set = nullptr;
 
     engine::GfxTask terrain_prepass_task;
@@ -121,7 +122,8 @@ void initialize_terrain( Terrain& terrain,
     const TerrainPrepassInfo& prepass_info, const TerrainLightingInfo& lighting_info );
 
 void initialize_terrain_draw_pipeline( Terrain& terrain,
-    engine::DescriptorSet& sun_visibility_desc_set
+    engine::DescriptorSet& sun_visibility_desc_set,
+    engine::DescriptorSet& ao_read_desc_set
 #if RACECAR_RAY_TRACING
     ,
     engine::DescriptorSet& car_tlas_desc_set,
