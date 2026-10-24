@@ -44,15 +44,21 @@ std::optional<float> racing_camera_yaw;
 
 const float RACING_CAMERA_RADIUS = 16.0f;
 const float RACING_CAMERA_ZENITH = glm::radians( 25.0f );
-const float RACING_CAMERA_YAW_SLACK = glm::radians( 10.0f );
+const float RACING_CAMERA_FOLLOW_DISTANCE = 25.0f;
+const float RACING_CAMERA_MAX_FOLLOW_RATE = 0.5f;
 
 void apply_racing_camera( camera::OrbitCamera& camera, glm::vec3 car_position )
 {
-    const float car_yaw = engine::State::GetConst().gamestate.yaw;
+    const engine::State& engine = engine::State::GetConst();
+    const float car_yaw = engine.gamestate.yaw;
     const float yaw_offset
         = std::remainder( car_yaw - racing_camera_yaw.value_or( car_yaw ), glm::two_pi<float>() );
-    racing_camera_yaw
-        = car_yaw - glm::clamp( yaw_offset, -RACING_CAMERA_YAW_SLACK, RACING_CAMERA_YAW_SLACK );
+    const float follow_rate = glm::min(
+        engine.gamestate.speed / RACING_CAMERA_FOLLOW_DISTANCE,
+        RACING_CAMERA_MAX_FOLLOW_RATE
+    );
+    const float follow = 1.0f - std::exp( -follow_rate * static_cast<float>( engine.delta ) );
+    racing_camera_yaw = car_yaw - yaw_offset * ( 1.0f - follow );
 
     camera.center = car_position;
     camera.radius = RACING_CAMERA_RADIUS;
