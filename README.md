@@ -194,3 +194,11 @@ We use vcpkg for managing third-party C++ libraries, CMake for configuration, cl
 Make sure your GPU supports Vulkan 1.4 and your drivers are up to date. Get the [Vulkan SDK](https://vulkan.lunarg.com/) and run the installer with admin privileges so it can set the appropriate environment variables for you.
 
 To check that Vulkan is ready for use, go to your Vulkan SDK directory (by default should be `C:/VulkanSDK`) and run the `vkcube.exe` example within the `Bin` directory. If you see a rotating gray cube with the LunarG logo, then you are all set!
+
+### Further Ideas
+- [ ] Async BVH builds of surrounding terrain instead of per-frame refitting
+- [ ] Better terrain expansion
+- [ ] Car lights (headlights, tail lights)
+- [ ] Better racing camera
+- [ ] Fix SSAO application to ground
+- [ ] Grass rendering
