@@ -192,7 +192,7 @@ float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
 
     float3 base_position = float3( world_position.x, 0.0f, world_position.z );
     float3 vertex_normal = terrain_height_normal(
-        base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, terrain_linear_sampler, TERRAIN_HEIGHT_NORMAL_EPS, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
+        base_position, gamestate_data.world_position.xyz, scroll, gamestate_data.spline_positions, terrain_linear_sampler, terrain_data.packed_floats1.z, terrain_data.packed_floats1.x, terrain_data.packed_floats1.y );
 
     TerrainUVs uvs = terrain_compute_uvs( world_position, scroll );
 

@@ -143,7 +143,7 @@ struct [[slang_check("TerrainData")]] TerrainData {
     glm::vec4 packed_floats0;
 
     // terrain params
-    // stores: road_width, blend_width
+    // stores: road_width, blend_width, height_normal_eps
     glm::vec4 packed_floats1;
 };
 

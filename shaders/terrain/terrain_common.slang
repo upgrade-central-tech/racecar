@@ -11,9 +11,6 @@ static const float TERRAIN_WORLD_SCALE = 0.05f;
 
 static const float TERRAIN_HEIGHT_AMPLITUDE = 5.0f;
 
-// matches terrain spacing in terrain.cpp/terrain_rt.cpp
-static const float TERRAIN_HEIGHT_NORMAL_EPS = 500.0f / 255.0f;
-
 static const float TERRAIN_TRIPLANAR_SHARPNESS = 4.0f;
 
 static const float2x2 TERRAIN_GRASS_TANGENT_FRAME = float2x2( 0.0f, 1.0f, 1.0f, 0.0f );

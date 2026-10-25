@@ -19,7 +19,8 @@
 
 namespace racecar {
 
-constexpr uint32_t TERRAIN_RT_VERTS_PER_SIDE = 256;
+constexpr uint32_t TERRAIN_RT_VERTS_PER_SIDE
+    = uint32_t( geometry::TERRAIN_NUM_TILES * geometry::TERRAIN_RT_QUADS_PER_TILE + 1 );
 constexpr uint32_t TERRAIN_RT_QUADS_PER_SIDE = TERRAIN_RT_VERTS_PER_SIDE - 1;
 constexpr uint32_t TERRAIN_RT_VERTEX_COUNT = TERRAIN_RT_VERTS_PER_SIDE * TERRAIN_RT_VERTS_PER_SIDE;
 constexpr uint32_t TERRAIN_RT_TRIANGLE_COUNT

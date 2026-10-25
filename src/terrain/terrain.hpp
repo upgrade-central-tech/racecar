@@ -16,8 +16,12 @@ struct Gui;
 namespace racecar::geometry {
 
 constexpr float TERRAIN_TILE_WIDTH = 10.0f;
-constexpr size_t TERRAIN_NUM_TILES = 50;
+constexpr size_t TERRAIN_NUM_TILES = 100;
 constexpr float TERRAIN_HALF_WIDTH = ( TERRAIN_NUM_TILES * TERRAIN_TILE_WIDTH ) / 2.0f;
+
+constexpr size_t TERRAIN_RT_QUADS_PER_TILE = 5;
+// matches terrain spacing in terrain_rt.cpp
+constexpr float TERRAIN_HEIGHT_NORMAL_EPS = TERRAIN_TILE_WIDTH / float( TERRAIN_RT_QUADS_PER_TILE );
 
 // TERRAIN_WORLD_SCALE in terrain_common.slang
 constexpr float TERRAIN_WORLD_SCALE = 0.05f;

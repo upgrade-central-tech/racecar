@@ -605,7 +605,8 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
 
     float road_width = RuntimeSettings::GetFloat( RacecarSettings::TERRAIN_ROAD_WIDTH );
     float blend_width = RuntimeSettings::GetFloat( RacecarSettings::TERRAIN_BLEND_WIDTH );
-    terrain_ub.packed_floats1 = glm::vec4( road_width, blend_width, 0.0f, 0.0f );
+    terrain_ub.packed_floats1
+        = glm::vec4( road_width, blend_width, TERRAIN_HEIGHT_NORMAL_EPS, 0.0f );
 
     terrain.terrain_uniform.set_data( terrain_ub );
     terrain.terrain_uniform.update( engine.get_frame_index() );
