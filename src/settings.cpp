@@ -129,6 +129,8 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
               .fallback_float = 8.0f }, // TERRAIN_BLEND_WIDTH
 
     Setting { .validate = &validate_terrain_wireframe_view }, // TERRAIN_WIREFRAME_VIEW
+
+    Setting { .desired = 0 }, // TERRAIN_DISTANCE_FOG
 };
 
 }

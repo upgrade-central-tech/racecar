@@ -79,7 +79,7 @@ struct TerrainData {
     float4 packed_floats0;
 
     // terrain params
-    // stores: road_width, blend_width, height_normal_eps
+    // stores: road_width, blend_width, height_normal_eps, enable_distance_fog
     float4 packed_floats1;
 }
 

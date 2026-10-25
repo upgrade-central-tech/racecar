@@ -373,6 +373,10 @@ void update(
                     "Blend Width",
                     RacecarSettings::TERRAIN_BLEND_WIDTH
                 );
+                RacecarGUI::SettingsCheckbox(
+                    "Distance Fog",
+                    RacecarSettings::TERRAIN_DISTANCE_FOG
+                );
 
                 ImGui::SeparatorText( "Debug" );
 #if RACECAR_DEV
