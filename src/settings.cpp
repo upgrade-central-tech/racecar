@@ -131,6 +131,8 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
     Setting { .validate = &validate_terrain_wireframe_view }, // TERRAIN_WIREFRAME_VIEW
 
     Setting { .desired = 0 }, // TERRAIN_DISTANCE_FOG
+
+    Setting { .desired = 1 }, // TERRAIN_FRUSTUM_CULLING
 };
 
 }

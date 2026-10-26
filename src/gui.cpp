@@ -385,6 +385,10 @@ void update(
                     RacecarSettings::TERRAIN_WIREFRAME_VIEW
                 );
 #endif
+                RacecarGUI::SettingsCheckbox(
+                    "Frustum Culling",
+                    RacecarSettings::TERRAIN_FRUSTUM_CULLING
+                );
                 ImGui::Checkbox( "Enable GT7 AO/local shadows", &gui.terrain.enable_gt7_ao );
                 ImGui::Checkbox( "Shadowing only", &gui.terrain.shadowing_only );
                 ImGui::Checkbox( "Roughness only", &gui.terrain.roughness_only );

@@ -586,7 +586,7 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
         gui.terrain.enable_gt7_ao ? 1.0f : 0.0f,
         gui.terrain.shadowing_only ? 1.0f : 0.0f,
         gui.terrain.roughness_only ? 1.0f : 0.0f,
-        0.0f
+        RuntimeSettings::GetEnabled( RacecarSettings::TERRAIN_FRUSTUM_CULLING ) ? 1.0f : 0.0f
     );
 
     terrain_ub.terrain_data0 = glm::vec4(

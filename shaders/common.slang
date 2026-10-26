@@ -75,7 +75,7 @@ struct TerrainData {
     float4 terrain_data1;
 
     // debug info
-    // stores: enable_gt7_ao, shadowing_only, roughness_only, null
+    // stores: enable_gt7_ao, shadowing_only, roughness_only, enable_frustum_culling
     float4 packed_floats0;
 
     // terrain params

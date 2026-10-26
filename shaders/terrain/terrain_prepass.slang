@@ -89,6 +89,37 @@ float edge_tess_factor( float3 v0, float3 v1 )
     return tess_factor( 0.5 * ( v0 + v1 ), 0.5 * distance( v0, v1 ) );
 }
 
+static const float TERRAIN_CULL_HEIGHT_PADDING = 3.0f * TERRAIN_HEIGHT_AMPLITUDE;
+
+bool patch_outside_frustum( InputPatch<VertexOutput, 4> patch )
+{
+    float3 box_min = min( min( patch[0].position, patch[1].position ),
+                          min( patch[2].position, patch[3].position ) );
+    float3 box_max = max( max( patch[0].position, patch[1].position ),
+                          max( patch[2].position, patch[3].position ) );
+    box_min.y -= TERRAIN_CULL_HEIGHT_PADDING;
+    box_max.y += TERRAIN_CULL_HEIGHT_PADDING;
+
+    uint outside_all = 0x3F;
+    for ( uint i = 0; i < 8; ++i ) {
+        float3 corner = float3( ( i & 1 ) ? box_max.x : box_min.x,
+                                ( i & 2 ) ? box_max.y : box_min.y,
+                                ( i & 4 ) ? box_max.z : box_min.z );
+        float4 clip = mul( camera_buffer_data.mvp, float4( corner, 1.0 ) );
+
+        uint outside = 0;
+        outside |= ( clip.x < -clip.w ) ? 0x01 : 0;
+        outside |= ( clip.x > clip.w ) ? 0x02 : 0;
+        outside |= ( clip.y < -clip.w ) ? 0x04 : 0;
+        outside |= ( clip.y > clip.w ) ? 0x08 : 0;
+        outside |= ( clip.z < 0.0 ) ? 0x10 : 0;
+        outside |= ( clip.z > clip.w ) ? 0x20 : 0;
+        outside_all &= outside;
+    }
+
+    return outside_all != 0;
+}
+
 [patchconstantfunc( "constants" )]
 PatchConstantOutput constants( InputPatch<VertexOutput, 4> patch )
 {
@@ -100,6 +131,17 @@ PatchConstantOutput constants( InputPatch<VertexOutput, 4> patch )
     pc.edges[3] = 1.0;
     pc.inside[0] = 1.0;
     pc.inside[1] = 1.0;
+
+    bool frustum_culling = terrain_data.packed_floats0.w > 0.5f;
+    if ( frustum_culling && patch_outside_frustum( patch ) ) {
+        pc.edges[0] = 0.0;
+        pc.edges[1] = 0.0;
+        pc.edges[2] = 0.0;
+        pc.edges[3] = 0.0;
+        pc.inside[0] = 0.0;
+        pc.inside[1] = 0.0;
+        return pc;
+    }
 
     pc.edges[0] = edge_tess_factor( patch[0].position, patch[2].position ); // top
     pc.edges[1] = edge_tess_factor( patch[0].position, patch[1].position ); // top

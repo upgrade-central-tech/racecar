@@ -140,6 +140,7 @@ struct [[slang_check("TerrainData")]] TerrainData {
     // bool enable_gt7_ao;
     // bool shadowing_only;
     // bool roughness_only;
+    // bool enable_frustum_culling;
     glm::vec4 packed_floats0;
 
     // terrain params
