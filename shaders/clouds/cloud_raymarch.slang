@@ -178,11 +178,6 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     color = color / ( color + float3( 1.0, 1.0, 1.0 ) );
     color *= PAPER_WHITE;
 
-    // make clouds opaque at the sun.
-    if ( dot( view, sun_direction ) > 0.9985 ) {
-        return float4( color, 1.0 );
-    }
-
     if ( view.y < 0.1 ) {
         throughput *= view.y * 10.f;
     }
