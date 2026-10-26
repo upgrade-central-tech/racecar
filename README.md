@@ -202,3 +202,5 @@ To check that Vulkan is ready for use, go to your Vulkan SDK directory (by defau
 - [ ] Better racing camera
 - [x] Fix SSAO application to ground
 - [ ] Grass rendering
+- [ ] Terrain lighting does not appear to correspond with environment
+- [ ] Fix clouds
