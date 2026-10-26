@@ -37,7 +37,7 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
     return 0.5f * ( max( cumulus_map * height_modulation, 0 ) );
 }
 
-static const float absorption_coeff = 0.002f;
+static const float extinction_coeff = 0.02f;
 
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     Texture3D<float> low_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
@@ -74,7 +74,7 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         float d = sample_density(
             cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler, pos );
         // Beer–Lambert per-step
-        T *= exp( -4.0 * d * step_size );
+        T *= exp( -extinction_coeff * d * step_size );
 
         if ( T <= 1e-4 ) {
             return 0.0;
@@ -163,7 +163,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             float3 direct_lighting
                 = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * density * transmittance * step_size;
             accumulated += throughput * direct_lighting;
-            throughput *= exp( -density * step_size * absorption_coeff );
+            throughput *= exp( -density * step_size * extinction_coeff );
         }
     }
     // Add background sky contribution attenuated by transmittance_along_ray
@@ -178,11 +178,13 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     color = color / ( color + float3( 1.0, 1.0, 1.0 ) );
     color *= PAPER_WHITE;
 
+    float opacity = 1.f - throughput;
+
     if ( view.y < 0.1 ) {
-        throughput *= view.y * 10.f;
+        opacity *= view.y * 10.f;
     }
 
-    return float4( color, max( 0, throughput ) );
+    return float4( color, saturate( opacity ) );
 }
 
 
