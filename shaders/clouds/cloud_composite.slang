@@ -53,7 +53,7 @@ float4 fs_main( VertexOutput in )
     float2 uv = 0.5f * in.position.xy + 0.5f;
 
     float4 clouds = cloud_buffer.SampleLevel( linear_sampler, uv, 0 );
-    clouds.a = lerp( clouds.a, 0.5f, 0.5f );
+    clouds.a *= 0.75f;
 
     return clouds;
 }
