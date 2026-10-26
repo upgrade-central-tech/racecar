@@ -9,7 +9,7 @@ static const float TERRAIN_DISTORT_AMPLITUDE = 0.1f;
 static const float TERRAIN_LAYER_MAP_SCALE = 0.025f;
 static const float TERRAIN_WORLD_SCALE = 0.05f;
 
-static const float TERRAIN_HEIGHT_AMPLITUDE = 5.0f;
+static const float TERRAIN_HEIGHT_AMPLITUDE = 2.0f;
 
 static const float TERRAIN_TRIPLANAR_SHARPNESS = 4.0f;
 
