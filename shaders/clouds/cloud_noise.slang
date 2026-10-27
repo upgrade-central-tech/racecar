@@ -29,16 +29,15 @@ void cs_generate_low_frequency( uint3 thread_id: SV_DispatchThreadID )
 [numthreads( 8, 8, 8 )]
 void cs_generate_high_frequency( uint3 thread_id: SV_DispatchThreadID )
 {
-    float ndc_x = 2.0f * float( thread_id.x ) / 128.0f - 1.0f;
-    float ndc_y = 2.0f * float( thread_id.y ) / 128.0f - 1.0f;
-    float ndc_z = 2.0f * float( thread_id.z ) / 128.0f - 1.0f;
+    float ndc_x = 2.0f * float( thread_id.x ) / 32.0f - 1.0f;
+    float ndc_y = 2.0f * float( thread_id.y ) / 32.0f - 1.0f;
+    float ndc_z = 2.0f * float( thread_id.z ) / 32.0f - 1.0f;
     float3 pos = float3( ndc_x, ndc_y, ndc_z );
 
     float high_freq_noise = noise_sum3D_Worley( pos * 2.5 + 100.f );
     high_freq_noise = 0.8 - 0.7 * smoothstep( 0.0, 0.8, high_freq_noise );
 
-    float noise = 1.0f;
-    high_frequency_noise[thread_id] = noise;
+    high_frequency_noise[thread_id] = high_freq_noise;
 }
 
 [shader( "compute" )]

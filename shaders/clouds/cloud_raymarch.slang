@@ -6,6 +6,8 @@ import cloud_utils;
 #include "../utils.slang"
 #include "../common.slang"
 
+static const float CLOUD_DETAIL_EROSION = 0.3f;
+
 public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
     SamplerState linear_mirrored_repeat_sampler, float3 march_pos )
 {
@@ -27,17 +29,26 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
 
     float low_freq_modulation = 1.f - height_modulation;
 
-    float high_freq_noise = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 12 );
+    float low_freq_detail = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 12 );
 
-    float extra_freq = 4 * low_freq_noise + high_freq_noise;
+    float extra_freq = 4 * low_freq_noise + low_freq_detail;
 
     cumulus_map = lerp( cumulus_map, cumulus_map + extra_freq, low_freq_modulation );
     cumulus_map = smoothstep( 0.3, 0.6, cumulus_map ) * 2 - 1;
 
-    return 0.5f * ( max( cumulus_map * height_modulation, 0 ) );
+    float base_density = max( cumulus_map * height_modulation, 0 );
+    if ( base_density <= 0.f ) {
+        return 0.f;
+    }
+
+    float high_freq_noise = high_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 24 );
+    float erosion = CLOUD_DETAIL_EROSION * high_freq_noise;
+    float eroded_density = saturate( ( base_density - erosion ) / ( 1.f - erosion ) );
+
+    return 0.5f * eroded_density;
 }
 
-static const float extinction_coeff = 0.02f;
+static const float extinction_coeff = 0.03f;
 
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     Texture3D<float> low_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
