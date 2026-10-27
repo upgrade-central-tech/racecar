@@ -5,6 +5,7 @@
 #include "engine/descriptor_set.hpp"
 #include "engine/images.hpp"
 #include "engine/state.hpp"
+#include "settings.h"
 #include "vk/common.hpp"
 #include "vk/create.hpp"
 #include "vk/utility.hpp"
@@ -532,6 +533,12 @@ void update_volumetric_uniform_buffer(
     cloud_ub.cloud_offset_x = wind + travel.x;
     cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
     cloud_ub.cloud_offset_y = wind + travel.y;
+    cloud_ub.cloud_params = glm::vec4(
+        RuntimeSettings::Get<RacecarSettings::CLOUD_EXTINCTION>(),
+        RuntimeSettings::Get<RacecarSettings::CLOUD_EROSION>(),
+        0.0f,
+        0.0f
+    );
 
     volumetric.uniform_buffer.set_data( cloud_ub );
     volumetric.uniform_buffer.update( engine.get_frame_index() );

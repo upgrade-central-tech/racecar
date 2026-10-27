@@ -430,6 +430,10 @@ void update(
                     RacecarSettings::CAR_IRRADIANCE_STRENGTH
                 );
 
+                ImGui::SeparatorText( "Clouds" );
+                RacecarGUI::SettingsSliderFloat( "Extinction", RacecarSettings::CLOUD_EXTINCTION );
+                RacecarGUI::SettingsSliderFloat( "Erosion", RacecarSettings::CLOUD_EROSION );
+
                 ImGui::EndTabItem();
             }
 

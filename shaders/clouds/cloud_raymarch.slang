@@ -6,8 +6,6 @@ import cloud_utils;
 #include "../utils.slang"
 #include "../common.slang"
 
-static const float CLOUD_DETAIL_EROSION = 0.3f;
-
 public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
     SamplerState linear_mirrored_repeat_sampler, float3 march_pos )
 {
@@ -42,13 +40,12 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
     }
 
     float high_freq_noise = high_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 24 );
-    float erosion = CLOUD_DETAIL_EROSION * high_freq_noise;
+    float erosion = clouds_buffer_data.cloud_params.y * high_freq_noise;
     float eroded_density = saturate( ( base_density - erosion ) / ( 1.f - erosion ) );
 
     return 0.5f * eroded_density;
 }
 
-static const float extinction_coeff = 0.03f;
 
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     Texture3D<float> low_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
@@ -85,7 +82,7 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         float d = sample_density(
             cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler, pos );
         // Beer–Lambert per-step
-        T *= exp( -extinction_coeff * d * step_size );
+        T *= exp( -clouds_buffer_data.cloud_params.x * d * step_size );
 
         if ( T <= 1e-4 ) {
             return 0.0;
@@ -174,7 +171,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             float3 direct_lighting
                 = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * density * transmittance * step_size;
             accumulated += throughput * direct_lighting;
-            throughput *= exp( -density * step_size * extinction_coeff );
+            throughput *= exp( -density * step_size * clouds_buffer_data.cloud_params.x );
         }
     }
     // Add background sky contribution attenuated by transmittance_along_ray

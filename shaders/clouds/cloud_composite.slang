@@ -10,14 +10,7 @@ struct VertexOutput {
     float3 position;
 };
 
-struct CloudUniformData {
-    float4x4 inverse_proj;
-    float4x4 inverse_view;
-    float3 camera_position;
-    float cloud_offset_x;
-    float3 sun_direction;
-    float cloud_offset_y;
-};
+#include "cloud_uniforms.slang"
 
 struct DebugData {
     int debug_view;

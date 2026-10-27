@@ -1,15 +1,7 @@
 module cloud_bindings;
 
 #include "../common.slang"
-
-public struct CloudUniformData {
-    public float4x4 inverse_proj;
-    public float4x4 inverse_view;
-    public float3 camera_position;
-    public float cloud_offset_x;
-    public float3 sun_direction;
-    public float cloud_offset_y;
-};
+#include "cloud_uniforms.slang"
 
 layout( binding = 0, set = 0 ) public ConstantBuffer<CloudUniformData> clouds_buffer_data;
 layout( binding = 1, set = 0 ) public ConstantBuffer<DebugData> debug_data;

@@ -133,6 +133,16 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
     Setting { .desired = 0 }, // TERRAIN_DISTANCE_FOG
 
     Setting { .desired = 1 }, // TERRAIN_FRUSTUM_CULLING
+
+    Setting { .min = 0.0f,
+              .max = 0.2f,
+              .desired_float = 0.03f,
+              .fallback_float = 0.03f }, // CLOUD_EXTINCTION
+
+    Setting { .min = 0.0f,
+              .max = 0.9f,
+              .desired_float = 0.3f,
+              .fallback_float = 0.3f }, // CLOUD_EROSION
 };
 
 }

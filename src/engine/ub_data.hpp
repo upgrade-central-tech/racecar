@@ -116,13 +116,15 @@ struct GameStateBuffer {
     glm::vec4 spline_positions[ROAD_NUM_POINTS] = {};
 };
 
-struct Clouds {
+struct [[slang_check("CloudUniformData")]] Clouds {
     glm::mat4 inverse_proj = {};
     glm::mat4 inverse_view = {};
     glm::vec3 camera_position = {};
     float cloud_offset_x = 0.f;
     glm::vec3 sun_direction = {};
     float cloud_offset_y = 0.f;
+    // extinction, erosion, null, null
+    glm::vec4 cloud_params = {};
 };
 
 struct [[slang_check("TerrainData")]] TerrainData {
