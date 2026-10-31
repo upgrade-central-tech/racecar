@@ -47,15 +47,13 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
 }
 
 
+static const float LIGHT_MARCH_MAX_DISTANCE = 5000.0f;
+
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     Texture3D<float> low_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
     float3 march_pos, float3 sun_direction )
 {
     float3 local_dir = normalize( sun_direction );
-
-    if ( local_dir.y < 0.1 && local_dir.y > -0.1 ) {
-        return 0.f;
-    }
 
     float lower_plane_altitude = 3000;
     float higher_plane_altitude = 3500;
@@ -63,11 +61,11 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         return 1.f;
     }
 
-    float t_max;
-    if ( local_dir.y > 0 ) {
-        t_max = ( higher_plane_altitude - march_pos.y ) / local_dir.y;
-    } else {
-        t_max = ( lower_plane_altitude - march_pos.y ) / local_dir.y;
+    float t_max = LIGHT_MARCH_MAX_DISTANCE;
+    if ( local_dir.y > 1e-4 ) {
+        t_max = min( t_max, ( higher_plane_altitude - march_pos.y ) / local_dir.y );
+    } else if ( local_dir.y < -1e-4 ) {
+        t_max = min( t_max, ( lower_plane_altitude - march_pos.y ) / local_dir.y );
     }
 
     uint steps = 32;
@@ -139,6 +137,8 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
 
     float throughput = 1.f;
 
+    float sun_horizon_fade = smoothstep( -0.03f, 0.02f, normalize( sun_direction ).y );
+
     float3 ambient_radiance
         = octahedral_sky_mips
               .SampleLevel( linear_sampler, oct_encode( float3( 0.f, 1.f, 0.f ) ), SKY_MAX_MIP )
@@ -178,7 +178,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
                 = exp( -density * step_size * clouds_buffer_data.cloud_params.x );
 
             float3 direct_lighting = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * transmittance
-                * ( 1.f - step_transmittance );
+                * sun_horizon_fade * ( 1.f - step_transmittance );
             float3 ambient_lighting = ALBEDO * ambient_radiance * ( 1.f - step_transmittance );
             accumulated += throughput * ( direct_lighting + ambient_lighting );
             throughput *= step_transmittance;

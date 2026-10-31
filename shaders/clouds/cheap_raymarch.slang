@@ -32,15 +32,13 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
 
 static const float absorption_coeff = 0.002f;
 
+static const float LIGHT_MARCH_MAX_DISTANCE = 5000.0f;
+
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     Texture3D<float> low_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
     float3 march_pos, float3 sun_direction, float3 texture_offset )
 {
     float3 local_dir = normalize( sun_direction );
-
-    if ( local_dir.y < 0.1 && local_dir.y > -0.1 ) {
-        return 0.f;
-    }
 
     float lower_plane_altitude = 3000;
     float higher_plane_altitude = 3500;
@@ -48,11 +46,11 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         return 1.f;
     }
 
-    float t_max;
-    if ( local_dir.y > 0 ) {
-        t_max = ( higher_plane_altitude - march_pos.y ) / local_dir.y;
-    } else {
-        t_max = ( lower_plane_altitude - march_pos.y ) / local_dir.y;
+    float t_max = LIGHT_MARCH_MAX_DISTANCE;
+    if ( local_dir.y > 1e-4 ) {
+        t_max = min( t_max, ( higher_plane_altitude - march_pos.y ) / local_dir.y );
+    } else if ( local_dir.y < -1e-4 ) {
+        t_max = min( t_max, ( lower_plane_altitude - march_pos.y ) / local_dir.y );
     }
 
     uint steps = 16 >> 3;
@@ -145,6 +143,8 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float3 accumulated = float3( 0.0f );
 
     float throughput = 1.f;
+
+    float sun_horizon_fade = smoothstep( -0.03f, 0.02f, normalize( sun_direction ).y );
     // jitter
     float jitter = 0.3f
         * ( rand_float( dot( local_origin.xyz, float3( 12.9898, 78.233, 45.164 ) ) ) - 0.5 )
@@ -175,7 +175,8 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
                 = 0.95 * PhaseHG( cosTheta, 0.75 ) + 0.05 * PhaseHG( cosTheta, -0.2 ); // TTHG
 
             float3 direct_lighting
-                = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * density * transmittance * step_size;
+                = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * density * transmittance
+                * sun_horizon_fade * step_size;
             accumulated += throughput * direct_lighting;
             throughput *= exp( -density * step_size * absorption_coeff );
         }
