@@ -418,11 +418,16 @@ void run( bool use_fullscreen )
     // Draw the atmosphere
     atmosphere::draw_atmosphere( task_list, atms, screen_color );
 
-    // Draw the volumetric clouds
-    volumetric::draw_volumetric( volumetric, task_list, screen_color );
-
     // Running the atmosphere baker
     atmosphere::dispatch_atmosphere_baker( task_list, lut_sets, atms_baker );
+
+    // Draw the volumetric clouds
+    volumetric::draw_volumetric(
+        volumetric,
+        task_list,
+        screen_color,
+        atms_baker.octahedral_sky_mips
+    );
 
     // Sun visibility through the clouds
     atmosphere::compute_sun_visibility( sun_visibility, task_list );

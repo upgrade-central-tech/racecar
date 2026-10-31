@@ -49,6 +49,7 @@ Volumetric initialize()
     volumetric.lut_desc_set = engine::generate_descriptor_set(
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+          VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
@@ -345,7 +346,8 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 void draw_volumetric(
     [[maybe_unused]] Volumetric& volumetric,
     [[maybe_unused]] engine::TaskList& task_list,
-    engine::RWImage& color_attachment
+    engine::RWImage& color_attachment,
+    engine::RWImage& octahedral_sky_mips
 )
 {
     const engine::State& engine = engine::State::GetConst();
@@ -403,6 +405,12 @@ void draw_volumetric(
     engine::update_descriptor_set_image( volumetric.lut_desc_set, volumetric.low_freq_noise, 0 );
     engine::update_descriptor_set_image( volumetric.lut_desc_set, volumetric.high_freq_noise, 1 );
     engine::update_descriptor_set_image( volumetric.lut_desc_set, volumetric.cumulus_map, 2 );
+    engine::update_descriptor_set_rwimage(
+        volumetric.lut_desc_set,
+        octahedral_sky_mips,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        3
+    );
 
     try {
         volumetric_pipeline = engine::create_gfx_pipeline(

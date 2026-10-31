@@ -100,7 +100,6 @@ public float PhaseHG( float cosTheta, float g )
 
 static const float3 SUN_COLOR = float3( 1.0, 0.95, 0.85 );
 static const float SUN_INTENSITY = 30.0; // brightness multiplier for direct light
-static const float AMBIENT_INTENSITY = 0.2; // ambient skylight
 static const float ALBEDO = 0.9; // single-scattering albedo
 static const float SIGMA_T = 200.0; // extinction coefficient (tune for opacity)
 static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forward scattering
@@ -139,6 +138,13 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float3 accumulated = float3( 0.0f );
 
     float throughput = 1.f;
+
+    float3 ambient_radiance
+        = octahedral_sky_mips
+              .SampleLevel( linear_sampler, oct_encode( float3( 0.f, 1.f, 0.f ) ), SKY_MAX_MIP )
+              .rgb
+        / PAPER_WHITE;
+
     // jitter
     float jitter = 0.3f
         * ( rand_float( dot( local_origin.xyz, float3( 12.9898, 78.233, 45.164 ) ) ) - 0.5 )
@@ -173,13 +179,12 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
 
             float3 direct_lighting = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * transmittance
                 * ( 1.f - step_transmittance );
-            accumulated += throughput * direct_lighting;
+            float3 ambient_lighting = ALBEDO * ambient_radiance * ( 1.f - step_transmittance );
+            accumulated += throughput * ( direct_lighting + ambient_lighting );
             throughput *= step_transmittance;
         }
     }
-    // Add background sky contribution attenuated by transmittance_along_ray
-    float3 sky = float3( 0.6, 0.75, 0.95 ) * AMBIENT_INTENSITY;
-    float3 color = accumulated + throughput * sky;
+    float3 color = accumulated;
 
     if ( length( accumulated ) < 1e-6 ) {
         return float4( 0.f );
