@@ -168,10 +168,13 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             float phase
                 = 0.95 * PhaseHG( cosTheta, 0.75 ) + 0.05 * PhaseHG( cosTheta, -0.2 ); // TTHG
 
-            float3 direct_lighting
-                = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * density * transmittance * step_size;
+            float step_transmittance
+                = exp( -density * step_size * clouds_buffer_data.cloud_params.x );
+
+            float3 direct_lighting = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * transmittance
+                * ( 1.f - step_transmittance );
             accumulated += throughput * direct_lighting;
-            throughput *= exp( -density * step_size * clouds_buffer_data.cloud_params.x );
+            throughput *= step_transmittance;
         }
     }
     // Add background sky contribution attenuated by transmittance_along_ray
