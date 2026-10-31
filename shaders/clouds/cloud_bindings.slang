@@ -10,6 +10,7 @@ layout( binding = 0, set = 1 ) public Texture3D<float> low_freq_noise_LUT;
 layout( binding = 1, set = 1 ) public Texture3D<float> high_freq_noise_LUT;
 layout( binding = 2, set = 1 ) public Texture2D<float> cumulus_map_LUT;
 layout( binding = 3, set = 1 ) public Texture2D<float4> octahedral_sky_mips;
+layout( binding = 4, set = 1 ) public Texture2D<float4> atmosphere_transmittance_LUT;
 
 layout( binding = 0, set = 2 ) public SamplerState linear_sampler;
 layout( binding = 1, set = 2 ) public SamplerState linear_mirrored_repeat_sampler;

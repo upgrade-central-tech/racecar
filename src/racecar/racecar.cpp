@@ -426,7 +426,8 @@ void run( bool use_fullscreen )
         volumetric,
         task_list,
         screen_color,
-        atms_baker.octahedral_sky_mips
+        atms_baker.octahedral_sky_mips,
+        atms.transmittance
     );
 
     // Sun visibility through the clouds

@@ -2,6 +2,8 @@ module cloud_raymarch;
 
 import cloud_bindings;
 import cloud_utils;
+import constants;
+import helpers;
 
 #include "../utils.slang"
 #include "../common.slang"
@@ -96,7 +98,6 @@ public float PhaseHG( float cosTheta, float g )
     return ( 1 - g2 ) / ( 4 * 3.14159265 * denom );
 }
 
-static const float3 SUN_COLOR = float3( 1.0, 0.95, 0.85 );
 static const float SUN_INTENSITY = 30.0; // brightness multiplier for direct light
 static const float ALBEDO = 0.9; // single-scattering albedo
 static const float SIGMA_T = 200.0; // extinction coefficient (tune for opacity)
@@ -139,6 +140,11 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
 
     float sun_horizon_fade = smoothstep( -0.03f, 0.02f, normalize( sun_direction ).y );
 
+    float cloud_radius_km
+        = EARTH.bottom_radius + 0.5f * ( lower_plane_altitude + higher_plane_altitude ) * 0.001f;
+    float3 sun_color = sample_transmittance_lut( atmosphere_transmittance_LUT, linear_sampler,
+        cloud_radius_km, normalize( sun_direction ).y );
+
     float3 ambient_radiance
         = octahedral_sky_mips
               .SampleLevel( linear_sampler, oct_encode( float3( 0.f, 1.f, 0.f ) ), SKY_MAX_MIP )
@@ -177,7 +183,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             float step_transmittance
                 = exp( -density * step_size * clouds_buffer_data.cloud_params.x );
 
-            float3 direct_lighting = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * transmittance
+            float3 direct_lighting = sun_color * SUN_INTENSITY * ALBEDO * phase * transmittance
                 * sun_horizon_fade * ( 1.f - step_transmittance );
             float3 ambient_lighting = ALBEDO * ambient_radiance * ( 1.f - step_transmittance );
             accumulated += throughput * ( direct_lighting + ambient_lighting );

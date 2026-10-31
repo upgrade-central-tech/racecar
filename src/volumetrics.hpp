@@ -42,7 +42,8 @@ bool generate_noise(
 void draw_volumetric( [[maybe_unused]] Volumetric& volumetric,
     [[maybe_unused]] engine::TaskList& task_list,
     engine::RWImage& color_attachment,
-    engine::RWImage& octahedral_sky_mips );
+    engine::RWImage& octahedral_sky_mips,
+    const vk::mem::AllocatedImage& transmittance_lut );
 
 void update_volumetric_uniform_buffer( 
     atmosphere::Atmosphere& atms, volumetric::Volumetric& volumetric,

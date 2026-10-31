@@ -50,6 +50,7 @@ Volumetric initialize()
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+          VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
@@ -347,7 +348,8 @@ void draw_volumetric(
     [[maybe_unused]] Volumetric& volumetric,
     [[maybe_unused]] engine::TaskList& task_list,
     engine::RWImage& color_attachment,
-    engine::RWImage& octahedral_sky_mips
+    engine::RWImage& octahedral_sky_mips,
+    const vk::mem::AllocatedImage& transmittance_lut
 )
 {
     const engine::State& engine = engine::State::GetConst();
@@ -411,6 +413,7 @@ void draw_volumetric(
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         3
     );
+    engine::update_descriptor_set_image( volumetric.lut_desc_set, transmittance_lut, 4 );
 
     try {
         volumetric_pipeline = engine::create_gfx_pipeline(

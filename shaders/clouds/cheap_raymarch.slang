@@ -82,7 +82,6 @@ public float PhaseHG( float cosTheta, float g )
     return ( 1 - g2 ) / ( 4 * 3.14159265 * denom );
 }
 
-static const float3 SUN_COLOR = float3( 1.0, 0.95, 0.85 );
 static const float SUN_INTENSITY = 30.0; // brightness multiplier for direct light
 static const float AMBIENT_INTENSITY = 0.2; // ambient skylight
 static const float ALBEDO = 0.9; // single-scattering albedo
@@ -112,7 +111,7 @@ public float offset_sphere_intersection(
 
 public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
     SamplerState linear_mirrored_repeat_sampler, float3 view, float3 origin, float3 sun_direction,
-    float3 texture_offset )
+    float3 sun_color, float3 texture_offset )
 {
     float theta = acos( saturate( view.y ) );
     // theta = clamp( theta, 0.0, radians( 80 ) );
@@ -175,7 +174,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
                 = 0.95 * PhaseHG( cosTheta, 0.75 ) + 0.05 * PhaseHG( cosTheta, -0.2 ); // TTHG
 
             float3 direct_lighting
-                = SUN_COLOR * SUN_INTENSITY * ALBEDO * phase * density * transmittance
+                = sun_color * SUN_INTENSITY * ALBEDO * phase * density * transmittance
                 * sun_horizon_fade * step_size;
             accumulated += throughput * direct_lighting;
             throughput *= exp( -density * step_size * absorption_coeff );
