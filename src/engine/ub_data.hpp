@@ -123,7 +123,7 @@ struct [[slang_check("CloudUniformData")]] Clouds {
     float cloud_offset_x = 0.f;
     glm::vec3 sun_direction = {};
     float cloud_offset_y = 0.f;
-    // extinction, erosion, null, null
+    // extinction, erosion, radiance exposure, null
     glm::vec4 cloud_params = {};
 };
 

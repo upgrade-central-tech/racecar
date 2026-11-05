@@ -98,7 +98,6 @@ public float PhaseHG( float cosTheta, float g )
     return ( 1 - g2 ) / ( 4 * 3.14159265 * denom );
 }
 
-static const float SUN_INTENSITY = 30.0; // brightness multiplier for direct light
 static const float ALBEDO = 0.9; // single-scattering albedo
 static const float SIGMA_T = 200.0; // extinction coefficient (tune for opacity)
 static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forward scattering
@@ -143,7 +142,8 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float cloud_radius_km
         = EARTH.bottom_radius + 0.5f * ( lower_plane_altitude + higher_plane_altitude ) * 0.001f;
     float3 sun_color = sample_transmittance_lut( atmosphere_transmittance_LUT, linear_sampler,
-        cloud_radius_km, normalize( sun_direction ).y );
+                           cloud_radius_km, normalize( sun_direction ).y )
+        * EARTH.solar_irradiance * clouds_buffer_data.cloud_params.z / PAPER_WHITE;
 
     float3 ambient_radiance
         = octahedral_sky_mips
@@ -183,22 +183,18 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             float step_transmittance
                 = exp( -density * step_size * clouds_buffer_data.cloud_params.x );
 
-            float3 direct_lighting = sun_color * SUN_INTENSITY * ALBEDO * phase * transmittance
+            float3 direct_lighting = sun_color * ALBEDO * phase * transmittance
                 * sun_horizon_fade * ( 1.f - step_transmittance );
             float3 ambient_lighting = ALBEDO * ambient_radiance * ( 1.f - step_transmittance );
             accumulated += throughput * ( direct_lighting + ambient_lighting );
             throughput *= step_transmittance;
         }
     }
-    float3 color = accumulated;
-
     if ( length( accumulated ) < 1e-6 ) {
         return float4( 0.f );
     }
 
-    // simple tonemap (ACES-lite / a gentle clamp)
-    color = color / ( color + float3( 1.0, 1.0, 1.0 ) );
-    color *= PAPER_WHITE;
+    float3 color = accumulated * PAPER_WHITE;
 
     float opacity = 1.f - throughput;
 

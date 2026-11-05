@@ -7,6 +7,6 @@ public struct CloudUniformData {
     public float cloud_offset_x;
     public float3 sun_direction;
     public float cloud_offset_y;
-    // extinction, erosion, null, null
+    // extinction, erosion, radiance exposure, null
     public float4 cloud_params;
 };

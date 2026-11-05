@@ -547,7 +547,7 @@ void update_volumetric_uniform_buffer(
     cloud_ub.cloud_params = glm::vec4(
         RuntimeSettings::Get<RacecarSettings::CLOUD_EXTINCTION>(),
         RuntimeSettings::Get<RacecarSettings::CLOUD_EROSION>(),
-        0.0f,
+        atms_ub.radiance_exposure,
         0.0f
     );
 
