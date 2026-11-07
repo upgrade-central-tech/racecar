@@ -121,8 +121,9 @@ void update_debug_texture_uniform_buffer( DebugTexturePass& pass, float exposure
     ub.index = RuntimeSettings::GetValue( RacecarSettings::DEBUG_TEXTURE );
     ub.exposure = exposure;
     ub.blur = blur;
-    ub.camera_view
-        = RuntimeSettings::Get<RacecarSettings::DEBUG_TEXTURE>() == DebugTexture::OCTAHEDRAL_SKY;
+    const DebugTexture debug_texture = RuntimeSettings::Get<RacecarSettings::DEBUG_TEXTURE>();
+    ub.camera_view = debug_texture == DebugTexture::OCTAHEDRAL_SKY;
+    ub.scene_referred = debug_texture == DebugTexture::OCTAHEDRAL_SKY;
 
     pass.buffer.set_data( ub );
     pass.buffer.update( engine.get_frame_index() );
