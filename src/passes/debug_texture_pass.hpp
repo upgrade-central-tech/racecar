@@ -21,7 +21,8 @@ struct DebugTexturePass {
 };
 
 void initialize_debug_texture_pass( DebugTexturePass& pass, engine::RWImage& screen_buffer,
-    const std::vector<const engine::RWImage*>& textures );
+    const std::vector<const engine::RWImage*>& textures,
+    const UniformBuffer<ub_data::Camera>& camera_buffer );
 
 void add_debug_texture_pass( DebugTexturePass& pass, engine::TaskList& task_list );
 

@@ -368,7 +368,13 @@ void run( bool use_fullscreen )
     debug_textures.push_back( &ao_pass.ao_output );
 #endif // RACECAR_RAY_TRACING
     debug_textures.push_back( &ao_pass.ao_output );
-    initialize_debug_texture_pass( debug_texture_pass, screen_buffer, debug_textures );
+    debug_textures.push_back( &atms_baker.octahedral_sky_mips );
+    initialize_debug_texture_pass(
+        debug_texture_pass,
+        screen_buffer,
+        debug_textures,
+        camera_buffer
+    );
 
     // ================================================================================================================
     // PRECOMPUTE

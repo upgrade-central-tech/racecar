@@ -23,7 +23,8 @@ bool debug_texture_is_on()
 void initialize_debug_texture_pass(
     DebugTexturePass& pass,
     engine::RWImage& screen_buffer,
-    const std::vector<const engine::RWImage*>& textures
+    const std::vector<const engine::RWImage*>& textures,
+    const UniformBuffer<ub_data::Camera>& camera_buffer
 )
 {
     const engine::State& engine = engine::State::GetConst();
@@ -43,6 +44,7 @@ void initialize_debug_texture_pass(
         {
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             VK_DESCRIPTOR_TYPE_SAMPLER,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         },
         VK_SHADER_STAGE_COMPUTE_BIT
@@ -70,6 +72,7 @@ void initialize_debug_texture_pass(
         1
     );
     engine::update_descriptor_set_uniform( pass.output_desc_set, pass.buffer, 2 );
+    engine::update_descriptor_set_uniform( pass.output_desc_set, camera_buffer, 3 );
 
     pass.pipeline = engine::create_compute_pipeline(
         {
@@ -118,6 +121,8 @@ void update_debug_texture_uniform_buffer( DebugTexturePass& pass, float exposure
     ub.index = RuntimeSettings::GetValue( RacecarSettings::DEBUG_TEXTURE );
     ub.exposure = exposure;
     ub.blur = blur;
+    ub.camera_view
+        = RuntimeSettings::Get<RacecarSettings::DEBUG_TEXTURE>() == DebugTexture::OCTAHEDRAL_SKY;
 
     pass.buffer.set_data( ub );
     pass.buffer.update( engine.get_frame_index() );

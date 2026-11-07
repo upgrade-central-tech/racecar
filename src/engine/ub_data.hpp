@@ -169,6 +169,7 @@ struct DebugTexture {
     int index = 0;
     float exposure = 1.f;
     float blur = 0.f;
+    uint32_t camera_view = 0;
 };
 
 struct ModelMat {
