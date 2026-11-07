@@ -44,7 +44,6 @@ func cs_debug_texture( uint2 thread_id: SV_DispatchThreadID )->void
         let far_point = mul( camera_data.inv_vp, float4( uv * 2.0f - 1.0f, 1.0f, 1.0f ) );
         let view_dir = normalize( far_point.xyz / far_point.w - camera_data.camera_pos.xyz );
         sample_uv = oct_encode( view_dir );
-        lod = 0.0f;
     }
 
     let texel = debug_textures[settings.index - 1].SampleLevel( linear_sampler, sample_uv, lod );
