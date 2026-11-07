@@ -45,7 +45,7 @@ FragmentOutput fs_main( VertexOutput in )
 
     FragmentOutput output;
 
-    output.cloud_buffer = float4( output_color.rgb * output_color.a, output_color.a );
+    output.cloud_buffer = output_color;
 
     return output;
 }

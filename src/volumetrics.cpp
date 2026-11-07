@@ -348,7 +348,7 @@ void draw_volumetric(
     [[maybe_unused]] Volumetric& volumetric,
     [[maybe_unused]] engine::TaskList& task_list,
     engine::RWImage& color_attachment,
-    engine::RWImage& octahedral_sky_mips,
+    const vk::mem::AllocatedImage& irradiance_lut,
     const vk::mem::AllocatedImage& transmittance_lut
 )
 {
@@ -407,12 +407,7 @@ void draw_volumetric(
     engine::update_descriptor_set_image( volumetric.lut_desc_set, volumetric.low_freq_noise, 0 );
     engine::update_descriptor_set_image( volumetric.lut_desc_set, volumetric.high_freq_noise, 1 );
     engine::update_descriptor_set_image( volumetric.lut_desc_set, volumetric.cumulus_map, 2 );
-    engine::update_descriptor_set_rwimage(
-        volumetric.lut_desc_set,
-        octahedral_sky_mips,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        3
-    );
+    engine::update_descriptor_set_image( volumetric.lut_desc_set, irradiance_lut, 3 );
     engine::update_descriptor_set_image( volumetric.lut_desc_set, transmittance_lut, 4 );
 
     try {

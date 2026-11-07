@@ -7,6 +7,7 @@ import helpers;
 
 #include "../utils.slang"
 #include "../common.slang"
+#include "../atmosphere/geo/atms_geo.slang"
 
 public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
     SamplerState linear_mirrored_repeat_sampler, float3 march_pos )
@@ -145,11 +146,12 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
                            cloud_radius_km, normalize( sun_direction ).y )
         * EARTH.solar_irradiance * clouds_buffer_data.cloud_params.z / PAPER_WHITE;
 
+    float3 sky_irradiance = get_sun_and_sky_irradiance( atmosphere_irradiance_LUT,
+        atmosphere_transmittance_LUT, linear_sampler, float3( 0.f, cloud_radius_km, 0.f ),
+        float3( 0.f, 1.f, 0.f ), normalize( sun_direction ) )
+                                ._1;
     float3 ambient_radiance
-        = octahedral_sky_mips
-              .SampleLevel( linear_sampler, oct_encode( float3( 0.f, 1.f, 0.f ) ), SKY_MAX_MIP )
-              .rgb
-        / PAPER_WHITE;
+        = sky_irradiance * INV_PI * clouds_buffer_data.cloud_params.z / PAPER_WHITE;
 
     // jitter
     float jitter = 0.3f
@@ -200,6 +202,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
 
     if ( view.y < 0.1 ) {
         opacity *= view.y * 10.f;
+        color *= view.y * 10.f;
     }
 
     return float4( color, saturate( opacity ) );
