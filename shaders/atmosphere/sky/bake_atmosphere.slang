@@ -139,10 +139,17 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
 
     float3 texture_offset
         = float3( clouds_buffer_data.cloud_offset_x, 0, clouds_buffer_data.cloud_offset_y );
-    float3 sun_color = sample_transmittance_lut(
-        transmittance_lut, sampler, EARTH.bottom_radius + 3.25f, get_sun_direction().y );
+    float3 sun_direction = get_sun_direction();
+    float cloud_radius_km = EARTH.bottom_radius + 3.25f;
+    float3 sun_color
+        = sample_transmittance_lut( transmittance_lut, sampler, cloud_radius_km, sun_direction.y )
+        * EARTH.solar_irradiance * uniforms.radiance_exposure;
+    float3 sky_irradiance = get_sun_and_sky_irradiance( irradiance_lut, transmittance_lut, sampler,
+        float3( 0.f, cloud_radius_km, 0.f ), float3( 0.f, 1.f, 0.f ), sun_direction )
+                                ._1;
+    float3 ambient_radiance = sky_irradiance * INV_PI * uniforms.radiance_exposure;
     float4 clouds = raymarch( cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler,
-        view_direction, origin, get_sun_direction(), sun_color, texture_offset );
+        view_direction, origin, sun_direction, sun_color, ambient_radiance, texture_offset );
 
     sky_color = lerp( sky_color, clouds.rgb, clouds.a );
 

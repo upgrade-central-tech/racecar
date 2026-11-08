@@ -82,7 +82,6 @@ public float PhaseHG( float cosTheta, float g )
     return ( 1 - g2 ) / ( 4 * 3.14159265 * denom );
 }
 
-static const float SUN_INTENSITY = 30.0; // brightness multiplier for direct light
 static const float AMBIENT_INTENSITY = 0.2; // ambient skylight
 static const float ALBEDO = 0.9; // single-scattering albedo
 static const float SIGMA_T = 4.0; // extinction coefficient (tune for opacity)
@@ -111,7 +110,7 @@ public float offset_sphere_intersection(
 
 public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
     SamplerState linear_mirrored_repeat_sampler, float3 view, float3 origin, float3 sun_direction,
-    float3 sun_color, float3 texture_offset )
+    float3 sun_color, float3 ambient_radiance, float3 texture_offset )
 {
     float theta = acos( saturate( view.y ) );
     // theta = clamp( theta, 0.0, radians( 80 ) );
@@ -144,6 +143,9 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float throughput = 1.f;
 
     float sun_horizon_fade = smoothstep( -0.03f, 0.02f, normalize( sun_direction ).y );
+
+    float3 sun_irradiance = sun_color / PAPER_WHITE;
+    float3 ambient = ambient_radiance / PAPER_WHITE;
     // jitter
     float jitter = 0.3f
         * ( rand_float( dot( local_origin.xyz, float3( 12.9898, 78.233, 45.164 ) ) ) - 0.5 )
@@ -173,11 +175,13 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             float phase
                 = 0.95 * PhaseHG( cosTheta, 0.75 ) + 0.05 * PhaseHG( cosTheta, -0.2 ); // TTHG
 
-            float3 direct_lighting
-                = sun_color * SUN_INTENSITY * ALBEDO * phase * density * transmittance
-                * sun_horizon_fade * step_size;
-            accumulated += throughput * direct_lighting;
-            throughput *= exp( -density * step_size * absorption_coeff );
+            float step_transmittance = exp( -density * step_size * absorption_coeff );
+
+            float3 direct_lighting = sun_irradiance * ALBEDO * phase * transmittance
+                * sun_horizon_fade * ( 1.f - step_transmittance );
+            float3 ambient_lighting = ALBEDO * ambient * ( 1.f - step_transmittance );
+            accumulated += throughput * ( direct_lighting + ambient_lighting );
+            throughput *= step_transmittance;
         }
     }
     // Add background sky contribution attenuated by transmittance_along_ray
