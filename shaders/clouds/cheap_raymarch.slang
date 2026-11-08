@@ -82,7 +82,6 @@ public float PhaseHG( float cosTheta, float g )
     return ( 1 - g2 ) / ( 4 * 3.14159265 * denom );
 }
 
-static const float AMBIENT_INTENSITY = 0.2; // ambient skylight
 static const float ALBEDO = 0.9; // single-scattering albedo
 static const float SIGMA_T = 4.0; // extinction coefficient (tune for opacity)
 static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forward scattering
@@ -184,9 +183,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             throughput *= step_transmittance;
         }
     }
-    // Add background sky contribution attenuated by transmittance_along_ray
-    float3 sky = float3( 0.6, 0.75, 0.95 ) * AMBIENT_INTENSITY;
-    float3 color = accumulated + throughput * sky;
+    float3 color = accumulated;
 
     if ( length( accumulated ) < 1e-6 ) {
         return float4( 0.f );
