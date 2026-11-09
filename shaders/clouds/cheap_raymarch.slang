@@ -192,7 +192,9 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float opacity = 1.f - throughput;
 
     if ( view.y < 0.1 ) {
-        opacity *= view.y * 10.f;
+        float horizon_fade = view.y * 10.f;
+        opacity *= horizon_fade;
+        color *= horizon_fade;
     }
 
     return float4( color, saturate( opacity ) );

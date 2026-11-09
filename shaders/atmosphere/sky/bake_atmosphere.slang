@@ -151,7 +151,7 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
     float4 clouds = raymarch( cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler,
         view_direction, origin, sun_direction, sun_color, ambient_radiance, texture_offset );
 
-    sky_color = lerp( sky_color, clouds.rgb, clouds.a );
+    sky_color = sky_color * ( 1.f - clouds.a ) + clouds.rgb;
 
     octahedral_sky[pixel] = float4( sky_color, 1.0f );
 }
