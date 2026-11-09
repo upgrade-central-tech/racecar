@@ -25,7 +25,11 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
     float low_freq_noise = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 4 );
     float low_freq_modulation = 1.f - height_modulation;
 
-    cumulus_map = lerp( cumulus_map, cumulus_map + low_freq_noise, low_freq_modulation );
+    float low_freq_detail = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 12 );
+
+    float extra_freq = 4 * low_freq_noise + low_freq_detail;
+
+    cumulus_map = lerp( cumulus_map, cumulus_map + extra_freq, low_freq_modulation );
     cumulus_map = smoothstep( 0.3, 0.6, cumulus_map ) * 2 - 1;
 
     float base_density = max( cumulus_map * height_modulation, 0 );
