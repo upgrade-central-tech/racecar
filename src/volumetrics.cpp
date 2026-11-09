@@ -18,8 +18,7 @@ constexpr std::string_view VOLUMETRIC_SHADER_MODULE_PATH = "../shaders/clouds/cl
 constexpr std::string_view VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH
     = "../shaders/clouds/cloud_composite.spv";
 
-// artistic exaggeration. Default is 0.00005
-constexpr float CLOUD_TRAVEL_SCALE = 0.0002f;
+constexpr float CLOUD_NOISE_SCALE = 0.00005f;
 constexpr float CLOUD_WIND_SPEED = 0.002f;
 
 Volumetric initialize()
@@ -534,7 +533,7 @@ void update_volumetric_uniform_buffer(
     cloud_ub.inverse_view = glm::inverse( camera_data.view );
     cloud_ub.camera_position = camera::calculate_eye_position( engine.camera );
     float wind = static_cast<float>( engine.time ) * CLOUD_WIND_SPEED;
-    glm::vec2 travel = engine.gamestate.world_position * CLOUD_TRAVEL_SCALE;
+    glm::vec2 travel = engine.gamestate.world_position * CLOUD_NOISE_SCALE;
 
     cloud_ub.cloud_offset_x = wind + travel.x;
     cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
