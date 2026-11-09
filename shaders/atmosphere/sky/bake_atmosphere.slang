@@ -136,7 +136,7 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
     // Insert the work to actually derive a 3D global direction from pixel and face
     float3 sky_color = get_sky_color( view_direction, 0.0f );
 
-    float3 origin = gamestate_data.world_position.xyz;
+    float3 origin = float3( 0.0f );
 
     float3 texture_offset
         = float3( clouds_buffer_data.cloud_offset_x, 0, clouds_buffer_data.cloud_offset_y );
