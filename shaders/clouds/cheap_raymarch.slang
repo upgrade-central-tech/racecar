@@ -183,15 +183,11 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             throughput *= step_transmittance;
         }
     }
-    float3 color = accumulated;
-
     if ( length( accumulated ) < 1e-6 ) {
         return float4( 0.f );
     }
 
-    // simple tonemap (ACES-lite / a gentle clamp)
-    color = color / ( color + float3( 1.0, 1.0, 1.0 ) );
-    color *= PAPER_WHITE;
+    float3 color = accumulated * PAPER_WHITE;
 
     float opacity = 1.f - throughput;
 
