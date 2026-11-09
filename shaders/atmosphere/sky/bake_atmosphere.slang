@@ -27,6 +27,7 @@ layout( binding = 0, set = 4 ) Texture2D<float> cumulus_map_LUT;
 layout( binding = 1, set = 4 ) Texture3D<float> low_freq_noise_LUT;
 layout( binding = 2, set = 4 ) SamplerState linear_mirrored_repeat_sampler;
 layout( binding = 3, set = 4 ) ConstantBuffer<CloudUniformData> clouds_buffer_data;
+layout( binding = 4, set = 4 ) Texture3D<float> high_freq_noise_LUT;
 
 layout( binding = 0, set = 5 ) ConstantBuffer<GameStateBuffer> gamestate_data;
 
@@ -148,9 +149,10 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
         float3( 0.f, cloud_radius_km, 0.f ), float3( 0.f, 1.f, 0.f ), sun_direction )
                                 ._1;
     float3 ambient_radiance = sky_irradiance * INV_PI * uniforms.radiance_exposure;
-    float4 clouds = raymarch( cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler,
-        view_direction, origin, sun_direction, sun_color, ambient_radiance, texture_offset,
-        clouds_buffer_data.cloud_params.x );
+    float4 clouds = raymarch( cumulus_map_LUT, low_freq_noise_LUT, high_freq_noise_LUT,
+        linear_mirrored_repeat_sampler, view_direction, origin, sun_direction, sun_color,
+        ambient_radiance, texture_offset, clouds_buffer_data.cloud_params.x,
+        clouds_buffer_data.cloud_params.y );
 
     sky_color = sky_color * ( 1.f - clouds.a ) + clouds.rgb;
 

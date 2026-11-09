@@ -64,8 +64,9 @@ float sun_transmittance( float3 direction )
     for ( uint i = 0; i < TRANSMITTANCE_STEPS; i++ ) {
         float t = t_min + ( float( i ) + 0.5f ) * step_size;
 
-        float density = sample_density( cumulus_map_LUT, low_freq_noise_LUT,
-            linear_mirrored_repeat_sampler, origin + direction * t, texture_offset );
+        float density = sample_density( cumulus_map_LUT, low_freq_noise_LUT, high_freq_noise_LUT,
+            linear_mirrored_repeat_sampler, origin + direction * t, texture_offset,
+            clouds_buffer_data.cloud_params.y );
 
         transmittance *= exp( -SUN_EXTINCTION * density * step_size );
 

@@ -56,6 +56,7 @@ void initialize_atmosphere_baker(
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             VK_DESCRIPTOR_TYPE_SAMPLER,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
         },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
@@ -85,6 +86,11 @@ void initialize_atmosphere_baker(
         atms_baker.volumetrics_desc_set,
         volumetric.uniform_buffer,
         3
+    );
+    engine::update_descriptor_set_image(
+        atms_baker.volumetrics_desc_set,
+        volumetric.high_freq_noise,
+        4
     );
 
     atms_baker.cs_bake_atmosphere_pipeline = engine::create_compute_pipeline(

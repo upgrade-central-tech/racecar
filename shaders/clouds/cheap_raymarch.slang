@@ -6,7 +6,8 @@ import cloud_utils;
 #include "../utils.slang"
 
 public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
-    SamplerState linear_mirrored_repeat_sampler, float3 march_pos, float3 texture_offset )
+    Texture3D<float> high_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
+    float3 march_pos, float3 texture_offset, float erosion )
 {
     float3 p = march_pos * 0.00005f + texture_offset;
 
@@ -27,14 +28,25 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
     cumulus_map = lerp( cumulus_map, cumulus_map + low_freq_noise, low_freq_modulation );
     cumulus_map = smoothstep( 0.3, 0.6, cumulus_map ) * 2 - 1;
 
-    return 0.5f * ( max( cumulus_map * height_modulation, 0 ) );
+    float base_density = max( cumulus_map * height_modulation, 0 );
+    if ( base_density <= 0.f ) {
+        return 0.f;
+    }
+
+    float high_freq_noise = high_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 24 );
+    float erosion_amount = erosion * high_freq_noise;
+    float eroded_density
+        = saturate( ( base_density - erosion_amount ) / ( 1.f - erosion_amount ) );
+
+    return 0.5f * eroded_density;
 }
 
 static const float LIGHT_MARCH_MAX_DISTANCE = 5000.0f;
 
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
-    Texture3D<float> low_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
-    float3 march_pos, float3 sun_direction, float3 texture_offset, float extinction )
+    Texture3D<float> low_freq_noise_LUT, Texture3D<float> high_freq_noise_LUT,
+    SamplerState linear_mirrored_repeat_sampler, float3 march_pos, float3 sun_direction,
+    float3 texture_offset, float extinction, float erosion )
 {
     float3 local_dir = normalize( sun_direction );
 
@@ -61,8 +73,8 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         float t = t0 + ( i + 0.5 ) * step_size; // midpoint sample
         float3 pos = march_pos + local_dir * t;
         // if outside the AABB you can break early, but caller will pass proper t_max
-        float d = sample_density( cumulus_map_LUT, low_freq_noise_LUT,
-            linear_mirrored_repeat_sampler, pos, texture_offset );
+        float d = sample_density( cumulus_map_LUT, low_freq_noise_LUT, high_freq_noise_LUT,
+            linear_mirrored_repeat_sampler, pos, texture_offset, erosion );
         // Beer–Lambert per-step
         T *= exp( -extinction * d * step_size );
 
@@ -105,8 +117,9 @@ public float offset_sphere_intersection(
 }
 
 public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
-    SamplerState linear_mirrored_repeat_sampler, float3 view, float3 origin, float3 sun_direction,
-    float3 sun_color, float3 ambient_radiance, float3 texture_offset, float extinction )
+    Texture3D<float> high_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler, float3 view,
+    float3 origin, float3 sun_direction, float3 sun_color, float3 ambient_radiance,
+    float3 texture_offset, float extinction, float erosion )
 {
     float theta = acos( saturate( view.y ) );
     // theta = clamp( theta, 0.0, radians( 80 ) );
@@ -158,14 +171,14 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             break;
         }
         float3 marched_pos = local_origin + local_dir * t;
-        float density = sample_density( cumulus_map_LUT, low_freq_noise_LUT,
-            linear_mirrored_repeat_sampler, marched_pos, texture_offset );
+        float density = sample_density( cumulus_map_LUT, low_freq_noise_LUT, high_freq_noise_LUT,
+            linear_mirrored_repeat_sampler, marched_pos, texture_offset, erosion );
         if ( density > 0.01 ) {
 
             float transmittance = max(
-                estimate_transmittance( cumulus_map_LUT, low_freq_noise_LUT,
+                estimate_transmittance( cumulus_map_LUT, low_freq_noise_LUT, high_freq_noise_LUT,
                     linear_mirrored_repeat_sampler, marched_pos, sun_direction, texture_offset,
-                    extinction ),
+                    extinction, erosion ),
                 0.01 );
 
             float cosTheta = dot( local_dir, sun_direction );
