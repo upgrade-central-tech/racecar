@@ -204,3 +204,6 @@ To check that Vulkan is ready for use, go to your Vulkan SDK directory (by defau
 - [ ] Grass rendering
 - [ ] Terrain lighting does not appear to correspond with environment
 - [ ] Fix clouds
+  - [ ] Cloud symmetry bug
+- [ ] Glass IBL relfections bug (need RT reflections or some solution)
+- [ ] Fix specular highlight coloring
