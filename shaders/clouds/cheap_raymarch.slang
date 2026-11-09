@@ -30,13 +30,11 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
     return 0.5f * ( max( cumulus_map * height_modulation, 0 ) );
 }
 
-static const float absorption_coeff = 0.002f;
-
 static const float LIGHT_MARCH_MAX_DISTANCE = 5000.0f;
 
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     Texture3D<float> low_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
-    float3 march_pos, float3 sun_direction, float3 texture_offset )
+    float3 march_pos, float3 sun_direction, float3 texture_offset, float extinction )
 {
     float3 local_dir = normalize( sun_direction );
 
@@ -66,7 +64,7 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         float d = sample_density( cumulus_map_LUT, low_freq_noise_LUT,
             linear_mirrored_repeat_sampler, pos, texture_offset );
         // Beer–Lambert per-step
-        T *= exp( -SIGMA_T * d * step_size );
+        T *= exp( -extinction * d * step_size );
 
         if ( T <= 1e-4 ) {
             return 0.0;
@@ -83,7 +81,6 @@ public float PhaseHG( float cosTheta, float g )
 }
 
 static const float ALBEDO = 0.9; // single-scattering albedo
-static const float SIGMA_T = 4.0; // extinction coefficient (tune for opacity)
 static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forward scattering
 
 public float hash11( float n ) { return frac( sin( n ) * 43758.5453 ); }
@@ -109,7 +106,7 @@ public float offset_sphere_intersection(
 
 public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
     SamplerState linear_mirrored_repeat_sampler, float3 view, float3 origin, float3 sun_direction,
-    float3 sun_color, float3 ambient_radiance, float3 texture_offset )
+    float3 sun_color, float3 ambient_radiance, float3 texture_offset, float extinction )
 {
     float theta = acos( saturate( view.y ) );
     // theta = clamp( theta, 0.0, radians( 80 ) );
@@ -167,14 +164,15 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
 
             float transmittance = max(
                 estimate_transmittance( cumulus_map_LUT, low_freq_noise_LUT,
-                    linear_mirrored_repeat_sampler, marched_pos, sun_direction, texture_offset ),
+                    linear_mirrored_repeat_sampler, marched_pos, sun_direction, texture_offset,
+                    extinction ),
                 0.01 );
 
             float cosTheta = dot( local_dir, sun_direction );
             float phase
                 = 0.95 * PhaseHG( cosTheta, 0.75 ) + 0.05 * PhaseHG( cosTheta, -0.2 ); // TTHG
 
-            float step_transmittance = exp( -density * step_size * absorption_coeff );
+            float step_transmittance = exp( -density * step_size * extinction );
 
             float3 direct_lighting = sun_irradiance * ALBEDO * phase * transmittance
                 * sun_horizon_fade * ( 1.f - step_transmittance );

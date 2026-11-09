@@ -149,7 +149,8 @@ void cs_bake_atmosphere( uint3 thread_id: SV_DispatchThreadID )
                                 ._1;
     float3 ambient_radiance = sky_irradiance * INV_PI * uniforms.radiance_exposure;
     float4 clouds = raymarch( cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler,
-        view_direction, origin, sun_direction, sun_color, ambient_radiance, texture_offset );
+        view_direction, origin, sun_direction, sun_color, ambient_radiance, texture_offset,
+        clouds_buffer_data.cloud_params.x );
 
     sky_color = sky_color * ( 1.f - clouds.a ) + clouds.rgb;
 
