@@ -19,8 +19,6 @@ static const float CLOUD_LAYER_BOTTOM = 3000.0f;
 static const float CLOUD_LAYER_TOP = 3500.0f;
 static const uint TRANSMITTANCE_STEPS = 32;
 
-static const float SUN_EXTINCTION = 0.03f;
-
 groupshared float wave_visibility[MAX_WAVES];
 
 float3 sample_sun_disk( uint sample_index, float3 sun_direction )
@@ -68,7 +66,7 @@ float sun_transmittance( float3 direction )
             linear_mirrored_repeat_sampler, origin + direction * t, texture_offset,
             clouds_buffer_data.cloud_params.y );
 
-        transmittance *= exp( -SUN_EXTINCTION * density * step_size );
+        transmittance *= exp( -clouds_buffer_data.cloud_params.x * density * step_size );
 
         if ( transmittance <= 1e-4f ) {
             return 0.0f;
