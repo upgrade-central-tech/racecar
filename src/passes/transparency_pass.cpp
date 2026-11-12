@@ -11,8 +11,8 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view TRANSPARENCY_SHADER_MODULE_PATH
-    = "../shaders/transparency/transparency.spv";
+constexpr std::string_view
+    TRANSPARENCY_SHADER_MODULE_PATH = "../shaders/transparency/transparency.spv";
 
 glm::vec3
 compute_primitive_centroid( const geometry::scene::Mesh& scene_mesh, const scene::Primitive& prim )
@@ -26,8 +26,8 @@ compute_primitive_centroid( const geometry::scene::Mesh& scene_mesh, const scene
 
     for ( size_t i = 0; i < prim.ind_count; ++i ) {
         const uint32_t idx = scene_mesh.indices[size_t( prim.ind_offset ) + i];
-        const glm::vec3& position
-            = scene_mesh.vertices[size_t( prim.vertex_offset ) + size_t( idx )].position;
+        const glm::vec3&
+            position = scene_mesh.vertices[size_t( prim.vertex_offset ) + size_t( idx )].position;
 
         aabb_min = glm::min( aabb_min, position );
         aabb_max = glm::max( aabb_max, position );
@@ -157,10 +157,10 @@ void execute_transparency_pass(
                     return 0.f;
                 }
 
-                const glm::mat4 model
-                    = model_mat_uniform_buffers[static_cast<size_t>( info->node_id )]
-                          .get_data()
-                          .model_mat;
+                const glm::mat4
+                    model = model_mat_uniform_buffers[static_cast<size_t>( info->node_id )]
+                                .get_data()
+                                .model_mat;
 
                 return ( view * model * glm::vec4( info->centroid, 1.f ) ).z;
             };

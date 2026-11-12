@@ -133,8 +133,8 @@ vk::mem::AllocatedImage create_image(
 )
 {
     const engine::State& engine = engine::State::GetConst();
-    const size_t data_size
-        = extent.depth * extent.width * extent.height * vk::utility::bytes_from_format( format );
+    const size_t data_size = extent.depth * extent.width * extent.height
+        * vk::utility::bytes_from_format( format );
 
     vk::mem::AllocatedImage new_image;
 
@@ -283,8 +283,9 @@ vk::mem::AllocatedImage allocate_vma_image(
 
     {
         // Let's just assume there are binary results
-        VkImageViewType image_view_type
-            = ( image_type == VK_IMAGE_TYPE_2D ) ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
+        VkImageViewType image_view_type = ( image_type == VK_IMAGE_TYPE_2D )
+            ? VK_IMAGE_VIEW_TYPE_2D
+            : VK_IMAGE_VIEW_TYPE_3D;
 
         VkImageViewCreateInfo image_view_info = vk::create::image_view_info(
             format,

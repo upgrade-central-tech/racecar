@@ -20,8 +20,9 @@ void immediate_submit(
         "Failed to reset immediate command buffer"
     );
 
-    VkCommandBufferBeginInfo command_buffer_begin_info
-        = vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
+    VkCommandBufferBeginInfo command_buffer_begin_info = vk::create::command_buffer_begin_info(
+        VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+    );
     VkCommandBuffer command_buffer = immediate_submit.cmd_buf;
 
     vk::check(
@@ -33,8 +34,9 @@ void immediate_submit(
 
     vk::check( vkEndCommandBuffer( command_buffer ), "Failed to end command buffer" );
 
-    VkCommandBufferSubmitInfo command_buffer_submit_info
-        = vk::create::command_buffer_submit_info( command_buffer );
+    VkCommandBufferSubmitInfo command_buffer_submit_info = vk::create::command_buffer_submit_info(
+        command_buffer
+    );
     VkSubmitInfo2 submit = vk::create::submit_info( &command_buffer_submit_info, nullptr, nullptr );
 
     vk::check(
@@ -73,8 +75,11 @@ void create_immediate_commands( ImmediateSubmit& immediate_submit )
 
     log::info( "[engine] Created immediate command pool" );
 
-    VkCommandBufferAllocateInfo command_buffer_allocate_info
-        = vk::create::command_buffer_allocate_info( immediate_submit.cmd_pool, 1 );
+    VkCommandBufferAllocateInfo
+        command_buffer_allocate_info = vk::create::command_buffer_allocate_info(
+            immediate_submit.cmd_pool,
+            1
+        );
     vk::check(
         vkAllocateCommandBuffers(
             vulkan.device,

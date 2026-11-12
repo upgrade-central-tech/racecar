@@ -54,8 +54,9 @@ vkb::Instance create_instance()
     }
 
     vkb::SystemInfo& system_info = system_info_ret.value();
-    auto handler
-        = reinterpret_cast<PFN_vkGetInstanceProcAddr>( SDL_Vulkan_GetVkGetInstanceProcAddr() );
+    auto handler = reinterpret_cast<PFN_vkGetInstanceProcAddr>(
+        SDL_Vulkan_GetVkGetInstanceProcAddr()
+    );
 
     if ( !handler ) {
         throw Exception( "[SDL] Could not get vkGetInstanceProcAddr: {}", SDL_GetError() );
@@ -150,9 +151,10 @@ vkb::Device pick_and_create_device()
         .rayTracingPipeline = VK_TRUE, // Explicitly enable ray tracing pipelines
     };
 
-    VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features
-        = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
-            .rayQuery = VK_TRUE };
+    VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
+        .rayQuery = VK_TRUE
+    };
 
     log::info( "[Vulkan] Enabling ray tracing" );
 #endif // RACECAR_RAY_TRACING
@@ -193,34 +195,35 @@ vkb::Device pick_and_create_device()
         .shaderInt16 = VK_TRUE,
     };
 
-    vkb::Result<vkb::PhysicalDevice> phys_selector_ret
-        = phys_selector.prefer_gpu_device_type( vkb::PreferredDeviceType::discrete )
-              .allow_any_gpu_device_type( false )
-              .set_minimum_version( 1, 3 )
-              .add_required_extension( VK_KHR_SWAPCHAIN_EXTENSION_NAME )
-              .add_required_extension( VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME )
+    vkb::Result<vkb::PhysicalDevice> phys_selector_ret =
+        phys_selector.prefer_gpu_device_type( vkb::PreferredDeviceType::discrete )
+            .allow_any_gpu_device_type( false )
+            .set_minimum_version( 1, 3 )
+            .add_required_extension( VK_KHR_SWAPCHAIN_EXTENSION_NAME )
+            .add_required_extension( VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME )
 #if RACECAR_RAY_TRACING
-              .add_required_extension( VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME )
-              .add_required_extension( VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME )
-              .add_required_extension( VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME )
-              .add_required_extension( VK_KHR_RAY_QUERY_EXTENSION_NAME )
+            .add_required_extension( VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME )
+            .add_required_extension( VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME )
+            .add_required_extension( VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME )
+            .add_required_extension( VK_KHR_RAY_QUERY_EXTENSION_NAME )
 #endif // RACECAR_RAY_TRACING
-              .add_required_extension( VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME )
+            .add_required_extension( VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME )
 #if RACECAR_RAY_TRACING
-              .add_required_extension_features( as_features )
-              .add_required_extension_features( rt_pipeline_features )
-              .add_required_extension_features( ray_query_features )
+            .add_required_extension_features( as_features )
+            .add_required_extension_features( rt_pipeline_features )
+            .add_required_extension_features( ray_query_features )
 #endif // RACECAR_RAY_TRACING
-              .add_required_extension_features( compute_derivatives_features )
-              .set_required_features_13( required_features_13 )
-              .set_required_features_12( required_features_12 )
-              .set_required_features_11( required_features_11 )
-              .set_required_features( required_features )
-              .select();
+            .add_required_extension_features( compute_derivatives_features )
+            .set_required_features_13( required_features_13 )
+            .set_required_features_12( required_features_12 )
+            .set_required_features_11( required_features_11 )
+            .set_required_features( required_features )
+            .select();
 
     if ( !phys_selector_ret ) {
-        auto phys_device_error
-            = static_cast<vkb::PhysicalDeviceError>( phys_selector_ret.error().value() );
+        auto phys_device_error = static_cast<vkb::PhysicalDeviceError>(
+            phys_selector_ret.error().value()
+        );
 
         // Handle no physical devices separately
         switch ( phys_device_error ) {
@@ -318,8 +321,9 @@ void initialize( SDL_Window* window )
         initialize_vmaallocator();
 
         {
-            vkb::Result<VkQueue> gfx_queue_res
-                = vulkan.device.get_queue( vkb::QueueType::graphics );
+            vkb::Result<VkQueue> gfx_queue_res = vulkan.device.get_queue(
+                vkb::QueueType::graphics
+            );
 
             if ( !gfx_queue_res ) {
                 throw Exception(
@@ -332,8 +336,9 @@ void initialize( SDL_Window* window )
         }
 
         {
-            vkb::Result<uint32_t> gfx_queue_family_res
-                = vulkan.device.get_queue_index( vkb::QueueType::graphics );
+            vkb::Result<uint32_t> gfx_queue_family_res = vulkan.device.get_queue_index(
+                vkb::QueueType::graphics
+            );
 
             if ( !gfx_queue_family_res ) {
                 throw Exception(

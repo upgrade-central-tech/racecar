@@ -62,8 +62,9 @@ void execute( TaskList& task_list, const gui::Gui& gui )
     size_t frame_number = engine.get_frame_index();
     FrameData& frame = engine.frames[frame_number];
 
-    VkCommandBufferBeginInfo command_buffer_begin_info
-        = vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
+    VkCommandBufferBeginInfo command_buffer_begin_info = vk::create::command_buffer_begin_info(
+        VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+    );
 
     // Request swapchain index.
     uint32_t output_swapchain_index = 0;

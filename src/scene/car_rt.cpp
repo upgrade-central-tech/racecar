@@ -52,10 +52,12 @@ void alloc_blases(
         );
         engine.blas.push_back( as );
 
-        blas_offsets.vertex_buffer_offset[blas_count]
-            = uint32_t( prim == nullptr ? 0 : prim->vertex_offset );
-        blas_offsets.index_buffer_offset[blas_count]
-            = uint32_t( prim == nullptr ? 0 : prim->ind_offset );
+        blas_offsets.vertex_buffer_offset[blas_count] = uint32_t(
+            prim == nullptr ? 0 : prim->vertex_offset
+        );
+        blas_offsets.index_buffer_offset[blas_count] = uint32_t(
+            prim == nullptr ? 0 : prim->ind_offset
+        );
         blas_offsets.material_id[blas_count] = uint32_t( prim == nullptr ? 0 : prim->material_id );
 
         blas_count++;
@@ -273,8 +275,8 @@ UniformBuffer<ub_data::MaterialTable> create_material_table(
         );
     }
 
-    UniformBuffer<ub_data::MaterialTable> material_table
-        = create_uniform_buffer<ub_data::MaterialTable>( { }, engine.frame_overlap );
+    UniformBuffer<ub_data::MaterialTable>
+        material_table = create_uniform_buffer<ub_data::MaterialTable>( { }, engine.frame_overlap );
 
     sync_material_table( material_table, material_uniform_buffers );
     material_table.update_all();

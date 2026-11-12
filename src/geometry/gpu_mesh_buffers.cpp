@@ -44,8 +44,10 @@ bool create_mesh_buffers(
             .buffer = mesh_buffers.vertex_buffer.handle,
         };
 
-        mesh_buffers.vertex_buffer_address
-            = vkGetBufferDeviceAddress( vulkan.device, &device_address_info );
+        mesh_buffers.vertex_buffer_address = vkGetBufferDeviceAddress(
+            vulkan.device,
+            &device_address_info
+        );
     }
 
     mesh_buffers.vertex_buffer_size = vertex_buffer_size;

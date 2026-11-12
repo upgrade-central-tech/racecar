@@ -66,8 +66,10 @@ void furnace( bool use_fullscreen )
     geometry::scene::Mesh scene_mesh;
     scene::load_gltf( FURNACE_SPHERE_FILE_PATH, scene, scene_mesh.vertices, scene_mesh.indices );
     geometry::scene::generate_tangents( scene_mesh );
-    scene_mesh.mesh_buffers
-        = geometry::scene::upload_mesh( scene_mesh.indices, scene_mesh.vertices );
+    scene_mesh.mesh_buffers = geometry::scene::upload_mesh(
+        scene_mesh.indices,
+        scene_mesh.vertices
+    );
 
     // Setup camera and debug buffers
     UniformBuffer<ub_data::Camera> camera_buffer;
@@ -134,8 +136,8 @@ void furnace( bool use_fullscreen )
         false
     );
 
-    UniformBuffer<ub_data::TerrainSizeData> sun_visibility_terrain_size
-        = create_uniform_buffer<ub_data::TerrainSizeData>( { }, engine.frame_overlap );
+    UniformBuffer<ub_data::TerrainSizeData> sun_visibility_terrain_size = create_uniform_buffer<
+        ub_data::TerrainSizeData>( { }, engine.frame_overlap );
     sun_visibility_terrain_size.set_data(
         ub_data::TerrainSizeData {
             .center = glm::vec4( 0.0f, 0.0f, 0.0f, 1.0f ),
@@ -153,7 +155,11 @@ void furnace( bool use_fullscreen )
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
     engine::update_descriptor_set_image( sun_visibility_desc_set, sun_visibility_image, 0 );
-    engine::update_descriptor_set_uniform( sun_visibility_desc_set, sun_visibility_terrain_size, 1 );
+    engine::update_descriptor_set_uniform(
+        sun_visibility_desc_set,
+        sun_visibility_terrain_size,
+        1
+    );
     engine::update_descriptor_set_sampler(
         sun_visibility_desc_set,
         vulkan.global_samplers.linear_sampler,
@@ -258,18 +264,19 @@ void furnace( bool use_fullscreen )
                                    .GBuffer_Depth = &gbuffers.GBuffer_Depth };
     initialize_ao_pass( ao_pass );
 
-    LightingPassDescSets lighting_pass_desc_sets
-        = { .uniform_desc_set = uniform_desc_set,
-            .material_desc_sets = material_desc_sets,
-            .lut_sets = lut_sets,
-            .sampler_desc_set = sampler_desc_set,
-            .gbuffer_desc_set = gbuffers.desc_set,
+    LightingPassDescSets lighting_pass_desc_sets = {
+        .uniform_desc_set = uniform_desc_set,
+        .material_desc_sets = material_desc_sets,
+        .lut_sets = lut_sets,
+        .sampler_desc_set = sampler_desc_set,
+        .gbuffer_desc_set = gbuffers.desc_set,
 #if RACECAR_RAY_TRACING
-            .car_tlas_desc_set = car_tlas_desc_set,
-            .reflection_buffer_desc_set = reflection_buffer_desc_set,
+        .car_tlas_desc_set = car_tlas_desc_set,
+        .reflection_buffer_desc_set = reflection_buffer_desc_set,
 #endif // RACECAR_RAY_TRACING
-            .sun_visibility_desc_set = sun_visibility_desc_set,
-            .ao_read_desc_set = ao_pass.ao_read_descriptor_set };
+        .sun_visibility_desc_set = sun_visibility_desc_set,
+        .ao_read_desc_set = ao_pass.ao_read_descriptor_set
+    };
 
     engine::Pipeline lighting_pass_pipeline;
     create_lighting_pass_resources( lighting_pass_desc_sets, &lighting_pass_pipeline );
@@ -295,8 +302,10 @@ void furnace( bool use_fullscreen )
 
     // Background: the same radiance the sky texture holds
     engine::GfxTask background_gfx_task = {
-        .clear_color
-        = VkClearColorValue { { FURNACE_RADIANCE, FURNACE_RADIANCE, FURNACE_RADIANCE, 1.f } },
+        .clear_color = VkClearColorValue { { FURNACE_RADIANCE,
+                                             FURNACE_RADIANCE,
+                                             FURNACE_RADIANCE,
+                                             1.f } },
         .color_attachments = { &screen_color },
         .extent = engine.swapchain.extent,
     };
@@ -413,8 +422,9 @@ void furnace( bool use_fullscreen )
         SDL_UpdateWindowSurface( ctx.window );
 
         auto new_tick = std::chrono::steady_clock::now();
-        auto duration
-            = std::chrono::duration_cast<std::chrono::milliseconds>( new_tick - current_tick );
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            new_tick - current_tick
+        );
         engine.delta = static_cast<double>( duration.count() ) * 0.001;
         engine.time += engine.delta;
     }

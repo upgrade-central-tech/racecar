@@ -23,8 +23,8 @@ vk::mem::AllocatedImage generate_test_3D()
         for ( uint32_t y = 0; y < dim; ++y ) {
             for ( uint32_t x = 0; x < dim; ++x ) {
 
-                float checkered
-                    = ( ( x / block_size ) + ( y / block_size ) + ( z / block_size ) ) % 2;
+                float checkered = ( ( x / block_size ) + ( y / block_size ) + ( z / block_size ) )
+                    % 2;
 
                 size_t idx = 4 * ( x + y * dim + z * dim * dim );
                 texture_data[idx + 0] = checkered; // R
@@ -71,8 +71,9 @@ vk::mem::AllocatedImage generate_glint_noise()
 
         engine::update_descriptor_set_write_image( glint_desc_set, glint_noise_texture, 0 );
 
-        VkShaderModule glint_noise_init_module
-            = vk::create::shader_module( "../shaders/glint/glint_noise_init.spv" );
+        VkShaderModule glint_noise_init_module = vk::create::shader_module(
+            "../shaders/glint/glint_noise_init.spv"
+        );
 
         std::vector<engine::DescriptorSet> descs = { glint_desc_set };
 

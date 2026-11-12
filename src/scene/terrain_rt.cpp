@@ -9,8 +9,8 @@ namespace racecar {
 
 namespace {
 
-const std::filesystem::path TERRAIN_RT_DISPLACE_SHADER_MODULE_PATH
-    = "../shaders/terrain/terrain_rt_displace.spv";
+const std::filesystem::path
+    TERRAIN_RT_DISPLACE_SHADER_MODULE_PATH = "../shaders/terrain/terrain_rt_displace.spv";
 
 constexpr uint32_t DISPLACE_GROUP_SIZE = 8;
 
@@ -42,8 +42,10 @@ void create_grid_uniform( TerrainRayTracingInfo* info )
     info->grid_uniform.set_data(
         TerrainRTGrid {
             .world_min = glm::vec2( -TERRAIN_RT_WORLD_HALF_WIDTH, -TERRAIN_RT_WORLD_HALF_WIDTH ),
-            .world_size
-            = glm::vec2( 2.0f * TERRAIN_RT_WORLD_HALF_WIDTH, 2.0f * TERRAIN_RT_WORLD_HALF_WIDTH ),
+            .world_size = glm::vec2(
+                2.0f * TERRAIN_RT_WORLD_HALF_WIDTH,
+                2.0f * TERRAIN_RT_WORLD_HALF_WIDTH
+            ),
             .vertex_count = glm::uvec2( TERRAIN_RT_VERTS_PER_SIDE, TERRAIN_RT_VERTS_PER_SIDE ),
             ._pad = glm::uvec2( 0 ),
         }

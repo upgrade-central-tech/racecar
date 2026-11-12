@@ -230,8 +230,9 @@ AllSubmitInfo all_submit_info( CreateSubmitInfoDescriptor submit_info_descriptor
         submit_info_descriptor.signal_flag_bits,
         submit_info_descriptor.signal_semaphore
     );
-    VkCommandBufferSubmitInfo command_info
-        = vk::create::command_buffer_submit_info( submit_info_descriptor.command_buffer );
+    VkCommandBufferSubmitInfo command_info = vk::create::command_buffer_submit_info(
+        submit_info_descriptor.command_buffer
+    );
 
     return { .wait_info = wait_info, .signal_info = signal_info, .command_info = command_info };
 }

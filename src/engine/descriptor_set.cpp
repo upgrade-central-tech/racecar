@@ -25,8 +25,10 @@ DescriptorSet generate_descriptor_set(
         }
 
         for ( size_t i = 0; i < num_frames; ++i ) {
-            desc_set.layouts[i]
-                = engine::descriptor_layout_builder::build( shader_stage_flags, builder );
+            desc_set.layouts[i] = engine::descriptor_layout_builder::build(
+                shader_stage_flags,
+                builder
+            );
             desc_set.descriptor_sets[i] = engine::descriptor_allocator::allocate(
                 engine.descriptor_system.frame_allocators[i],
                 desc_set.layouts[i]
@@ -62,8 +64,10 @@ DescriptorSet generate_array_descriptor_set(
         }
 
         for ( size_t i = 0; i < num_frames; ++i ) {
-            desc_set.layouts[i]
-                = engine::descriptor_layout_builder::build( shader_stage_flags, builder );
+            desc_set.layouts[i] = engine::descriptor_layout_builder::build(
+                shader_stage_flags,
+                builder
+            );
             desc_set.descriptor_sets[i] = engine::descriptor_allocator::allocate(
                 engine.descriptor_system.frame_allocators[i],
                 desc_set.layouts[i]
@@ -330,11 +334,12 @@ void update_descriptor_set_acceleration_structure(
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        VkWriteDescriptorSetAccelerationStructureKHR desc_as_info
-            = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
-                .pNext = VK_NULL_HANDLE,
-                .accelerationStructureCount = 1,
-                .pAccelerationStructures = &tlas };
+        VkWriteDescriptorSetAccelerationStructureKHR desc_as_info = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
+            .pNext = VK_NULL_HANDLE,
+            .accelerationStructureCount = 1,
+            .pAccelerationStructures = &tlas
+        };
 
         VkWriteDescriptorSet write_desc_set = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -364,11 +369,12 @@ void update_descriptor_set_acceleration_structure_per_frame(
     }
 
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        VkWriteDescriptorSetAccelerationStructureKHR desc_as_info
-            = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
-                .pNext = VK_NULL_HANDLE,
-                .accelerationStructureCount = 1,
-                .pAccelerationStructures = &tlases[i] };
+        VkWriteDescriptorSetAccelerationStructureKHR desc_as_info = {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
+            .pNext = VK_NULL_HANDLE,
+            .accelerationStructureCount = 1,
+            .pAccelerationStructures = &tlases[i]
+        };
 
         VkWriteDescriptorSet write_desc_set = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,

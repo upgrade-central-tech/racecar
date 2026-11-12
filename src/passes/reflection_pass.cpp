@@ -12,8 +12,8 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view REFLECTION_PASS_SHADER_MODULE_PATH
-    = "../shaders/reflections/reflections.spv";
+constexpr std::string_view
+    REFLECTION_PASS_SHADER_MODULE_PATH = "../shaders/reflections/reflections.spv";
 
 }
 
@@ -113,18 +113,19 @@ void create_reflection_pass_resources(
         .index_count = uint32_t( quad_mesh.indices.size() ),
     };
 
-    engine::DrawTask reflection_prepass_task { .draw_resource_descriptor = reflection_prepass_desc,
-                                               .descriptor_sets
-                                               = { &desc_sets.uniform_desc_set,
-                                                   &desc_sets.sampler_desc_set,
-                                                   &desc_sets.gbuffer_desc_set,
-                                                   &desc_sets.car_tlas_desc_set,
-                                                   &desc_sets.car_desc_set,
-                                                   &desc_sets.combined_textures_desc_set,
-                                                   &desc_sets.terrain_shading_desc_set,
-                                                   &desc_sets.sun_visibility_desc_set,
-                                                   &desc_sets.gamestate_desc_set },
-                                               .pipeline = *reflection_pipeline };
+    engine::DrawTask reflection_prepass_task {
+        .draw_resource_descriptor = reflection_prepass_desc,
+        .descriptor_sets = { &desc_sets.uniform_desc_set,
+                             &desc_sets.sampler_desc_set,
+                             &desc_sets.gbuffer_desc_set,
+                             &desc_sets.car_tlas_desc_set,
+                             &desc_sets.car_desc_set,
+                             &desc_sets.combined_textures_desc_set,
+                             &desc_sets.terrain_shading_desc_set,
+                             &desc_sets.sun_visibility_desc_set,
+                             &desc_sets.gamestate_desc_set },
+        .pipeline = *reflection_pipeline
+    };
 
     *reflection_buffer_desc_set = engine::generate_descriptor_set(
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },

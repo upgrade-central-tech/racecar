@@ -73,8 +73,9 @@ TAAPass add_taa(
         engine::update_descriptor_set_uniform( uniform_desc_set, camera_buffer, 6 );
         engine::update_descriptor_set_uniform( uniform_desc_set, pass.buffer, 7 );
 
-        pass.uniform_desc_set
-            = std::make_unique<engine::DescriptorSet>( std::move( uniform_desc_set ) );
+        pass.uniform_desc_set = std::make_unique<engine::DescriptorSet>(
+            std::move( uniform_desc_set )
+        );
 
         engine::DescriptorSet history_desc_set = engine::generate_descriptor_set(
             {
@@ -103,8 +104,9 @@ TAAPass add_taa(
             4
         );
 
-        pass.history_desc_set
-            = std::make_unique<engine::DescriptorSet>( std::move( history_desc_set ) );
+        pass.history_desc_set = std::make_unique<engine::DescriptorSet>(
+            std::move( history_desc_set )
+        );
     }
 
     engine::add_cs_task(

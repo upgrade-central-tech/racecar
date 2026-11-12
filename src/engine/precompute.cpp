@@ -21,8 +21,9 @@ void begin_precompute_commandbuffer(
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
-    VkCommandBufferBeginInfo command_buffer_begin_info
-        = vk::create::command_buffer_begin_info( VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT );
+    VkCommandBufferBeginInfo command_buffer_begin_info = vk::create::command_buffer_begin_info(
+        VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+    );
     vkResetCommandBuffer( *precompute_cmdbuf, 0 );
     vkResetFences( vulkan.device, 1, &precompute_fence );
     vkBeginCommandBuffer( *precompute_cmdbuf, &command_buffer_begin_info );

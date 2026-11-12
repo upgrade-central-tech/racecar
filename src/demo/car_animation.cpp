@@ -51,8 +51,10 @@ void apply_racing_camera( camera::OrbitCamera& camera, glm::vec3 car_position )
 {
     const engine::State& engine = engine::State::GetConst();
     const float car_yaw = engine.gamestate.yaw;
-    const float yaw_offset
-        = std::remainder( car_yaw - racing_camera_yaw.value_or( car_yaw ), glm::two_pi<float>() );
+    const float yaw_offset = std::remainder(
+        car_yaw - racing_camera_yaw.value_or( car_yaw ),
+        glm::two_pi<float>()
+    );
     const float follow_rate = glm::min(
         engine.gamestate.speed / RACING_CAMERA_FOLLOW_DISTANCE,
         RACING_CAMERA_MAX_FOLLOW_RATE
@@ -96,12 +98,12 @@ void apply_demo_camera_motion(
     if ( gui.demo.enable_unlocked_camera ) {
         const engine::State& engine = engine::State::GetConst();
         const glm::vec2 world_position = engine.gamestate.world_position;
-        const glm::vec2 travel
-            = world_position - unlocked_camera_prev_world_position.value_or( world_position );
+        const glm::vec2 travel = world_position
+            - unlocked_camera_prev_world_position.value_or( world_position );
         unlocked_camera_prev_world_position = world_position;
 
-        const glm::vec3 eye
-            = camera::calculate_eye_position( camera ) - glm::vec3( travel.x, 0.f, travel.y );
+        const glm::vec3 eye = camera::calculate_eye_position( camera )
+            - glm::vec3( travel.x, 0.f, travel.y );
 
         if ( car_position.has_value() ) {
             camera.center = car_position.value();

@@ -13,11 +13,11 @@ void execute_gfx_task( const VkCommandBuffer& cmd_buf, GfxTask& gfx_task )
         color_attachment_infos.push_back(
             {
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-                .imageView
-                = attachment.mip_levels.empty() ? attachment.image_view : attachment.mip_levels[0],
+                .imageView = attachment.mip_levels.empty() ? attachment.image_view
+                                                           : attachment.mip_levels[0],
                 .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                .loadOp
-                = gfx_task.clear_color ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
+                .loadOp = gfx_task.clear_color ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                               : VK_ATTACHMENT_LOAD_OP_LOAD,
                 .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                 .clearValue = { .color = gfx_task.clear_color.value_or( VkClearColorValue { } ) },
             }
@@ -31,8 +31,8 @@ void execute_gfx_task( const VkCommandBuffer& cmd_buf, GfxTask& gfx_task )
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
             .imageView = gfx_task.depth_image->images[frame_idx].image_view,
             .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-            .loadOp
-            = gfx_task.clear_depth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
+            .loadOp = gfx_task.clear_depth ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                           : VK_ATTACHMENT_LOAD_OP_LOAD,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .clearValue = { .depthStencil = { .depth = gfx_task.clear_depth.value_or( 0.f ) } },
         };

@@ -100,17 +100,23 @@ Preset parse_preset_json( fs::path json_path )
 
         Preset::MaterialData material_data = {
             .slot = material["slot"].get<int>(),
-            .data = gui::Material {
-                .color = glm::vec4(material_color[0], material_color[1], material_color[2], material_color[3]),
-                .roughness = material["roughness"].get<float>(),
-                .metallic =  material["metallic"].get<float>(),
-                .clearcoat_roughness =  material["clearcoatRoughness"].get<float>(),
-                .clearcoat_weight =  material["clearcoatWeight"].get<float>(),
-                .glintiness =  material["glintiness"].get<float>(),
-                .glint_log_density =  material["glintLogDensity"].get<float>(),
-                .glint_roughness =  material["glintRoughness"].get<float>(),
-                .glint_randomness =  material["glintRandomness"].get<float>(),
-            },
+            .data =
+                gui::Material {
+                    .color = glm::vec4(
+                        material_color[0],
+                        material_color[1],
+                        material_color[2],
+                        material_color[3]
+                    ),
+                    .roughness = material["roughness"].get<float>(),
+                    .metallic = material["metallic"].get<float>(),
+                    .clearcoat_roughness = material["clearcoatRoughness"].get<float>(),
+                    .clearcoat_weight = material["clearcoatWeight"].get<float>(),
+                    .glintiness = material["glintiness"].get<float>(),
+                    .glint_log_density = material["glintLogDensity"].get<float>(),
+                    .glint_roughness = material["glintRoughness"].get<float>(),
+                    .glint_randomness = material["glintRandomness"].get<float>(),
+                },
         };
 
         preset.materials.push_back( std::move( material_data ) );
@@ -192,8 +198,11 @@ void update_preset_transition(
         float roughness = glm::mix( i_mat.roughness, f_mat.roughness, t );
         float metallic = glm::mix( i_mat.metallic, f_mat.metallic, t );
         float clearcoat = glm::mix( i_mat.clearcoat_weight, f_mat.clearcoat_weight, t );
-        float clearcoat_roughness
-            = glm::mix( i_mat.clearcoat_roughness, f_mat.clearcoat_roughness, t );
+        float clearcoat_roughness = glm::mix(
+            i_mat.clearcoat_roughness,
+            f_mat.clearcoat_roughness,
+            t
+        );
         float glintiness = glm::mix( i_mat.glintiness, f_mat.glintiness, t );
         float glint_log_density = glm::mix( i_mat.glint_log_density, f_mat.glint_log_density, t );
         float glint_roughness = glm::mix( i_mat.glint_roughness, f_mat.glint_roughness, t );

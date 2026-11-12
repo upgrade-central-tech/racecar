@@ -23,8 +23,8 @@ void update_debug_uniform_buffer(
 
         .debug_view = (uint32_t)RuntimeSettings::GetValue( RacecarSettings::DEBUG_VIEW ),
         .ray_traced_shadows = gui.debug.ray_traced_shadows,
-        .terrain_irradiance_strength
-        = RuntimeSettings::Get<RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH>(),
+        .terrain_irradiance_strength = RuntimeSettings::Get<
+            RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH>(),
         .car_irradiance_strength = RuntimeSettings::Get<RacecarSettings::CAR_IRRADIANCE_STRENGTH>(),
     };
 
@@ -39,8 +39,11 @@ void update_material_uniform_buffers(
 )
 {
     const engine::State& engine = engine::State::GetConst();
-    gui.debug.current_editing_material
-        = glm::clamp( gui.debug.current_editing_material, 0, int( num_materials ) );
+    gui.debug.current_editing_material = glm::clamp(
+        gui.debug.current_editing_material,
+        0,
+        int( num_materials )
+    );
     int mat_idx = gui.debug.current_editing_material;
     auto mat_data = material_uniform_buffers[size_t( mat_idx )].get_data();
     if ( gui.debug.load_material_into_gui ) {

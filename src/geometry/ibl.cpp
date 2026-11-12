@@ -38,11 +38,17 @@ vk::mem::AllocatedImage generate_diffuse_irradiance( std::filesystem::path file_
     uint32_t tile_height = 256;
     VkExtent3D tile_extent = { tile_width, tile_height, 1 };
 
-    vk::mem::AllocatedImage cubemap_image
-        = allocate_cube_map( tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
+    vk::mem::AllocatedImage cubemap_image = allocate_cube_map(
+        tile_extent,
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        1
+    );
 
-    vk::mem::AllocatedImage irradiance_rw_image
-        = allocate_cube_map( tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
+    vk::mem::AllocatedImage irradiance_rw_image = allocate_cube_map(
+        tile_extent,
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        1
+    );
 
     {
         // hardcode file paths for now because screw you
@@ -95,8 +101,9 @@ vk::mem::AllocatedImage generate_diffuse_irradiance( std::filesystem::path file_
 
         engine::update_descriptor_set_sampler( sampler_desc_set, sampler, 0 );
 
-        VkShaderModule irradiance_module
-            = vk::create::shader_module( "../shaders/prefilter/irradiance.spv" );
+        VkShaderModule irradiance_module = vk::create::shader_module(
+            "../shaders/prefilter/irradiance.spv"
+        );
 
         std::vector<engine::DescriptorSet> descs = { prefilter_desc_set, sampler_desc_set };
 
@@ -126,8 +133,8 @@ vk::mem::AllocatedImage generate_diffuse_irradiance( std::filesystem::path file_
                 compute_pipeline.handle
             );
 
-            VkDescriptorSet sets[]
-                = { prefilter_desc_set.descriptor_sets[0], sampler_desc_set.descriptor_sets[0] };
+            VkDescriptorSet sets[] = { prefilter_desc_set.descriptor_sets[0],
+                                       sampler_desc_set.descriptor_sets[0] };
 
             vkCmdBindDescriptorSets(
                 command_buffer,
@@ -204,11 +211,13 @@ cs_generate_diffuse_sh( vk::mem::AllocatedImage sample_cubemap, VkSampler sample
             0
         );
 
-        VkShaderModule irradiance_module
-            = vk::create::shader_module( "../shaders/prefilter/irradiance_sh.spv" );
+        VkShaderModule irradiance_module = vk::create::shader_module(
+            "../shaders/prefilter/irradiance_sh.spv"
+        );
 
-        std::vector<engine::DescriptorSet> descs
-            = { sh_projection_desc0_set, sampler_desc_set, sh_projection_desc1_set };
+        std::vector<engine::DescriptorSet> descs = { sh_projection_desc0_set,
+                                                     sampler_desc_set,
+                                                     sh_projection_desc1_set };
 
         std::vector<VkDescriptorSet> bind_descs = {
             sh_projection_desc0_set.descriptor_sets[0],
@@ -357,8 +366,8 @@ std::vector<glm::vec3> generate_diffuse_sh( std::filesystem::path file_path )
                     int index = l * ( l + 1 ) + m;
                     uint32_t uindex = static_cast<uint32_t>( index );
 
-                    sh_coefficients[uindex]
-                        += ( color * vk::utility::eval_SH( uindex, direction ) * solid_angle );
+                    sh_coefficients[uindex] +=
+                        ( color * vk::utility::eval_SH( uindex, direction ) * solid_angle );
                 }
             }
         }
@@ -484,8 +493,11 @@ vk::mem::AllocatedImage create_cubemap( std::filesystem::path file_path )
     uint32_t tile_height = 256;
     VkExtent3D tile_extent = { tile_width, tile_height, 1 };
 
-    vk::mem::AllocatedImage cubemap_image
-        = allocate_cube_map( tile_extent, VK_FORMAT_R32G32B32A32_SFLOAT, 1 );
+    vk::mem::AllocatedImage cubemap_image = allocate_cube_map(
+        tile_extent,
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        1
+    );
 
     // hardcode file paths for now because screw you
     std::string abs_file_path = std::filesystem::absolute( file_path ).string();
@@ -517,8 +529,8 @@ void load_cubemap(
 {
     const engine::State& engine = engine::State::GetConst();
     const size_t layer_count = 6;
-    const size_t face_size
-        = extent.width * extent.height * vk::utility::bytes_from_format( format );
+    const size_t face_size = extent.width * extent.height
+        * vk::utility::bytes_from_format( format );
     const size_t data_size = face_size * layer_count;
 
     try {

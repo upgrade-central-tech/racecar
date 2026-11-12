@@ -26,8 +26,8 @@ Pipeline create_gfx_pipeline(
     vk::Common& vulkan = vk::Common::GetMut();
     const engine::State& engine = engine::State::GetConst();
 
-    VkPipelineVertexInputStateCreateInfo vertex_input_info
-        = vertex_input_state_create_info.value_or(
+    VkPipelineVertexInputStateCreateInfo
+        vertex_input_info = vertex_input_state_create_info.value_or(
             VkPipelineVertexInputStateCreateInfo {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO }
         );
@@ -42,8 +42,8 @@ Pipeline create_gfx_pipeline(
     // hardcoding this for now
     VkPipelineTessellationStateCreateInfo tessellationInfo { };
     tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-    tessellationInfo.patchControlPoints
-        = 4; // this should be dynamic, but for now we're only using it for quads
+    tessellationInfo.patchControlPoints = 4; // this should be dynamic, but for now we're only using
+                                             // it for quads
 
     std::array<VkDynamicState, 2> dynamic_states = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -92,10 +92,10 @@ Pipeline create_gfx_pipeline(
 
     VkPipelineColorBlendAttachmentState color_blend_attachment_info = {
         .blendEnable = blend ? VK_TRUE : VK_FALSE,
-        .srcColorBlendFactor
-        = blend ? VK_BLEND_FACTOR_SRC_ALPHA : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
-        .dstColorBlendFactor
-        = blend ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
+        .srcColorBlendFactor = blend ? VK_BLEND_FACTOR_SRC_ALPHA
+                                     : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
+        .dstColorBlendFactor = blend ? VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA
+                                     : VkBlendFactor::VK_BLEND_FACTOR_ZERO,
         .colorBlendOp = VK_BLEND_OP_ADD,
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
             | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
@@ -182,8 +182,8 @@ Pipeline create_gfx_pipeline(
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = uint32_t( color_attachment_formats.size() ),
         .pColorAttachmentFormats = color_attachment_formats.data(),
-        .depthAttachmentFormat
-        = depth_test ? engine.depth_images[0].image_format : VK_FORMAT_UNDEFINED,
+        .depthAttachmentFormat = depth_test ? engine.depth_images[0].image_format
+                                            : VK_FORMAT_UNDEFINED,
     };
 
     VkGraphicsPipelineCreateInfo gfx_pipeline_info = {
@@ -230,10 +230,11 @@ Pipeline create_compute_pipeline(
     Pipeline compute_pipeline;
 
     {
-        VkPipelineLayoutCreateInfo pipeline_info
-            = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-                .setLayoutCount = static_cast<uint32_t>( layouts.size() ),
-                .pSetLayouts = layouts.data() };
+        VkPipelineLayoutCreateInfo pipeline_info = {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .setLayoutCount = static_cast<uint32_t>( layouts.size() ),
+            .pSetLayouts = layouts.data()
+        };
 
         vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &compute_pipeline.layout );
         vulkan.destructor_stack

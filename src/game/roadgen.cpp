@@ -79,8 +79,11 @@ size_t closest_road_segment(
         const glm::vec2 p1 = glm::vec2( points[i + 1].x, points[i + 1].z ) - position;
         const glm::vec2 p2 = glm::vec2( points[i + 2].x, points[i + 2].z ) - position;
 
-        const ClosestPointData closest
-            = closest_point_on_quadratic_bezier( 0.5f * ( p0 + p1 ), p1, 0.5f * ( p1 + p2 ) );
+        const ClosestPointData closest = closest_point_on_quadratic_bezier(
+            0.5f * ( p0 + p1 ),
+            p1,
+            0.5f * ( p1 + p2 )
+        );
 
         if ( closest.dist_sq < best_dist_sq ) {
             best_dist_sq = closest.dist_sq;

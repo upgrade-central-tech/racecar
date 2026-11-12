@@ -75,12 +75,12 @@ void update_game_state( const scene::Scene& scene )
     const float speed_sq = gamestate.speed * gamestate.speed;
     if ( speed_sq > 0.0f ) {
         const float grip_wheel_angle = glm::atan( wheelbase * MAX_LATERAL_ACCELERATION / speed_sq );
-        gamestate.wheel_angle
-            = glm::clamp( gamestate.wheel_angle, -grip_wheel_angle, grip_wheel_angle );
+        gamestate
+            .wheel_angle = glm::clamp( gamestate.wheel_angle, -grip_wheel_angle, grip_wheel_angle );
     }
 
-    const float lateral_acceleration
-        = speed_sq * glm::abs( glm::tan( gamestate.wheel_angle ) ) / wheelbase;
+    const float lateral_acceleration = speed_sq * glm::abs( glm::tan( gamestate.wheel_angle ) )
+        / wheelbase;
     gamestate.speed = glm::max(
         gamestate.speed - TURNING_DRAG * lateral_acceleration * float( state.delta ),
         0.0f
@@ -97,8 +97,8 @@ void update_game_state( const scene::Scene& scene )
     gamestate.integrated_distance_traveled += distance;
 
     glm::vec2 heading = glm::vec2( glm::sin( gamestate.yaw ), glm::cos( gamestate.yaw ) );
-    glm::vec2 back_axle_position
-        = gamestate.world_position + back_axle_z * heading + heading * distance;
+    glm::vec2 back_axle_position = gamestate.world_position + back_axle_z * heading
+        + heading * distance;
 
     gamestate.yaw += distance * glm::tan( gamestate.wheel_angle ) / wheelbase;
 

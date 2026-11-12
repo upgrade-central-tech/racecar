@@ -10,10 +10,10 @@
 
 namespace racecar::atmosphere {
 
-static constexpr std::string_view BAKE_ATMS_SHADER_PATH
-    = "../shaders/atmosphere/sky/bake_atmosphere.spv";
-static constexpr std::string_view BAKE_ATMS_MIPS_SHADER_PATH
-    = "../shaders/atmosphere/sky/bake_atmosphere_mips.spv";
+static constexpr std::string_view
+    BAKE_ATMS_SHADER_PATH = "../shaders/atmosphere/sky/bake_atmosphere.spv";
+static constexpr std::string_view
+    BAKE_ATMS_MIPS_SHADER_PATH = "../shaders/atmosphere/sky/bake_atmosphere_mips.spv";
 
 static const uint32_t mip0_size = 512;
 static const uint32_t mip_levels = 5;
@@ -132,8 +132,10 @@ void initialize_atmosphere_baker(
 
     atms_baker.mip_data.resize( mip_levels );
     for ( size_t mip = 0; mip < mip_levels; mip++ ) {
-        atms_baker.mip_data[mip]
-            = create_uniform_buffer<ub_data::OctahedralData>( { }, engine.frame_overlap );
+        atms_baker.mip_data[mip] = create_uniform_buffer<ub_data::OctahedralData>(
+            { },
+            engine.frame_overlap
+        );
     }
 }
 

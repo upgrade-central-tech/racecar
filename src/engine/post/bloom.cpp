@@ -25,8 +25,9 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
     // correct layouts
 
     {
-        VkExtent3D current_extent
-            = { engine.swapchain.extent.width / 2, engine.swapchain.extent.height / 2, 1 };
+        VkExtent3D current_extent = { engine.swapchain.extent.width / 2,
+                                      engine.swapchain.extent.height / 2,
+                                      1 };
 
         for ( size_t i = 0; i < BloomPass::NUM_PASSES; ++i ) {
             pass.images[i] = engine::create_rwimage(
@@ -67,8 +68,9 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
         );
         engine::update_descriptor_set_uniform( uniform_desc_set, pass.bloom_ub, 0 );
 
-        pass.uniform_desc_set
-            = std::make_unique<engine::DescriptorSet>( std::move( uniform_desc_set ) );
+        pass.uniform_desc_set = std::make_unique<engine::DescriptorSet>(
+            std::move( uniform_desc_set )
+        );
     }
 
     {
@@ -82,8 +84,9 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
             0
         );
 
-        pass.sampler_desc_set
-            = std::make_unique<engine::DescriptorSet>( std::move( sampler_desc_set ) );
+        pass.sampler_desc_set = std::make_unique<engine::DescriptorSet>(
+            std::move( sampler_desc_set )
+        );
     }
 
     {
@@ -110,8 +113,9 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
             "threshold"
         );
 
-        pass.threshold_desc_set
-            = std::make_unique<engine::DescriptorSet>( std::move( threshold_desc_set ) );
+        pass.threshold_desc_set = std::make_unique<engine::DescriptorSet>(
+            std::move( threshold_desc_set )
+        );
 
         engine::add_cs_task(
             task_list,
@@ -186,8 +190,9 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
             "downsample"
         );
 
-        pass.downsample_desc_sets[i]
-            = std::make_unique<engine::DescriptorSet>( std::move( downsample_desc_set ) );
+        pass.downsample_desc_sets[i] = std::make_unique<engine::DescriptorSet>(
+            std::move( downsample_desc_set )
+        );
 
         engine::add_cs_task(
             task_list,
@@ -196,8 +201,9 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                 .descriptor_sets = { pass.downsample_desc_sets[i].get(),
                                      pass.uniform_desc_set.get(),
                                      pass.sampler_desc_set.get() },
-                .group_size
-                = { ( output_extent.width + 7 ) / 8, ( output_extent.height + 7 ) / 8, 1 },
+                .group_size = { ( output_extent.width + 7 ) / 8,
+                                ( output_extent.height + 7 ) / 8,
+                                1 },
             },
             "Bloom Downsample"
         );
@@ -266,8 +272,9 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
         );
 
         size_t desc_set_idx = BloomPass::NUM_PASSES - 1 - i;
-        pass.upsample_desc_sets[desc_set_idx]
-            = std::make_unique<engine::DescriptorSet>( std::move( upsample_desc_set ) );
+        pass.upsample_desc_sets[desc_set_idx] = std::make_unique<engine::DescriptorSet>(
+            std::move( upsample_desc_set )
+        );
 
         engine::add_cs_task(
             task_list,
@@ -276,8 +283,9 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                 .descriptor_sets = { pass.upsample_desc_sets[desc_set_idx].get(),
                                      pass.uniform_desc_set.get(),
                                      pass.sampler_desc_set.get() },
-                .group_size
-                = { ( output_extent.width + 7 ) / 8, ( output_extent.height + 7 ) / 8, 1 },
+                .group_size = { ( output_extent.width + 7 ) / 8,
+                                ( output_extent.height + 7 ) / 8,
+                                1 },
             },
             "Bloom Upsample"
         );

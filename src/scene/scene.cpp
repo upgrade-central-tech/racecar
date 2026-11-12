@@ -95,11 +95,15 @@ void load_gltf(
     bool has_loaded_successfully = false;
     // Binary files
     if ( ext == ".glb" ) {
-        has_loaded_successfully
-            = loader.LoadBinaryFromFile( &model, &err, &warn, file_path.string() );
+        has_loaded_successfully = loader.LoadBinaryFromFile(
+            &model,
+            &err,
+            &warn,
+            file_path.string()
+        );
     } else { // ASCII files
-        has_loaded_successfully
-            = loader.LoadASCIIFromFile( &model, &err, &warn, file_path.string() );
+        has_loaded_successfully = loader
+                                      .LoadASCIIFromFile( &model, &err, &warn, file_path.string() );
     }
 
     // Check for errors and warnings
@@ -132,10 +136,12 @@ void load_gltf(
     for ( const tinygltf::Material& loaded_mat : model.materials ) {
         Material new_mat = { };
 
-        new_mat.base_color
-            = double_array_to_vec3( loaded_mat.pbrMetallicRoughness.baseColorFactor );
-        new_mat.base_color_texture_index
-            = global_texture_index( loaded_mat.pbrMetallicRoughness.baseColorTexture.index );
+        new_mat.base_color = double_array_to_vec3(
+            loaded_mat.pbrMetallicRoughness.baseColorFactor
+        );
+        new_mat.base_color_texture_index = global_texture_index(
+            loaded_mat.pbrMetallicRoughness.baseColorTexture.index
+        );
         new_mat.alpha = static_cast<float>( loaded_mat.pbrMetallicRoughness.baseColorFactor[3] );
 
         new_mat.metallic = static_cast<float>( loaded_mat.pbrMetallicRoughness.metallicFactor );
@@ -146,8 +152,9 @@ void load_gltf(
 
         if ( loaded_mat.extensions.count( "KHR_materials_specular" ) != 0 ) {
             auto specular = loaded_mat.extensions.find( "KHR_materials_specular" )->second;
-            new_mat.specular
-                = static_cast<float>( specular.Get( "specularFactor" ).GetNumberAsDouble() );
+            new_mat.specular = static_cast<float>(
+                specular.Get( "specularFactor" ).GetNumberAsDouble()
+            );
             // newMat.specularTint = specular.Get("specularColorFactor")
         }
         if ( loaded_mat.extensions.count( "KHR_materials_ior" ) != 0 ) {
@@ -157,14 +164,15 @@ void load_gltf(
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_clearcoat" ) ) {
-            new_mat.clearcoat
-                = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_clearcoat" )
-                                          ->second.Get( "clearcoatFactor" )
-                                          .GetNumberAsDouble() );
-            new_mat.clearcoat_roughness
-                = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_clearcoat" )
-                                          ->second.Get( "clearcoatRoughnessFactor" )
-                                          .GetNumberAsDouble() );
+            new_mat.clearcoat = static_cast<float>( loaded_mat.extensions
+                                                        .find( "KHR_materials_clearcoat" )
+                                                        ->second.Get( "clearcoatFactor" )
+                                                        .GetNumberAsDouble() );
+            new_mat.clearcoat_roughness = static_cast<float>(
+                loaded_mat.extensions.find( "KHR_materials_clearcoat" )
+                    ->second.Get( "clearcoatRoughnessFactor" )
+                    .GetNumberAsDouble()
+            );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_sheen" ) ) {
@@ -180,15 +188,16 @@ void load_gltf(
                     color_factor.Get( 2 ).GetNumberAsDouble()
                 );
             }
-            new_mat.sheen_roughness
-                = static_cast<float>( sheen.Get( "sheenRoughnessFactor" ).GetNumberAsDouble() );
+            new_mat.sheen_roughness = static_cast<float>(
+                sheen.Get( "sheenRoughnessFactor" ).GetNumberAsDouble()
+            );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_transmission" ) ) {
-            new_mat.transmission
-                = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_transmission" )
-                                          ->second.Get( "transmissionFactor" )
-                                          .GetNumberAsDouble() );
+            new_mat.transmission = static_cast<float>( loaded_mat.extensions
+                                                           .find( "KHR_materials_transmission" )
+                                                           ->second.Get( "transmissionFactor" )
+                                                           .GetNumberAsDouble() );
         }
 
         new_mat.emissive = double_array_to_vec3( loaded_mat.emissiveFactor );
@@ -201,8 +210,9 @@ void load_gltf(
 
         new_mat.normal_texture_index = global_texture_index( loaded_mat.normalTexture.index );
         new_mat.normal_texture_weight = static_cast<int>( loaded_mat.normalTexture.scale );
-        new_mat.occulusion_texture_index
-            = global_texture_index( loaded_mat.occlusionTexture.index );
+        new_mat.occulusion_texture_index = global_texture_index(
+            loaded_mat.occlusionTexture.index
+        );
 
         new_mat.double_sided = loaded_mat.doubleSided;
         new_mat.unlit = false;
@@ -225,12 +235,12 @@ void load_gltf(
     // Mark albedo and emission as SRGB.
     for ( const Material& mat : scene.materials ) {
         if ( mat.base_color_texture_index.has_value() ) {
-            scene.textures[size_t( mat.base_color_texture_index.value() )].color_space
-                = ColorSpace::SRGB;
+            scene.textures[size_t( mat.base_color_texture_index.value() )]
+                .color_space = ColorSpace::SRGB;
         }
         if ( mat.emmisive_texture_index.has_value() ) {
-            scene.textures[size_t( mat.emmisive_texture_index.value() )].color_space
-                = ColorSpace::SRGB;
+            scene.textures[size_t( mat.emmisive_texture_index.value() )]
+                .color_space = ColorSpace::SRGB;
         }
     }
 
@@ -240,8 +250,11 @@ void load_gltf(
         const tinygltf::Texture& loaded_tex = model.textures[i];
         const tinygltf::Image& loaded_img = model.images[size_t( loaded_tex.source )];
 
-        VkFormat image_format
-            = get_vk_format( texture.bits_per_channel, texture.num_channels, texture.color_space );
+        VkFormat image_format = get_vk_format(
+            texture.bits_per_channel,
+            texture.num_channels,
+            texture.color_space
+        );
 
         texture.data = engine::create_image(
             const_cast<void*>( static_cast<const void*>( loaded_img.image.data() ) ),
@@ -325,8 +338,11 @@ void load_gltf(
                 );
             }
             if ( loaded_node.scale.size() ) {
-                scale
-                    = glm::vec3( loaded_node.scale[0], loaded_node.scale[1], loaded_node.scale[2] );
+                scale = glm::vec3(
+                    loaded_node.scale[0],
+                    loaded_node.scale[1],
+                    loaded_node.scale[2]
+                );
             }
 
             // Combine translate, rotation, and scale
@@ -346,8 +362,8 @@ void load_gltf(
         // the future.
         if ( loaded_node.mesh != -1 ) {
             new_node->mesh = std::make_unique<Mesh>();
-            const tinygltf::Mesh& loaded_mesh
-                = model.meshes[static_cast<size_t>( loaded_node.mesh )];
+            const tinygltf::Mesh&
+                loaded_mesh = model.meshes[static_cast<size_t>( loaded_node.mesh )];
 
             // Load primitives
             for ( const tinygltf::Primitive& loaded_prim : loaded_mesh.primitives ) {
@@ -378,8 +394,8 @@ void load_gltf(
 
                 if ( loaded_prim.attributes.count( "POSITION" ) > 0 ) {
                     int accessor_id = loaded_prim.attributes.at( "POSITION" );
-                    const tinygltf::Accessor& accessor
-                        = model.accessors[static_cast<size_t>( accessor_id )];
+                    const tinygltf::Accessor&
+                        accessor = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
                         log::warn(
@@ -397,8 +413,8 @@ void load_gltf(
                         );
                     }
 
-                    const tinygltf::BufferView& buffer_view
-                        = model.bufferViews[static_cast<size_t>( buffer_view_id )];
+                    const tinygltf::BufferView&
+                        buffer_view = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
                     size_t byte_length = accessor.count * 3 * sizeof( float ); // vec3f
@@ -412,8 +428,8 @@ void load_gltf(
 
                 if ( loaded_prim.attributes.count( "NORMAL" ) > 0 ) {
                     int accessor_id = loaded_prim.attributes.at( "NORMAL" );
-                    const tinygltf::Accessor& accessor
-                        = model.accessors[static_cast<size_t>( accessor_id )];
+                    const tinygltf::Accessor&
+                        accessor = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
                         log::warn(
@@ -431,8 +447,8 @@ void load_gltf(
                         );
                     }
 
-                    const tinygltf::BufferView& buffer_view
-                        = model.bufferViews[static_cast<size_t>( buffer_view_id )];
+                    const tinygltf::BufferView&
+                        buffer_view = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
                     size_t byte_length = accessor.count * 3 * sizeof( float ); // vec3f
@@ -447,8 +463,8 @@ void load_gltf(
                 // Currently only accepting one uv coordinate per primative.
                 if ( loaded_prim.attributes.count( "TEXCOORD_0" ) > 0 ) {
                     int accessor_id = loaded_prim.attributes.at( "TEXCOORD_0" );
-                    const tinygltf::Accessor& accessor
-                        = model.accessors[static_cast<size_t>( accessor_id )];
+                    const tinygltf::Accessor&
+                        accessor = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
                     if ( accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT ) {
                         log::warn(
@@ -467,8 +483,8 @@ void load_gltf(
                         );
                     }
 
-                    const tinygltf::BufferView& buffer_view
-                        = model.bufferViews[static_cast<size_t>( buffer_view_id )];
+                    const tinygltf::BufferView&
+                        buffer_view = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     size_t length = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
                     size_t byte_length = accessor.count * 2 * sizeof( float ); // vec2f
@@ -511,8 +527,8 @@ void load_gltf(
 
                 if ( loaded_prim.indices != -1 ) {
                     int accessor_id = loaded_prim.indices;
-                    const tinygltf::Accessor& accessor
-                        = model.accessors[static_cast<size_t>( accessor_id )];
+                    const tinygltf::Accessor&
+                        accessor = model.accessors[static_cast<size_t>( accessor_id )];
                     int buffer_view_id = accessor.bufferView;
 
                     if ( accessor.type != TINYGLTF_TYPE_SCALAR ) {
@@ -523,8 +539,8 @@ void load_gltf(
                         );
                     }
 
-                    const tinygltf::BufferView& buffer_view
-                        = model.bufferViews[static_cast<size_t>( buffer_view_id )];
+                    const tinygltf::BufferView&
+                        buffer_view = model.bufferViews[static_cast<size_t>( buffer_view_id )];
                     new_prim.ind_offset = static_cast<int>( out_global_indices.size() );
                     new_prim.ind_count = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
@@ -585,10 +601,17 @@ void load_gltf(
     }
 
     // setting some constants. this should probably be cleaned up later
-    scene.demo_scene_nodes.back_axle_local_z
-        = get_position_in_scene( scene, scene.demo_scene_nodes.wheel_back_left_id.value() ).z;
-    scene.demo_scene_nodes.front_axle_local_z
-        = get_position_in_scene( scene, scene.demo_scene_nodes.wheel_front_left_id.value() ).z;
+    scene.demo_scene_nodes.back_axle_local_z = get_position_in_scene(
+                                                   scene,
+                                                   scene.demo_scene_nodes.wheel_back_left_id.value()
+    )
+                                                   .z;
+    scene.demo_scene_nodes
+        .front_axle_local_z = get_position_in_scene(
+                                  scene,
+                                  scene.demo_scene_nodes.wheel_front_left_id.value()
+    )
+                                  .z;
 }
 
 bool load_hdri( std::string file_path, Scene& scene )
@@ -607,8 +630,11 @@ bool load_hdri( std::string file_path, Scene& scene )
     hdri.bits_per_channel = 32; // via stbi_loadf
     hdri.num_channels = 4; // via stbi_loadf
 
-    VkFormat image_format
-        = get_vk_format( hdri.bits_per_channel, hdri.num_channels, ColorSpace::SFLOAT );
+    VkFormat image_format = get_vk_format(
+        hdri.bits_per_channel,
+        hdri.num_channels,
+        ColorSpace::SFLOAT
+    );
     hdri.data = engine::create_image(
         static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },

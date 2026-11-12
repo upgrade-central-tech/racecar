@@ -102,15 +102,15 @@ void add_ao( AoPass& ao_pass, TaskList& task_list )
     engine::add_pipeline_barrier(
         task_list,
         { .buffer_barriers = { },
-          .image_barriers
-          = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                     .src_access = VK_ACCESS_2_NONE,
-                                     .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                     .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                                     .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                     .image = &ao_pass.ao_output,
-                                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
+          .image_barriers = { engine::ImageBarrier {
+              .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+              .src_access = VK_ACCESS_2_NONE,
+              .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+              .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+              .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+              .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+              .image = &ao_pass.ao_output,
+              .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
           .label = "AO Output Pre-Pass Pipeline Barrier" }
     );
 
@@ -129,16 +129,16 @@ void add_ao( AoPass& ao_pass, TaskList& task_list )
     engine::add_pipeline_barrier(
         task_list,
         { .buffer_barriers = { },
-          .image_barriers
-          = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                     .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                                     .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                     .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT
-                                         | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                                     .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                     .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                     .image = &ao_pass.ao_output,
-                                     .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
+          .image_barriers = { engine::ImageBarrier {
+              .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+              .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+              .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+              .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT
+                  | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+              .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+              .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+              .image = &ao_pass.ao_output,
+              .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
           .label = "AO Output Post-Pass Pipeline Barrier" }
     );
 

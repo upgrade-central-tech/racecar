@@ -258,8 +258,10 @@ void update(
 
         if ( ImGui::BeginTabBar( "Categories" ) ) {
             if ( ImGui::BeginTabItem( "Materials" ) ) {
-                gui.debug.load_material_into_gui
-                    = ImGui::InputInt( "Editing Material", &gui.debug.current_editing_material );
+                gui.debug.load_material_into_gui = ImGui::InputInt(
+                    "Editing Material",
+                    &gui.debug.current_editing_material
+                );
                 ImGui::ColorEdit4( "Base color", &gui.debug.color[0] );
                 ImGui::SliderFloat( "Roughness", &gui.debug.roughness, 0, 1.0f );
                 ImGui::SliderFloat( "Metallic", &gui.debug.metallic, 0, 1.0f );
@@ -562,19 +564,19 @@ void use_preset(
             size_t material_idx = static_cast<size_t>( preset_material.slot );
             ub_data::Material material = material_buffers[material_idx].get_data();
 
-            Preset::MaterialData before_material
-                = { .slot = preset_material.slot,
-                    .data = gui::Material {
-                        .color = material.base_color,
-                        .roughness = material.roughness,
-                        .metallic = material.metallic,
-                        .clearcoat_roughness = material.clearcoat_roughness,
-                        .clearcoat_weight = material.clearcoat,
-                        .glintiness = material.glintiness,
-                        .glint_log_density = material.glint_log_density,
-                        .glint_roughness = material.roughness,
-                        .glint_randomness = material.glint_randomness,
-                    } };
+            Preset::MaterialData
+                before_material = { .slot = preset_material.slot,
+                                    .data = gui::Material {
+                                        .color = material.base_color,
+                                        .roughness = material.roughness,
+                                        .metallic = material.metallic,
+                                        .clearcoat_roughness = material.clearcoat_roughness,
+                                        .clearcoat_weight = material.clearcoat,
+                                        .glintiness = material.glintiness,
+                                        .glint_log_density = material.glint_log_density,
+                                        .glint_roughness = material.roughness,
+                                        .glint_randomness = material.glint_randomness,
+                                    } };
 
             before_materials.push_back( std::move( before_material ) );
             log::info( "[preset] Transitioning material with ID {}", preset_material.slot );

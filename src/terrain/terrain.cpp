@@ -14,20 +14,20 @@
 
 #include <glm/ext/vector_float4.hpp>
 
-const std::filesystem::path TERRAIN_SHADER_PREPASS_MODULE_PATH
-    = "../shaders/terrain/terrain_prepass.spv";
-const std::filesystem::path TERRAIN_SHADER_LIGHTING_MODULE_PATH
-    = "../shaders/terrain/cs_terrain_draw.spv";
+const std::filesystem::path
+    TERRAIN_SHADER_PREPASS_MODULE_PATH = "../shaders/terrain/terrain_prepass.spv";
+const std::filesystem::path
+    TERRAIN_SHADER_LIGHTING_MODULE_PATH = "../shaders/terrain/cs_terrain_draw.spv";
 
 // TEST FILE PATHS...
 const std::filesystem::path TEST_LAYER_MASK_PATH = "../assets/LUT/test_terrain_map.bmp";
-const std::filesystem::path TEST_GRASS_ALBEDO_ROUGHNESS_PATH
-    = "../assets/terrain/better_grass/grass_albedo_roughness.png";
-const std::filesystem::path TEST_GRASS_NORMAL_AO_PATH
-    = "../assets/terrain/better_grass/grass_normal_ao.png";
+const std::filesystem::path
+    TEST_GRASS_ALBEDO_ROUGHNESS_PATH = "../assets/terrain/better_grass/grass_albedo_roughness.png";
+const std::filesystem::path
+    TEST_GRASS_NORMAL_AO_PATH = "../assets/terrain/better_grass/grass_normal_ao.png";
 
-const std::filesystem::path TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH
-    = "../assets/terrain/asphalt_albedo_roughness.png";
+const std::filesystem::path
+    TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH = "../assets/terrain/asphalt_albedo_roughness.png";
 const std::filesystem::path TEST_ASPHALT_NORMAL_AO_PATH = "../assets/terrain/asphalt_normal_ao.png";
 
 const std::filesystem::path TERRAIN_NOISE_PAPTH = "../assets/LUT/terrain_noise.jpg";
@@ -110,17 +110,31 @@ void initialize_terrain(
             | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     );
 
-    terrain.terrain_uniform
-        = create_uniform_buffer<ub_data::TerrainData>( { }, engine.frame_overlap );
+    terrain.terrain_uniform = create_uniform_buffer<ub_data::TerrainData>(
+        { },
+        engine.frame_overlap
+    );
 
-    terrain.test_layer_mask
-        = engine::load_image( TEST_LAYER_MASK_PATH, 2, VK_FORMAT_R8G8_UNORM, false );
+    terrain.test_layer_mask = engine::load_image(
+        TEST_LAYER_MASK_PATH,
+        2,
+        VK_FORMAT_R8G8_UNORM,
+        false
+    );
 
-    terrain.grass_albedo_roughness
-        = engine::load_image( TEST_GRASS_ALBEDO_ROUGHNESS_PATH, 4, VK_FORMAT_R8G8B8A8_SRGB, true );
+    terrain.grass_albedo_roughness = engine::load_image(
+        TEST_GRASS_ALBEDO_ROUGHNESS_PATH,
+        4,
+        VK_FORMAT_R8G8B8A8_SRGB,
+        true
+    );
 
-    terrain.grass_normal_ao
-        = engine::load_image( TEST_GRASS_NORMAL_AO_PATH, 4, VK_FORMAT_R16G16B16A16_SFLOAT, true );
+    terrain.grass_normal_ao = engine::load_image(
+        TEST_GRASS_NORMAL_AO_PATH,
+        4,
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        true
+    );
 
     terrain.asphalt_albedo_roughness = engine::load_image(
         TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH,
@@ -129,11 +143,15 @@ void initialize_terrain(
         true
     );
 
-    terrain.asphalt_normal_ao
-        = engine::load_image( TEST_ASPHALT_NORMAL_AO_PATH, 4, VK_FORMAT_R16G16B16A16_SFLOAT, true );
+    terrain.asphalt_normal_ao = engine::load_image(
+        TEST_ASPHALT_NORMAL_AO_PATH,
+        4,
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        true
+    );
 
-    terrain.terrain_noise
-        = engine::load_image( TERRAIN_NOISE_PAPTH, 2, VK_FORMAT_R8G8_UNORM, true );
+    terrain
+        .terrain_noise = engine::load_image( TERRAIN_NOISE_PAPTH, 2, VK_FORMAT_R8G8_UNORM, true );
 
     // ============================================================================================
     // Prepass resources
@@ -543,9 +561,10 @@ void draw_terrain_wireframe(
     Terrain& terrain, engine::TaskList& task_list, engine::RWImage& screen_color
 )
 {
-    engine::GfxTask terrain_wireframe_gfx_task
-        = { .color_attachments = { &screen_color },
-            .extent = engine::State::GetConst().swapchain.extent };
+    engine::GfxTask terrain_wireframe_gfx_task = {
+        .color_attachments = { &screen_color },
+        .extent = engine::State::GetConst().swapchain.extent
+    };
 
     engine::DrawResourceDescriptor draw_descriptor = {
         .vertex_buffers = { terrain.mesh_buffers.vertex_buffer.handle },
@@ -605,10 +624,15 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
 
     float road_width = RuntimeSettings::GetFloat( RacecarSettings::TERRAIN_ROAD_WIDTH );
     float blend_width = RuntimeSettings::GetFloat( RacecarSettings::TERRAIN_BLEND_WIDTH );
-    float distance_fog
-        = RuntimeSettings::GetEnabled( RacecarSettings::TERRAIN_DISTANCE_FOG ) ? 1.0f : 0.0f;
-    terrain_ub.packed_floats1
-        = glm::vec4( road_width, blend_width, TERRAIN_HEIGHT_NORMAL_EPS, distance_fog );
+    float distance_fog = RuntimeSettings::GetEnabled( RacecarSettings::TERRAIN_DISTANCE_FOG )
+        ? 1.0f
+        : 0.0f;
+    terrain_ub.packed_floats1 = glm::vec4(
+        road_width,
+        blend_width,
+        TERRAIN_HEIGHT_NORMAL_EPS,
+        distance_fog
+    );
 
     terrain.terrain_uniform.set_data( terrain_ub );
     terrain.terrain_uniform.update( engine.get_frame_index() );

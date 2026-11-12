@@ -6,8 +6,8 @@ namespace racecar::engine {
 
 namespace {
 
-constexpr std::string_view DEPTH_PREPASS_SHADER_MODULE_PATH
-    = "../shaders/deferred/depth_prepass.spv";
+constexpr std::string_view
+    DEPTH_PREPASS_SHADER_MODULE_PATH = "../shaders/deferred/depth_prepass.spv";
 
 }
 

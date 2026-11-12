@@ -48,8 +48,10 @@ GPUMeshBuffers upload_mesh( std::span<uint32_t> indices, std::span<Vertex> verti
             .buffer = new_mesh_buffers.vertex_buffer.handle,
         };
 
-        new_mesh_buffers.vertex_buffer_address
-            = vkGetBufferDeviceAddress( vulkan.device, &device_address_info );
+        new_mesh_buffers.vertex_buffer_address = vkGetBufferDeviceAddress(
+            vulkan.device,
+            &device_address_info
+        );
     }
 
     // Need to upload this to the buffer, analogous to DX12 default + upload heap
@@ -136,11 +138,11 @@ void generate_tangents( Mesh& mesh )
         glm::vec3 tangent = f * ( deltaUV2.y * edge1 - deltaUV1.y * edge2 );
         glm::vec3 bitangent = f * ( -deltaUV2.x * edge1 + deltaUV1.x * edge2 );
 
-        float w
-            = glm::dot(
-                  normalize( glm::cross( vertices[i0].normal, tangent ) ),
-                  normalize( bitangent )
-              ) < 0.0f
+        float w = glm::dot(
+                      normalize( glm::cross( vertices[i0].normal, tangent ) ),
+                      normalize( bitangent )
+                  )
+                < 0.0f
             ? -1.0f
             : 0.0f;
 
@@ -151,8 +153,9 @@ void generate_tangents( Mesh& mesh )
 
     for ( Vertex& vertex : vertices ) {
         glm::vec normal = glm::normalize( vertex.normal );
-        glm::vec3 tangent
-            = glm::normalize( glm::vec3( vertex.tangent.x, vertex.tangent.y, vertex.tangent.z ) );
+        glm::vec3 tangent = glm::normalize(
+            glm::vec3( vertex.tangent.x, vertex.tangent.y, vertex.tangent.z )
+        );
         float tangent_w = vertex.tangent.w < 0.0f ? -1.0f : 1.0f;
 
         tangent = glm::normalize( tangent - normal * glm::dot( normal, tangent ) );

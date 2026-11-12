@@ -61,16 +61,20 @@ vkb::Swapchain create_swapchain( SDL_Window* window )
 #endif
 
     vkb::SwapchainBuilder swapchain_builder( vulkan.device );
-    vkb::Result<vkb::Swapchain> swapchain_ret
-        = swapchain_builder.set_desired_extent( swap_extent.width, swap_extent.height )
-              .set_desired_min_image_count( capabilities.minImageCount )
-              .set_desired_present_mode( present_mode )
-              .set_desired_format( { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR } )
-              .set_image_usage_flags(
-                  VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-                  | VK_IMAGE_USAGE_TRANSFER_DST_BIT
-              )
-              .build();
+    vkb::Result<vkb::Swapchain>
+        swapchain_ret = swapchain_builder
+                            .set_desired_extent( swap_extent.width, swap_extent.height )
+                            .set_desired_min_image_count( capabilities.minImageCount )
+                            .set_desired_present_mode( present_mode )
+                            .set_desired_format(
+                                { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }
+                            )
+                            .set_image_usage_flags(
+                                VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+                                | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+                                | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+                            )
+                            .build();
 
     if ( !swapchain_ret ) {
         auto swapchain_error = static_cast<vkb::SwapchainError>( swapchain_ret.error().value() );
@@ -108,8 +112,10 @@ void create_frame_data()
     engine.frame_overlap = static_cast<uint32_t>( num_images );
     engine.frame_number = 0;
 
-    const VkCommandBufferAllocateInfo cmd_buf_info
-        = vk::create::command_buffer_allocate_info( engine.cmd_pool, 1 );
+    const VkCommandBufferAllocateInfo cmd_buf_info = vk::create::command_buffer_allocate_info(
+        engine.cmd_pool,
+        1
+    );
     const VkSemaphoreCreateInfo semaphore_info = vk::create::semaphore_info();
     const VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
 
@@ -189,8 +195,9 @@ void create_depth_images()
         vk::mem::AllocatedImage& depth_image = engine.depth_images[i];
 
         depth_image.image_format = VK_FORMAT_D32_SFLOAT;
-        depth_image.image_extent
-            = { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 };
+        depth_image.image_extent = { engine.swapchain.extent.width,
+                                     engine.swapchain.extent.height,
+                                     1 };
 
         VkImageUsageFlags depth_image_usages = { };
         depth_image_usages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -205,9 +212,10 @@ void create_depth_images()
             depth_image_usages,
             depth_image.image_extent
         );
-        VmaAllocationCreateInfo image_allocate_info
-            = { .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-                .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) };
+        VmaAllocationCreateInfo image_allocate_info = {
+            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+            .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT )
+        };
 
         vk::check(
             vmaCreateImage(
@@ -282,8 +290,8 @@ void initialize( Context& ctx )
         }
 
         {
-            vkb::Result<std::vector<VkImageView>> image_views_res
-                = engine.swapchain.get_image_views();
+            vkb::Result<std::vector<VkImageView>> image_views_res = engine.swapchain
+                                                                        .get_image_views();
 
             if ( !image_views_res ) {
                 throw Exception(

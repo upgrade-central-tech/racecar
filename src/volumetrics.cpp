@@ -15,8 +15,8 @@
 namespace racecar::volumetric {
 
 constexpr std::string_view VOLUMETRIC_SHADER_MODULE_PATH = "../shaders/clouds/clouds.spv";
-constexpr std::string_view VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH
-    = "../shaders/clouds/cloud_composite.spv";
+constexpr std::string_view
+    VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH = "../shaders/clouds/cloud_composite.spv";
 
 constexpr float CLOUD_NOISE_SCALE = 0.00005f;
 constexpr float CLOUD_WIND_SPEED = 0.002f;
@@ -112,8 +112,9 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 
         engine::update_descriptor_set_write_image( cumulus_desc_set, volumetric.cumulus_map, 2 );
 
-        VkShaderModule generate_cumulus_module
-            = vk::create::shader_module( "../shaders/clouds/cs_generate_cumulus.spv" );
+        VkShaderModule generate_cumulus_module = vk::create::shader_module(
+            "../shaders/clouds/cs_generate_cumulus.spv"
+        );
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
             { cumulus_desc_set.layouts[0] },
@@ -196,8 +197,9 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
             0
         );
 
-        VkShaderModule generate_low_freq_module
-            = vk::create::shader_module( "../shaders/clouds/cs_generate_low_frequency.spv" );
+        VkShaderModule generate_low_freq_module = vk::create::shader_module(
+            "../shaders/clouds/cs_generate_low_frequency.spv"
+        );
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
             { low_freq_desc_set.layouts[0] },
@@ -281,8 +283,9 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
             1
         );
 
-        VkShaderModule generate_high_freq_module
-            = vk::create::shader_module( "../shaders/clouds/cs_generate_high_frequency.spv" );
+        VkShaderModule generate_high_freq_module = vk::create::shader_module(
+            "../shaders/clouds/cs_generate_high_frequency.spv"
+        );
 
         engine::Pipeline compute_pipeline = engine::create_compute_pipeline(
             { high_freq_desc_set.layouts[0] },

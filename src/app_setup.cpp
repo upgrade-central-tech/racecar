@@ -43,8 +43,10 @@ void load_scene( scene::Scene* scene, geometry::scene::Mesh* scene_mesh )
 {
     scene::load_gltf( GLTF_FILE_PATH, *scene, scene_mesh->vertices, scene_mesh->indices );
     geometry::scene::generate_tangents( *scene_mesh );
-    scene_mesh->mesh_buffers
-        = geometry::scene::upload_mesh( scene_mesh->indices, scene_mesh->vertices );
+    scene_mesh->mesh_buffers = geometry::scene::upload_mesh(
+        scene_mesh->indices,
+        scene_mesh->vertices
+    );
 }
 
 void load_camera_debug_uniform_buffers(
@@ -58,8 +60,10 @@ void load_camera_debug_uniform_buffers(
         { },
         static_cast<size_t>( engine.frame_overlap )
     );
-    *debug_buffer
-        = create_uniform_buffer<ub_data::Debug>( { }, static_cast<size_t>( engine.frame_overlap ) );
+    *debug_buffer = create_uniform_buffer<ub_data::Debug>(
+        { },
+        static_cast<size_t>( engine.frame_overlap )
+    );
     // UniformBuffer raymarch_buffer = create_uniform_buffer<ub_data::RaymarchBufferData>(
     //     vulkan, {}, static_cast<size_t>( engine.frame_overlap ) );
 
@@ -149,8 +153,8 @@ void load_materials(
         );
         ub_data::Material material_ub = {
             .has_base_color_texture = mat.base_color_texture_index.has_value() ? 1 : 0,
-            .has_metallic_roughness_texture
-            = mat.metallic_roughness_texture_index.has_value() ? 1 : 0,
+            .has_metallic_roughness_texture = mat.metallic_roughness_texture_index.has_value() ? 1
+                                                                                               : 0,
             .has_normal_texture = mat.normal_texture_index.has_value() ? 1 : 0,
             .has_emmisive_texture = mat.emmisive_texture_index.has_value() ? 1 : 0,
 
@@ -300,16 +304,17 @@ void load_model_primitive_material_data(
                     );
                 }
 
-                const scene::Material& current_material
-                    = scene.materials[static_cast<size_t>( prim.material_id )];
+                const scene::Material&
+                    current_material = scene.materials[static_cast<size_t>( prim.material_id )];
                 std::vector<std::optional<scene::Texture>> textures_needed;
 
                 switch ( current_material.type ) {
                 case scene::MaterialType::PBR_ALBEDO_MAP: {
                     std::optional<int> albedo_index = current_material.base_color_texture_index;
                     std::optional<int> normal_index = current_material.normal_texture_index;
-                    std::optional<int> metallic_roughness_index
-                        = current_material.metallic_roughness_texture_index;
+                    std::optional<int>
+                        metallic_roughness_index = current_material
+                                                       .metallic_roughness_texture_index;
 
                     textures_needed.push_back(
                         albedo_index
@@ -336,8 +341,9 @@ void load_model_primitive_material_data(
                         albedo_textures.push_back(
                             scene.textures[static_cast<size_t>( albedo_index.value() )].data.value()
                         );
-                        rt_texture_uniform.albedo_texture_index[tex_count]
-                            = int( albedo_textures.size() - 1 );
+                        rt_texture_uniform.albedo_texture_index[tex_count] = int(
+                            albedo_textures.size() - 1
+                        );
                     } else {
                         rt_texture_uniform.albedo_texture_index[tex_count] = -1;
                     }
@@ -347,8 +353,9 @@ void load_model_primitive_material_data(
                             scene.textures[static_cast<size_t>( metallic_roughness_index.value() )]
                                 .data.value()
                         );
-                        rt_texture_uniform.metallic_roughness_texture_index[tex_count]
-                            = int( metallic_roughness_textures.size() - 1 );
+                        rt_texture_uniform.metallic_roughness_texture_index[tex_count] = int(
+                            metallic_roughness_textures.size() - 1
+                        );
                     } else {
                         rt_texture_uniform.metallic_roughness_texture_index[tex_count] = -1;
                     }

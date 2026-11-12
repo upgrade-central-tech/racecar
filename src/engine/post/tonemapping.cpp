@@ -8,8 +8,8 @@
 
 namespace racecar::engine::post {
 
-static constexpr std::string_view TONEMAPPING_SHADER_PATH
-    = "../shaders/post/tonemapping/tonemapping.spv";
+static constexpr std::string_view
+    TONEMAPPING_SHADER_PATH = "../shaders/post/tonemapping/tonemapping.spv";
 
 TonemappingPass add_tonemapping( const RWImage& input, const RWImage& output, TaskList& task_list )
 {
@@ -39,8 +39,9 @@ TonemappingPass add_tonemapping( const RWImage& input, const RWImage& output, Ta
         );
         engine::update_descriptor_set_uniform( uniform_desc_set, pass.buffer, 2 );
 
-        pass.uniform_desc_set
-            = std::make_unique<engine::DescriptorSet>( std::move( uniform_desc_set ) );
+        pass.uniform_desc_set = std::make_unique<engine::DescriptorSet>(
+            std::move( uniform_desc_set )
+        );
     }
 
     engine::add_cs_task(

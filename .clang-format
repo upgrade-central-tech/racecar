@@ -22,6 +22,8 @@ BinPackParameters: false
 
 AllowAllArgumentsOnNextLine: false
 PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyBreakAssignment: 500
+BreakBeforeBinaryOperators: NonAssignment
 AlignAfterOpenBracket: BlockIndent
 
 # Local includes, then 3rd party libraries, then standard library. volk has to be included

@@ -52,8 +52,10 @@ Mesh create()
             .buffer = mesh.mesh_buffers.vertex_buffer.handle,
         };
 
-        mesh.mesh_buffers.vertex_buffer_address
-            = vkGetBufferDeviceAddress( vulkan.device, &device_address_info );
+        mesh.mesh_buffers.vertex_buffer_address = vkGetBufferDeviceAddress(
+            vulkan.device,
+            &device_address_info
+        );
     }
 
     // Upload index + vertex data to GPU

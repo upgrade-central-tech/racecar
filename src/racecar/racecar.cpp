@@ -218,23 +218,29 @@ void run( bool use_fullscreen )
     );
 
     // Initialize RT texture data uniform buffer
-    UniformBuffer<ub_data::RTTextureUniform> rt_texture_uniform_data
-        = create_uniform_buffer( rt_texture_uniform, engine.frame_overlap );
+    UniformBuffer<ub_data::RTTextureUniform> rt_texture_uniform_data = create_uniform_buffer(
+        rt_texture_uniform,
+        engine.frame_overlap
+    );
     rt_texture_uniform_data.set_data( rt_texture_uniform );
     rt_texture_uniform_data.update_all();
 
     // Create uniform buffer for BLAS offsets
-    UniformBuffer<ub_data::BLASOffsets> offset_data
-        = create_uniform_buffer( blas_offsets, static_cast<size_t>( engine.frame_overlap ) );
+    UniformBuffer<ub_data::BLASOffsets> offset_data = create_uniform_buffer(
+        blas_offsets,
+        static_cast<size_t>( engine.frame_overlap )
+    );
     offset_data.set_data( blas_offsets );
     offset_data.update_all();
 
     // Initialize RT vertex data buffer
-    vk::mem::AllocatedBuffer padded_vertex_data_buffer
-        = create_padded_vertex_data_buffer( scene_mesh );
+    vk::mem::AllocatedBuffer padded_vertex_data_buffer = create_padded_vertex_data_buffer(
+        scene_mesh
+    );
 
-    UniformBuffer<ub_data::MaterialTable> material_table
-        = create_material_table( material_uniform_buffers );
+    UniformBuffer<ub_data::MaterialTable> material_table = create_material_table(
+        material_uniform_buffers
+    );
 
     // Create car descriptor set
     engine::DescriptorSet car_descriptor_set = create_car_desc_set(
@@ -248,19 +254,25 @@ void run( bool use_fullscreen )
     );
 
     // Create combined textures descriptor set
-    engine::DescriptorSet combined_textures_desc_set
-        = create_combined_textures_desc_set( albedo_textures, metallic_roughness_textures );
+    engine::DescriptorSet combined_textures_desc_set = create_combined_textures_desc_set(
+        albedo_textures,
+        metallic_roughness_textures
+    );
 #endif // RACECAR_RAY_TRACING
 
     // ================================================================================================================
     // TERRAIN init
     // ================================================================================================================
 
-    geometry::TerrainPrepassInfo prepass_terrain_info
-        = { &camera_buffer, &debug_buffer, &gbuffers, &glint_noise, &gamestate_desc_set };
+    geometry::TerrainPrepassInfo prepass_terrain_info = { &camera_buffer,
+                                                          &debug_buffer,
+                                                          &gbuffers,
+                                                          &glint_noise,
+                                                          &gamestate_desc_set };
 
-    geometry::TerrainLightingInfo terrain_lighting_info
-        = { &camera_buffer, &debug_buffer, &atms_baker, &gbuffers, &screen_color, &lut_brdf };
+    geometry::TerrainLightingInfo terrain_lighting_info = { &camera_buffer, &debug_buffer,
+                                                            &atms_baker,    &gbuffers,
+                                                            &screen_color,  &lut_brdf };
 
     geometry::Terrain test_terrain;
     geometry::initialize_terrain( test_terrain, prepass_terrain_info, terrain_lighting_info );
@@ -311,18 +323,19 @@ void run( bool use_fullscreen )
     initialize_ao_pass( ao_pass );
 
     // Set up car lighting pass
-    LightingPassDescSets lighting_pass_desc_sets
-        = { .uniform_desc_set = uniform_desc_set,
-            .material_desc_sets = material_desc_sets,
-            .lut_sets = lut_sets,
-            .sampler_desc_set = sampler_desc_set,
-            .gbuffer_desc_set = gbuffers.desc_set,
+    LightingPassDescSets lighting_pass_desc_sets = {
+        .uniform_desc_set = uniform_desc_set,
+        .material_desc_sets = material_desc_sets,
+        .lut_sets = lut_sets,
+        .sampler_desc_set = sampler_desc_set,
+        .gbuffer_desc_set = gbuffers.desc_set,
 #if RACECAR_RAY_TRACING
-            .car_tlas_desc_set = car_tlas_desc_set,
-            .reflection_buffer_desc_set = reflection_buffer_desc_set,
+        .car_tlas_desc_set = car_tlas_desc_set,
+        .reflection_buffer_desc_set = reflection_buffer_desc_set,
 #endif // RACECAR_RAY_TRACING
-            .sun_visibility_desc_set = sun_visibility.visibility_read_desc_set,
-            .ao_read_desc_set = ao_pass.ao_read_descriptor_set };
+        .sun_visibility_desc_set = sun_visibility.visibility_read_desc_set,
+        .ao_read_desc_set = ao_pass.ao_read_descriptor_set
+    };
 
     // Create car lighting pass pipeline
     engine::Pipeline lighting_pass_pipeline;
@@ -677,8 +690,9 @@ void run( bool use_fullscreen )
         SDL_UpdateWindowSurface( ctx.window );
 
         auto new_tick = std::chrono::steady_clock::now();
-        auto duration
-            = std::chrono::duration_cast<std::chrono::milliseconds>( new_tick - current_tick );
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            new_tick - current_tick
+        );
 
         // Convert milliseconds to seconds
         engine.delta = static_cast<double>( duration.count() ) * 0.001;

@@ -12,11 +12,11 @@ namespace racecar {
 
 namespace {
 
-constexpr std::string_view REFLECTION_MIPS_SHADER_MODULE_PATH
-    = "../shaders/reflections/reflection_mips.spv";
+constexpr std::string_view
+    REFLECTION_MIPS_SHADER_MODULE_PATH = "../shaders/reflections/reflection_mips.spv";
 
-constexpr std::string_view REFLECTION_UPSAMPLE_SHADER_MODULE_PATH
-    = "../shaders/reflections/reflection_upsample.spv";
+constexpr std::string_view
+    REFLECTION_UPSAMPLE_SHADER_MODULE_PATH = "../shaders/reflections/reflection_upsample.spv";
 
 VkExtent2D mip_extent( VkExtent2D base, uint32_t mip )
 {
@@ -83,8 +83,8 @@ engine::ImageBarrier compute_write_to_compute_read( engine::RWImage* image, uint
         .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
         .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
         .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-        .dst_stage
-        = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT
+            | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
         .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
         .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         .image = image,
@@ -268,8 +268,10 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
             task_list,
             engine::PipelineBarrierDescriptor {
                 .buffer_barriers = { },
-                .image_barriers
-                = { compute_read_to_compute_write( chain.reflection_color, dst_mip ) },
+                .image_barriers = { compute_read_to_compute_write(
+                    chain.reflection_color,
+                    dst_mip
+                ) },
                 .label = "Reflection Mip Pre-Upsample Pipeline Barrier" }
         );
 
@@ -291,8 +293,10 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
             task_list,
             engine::PipelineBarrierDescriptor {
                 .buffer_barriers = { },
-                .image_barriers
-                = { compute_write_to_compute_read( chain.reflection_color, dst_mip ) },
+                .image_barriers = { compute_write_to_compute_read(
+                    chain.reflection_color,
+                    dst_mip
+                ) },
                 .label = "Reflection Mip Upsample Pipeline Barrier" }
         );
     }
