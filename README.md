@@ -207,3 +207,6 @@ To check that Vulkan is ready for use, go to your Vulkan SDK directory (by defau
   - [ ] Cloud symmetry bug
 - [ ] Glass IBL relfections bug (need RT reflections or some solution)
 - [ ] Fix specular highlight coloring
+- [ ] Sun light coloring
+- [ ] Better terrain (noise)
+- [ ] Temporal resources
