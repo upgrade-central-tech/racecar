@@ -139,3 +139,15 @@ struct GameStateBuffer {
     // these take up 16 bytes so they are correspondant to glm::vec4 on the host
     float3[ROAD_NUM_POINTS] spline_positions;
 };
+
+struct TerrainSizeData {
+    float4 center;
+    float2 size; // width, height
+};
+
+float sample_cloud_shadow( Texture2D<float> cloud_shadow_map, SamplerState cloud_shadow_sampler,
+    float4 terrain_center, float2 terrain_size, float3 world_position )
+{
+    float2 uv = ( world_position.xz - terrain_center.xz ) / terrain_size + 0.5f;
+    return cloud_shadow_map.SampleLevel( cloud_shadow_sampler, saturate( uv ), 0 );
+}

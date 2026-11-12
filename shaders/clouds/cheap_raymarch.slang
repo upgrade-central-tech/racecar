@@ -125,16 +125,7 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float3 origin, float3 sun_direction, float3 sun_color, float3 ambient_radiance,
     float3 texture_offset, float extinction, float erosion )
 {
-    float theta = acos( saturate( view.y ) );
-    // theta = clamp( theta, 0.0, radians( 80 ) );
-
-    float lerp = ( theta ) / PI * 2.f;
-
-    float thetaRemap = lerp * radians( 80 );
-    float phi = atan2( view.z, view.x );
-
-    float sinTheta = sin( thetaRemap );
-    float3 local_dir = float3( sinTheta * cos( phi ), cos( thetaRemap ), sinTheta * sin( phi ) );
+    float3 local_dir = cloud_dome_remap( view );
     float3 local_origin = origin;
 
     if ( view.y < 0.0 ) {

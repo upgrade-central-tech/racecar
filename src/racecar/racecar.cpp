@@ -287,7 +287,7 @@ void run( bool use_fullscreen )
                                  .car_desc_set = car_descriptor_set,
                                  .combined_textures_desc_set = combined_textures_desc_set,
                                  .terrain_shading_desc_set = terrain_rt.shading_desc_set,
-                                 .sun_visibility_desc_set = sun_visibility.visibility_desc_set,
+                                 .sun_visibility_desc_set = sun_visibility.visibility_read_desc_set,
                                  .gamestate_desc_set = gamestate_desc_set },
         &reflection_color,
         &reflection_data,
@@ -321,7 +321,7 @@ void run( bool use_fullscreen )
             .car_tlas_desc_set = car_tlas_desc_set,
             .reflection_buffer_desc_set = reflection_buffer_desc_set,
 #endif // RACECAR_RAY_TRACING
-            .sun_visibility_desc_set = sun_visibility.visibility_desc_set,
+            .sun_visibility_desc_set = sun_visibility.visibility_read_desc_set,
             .ao_read_desc_set = ao_pass.ao_read_descriptor_set };
 
     // Create car lighting pass pipeline
@@ -331,7 +331,7 @@ void run( bool use_fullscreen )
     // Create terrain draw pipeline
     geometry::initialize_terrain_draw_pipeline(
         test_terrain,
-        sun_visibility.visibility_desc_set,
+        sun_visibility.visibility_read_desc_set,
         ao_pass.ao_read_descriptor_set
 #if RACECAR_RAY_TRACING
         ,
@@ -351,7 +351,7 @@ void run( bool use_fullscreen )
         &model_mat_desc_sets,
         &lut_sets,
         &sampler_desc_set,
-        &sun_visibility.visibility_desc_set
+        &sun_visibility.visibility_read_desc_set
     );
 
     // ================================================================================================================
@@ -369,6 +369,7 @@ void run( bool use_fullscreen )
 #endif // RACECAR_RAY_TRACING
     debug_textures.push_back( &ao_pass.ao_output );
     debug_textures.push_back( &atms_baker.octahedral_sky_mips );
+    debug_textures.push_back( &sun_visibility.sun_visibility_shadow_map );
     initialize_debug_texture_pass(
         debug_texture_pass,
         screen_buffer,

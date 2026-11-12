@@ -124,23 +124,40 @@ void furnace( bool use_fullscreen )
     engine::update_descriptor_set_image( lut_sets, white_sky, LUT_INDEX::OCTAHEDRAL_MIPS );
 
     // Sun fully occluded, so only the sky lights the sphere
-    vk::mem::AllocatedBuffer sun_visibility_buffer = vk::mem::create_buffer(
-        sizeof( float ),
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VMA_MEMORY_USAGE_CPU_TO_GPU
-    );
     float sun_visibility = 0.f;
-    std::memcpy( sun_visibility_buffer.info.pMappedData, &sun_visibility, sizeof( float ) );
-    vmaFlushAllocation( vulkan.allocator, sun_visibility_buffer.allocation, 0, sizeof( float ) );
+    vk::mem::AllocatedImage sun_visibility_image = engine::create_image(
+        &sun_visibility,
+        VkExtent3D( 1, 1, 1 ),
+        VK_FORMAT_R32_SFLOAT,
+        VK_IMAGE_TYPE_2D,
+        VK_IMAGE_USAGE_SAMPLED_BIT,
+        false
+    );
+
+    UniformBuffer<ub_data::TerrainSizeData> sun_visibility_terrain_size
+        = create_uniform_buffer<ub_data::TerrainSizeData>( { }, engine.frame_overlap );
+    sun_visibility_terrain_size.set_data(
+        ub_data::TerrainSizeData {
+            .center = glm::vec4( 0.0f, 0.0f, 0.0f, 1.0f ),
+            .size = glm::vec2( 1.0f, 1.0f ),
+        }
+    );
+    sun_visibility_terrain_size.update_all();
 
     engine::DescriptorSet sun_visibility_desc_set = engine::generate_descriptor_set(
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER },
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            VK_DESCRIPTOR_TYPE_SAMPLER,
+        },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
-    engine::update_descriptor_set_const_storage_buffer(
+    engine::update_descriptor_set_image( sun_visibility_desc_set, sun_visibility_image, 0 );
+    engine::update_descriptor_set_uniform( sun_visibility_desc_set, sun_visibility_terrain_size, 1 );
+    engine::update_descriptor_set_sampler(
         sun_visibility_desc_set,
-        sun_visibility_buffer,
-        0
+        vulkan.global_samplers.linear_sampler,
+        2
     );
 
     geometry::quad::Mesh quad_mesh = geometry::quad::create();

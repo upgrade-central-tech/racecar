@@ -171,6 +171,7 @@ struct DebugTexture {
     float blur = 0.f;
     uint32_t camera_view = 0;
     uint32_t scene_referred = 0;
+    uint32_t single_channel = 0;
 };
 
 struct ModelMat {
@@ -211,5 +212,11 @@ struct MaterialTable {
 
 static_assert( sizeof( MaterialTable ) <= 16384,
     "MaterialTable exceeds the guaranteed maximum uniform buffer range" );
+
+struct [[slang_check("TerrainSizeData")]] TerrainSizeData {
+    glm::vec4 center;
+    glm::vec2 size;
+    glm::vec2 _pad0;
+};
 
 } // namespace racecar::uniform_buffer

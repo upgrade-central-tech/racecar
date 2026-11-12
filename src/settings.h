@@ -36,6 +36,7 @@ enum class DebugTexture : int {
     REFLECTIONS,
     AO,
     OCTAHEDRAL_SKY,
+    CLOUD_SHADOW_MAP,
 };
 
 // -------------------------------------------------------------------

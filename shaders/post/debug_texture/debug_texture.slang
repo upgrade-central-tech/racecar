@@ -11,6 +11,7 @@ struct DebugTextureSettings {
 
     bool camera_view;
     bool scene_referred;
+    bool single_channel;
 };
 
 layout( binding = 0, set = 0 ) Texture2D<float4> debug_textures[MAX_DEBUG_TEXTURES];
@@ -50,6 +51,9 @@ func cs_debug_texture( uint2 thread_id: SV_DispatchThreadID )->void
     var texel = debug_textures[settings.index - 1].SampleLevel( linear_sampler, sample_uv, lod ).rgb;
     if ( settings.scene_referred ) {
         texel /= PAPER_WHITE;
+    }
+    if ( settings.single_channel ) {
+        texel = texel.rrr;
     }
 
     out_color[pixel] = float4( linear_to_srgb( texel * settings.exposure ), 1.0f );

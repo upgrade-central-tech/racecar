@@ -19,6 +19,18 @@ public float rand_float( float seed )
     return ( wang32( asuint( seed ) ) & 0x00FFFFFFu ) / 16777216.0;
 }
 
+public float3 cloud_dome_remap( float3 direction )
+{
+    float theta = acos( saturate( direction.y ) );
+    // theta = clamp( theta, 0.0, radians( 80 ) );
+
+    float thetaRemap = theta * ( 80.0f / 90.0f );
+    float phi = atan2( direction.z, direction.x );
+
+    float sinTheta = sin( thetaRemap );
+    return float3( sinTheta * cos( phi ), cos( thetaRemap ), sinTheta * sin( phi ) );
+}
+
 public float rand_float2( float2 p )
 {
     uint32_t seed = ( asuint( p.x ) ) * 73856093u ^ ( asuint( p.y ) ) * 19349663u;

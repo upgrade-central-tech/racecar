@@ -81,7 +81,9 @@ layout( binding = 0, set = 4 ) StructuredBuffer<PaddedVertex> vertex_data;
 layout( binding = 1, set = 4 ) StructuredBuffer<uint32_t> index_data;
 layout( binding = 2, set = 4 ) ConstantBuffer<BLASOffsets> blas_offsets;
 layout( binding = 3, set = 4 ) ConstantBuffer<RTTextureUniform> rt_texture_uniform;
-layout( binding = 0, set = 7 ) StructuredBuffer<float> sun_visibility;
+layout( binding = 0, set = 7 ) Texture2D<float> cloud_shadow_map;
+layout( binding = 1, set = 7 ) ConstantBuffer<TerrainSizeData> cloud_shadow_terrain_size;
+layout( binding = 2, set = 7 ) SamplerState cloud_shadow_sampler;
 
 layout( binding = 4, set = 4 ) Texture2D<float2> BRDF_LUT;
 layout( binding = 5, set = 4 ) Texture2D<float4> octahedral_sky_mips;
@@ -216,7 +218,8 @@ float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
 
     float3 color
         = terrain_direct_lighting( albedo, normal, light, NDF, roughness, ao, view, terrain_data )
-        * sun_visibility[0];
+        * sample_cloud_shadow( cloud_shadow_map, cloud_shadow_sampler,
+            cloud_shadow_terrain_size.center, cloud_shadow_terrain_size.size, world_position );
 
     float2 oct_uv = oct_encode( normal );
     float2 oct_refl_uv = oct_encode( normalize( reflect( -view, normal ) ) );
@@ -383,8 +386,10 @@ ReflectionOutput fs_main( VertexOutput in )
     //
     float4 refl_input
         = float4( 0.0f ); // just use 1-bounce for reflections, sample IBL - mark alpha 0, as such
+    float sun_visibility = sample_cloud_shadow( cloud_shadow_map, cloud_shadow_sampler,
+        cloud_shadow_terrain_size.center, cloud_shadow_terrain_size.size, position );
     float3 color = car_bsdf( albedo, normal, hit_view_dir, half_vector, light, pbr, g_buffer,
-        sun_visibility[0], refl_input, refl_input, 1.0f );
+        sun_visibility, refl_input, refl_input, 1.0f );
 
     return reflection_hit( color, t, stencil );
 

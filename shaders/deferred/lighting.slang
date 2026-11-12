@@ -24,10 +24,14 @@ layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 
 // Cubemaps + LUTs
 #if RACECAR_RAY_TRACING
-layout( binding = 0, set = 7 ) StructuredBuffer<float> sun_visibility;
+layout( binding = 0, set = 7 ) Texture2D<float> cloud_shadow_map;
+layout( binding = 1, set = 7 ) ConstantBuffer<TerrainSizeData> cloud_shadow_terrain_size;
+layout( binding = 2, set = 7 ) SamplerState cloud_shadow_sampler;
 layout( binding = 0, set = 8 ) Texture2D<float4> ao_read;
 #else
-layout( binding = 0, set = 5 ) StructuredBuffer<float> sun_visibility;
+layout( binding = 0, set = 5 ) Texture2D<float> cloud_shadow_map;
+layout( binding = 1, set = 5 ) ConstantBuffer<TerrainSizeData> cloud_shadow_terrain_size;
+layout( binding = 2, set = 5 ) SamplerState cloud_shadow_sampler;
 layout( binding = 0, set = 6 ) Texture2D<float4> ao_read;
 #endif // RACECAR_RAY_TRACING
 
@@ -273,10 +277,13 @@ float4 fs_main( VertexOutput in )
     }
 #endif // RACECAR_RAY_TRACING
 
+    float sun_visibility = sample_cloud_shadow( cloud_shadow_map, cloud_shadow_sampler,
+        cloud_shadow_terrain_size.center, cloud_shadow_terrain_size.size, in_pos );
+
     float3 out_color
         = car_bsdf(
             base_albedo, normal, view, half, light, pbr, gbuffer,
-            ( hit ? 0.0f : 1.0f ) * sun_visibility[0], refl, refl_cc, ao );
+            ( hit ? 0.0f : 1.0f ) * sun_visibility, refl, refl_cc, ao );
 
     // DEBUG VIEWS
     switch ( debug_data.debug_view ) {
