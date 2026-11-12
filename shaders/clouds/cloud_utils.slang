@@ -54,7 +54,17 @@ public float3 rand_float3_float3( float3 p )
     return normalize( 2.f * float3( x, y, z ) - float3( 1.f ) );
 }
 
-public float perlin_noise3D( float3 p )
+public float3 wrap_cell( float3 cell, float3 period )
+{
+    if ( period.x <= 0.f ) {
+        return cell;
+    }
+    return cell - period * floor( cell / period );
+}
+
+public float perlin_noise3D( float3 p ) { return perlin_noise3D( p, float3( 0.f ) ); }
+
+public float perlin_noise3D( float3 p, float3 period )
 {
     float3 grid_cell = floor( p );
     float3 fractional = p - grid_cell;
@@ -62,21 +72,21 @@ public float perlin_noise3D( float3 p )
     float3 w = fractional * fractional * ( 3. - 2. * fractional );
 
     float f000 = dot(
-        rand_float3_float3( grid_cell + float3( .0, .0, 0. ) ), fractional - float3( .0, .0, 0. ) );
+        rand_float3_float3( wrap_cell( grid_cell + float3( .0, .0, 0. ), period ) ), fractional - float3( .0, .0, 0. ) );
     float f010 = dot(
-        rand_float3_float3( grid_cell + float3( .0, 1., 0. ) ), fractional - float3( .0, 1., 0. ) );
+        rand_float3_float3( wrap_cell( grid_cell + float3( .0, 1., 0. ), period ) ), fractional - float3( .0, 1., 0. ) );
     float f100 = dot(
-        rand_float3_float3( grid_cell + float3( 1., 0., 0. ) ), fractional - float3( 1., 0., 0. ) );
+        rand_float3_float3( wrap_cell( grid_cell + float3( 1., 0., 0. ), period ) ), fractional - float3( 1., 0., 0. ) );
     float f110 = dot(
-        rand_float3_float3( grid_cell + float3( 1., 1., 0. ) ), fractional - float3( 1., 1., 0. ) );
+        rand_float3_float3( wrap_cell( grid_cell + float3( 1., 1., 0. ), period ) ), fractional - float3( 1., 1., 0. ) );
     float f001 = dot(
-        rand_float3_float3( grid_cell + float3( .0, .0, 1. ) ), fractional - float3( .0, .0, 1. ) );
+        rand_float3_float3( wrap_cell( grid_cell + float3( .0, .0, 1. ), period ) ), fractional - float3( .0, .0, 1. ) );
     float f011 = dot(
-        rand_float3_float3( grid_cell + float3( .0, 1., 1. ) ), fractional - float3( .0, 1., 1. ) );
+        rand_float3_float3( wrap_cell( grid_cell + float3( .0, 1., 1. ), period ) ), fractional - float3( .0, 1., 1. ) );
     float f101 = dot(
-        rand_float3_float3( grid_cell + float3( 1., 0., 1. ) ), fractional - float3( 1., 0., 1. ) );
+        rand_float3_float3( wrap_cell( grid_cell + float3( 1., 0., 1. ), period ) ), fractional - float3( 1., 0., 1. ) );
     float f111 = dot(
-        rand_float3_float3( grid_cell + float3( 1., 1., 1. ) ), fractional - float3( 1., 1., 1. ) );
+        rand_float3_float3( wrap_cell( grid_cell + float3( 1., 1., 1. ), period ) ), fractional - float3( 1., 1., 1. ) );
 
     float f00 = lerp( f000, f001, w.z );
     float f01 = lerp( f010, f011, w.z );
@@ -91,23 +101,28 @@ public float perlin_noise3D( float3 p )
 }
 
 // fractal perlin noise
-public float noise_sum3D( float3 p )
+public float noise_sum3D( float3 p ) { return noise_sum3D( p, float3( 0.f ) ); }
+
+public float noise_sum3D( float3 p, float3 period )
 {
     p *= 1.; // Cell size
     // amplitude, noise_sum, total_sum
     float a = 1., r = 0., s = 0.;
 
     for ( int i = 0; i < 5; i++ ) {
-        r += a * perlin_noise3D( p );
+        r += a * perlin_noise3D( p, period );
         s += a;
         p *= 2.;
+        period *= 2.;
         a *= .5;
     }
 
     return r / s;
 }
 
-public float worley3D( float3 p )
+public float worley3D( float3 p ) { return worley3D( p, float3( 0.f ) ); }
+
+public float worley3D( float3 p, float3 period )
 {
     float r = 3.0;
     float3 f = floor( p );
@@ -116,9 +131,10 @@ public float worley3D( float3 p )
         for ( int j = -1; j <= 1; j++ ) {
             for ( int k = -1; k <= 1; k++ ) {
                 float3 q = float3( float( i ), float( j ), float( k ) );
+                float3 cell = wrap_cell( q + f, period );
                 float3 v = q
-                    + float3( rand_float3( ( q + f ) * 1.11 ), rand_float3( ( q + f ) * 1.14 ),
-                        rand_float3( ( q + f ) * 1.17 ) )
+                    + float3( rand_float3( cell * 1.11 ), rand_float3( cell * 1.14 ),
+                        rand_float3( cell * 1.17 ) )
                     - x;
                 float d = dot( v, v );
                 r = min( r, d );
@@ -129,16 +145,20 @@ public float worley3D( float3 p )
 }
 
 // fractal worley noise
-public float noise_sum3D_Worley( float3 p )
+public float noise_sum3D_Worley( float3 p ) { return noise_sum3D_Worley( p, float3( 0.f ) ); }
+
+public float noise_sum3D_Worley( float3 p, float3 period )
 {
     p *= 4.; // Cell size
+    period *= 4.;
     // amplitude, noise_sum, total_sum
     float a = 1., r = 0., s = 0.;
 
     for ( int i = 0; i < 5; i++ ) {
-        r += a * worley3D( p );
+        r += a * worley3D( p, period );
         s += a;
         p *= 2.;
+        period *= 2.;
         a *= .5;
     }
 

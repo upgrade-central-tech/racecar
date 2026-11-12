@@ -13,6 +13,6 @@ layout( binding = 3, set = 1 ) public Texture2D<float4> atmosphere_irradiance_LU
 layout( binding = 4, set = 1 ) public Texture2D<float4> atmosphere_transmittance_LUT;
 
 layout( binding = 0, set = 2 ) public SamplerState linear_sampler;
-layout( binding = 1, set = 2 ) public SamplerState linear_mirrored_repeat_sampler;
+layout( binding = 1, set = 2 ) public SamplerState linear_repeat_sampler;
 
 

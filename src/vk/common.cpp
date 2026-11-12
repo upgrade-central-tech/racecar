@@ -384,22 +384,22 @@ void initialize( SDL_Window* window )
             vulkan.destructor_stack
                 .push( vulkan.device, vulkan.global_samplers.nearest_sampler, vkDestroySampler );
 
-            VkSamplerCreateInfo linear_mirrored_repeat_sampler_info = vk::create::sampler_info(
+            VkSamplerCreateInfo linear_repeat_sampler_info = vk::create::sampler_info(
                 VK_FILTER_LINEAR,
-                VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT
+                VK_SAMPLER_ADDRESS_MODE_REPEAT
             );
             vk::check(
                 vkCreateSampler(
                     vulkan.device,
-                    &linear_mirrored_repeat_sampler_info,
+                    &linear_repeat_sampler_info,
                     nullptr,
-                    &vulkan.global_samplers.linear_mirrored_repeat_sampler
+                    &vulkan.global_samplers.linear_repeat_sampler
                 ),
-                "Failed to create global linear mirrored repeat sampler"
+                "Failed to create global linear repeat sampler"
             );
             vulkan.destructor_stack.push(
                 vulkan.device,
-                vulkan.global_samplers.linear_mirrored_repeat_sampler,
+                vulkan.global_samplers.linear_repeat_sampler,
                 vkDestroySampler
             );
         }

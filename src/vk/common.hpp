@@ -49,7 +49,7 @@ constexpr int TERRAIN_ID = 2;
 struct GlobalSamplers {
     VkSampler linear_sampler = VK_NULL_HANDLE;
     VkSampler nearest_sampler = VK_NULL_HANDLE;
-    VkSampler linear_mirrored_repeat_sampler = VK_NULL_HANDLE;
+    VkSampler linear_repeat_sampler = VK_NULL_HANDLE;
 };
 
 // These are for temporal jittering

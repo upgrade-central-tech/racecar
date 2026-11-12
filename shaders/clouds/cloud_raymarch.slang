@@ -10,12 +10,12 @@ import helpers;
 #include "../atmosphere/geo/atms_geo.slang"
 
 public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
-    SamplerState linear_mirrored_repeat_sampler, float3 march_pos )
+    SamplerState linear_repeat_sampler, float3 march_pos )
 {
     float3 p = march_pos * 0.00005f
         + float3( clouds_buffer_data.cloud_offset_x, 0, clouds_buffer_data.cloud_offset_y );
 
-    float cumulus_map = cumulus_map_LUT.Sample( linear_mirrored_repeat_sampler, p.xz );
+    float cumulus_map = cumulus_map_LUT.Sample( linear_repeat_sampler, p.xz );
     float3 uvw = fract( p );
 
     float normY = -p.y * 0.5 + 0.5;
@@ -26,11 +26,11 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
     height_modulation
         = ( smoothstep( 3000, 3100, march_pos.y ) + smoothstep( 3500, 3100, march_pos.y ) ) - 1;
 
-    float low_freq_noise = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 4 );
+    float low_freq_noise = low_freq_noise_LUT.Sample( linear_repeat_sampler, p * 4 );
 
     float low_freq_modulation = 1.f - height_modulation;
 
-    float low_freq_detail = low_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 12 );
+    float low_freq_detail = low_freq_noise_LUT.Sample( linear_repeat_sampler, p * 12 );
 
     float extra_freq = 4 * low_freq_noise + low_freq_detail;
 
@@ -42,7 +42,7 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
         return 0.f;
     }
 
-    float high_freq_noise = high_freq_noise_LUT.Sample( linear_mirrored_repeat_sampler, p * 24 );
+    float high_freq_noise = high_freq_noise_LUT.Sample( linear_repeat_sampler, p * 24 );
     float erosion = clouds_buffer_data.cloud_params.y * high_freq_noise;
     float eroded_density = saturate( ( base_density - erosion ) / ( 1.f - erosion ) );
 
@@ -53,7 +53,7 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
 static const float LIGHT_MARCH_MAX_DISTANCE = 5000.0f;
 
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
-    Texture3D<float> low_freq_noise_LUT, SamplerState linear_mirrored_repeat_sampler,
+    Texture3D<float> low_freq_noise_LUT, SamplerState linear_repeat_sampler,
     float3 march_pos, float3 sun_direction )
 {
     float3 local_dir = normalize( sun_direction );
@@ -81,7 +81,7 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         float3 pos = march_pos + local_dir * t;
         // if outside the AABB you can break early, but caller will pass proper t_max
         float d = sample_density(
-            cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler, pos );
+            cumulus_map_LUT, low_freq_noise_LUT, linear_repeat_sampler, pos );
         // Beer–Lambert per-step
         T *= exp( -clouds_buffer_data.cloud_params.x * d * step_size );
 
@@ -106,7 +106,7 @@ static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forwar
 public float hash11( float n ) { return frac( sin( n ) * 43758.5453 ); }
 
 public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
-    SamplerState linear_mirrored_repeat_sampler, float3 view, float3 origin, float3 sun_direction )
+    SamplerState linear_repeat_sampler, float3 view, float3 origin, float3 sun_direction )
 {
     float3 local_dir = cloud_dome_remap( view );
     float3 local_origin = origin;
@@ -161,12 +161,12 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
         }
         float3 marched_pos = local_origin + local_dir * t;
         float density = sample_density(
-            cumulus_map_LUT, low_freq_noise_LUT, linear_mirrored_repeat_sampler, marched_pos );
+            cumulus_map_LUT, low_freq_noise_LUT, linear_repeat_sampler, marched_pos );
         if ( density > 0.01 ) {
 
             float transmittance
                 = max( estimate_transmittance( cumulus_map_LUT, low_freq_noise_LUT,
-                           linear_mirrored_repeat_sampler, marched_pos, sun_direction ),
+                           linear_repeat_sampler, marched_pos, sun_direction ),
                     0.01 );
 
             float cosTheta = dot( local_dir, sun_direction );

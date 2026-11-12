@@ -22,7 +22,7 @@ layout( binding = 1, set = 0 ) ConstantBuffer<DebugData> debug_data;
 layout( binding = 0, set = 1 ) Texture2D<float4> cloud_buffer;
 
 layout( binding = 0, set = 2 ) SamplerState linear_sampler;
-layout( binding = 1, set = 2 ) SamplerState linear_mirrored_repeat_sampler;
+layout( binding = 1, set = 2 ) SamplerState linear_repeat_sampler;
 
 [shader( "vertex" )]
 VertexOutput vs_main( VertexInput input )

@@ -44,7 +44,7 @@ float sun_transmittance( float3 origin, float3 direction )
             cumulus_map_LUT,
             low_freq_noise_LUT,
             high_freq_noise_LUT,
-            linear_mirrored_repeat_sampler,
+            linear_repeat_sampler,
             origin + direction * t,
             texture_offset,
             clouds_buffer_data.cloud_params.y

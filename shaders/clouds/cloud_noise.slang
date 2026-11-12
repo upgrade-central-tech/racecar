@@ -13,10 +13,10 @@ void cs_generate_low_frequency( uint3 thread_id: SV_DispatchThreadID )
     float ndc_z = 2.0f * float( thread_id.z ) / 128.0f - 1.0f;
     float3 pos = float3( ndc_x, ndc_y, ndc_z );
 
-    float worley = noise_sum3D_Worley( pos * 3.5 + 100.f );
+    float worley = noise_sum3D_Worley( pos * 3.5 + 100.f, float3( 7.f ) );
     worley = smoothstep( 0.0, 0.8, worley ) - 0.2;
 
-    float low_freq_perlin = noise_sum3D( pos * 3.5 + 100.f ) + 0.5;
+    float low_freq_perlin = noise_sum3D( pos * 3.5 + 100.f, float3( 7.f ) ) + 0.5;
     low_freq_perlin = 0.8 * smoothstep( 0.3, 0.6, low_freq_perlin ) + 0.2;
     float low_freq_noise = low_freq_perlin * ( 1.2 - worley ) * 0.5;
     low_freq_noise *= 0.5;
@@ -34,7 +34,7 @@ void cs_generate_high_frequency( uint3 thread_id: SV_DispatchThreadID )
     float ndc_z = 2.0f * float( thread_id.z ) / 32.0f - 1.0f;
     float3 pos = float3( ndc_x, ndc_y, ndc_z );
 
-    float high_freq_noise = noise_sum3D_Worley( pos * 2.5 + 100.f );
+    float high_freq_noise = noise_sum3D_Worley( pos * 2.5 + 100.f, float3( 5.f ) );
     high_freq_noise = 0.8 - 0.7 * smoothstep( 0.0, 0.8, high_freq_noise );
 
     high_frequency_noise[thread_id] = high_freq_noise;
@@ -53,7 +53,7 @@ void cs_generate_cumulus( uint3 thread_id: SV_DispatchThreadID )
     float2 input = float2( ndc_x, ndc_z ) * 5.0f + 100.0f;
 
     // Noise function magic
-    float noise = noise_sum3D( float3( input, 1.0f ) );
+    float noise = noise_sum3D( float3( input, 1.0f ), float3( 10.f ) );
     noise += 0.5f;
 
     cumulus_map[thread_id.xy] = smoothstep( 0.2f, 1.0f, noise );

@@ -79,7 +79,7 @@ void initialize_atmosphere_baker(
     );
     engine::update_descriptor_set_sampler(
         atms_baker.volumetrics_desc_set,
-        vulkan.global_samplers.linear_mirrored_repeat_sampler,
+        vulkan.global_samplers.linear_repeat_sampler,
         2
     );
     engine::update_descriptor_set_uniform(
