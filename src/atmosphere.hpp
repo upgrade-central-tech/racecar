@@ -42,6 +42,8 @@ Atmosphere initialize();
 
 glm::vec3 compute_sun_direction( const Atmosphere& atms );
 
+glm::vec3 compute_sun_color( const glm::vec3& sun_direction, float radiance_exposure );
+
 void draw_atmosphere( engine::TaskList& task_list,
     atmosphere::Atmosphere& atms, engine::RWImage& out_color );
 

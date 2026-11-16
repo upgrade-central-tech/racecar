@@ -46,7 +46,7 @@ float3 direct_lighting(
     float3 albedo, float3 normal, float3 light, float NDF, float roughness, float ao, float3 view )
 {
     return terrain_direct_lighting(
-        albedo, normal, light, NDF, roughness, ao, view, terrain_data );
+        albedo, normal, light, NDF, roughness, ao, view, terrain_data, scene_data.sun_color.rgb );
 }
 
 float3 sample_glossy_ibl( float roughness, float2 direction )

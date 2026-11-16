@@ -426,7 +426,7 @@ float3 terrain_sample_glossy_ibl( float roughness, float2 direction, Texture2D<f
 }
 
 float3 terrain_direct_lighting( float3 albedo, float3 normal, float3 light, float NDF,
-    float roughness, float ao, float3 view, TerrainData terrain_data )
+    float roughness, float ao, float3 view, TerrainData terrain_data, float3 sun_color )
 {
     float3 half_vector = normalize( view + light );
     BSDF_Dots dots = get_dots( normal, view, half_vector, light );
@@ -465,5 +465,5 @@ float3 terrain_direct_lighting( float3 albedo, float3 normal, float3 light, floa
         return shadowing;
     }
 
-    return ( ( 1.0f - F ) * diffuse + specular ) * SUN_IRRADIANCE * shadowing;
+    return ( ( 1.0f - F ) * diffuse + specular ) * sun_color * shadowing;
 }

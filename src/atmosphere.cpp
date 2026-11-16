@@ -165,6 +165,64 @@ glm::vec3 compute_sun_direction( const Atmosphere& atms )
     };
 }
 
+namespace {
+
+constexpr float BOTTOM_RADIUS = 6360.f;
+constexpr float TOP_RADIUS = 6420.f;
+const glm::vec3 SOLAR_IRRADIANCE = { 1.474f, 1.8504f, 1.91198f };
+const glm::vec3 RAYLEIGH_SCATTERING = { 0.005802f, 0.013558f, 0.0331f };
+const glm::vec3 MIE_EXTINCTION = { 0.00444f, 0.00444f, 0.00444f };
+const glm::vec3 ABSORPTION_EXTINCTION = { 0.00065f, 0.001881f, 0.000085f };
+constexpr int SUN_TRANSMITTANCE_SAMPLES = 256;
+
+float ozone_density( float altitude )
+{
+    float density = altitude < 25.f ? 0.066667f * altitude - 0.666667f
+                                    : -0.066667f * altitude + 2.666667f;
+    return glm::clamp( density, 0.f, 1.f );
+}
+
+glm::vec3 sun_transmittance( float mu )
+{
+    float r = BOTTOM_RADIUS;
+    float distance_to_top = -r * mu
+        + std::sqrt( r * r * ( mu * mu - 1.f ) + TOP_RADIUS * TOP_RADIUS );
+    float dx = distance_to_top / float( SUN_TRANSMITTANCE_SAMPLES );
+
+    float rayleigh_length = 0.f;
+    float mie_length = 0.f;
+    float ozone_length = 0.f;
+    for ( int i = 0; i <= SUN_TRANSMITTANCE_SAMPLES; ++i ) {
+        float d = float( i ) * dx;
+        float r_i = std::sqrt( d * d + 2.f * r * mu * d + r * r );
+        float altitude = r_i - BOTTOM_RADIUS;
+        float weight = ( i == 0 || i == SUN_TRANSMITTANCE_SAMPLES ) ? 0.5f : 1.f;
+
+        rayleigh_length += glm::clamp( std::exp( -0.125f * altitude ), 0.f, 1.f ) * weight * dx;
+        mie_length += glm::clamp( std::exp( -0.833333f * altitude ), 0.f, 1.f ) * weight * dx;
+        ozone_length += ozone_density( altitude ) * weight * dx;
+    }
+
+    return glm::exp(
+        -( RAYLEIGH_SCATTERING * rayleigh_length + MIE_EXTINCTION * mie_length
+           + ABSORPTION_EXTINCTION * ozone_length )
+    );
+}
+
+}
+
+glm::vec3 compute_sun_color( const glm::vec3& sun_direction, float radiance_exposure )
+{
+    float mu = glm::normalize( sun_direction ).y;
+    float horizon_fade = glm::smoothstep( -0.03f, 0.02f, mu );
+    if ( horizon_fade <= 0.f ) {
+        return glm::vec3( 0.f );
+    }
+
+    return sun_transmittance( glm::max( mu, 0.f ) ) * SOLAR_IRRADIANCE * radiance_exposure
+        * horizon_fade;
+}
+
 void draw_atmosphere(
     engine::TaskList& task_list, atmosphere::Atmosphere& atms, engine::RWImage& out_color
 )

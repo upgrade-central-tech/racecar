@@ -158,7 +158,7 @@ float3 car_bsdf( float3 albedo, float3 normal, float3 view, float3 half, float3 
     float3 out_color = float3( 0.f );
 
     // Direct lighting
-    out_color += ( kD_direct * diffuse_direct + specular_direct ) * SUN_IRRADIANCE * sun_V
+    out_color += ( kD_direct * diffuse_direct + specular_direct ) * debug_data.sun_color.rgb * sun_V
         * clamped_n_dot_l;
 
     // IBL - Removed kD term due to strange shadows

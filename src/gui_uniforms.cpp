@@ -26,6 +26,10 @@ void update_debug_uniform_buffer(
         .terrain_irradiance_strength = RuntimeSettings::Get<
             RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH>(),
         .car_irradiance_strength = RuntimeSettings::Get<RacecarSettings::CAR_IRRADIANCE_STRENGTH>(),
+        .sun_color = glm::vec4(
+            atmosphere::compute_sun_color( atms_ub.sun_direction, atms_ub.radiance_exposure ),
+            1.0f
+        ),
     };
 
     debug_buffer.set_data( debug_ub );

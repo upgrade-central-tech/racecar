@@ -217,7 +217,8 @@ float3 shade_terrain_hit( float3 world_position, float3 ray_dir )
     float NDF = min( get_GGX_from_n_dot_h_sq( n_dot_h_sq, roughness * roughness ), 65.0f );
 
     float3 color
-        = terrain_direct_lighting( albedo, normal, light, NDF, roughness, ao, view, terrain_data )
+        = terrain_direct_lighting( albedo, normal, light, NDF, roughness, ao, view, terrain_data,
+              debug_data.sun_color.rgb )
         * sample_cloud_shadow( cloud_shadow_map, cloud_shadow_sampler,
             cloud_shadow_terrain_size.center, cloud_shadow_terrain_size.size, world_position );
 

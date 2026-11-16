@@ -3,7 +3,6 @@
 #include "common.slang"
 
 static const float PAPER_WHITE = 2.5f;
-static const float SUN_IRRADIANCE = PAPER_WHITE * PI;
 
 //=======================================================================================
 // BSDF Stuff

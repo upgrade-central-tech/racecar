@@ -61,6 +61,8 @@ public struct DebugData {
 
     float terrain_irradiance_strength;
     float car_irradiance_strength;
+
+    float4 sun_color;
 }
 
 struct TerrainData {
