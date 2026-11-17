@@ -51,6 +51,14 @@ public float sample_density( Texture2D<float> cumulus_map_LUT, Texture3D<float> 
 
 
 static const float LIGHT_MARCH_MAX_DISTANCE = 5000.0f;
+static const int LIGHT_MARCH_STEPS = 6;
+static const float LIGHT_MARCH_STEP_SIZES[LIGHT_MARCH_STEPS] = { 30.f, 60.f, 120.f, 240.f, 480.f,
+960.f };
+
+static const int VIEW_MARCH_STEPS = 128;
+static const int VIEW_MARCH_MAX_ITERATIONS = 256;
+static const float VIEW_MARCH_COARSE_SCALE = 3.f;
+static const int VIEW_MARCH_EMPTY_SAMPLES_LIMIT = 6;
 
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     Texture3D<float> low_freq_noise_LUT, SamplerState linear_repeat_sampler,
@@ -71,19 +79,19 @@ public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
         t_max = min( t_max, ( lower_plane_altitude - march_pos.y ) / local_dir.y );
     }
 
-    uint steps = 32;
-    float t0 = 1e-3;
-    float step_size = t_max / (float)steps;
-
     float T = 1.0;
-    for ( int i = 0; i < steps; ++i ) {
-        float t = t0 + ( i + 0.5 ) * step_size; // midpoint sample
-        float3 pos = march_pos + local_dir * t;
-        // if outside the AABB you can break early, but caller will pass proper t_max
+    float t = 0.f;
+    for ( int i = 0; i < LIGHT_MARCH_STEPS; ++i ) {
+        float step_size = min( LIGHT_MARCH_STEP_SIZES[i], t_max - t );
+        if ( step_size <= 0.f ) {
+            break;
+        }
+        float3 pos = march_pos + local_dir * ( t + 0.5f * step_size ); // midpoint sample
         float d = sample_density(
             cumulus_map_LUT, low_freq_noise_LUT, linear_repeat_sampler, pos );
         // Beer–Lambert per-step
         T *= exp( -clouds_buffer_data.cloud_params.x * d * step_size );
+        t += step_size;
 
         if ( T <= 1e-4 ) {
             return 0.0;
@@ -121,10 +129,8 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float t_min = ( lower_plane_altitude - origin.y ) / local_dir.y;
     float t_max = ( higher_plane_altitude - origin.y ) / local_dir.y;
 
-    int steps = 128;
-
-    float t = 0.0f;
-    float step_size = ( t_max - t_min ) / (float)steps;
+    float step_size = ( t_max - t_min ) / (float)VIEW_MARCH_STEPS;
+    float coarse_step_size = VIEW_MARCH_COARSE_SCALE * step_size;
     float3 accumulated = float3( 0.0f );
 
     float throughput = 1.f;
@@ -148,13 +154,13 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
     float jitter = 0.3f
         * ( rand_float( dot( local_origin.xyz, float3( 12.9898, 78.233, 45.164 ) ) ) - 0.5 )
         * step_size;
-    for ( int i = 0; i < steps; ++i ) {
-        float t = t_min + ( i + 0.5 ) * step_size + jitter;
+    float t_start = t_min + 0.5f * step_size + jitter;
+    float t = t_start;
+    bool in_cloud = false;
+    int empty_samples = 0;
+    for ( int i = 0; i < VIEW_MARCH_MAX_ITERATIONS; ++i ) {
         if ( throughput < 0.01 ) {
             break;
-        }
-        if ( t < t_min ) {
-            continue;
         }
         if ( t > t_max ) {
             break;
@@ -162,7 +168,21 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
         float3 marched_pos = local_origin + local_dir * t;
         float density = sample_density(
             cumulus_map_LUT, low_freq_noise_LUT, linear_repeat_sampler, marched_pos );
+
+        if ( !in_cloud ) {
+            if ( density > 0.f ) {
+                in_cloud = true;
+                empty_samples = 0;
+                t = max( t - coarse_step_size + step_size, t_start );
+            }
+            else {
+                t += coarse_step_size;
+            }
+            continue;
+        }
+
         if ( density > 0.01 ) {
+            empty_samples = 0;
 
             float transmittance
                 = max( estimate_transmittance( cumulus_map_LUT, low_freq_noise_LUT,
@@ -182,6 +202,14 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
             accumulated += throughput * ( direct_lighting + ambient_lighting );
             throughput *= step_transmittance;
         }
+        else {
+            empty_samples++;
+            if ( empty_samples >= VIEW_MARCH_EMPTY_SAMPLES_LIMIT ) {
+                in_cloud = false;
+            }
+        }
+
+        t += step_size;
     }
     if ( length( accumulated ) < 1e-6 ) {
         return float4( 0.f );
