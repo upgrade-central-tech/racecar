@@ -350,3 +350,39 @@ float clamp_range( float input, float min, float max )
 }
 
 
+
+float4 sample_catmull_rom( Texture2D<float4> tex, SamplerState linear_sampler, float2 uv,
+    float2 texture_size )
+{
+    float2 sample_position = uv * texture_size;
+    float2 texel_position_1 = floor( sample_position - 0.5f ) + 0.5f;
+
+    float2 f = sample_position - texel_position_1;
+
+    float2 w0 = f * ( -0.5f + f * ( 1.0f - 0.5f * f ) );
+    float2 w1 = 1.0f + f * f * ( -2.5f + 1.5f * f );
+    float2 w2 = f * ( 0.5f + f * ( 2.0f - 1.5f * f ) );
+    float2 w3 = f * f * ( -0.5f + 0.5f * f );
+
+    float2 w12 = w1 + w2;
+    float2 offset12 = w2 / w12;
+
+    float2 texel_position_0 = ( texel_position_1 - 1.0f ) / texture_size;
+    float2 texel_position_3 = ( texel_position_1 + 2.0f ) / texture_size;
+    float2 texel_position_12 = ( texel_position_1 + offset12 ) / texture_size;
+
+    float4 result = float4( 0.0f );
+    result += tex.SampleLevel( linear_sampler, float2( texel_position_12.x, texel_position_0.y ), 0 )
+        * w12.x * w0.y;
+    result += tex.SampleLevel( linear_sampler, float2( texel_position_0.x, texel_position_12.y ), 0 )
+        * w0.x * w12.y;
+    result += tex.SampleLevel( linear_sampler, texel_position_12, 0 ) * w12.x * w12.y;
+    result += tex.SampleLevel( linear_sampler, float2( texel_position_3.x, texel_position_12.y ), 0 )
+        * w3.x * w12.y;
+    result += tex.SampleLevel( linear_sampler, float2( texel_position_12.x, texel_position_3.y ), 0 )
+        * w12.x * w3.y;
+
+    float total_weight = w12.x * w0.y + w0.x * w12.y + w12.x * w12.y + w3.x * w12.y + w12.x * w3.y;
+
+    return max( result / total_weight, float4( 0.0f ) );
+}

@@ -1,4 +1,5 @@
 #include "../../common.slang"
+#include "../../utils.slang"
 
 layout( binding = 0, set = 0 ) Texture2D<float4> scene_color;
 layout( binding = 1, set = 0 ) Texture2D<float4> scene_history;
@@ -69,7 +70,7 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     bool invalid = any( prev_uv < 0.0f ) || any( prev_uv > 1.0f );
 
     float3 prev_color = select(
-        invalid, curr_color, scene_history.SampleLevel( linear_sampler, prev_uv, 0 ).rgb );
+        invalid, curr_color, sample_catmull_rom( scene_history, linear_sampler, prev_uv, screen_size ).rgb );
 
     // Neighborhood clamp process
     float3 nmin = RGB_to_YCoCg( curr_color );
