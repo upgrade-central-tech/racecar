@@ -5,6 +5,8 @@
 
 #include <volk.h>
 
+#include <filesystem>
+
 namespace racecar::engine {
 
 /// Abstraction over a single Vulkan image.
@@ -33,6 +35,12 @@ RWImage create_rwimage_mips( VkExtent3D extent,
 
 RWImage create_gbuffer_image( VkFormat format,
     VkSampleCountFlagBits samples );
+
+RWImage create_rwimage_from_data( void* data, VkExtent3D extent, VkFormat format,
+    VkImageType image_type, VkImageUsageFlags usage_flags, bool mipmapped );
+
+RWImage create_rwimage_from_load( std::filesystem::path file_path, size_t desired_channels,
+    VkFormat image_format, bool is_mipmapped );
 
 /// Transitions the image out of UNDEFINED once, immediately.
 /// For images whose contents must survive across frames (AA)

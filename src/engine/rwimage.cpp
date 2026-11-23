@@ -75,6 +75,46 @@ RWImage create_rwimage_mips(
     return allocate_rwimage( extent, format, image_type, samples, usage_flags, mip_levels, true );
 }
 
+RWImage create_rwimage_from_data(
+    void* data,
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    VkImageUsageFlags usage_flags,
+    bool mipmapped
+)
+{
+    RWImage rwimage;
+
+    try {
+        rwimage.image = create_image( data, extent, format, image_type, usage_flags, mipmapped );
+    } catch ( const Exception& ex ) {
+        log::error( "[RWImage] Error occurred: {}", ex.what() );
+        throw;
+    }
+
+    return rwimage;
+}
+
+RWImage create_rwimage_from_load(
+    std::filesystem::path file_path,
+    size_t desired_channels,
+    VkFormat image_format,
+    bool is_mipmapped
+)
+{
+    RWImage rwimage;
+
+    try {
+        rwimage.image = load_image( file_path, desired_channels, image_format, is_mipmapped );
+    } catch ( const Exception& ex ) {
+        log::error( "[RWImage] Error occurred: {}", ex.what() );
+        throw;
+    }
+
+    return rwimage;
+}
+
 void initialize_rwimage_layout( RWImage& image, VkImageLayout layout )
 {
     const engine::State& engine = engine::State::GetConst();
