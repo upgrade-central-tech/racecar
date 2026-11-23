@@ -145,6 +145,13 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
         .min = 0.0f, .max = 0.9f, .desired_float = 0.3f, .fallback_float = 0.3f }, // CLOUD_EROSION
 
     Setting { .desired = 0 }, // CONTROL_LOCK
+
+    Setting { .desired = 0 }, // AUTODRIVE
+
+    Setting { .min = 0.0f,
+              .max = 80.0f,
+              .desired_float = 40.0f,
+              .fallback_float = 40.0f }, // AUTODRIVE_TARGET_SPEED
 };
 
 }

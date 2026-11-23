@@ -24,6 +24,10 @@ namespace racecar {
 constexpr float ROAD_POINT_SPACING = 100.0f;
 constexpr size_t ROAD_CENTER_SEGMENT = ( ub_data::ROAD_NUM_POINTS - 2 ) / 2;
 
+inline constexpr float MAX_LATERAL_ACCELERATION = 15.0f;
+inline constexpr float THROTTLE_ACCELERATION = 10.0f;
+inline constexpr float BRAKE_ACCELERATION = -50.0f;
+
 struct GameState {
     float acceleration = 0;
     float speed = 0;

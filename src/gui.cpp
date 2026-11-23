@@ -357,6 +357,11 @@ void update(
                 ImGui::Checkbox( "Enable racing camera", &gui.demo.enable_racing_camera );
                 ImGui::EndDisabled();
                 ImGui::SliderFloat( "Bumpiness", &gui.demo.bumpiness, 0.0f, 0.01f );
+                RacecarGUI::SettingsCheckbox( "Autodrive", RacecarSettings::AUTODRIVE );
+                RacecarGUI::SettingsSliderFloat(
+                    "Autodrive target speed",
+                    RacecarSettings::AUTODRIVE_TARGET_SPEED
+                );
 
                 ImGui::Checkbox( "Rotate on", &gui.demo.rotate_on );
                 ImGui::Text( "Spin speed:" );

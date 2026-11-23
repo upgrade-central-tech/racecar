@@ -4,6 +4,7 @@
 #include "../engine/state.hpp"
 #include "../scene/scene.hpp"
 #include "../settings.h"
+#include "autodrive.hpp"
 #include "roadgen.hpp"
 
 #include <glm/common.hpp>
@@ -12,12 +13,13 @@
 #include <glm/geometric.hpp>
 #include <vulkan/vulkan_core.h>
 
+#include <optional>
+
 namespace racecar {
 
 static const float MAX_SPEED = 80.0f;
 static const float MAX_WHEEL_ANGLE = glm::radians( 40.0f );
 static const float WHEEL_TURNING_RATE = glm::radians( 50.0f );
-static const float MAX_LATERAL_ACCELERATION = 15.0f;
 static const float TURNING_DRAG = 0.1f;
 
 void update_game_state( const scene::Scene& scene )
@@ -25,20 +27,36 @@ void update_game_state( const scene::Scene& scene )
     engine::State& state = engine::State::GetMut();
     GameState& gamestate = state.gamestate;
 
+    const float back_axle_z = scene.demo_scene_nodes.back_axle_local_z;
+    const float wheelbase = scene.demo_scene_nodes.front_axle_local_z - back_axle_z;
+
+    const bool autodrive = RuntimeSettings::GetEnabled( RacecarSettings::AUTODRIVE );
+
     const bool* key_states = SDL_GetKeyboardState( nullptr );
-    const bool controls_locked = RuntimeSettings::GetEnabled( RacecarSettings::CONTROL_LOCK );
+
+    // this should eventually be moved to the predicate fn of control_lock
+    const bool controls_locked = autodrive
+        || RuntimeSettings::GetEnabled( RacecarSettings::CONTROL_LOCK );
 
     const bool up_pressed = !controls_locked && key_states[SDL_SCANCODE_UP];
     const bool down_pressed = !controls_locked && key_states[SDL_SCANCODE_DOWN];
     const bool left_pressed = !controls_locked && key_states[SDL_SCANCODE_LEFT];
     const bool right_pressed = !controls_locked && key_states[SDL_SCANCODE_RIGHT];
 
-    if ( up_pressed ) {
+    std::optional<AutodriveCommand> autodrive_command;
+    if ( autodrive ) {
+        autodrive_command = compute_autodrive( gamestate, back_axle_z, wheelbase );
+    }
+
+    if ( autodrive_command.has_value() ) {
         gamestate.speed_lock = false;
-        gamestate.acceleration = 10.0f;
+        gamestate.acceleration = autodrive_command->acceleration;
+    } else if ( up_pressed ) {
+        gamestate.speed_lock = false;
+        gamestate.acceleration = THROTTLE_ACCELERATION;
     } else if ( down_pressed ) {
         gamestate.speed_lock = false;
-        gamestate.acceleration = -50.0f;
+        gamestate.acceleration = BRAKE_ACCELERATION;
     } else {
         gamestate.acceleration = gamestate.speed_lock ? 0.0f : -10.0f;
     }
@@ -49,7 +67,16 @@ void update_game_state( const scene::Scene& scene )
     // front wheel turning
     bool wheel_turn_input = left_pressed || right_pressed;
 
-    if ( wheel_turn_input ) {
+    if ( autodrive_command.has_value() ) {
+        const float max_step = WHEEL_TURNING_RATE * float( state.delta );
+        const float target_angle = glm::clamp(
+            autodrive_command->wheel_angle,
+            -MAX_WHEEL_ANGLE,
+            MAX_WHEEL_ANGLE
+        );
+        gamestate
+            .wheel_angle += glm::clamp( target_angle - gamestate.wheel_angle, -max_step, max_step );
+    } else if ( wheel_turn_input ) {
         const float steer_input = ( left_pressed ? 1.0f : 0.0f ) - ( right_pressed ? 1.0f : 0.0f );
 
         gamestate.wheel_angle = glm::clamp(
@@ -74,9 +101,6 @@ void update_game_state( const scene::Scene& scene )
             }
         }
     }
-
-    const float back_axle_z = scene.demo_scene_nodes.back_axle_local_z;
-    const float wheelbase = scene.demo_scene_nodes.front_axle_local_z - back_axle_z;
 
     const float speed_sq = gamestate.speed * gamestate.speed;
     if ( speed_sq > 0.0f ) {

@@ -59,6 +59,8 @@ enum class RacecarSettings {
     CLOUD_EXTINCTION,
     CLOUD_EROSION,
     CONTROL_LOCK,
+    AUTODRIVE,
+    AUTODRIVE_TARGET_SPEED,
     RACECAR_SETTINGS_LENGTH
 };
 
@@ -96,6 +98,7 @@ RACECAR_SETTINGS_TYPEDECL( RacecarSettings::TERRAIN_ROAD_WIDTH, float );
 RACECAR_SETTINGS_TYPEDECL( RacecarSettings::TERRAIN_BLEND_WIDTH, float );
 RACECAR_SETTINGS_TYPEDECL( RacecarSettings::CLOUD_EXTINCTION, float );
 RACECAR_SETTINGS_TYPEDECL( RacecarSettings::CLOUD_EROSION, float );
+RACECAR_SETTINGS_TYPEDECL( RacecarSettings::AUTODRIVE_TARGET_SPEED, float );
 
 template <RacecarSettings S> typename SettingValue<S>::type Get()
 {
