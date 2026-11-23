@@ -178,8 +178,8 @@ void run( bool use_fullscreen )
     std::vector<glm::mat4> transforms;
     std::vector<const scene::Primitive*> prims;
     ub_data::RTTextureUniform rt_texture_uniform = { };
-    std::vector<vk::mem::AllocatedImage> albedo_textures;
-    std::vector<vk::mem::AllocatedImage> metallic_roughness_textures;
+    std::vector<const engine::RWImage*> albedo_textures;
+    std::vector<const engine::RWImage*> metallic_roughness_textures;
     load_model_primitive_material_data(
         scene,
         model_mat_uniform_buffers,

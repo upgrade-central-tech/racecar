@@ -15,11 +15,11 @@ namespace {
 
 constexpr size_t NUM_MATERIAL_TEXTURE_BINDINGS = 3;
 
-vk::mem::AllocatedImage create_fallback_texture()
+engine::RWImage create_fallback_texture()
 {
     uint32_t white = 0xFFFFFFFF;
 
-    return engine::create_image(
+    return engine::create_rwimage_from_data(
         &white,
         VkExtent3D( 1, 1, 1 ),
         VK_FORMAT_R8G8B8A8_UNORM,
@@ -285,12 +285,12 @@ void load_model_primitive_material_data(
     std::vector<glm::mat4>& transforms,
     std::vector<const scene::Primitive*>& prims,
     ub_data::RTTextureUniform& rt_texture_uniform,
-    std::vector<vk::mem::AllocatedImage>& albedo_textures,
-    std::vector<vk::mem::AllocatedImage>& metallic_roughness_textures,
+    std::vector<const engine::RWImage*>& albedo_textures,
+    std::vector<const engine::RWImage*>& metallic_roughness_textures,
     std::vector<engine::DescriptorSet>& material_desc_sets
 )
 {
-    const vk::mem::AllocatedImage fallback_texture = create_fallback_texture();
+    const engine::RWImage fallback_texture = create_fallback_texture();
 
     int tex_count = 0;
     for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
@@ -311,7 +311,7 @@ void load_model_primitive_material_data(
 
                 const scene::Material&
                     current_material = scene.materials[static_cast<size_t>( prim.material_id )];
-                std::vector<std::optional<scene::Texture>> textures_needed;
+                std::vector<const scene::Texture*> textures_needed;
 
                 switch ( current_material.type ) {
                 case scene::MaterialType::PBR_ALBEDO_MAP: {
@@ -322,29 +322,24 @@ void load_model_primitive_material_data(
                                                        .metallic_roughness_texture_index;
 
                     textures_needed.push_back(
-                        albedo_index
-                            ? std::optional { (
-                                  scene.textures[static_cast<size_t>( albedo_index.value() )]
-                              ) }
-                            : std::nullopt
+                        albedo_index ? &scene.textures[static_cast<size_t>( albedo_index.value() )]
+                                     : nullptr
                     );
                     textures_needed.push_back(
-                        normal_index
-                            ? std::optional { (
-                                  scene.textures[static_cast<size_t>( normal_index.value() )]
-                              ) }
-                            : std::nullopt
+                        normal_index ? &scene.textures[static_cast<size_t>( normal_index.value() )]
+                                     : nullptr
                     );
                     textures_needed.push_back(
                         metallic_roughness_index
-                            ? std::optional { ( scene.textures[static_cast<
-                                  size_t>( metallic_roughness_index.value() )] ) }
-                            : std::nullopt
+                            ? &scene.textures[static_cast<size_t>( metallic_roughness_index
+                                                                       .value() )]
+                            : nullptr
                     );
 
                     if ( albedo_index ) {
                         albedo_textures.push_back(
-                            scene.textures[static_cast<size_t>( albedo_index.value() )].data.value()
+                            &scene.textures[static_cast<size_t>( albedo_index.value() )]
+                                 .data.value()
                         );
                         rt_texture_uniform.albedo_texture_index[tex_count] = int(
                             albedo_textures.size() - 1
@@ -355,8 +350,8 @@ void load_model_primitive_material_data(
 
                     if ( metallic_roughness_index ) {
                         metallic_roughness_textures.push_back(
-                            scene.textures[static_cast<size_t>( metallic_roughness_index.value() )]
-                                .data.value()
+                            &scene.textures[static_cast<size_t>( metallic_roughness_index.value() )]
+                                 .data.value()
                         );
                         rt_texture_uniform.metallic_roughness_texture_index[tex_count] = int(
                             metallic_roughness_textures.size() - 1
@@ -377,17 +372,19 @@ void load_model_primitive_material_data(
 
                 // TODO: Not yet connected with a layout
                 if ( scene.hdri_index.has_value() ) {
-                    textures_needed.push_back( scene.textures[scene.hdri_index.value()] );
+                    textures_needed.push_back( &scene.textures[scene.hdri_index.value()] );
                 } else {
-                    textures_needed.push_back( std::nullopt );
+                    textures_needed.push_back( nullptr );
                 }
 
                 for ( size_t i = 0; i < NUM_MATERIAL_TEXTURE_BINDINGS; i++ ) {
-                    const bool has_texture = i < textures_needed.size() && textures_needed[i];
+                    const bool has_texture = i < textures_needed.size()
+                        && textures_needed[i] != nullptr;
 
-                    engine::update_descriptor_set_image(
+                    engine::update_descriptor_set_rwimage(
                         material_desc_sets[static_cast<size_t>( prim.material_id )],
                         has_texture ? textures_needed[i]->data.value() : fallback_texture,
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                         static_cast<int>( i )
                     );
                 }

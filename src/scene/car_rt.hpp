@@ -54,8 +54,8 @@ bool sync_material_table( UniformBuffer<ub_data::MaterialTable>& material_table,
     const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers );
 
 engine::DescriptorSet create_combined_textures_desc_set( 
-    std::vector<vk::mem::AllocatedImage>& albedo_textures,
-    std::vector<vk::mem::AllocatedImage>& metallic_roughness_textures );
+    const std::vector<const engine::RWImage*>& albedo_textures,
+    const std::vector<const engine::RWImage*>& metallic_roughness_textures );
 
 void update_rt_uniform_buffers(
     UniformBuffer<ub_data::BLASOffsets>& offset_data,

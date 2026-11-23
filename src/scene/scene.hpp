@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../engine/rwimage.hpp"
 #include "../engine/ub_data.hpp"
 #include "../engine/uniform_buffer.hpp"
 #include "../geometry/scene_mesh.hpp"
@@ -57,7 +58,7 @@ struct Material {
 };
 
 struct Texture {
-    std::optional<vk::mem::AllocatedImage> data;
+    std::optional<engine::RWImage> data;
 
     int width = 0;
     int height = 0;

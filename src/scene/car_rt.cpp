@@ -244,8 +244,8 @@ engine::DescriptorSet create_car_desc_set(
 }
 
 engine::DescriptorSet create_combined_textures_desc_set(
-    std::vector<vk::mem::AllocatedImage>& albedo_textures,
-    std::vector<vk::mem::AllocatedImage>& metallic_roughness_textures
+    const std::vector<const engine::RWImage*>& albedo_textures,
+    const std::vector<const engine::RWImage*>& metallic_roughness_textures
 )
 {
     engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(
@@ -257,11 +257,21 @@ engine::DescriptorSet create_combined_textures_desc_set(
         uint32_t( albedo_textures.size() )
     );
 
-    engine::update_descriptor_set_image_array( combined_textures_desc_set, albedo_textures, 0 );
-    engine::update_descriptor_set_image_array(
+    const uint32_t texture_array_count = uint32_t( albedo_textures.size() );
+
+    engine::update_descriptor_set_rwimage_array(
+        combined_textures_desc_set,
+        albedo_textures,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        0,
+        texture_array_count
+    );
+    engine::update_descriptor_set_rwimage_array(
         combined_textures_desc_set,
         metallic_roughness_textures,
-        1
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        1,
+        texture_array_count
     );
 
     return combined_textures_desc_set;

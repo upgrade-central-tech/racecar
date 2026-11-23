@@ -44,8 +44,8 @@ void load_model_primitive_material_data(
     const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
     std::vector<glm::mat4>& transforms, std::vector<const scene::Primitive*>& prims,
     ub_data::RTTextureUniform& rt_texture_uniform,
-    std::vector<vk::mem::AllocatedImage>& albedo_textures,
-    std::vector<vk::mem::AllocatedImage>& metallic_roughness_textures,
+    std::vector<const engine::RWImage*>& albedo_textures,
+    std::vector<const engine::RWImage*>& metallic_roughness_textures,
     std::vector<engine::DescriptorSet>& material_desc_sets );
 
 void sort_transparent_opaque_prims(

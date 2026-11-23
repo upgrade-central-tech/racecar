@@ -229,7 +229,7 @@ void load_gltf(
         new_tex.height = loaded_img.height;
         new_tex.bits_per_channel = loaded_img.bits;
         new_tex.num_channels = loaded_img.component;
-        scene.textures.push_back( new_tex );
+        scene.textures.push_back( std::move( new_tex ) );
     }
 
     // Mark albedo and emission as SRGB.
@@ -256,7 +256,7 @@ void load_gltf(
             texture.color_space
         );
 
-        texture.data = engine::create_image(
+        texture.data = engine::create_rwimage_from_data(
             const_cast<void*>( static_cast<const void*>( loaded_img.image.data() ) ),
             { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
             image_format,
@@ -635,7 +635,7 @@ bool load_hdri( std::string file_path, Scene& scene )
         hdri.num_channels,
         ColorSpace::SFLOAT
     );
-    hdri.data = engine::create_image(
+    hdri.data = engine::create_rwimage_from_data(
         static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
         image_format,
@@ -644,7 +644,7 @@ bool load_hdri( std::string file_path, Scene& scene )
         false
     );
 
-    scene.textures.push_back( hdri );
+    scene.textures.push_back( std::move( hdri ) );
     scene.hdri_index = scene.textures.size() - 1;
     return true;
 }
