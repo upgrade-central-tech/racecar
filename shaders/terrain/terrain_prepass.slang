@@ -311,7 +311,17 @@ FragmentOutput fs_main( DomainOutput in )
     output.albedo = float4( mixed_albedo, mixed_roughness );
 
 
-    output.velocity = float2( 0.0f );
+    float2 scroll_delta = terrain_data.terrain_data1.xy - terrain_data.terrain_data2.xy;
+    float3 prev_world_position = world_position
+        + float3( scroll_delta.x, 0.0f, scroll_delta.y ) / TERRAIN_WORLD_SCALE;
+
+    float4 curr_clip_pos = mul( camera_buffer_data.unjittered_mvp, float4( world_position, 1.0f ) );
+    float4 prev_clip_pos = mul( camera_buffer_data.prev_mvp, float4( prev_world_position, 1.0f ) );
+
+    float2 old_uv = 0.5f * ( prev_clip_pos.xy / prev_clip_pos.w ) + 0.5f;
+    float2 curr_uv = 0.5f * ( curr_clip_pos.xy / curr_clip_pos.w ) + 0.5f;
+
+    output.velocity = old_uv - curr_uv;
 
     return output;
 }

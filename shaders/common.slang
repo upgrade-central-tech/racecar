@@ -83,6 +83,9 @@ struct TerrainData {
     // terrain params
     // stores: road_width, blend_width, height_normal_eps, enable_distance_fog
     float4 packed_floats1;
+
+    // prev scrolling offset XY, unused, unused
+    float4 terrain_data2;
 }
 
 struct MaterialData {

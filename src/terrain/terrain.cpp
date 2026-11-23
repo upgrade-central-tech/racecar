@@ -620,6 +620,10 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
 
     glm::vec2 offset_XY = engine.gamestate.world_position * TERRAIN_WORLD_SCALE;
 
+    glm::vec2 prev_offset_XY = engine.rendered_frames == 0 ? offset_XY
+                                                           : glm::vec2( terrain_ub.terrain_data1 );
+    terrain_ub.terrain_data2 = glm::vec4( prev_offset_XY, 0.0f, 0.0f );
+
     terrain_ub.terrain_data1 = glm::vec4( offset_XY, scroll_direction );
 
     float road_width = RuntimeSettings::GetFloat( RacecarSettings::TERRAIN_ROAD_WIDTH );

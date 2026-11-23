@@ -150,6 +150,9 @@ struct [[slang_check("TerrainData")]] TerrainData {
     // terrain params
     // stores: road_width, blend_width, height_normal_eps, enable_distance_fog
     glm::vec4 packed_floats1;
+
+    // prev scrolling offset XY, unused, unused
+    glm::vec4 terrain_data2;
 };
 
 struct Tonemapping {
