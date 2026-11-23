@@ -109,7 +109,7 @@ void run( bool use_fullscreen )
     // LOAD MATERIAL LOOKUP TABLES
     engine::DescriptorSet lut_sets;
     vk::mem::AllocatedImage lut_brdf;
-    vk::mem::AllocatedImage glint_noise;
+    engine::RWImage glint_noise;
     create_lut_sets( &lut_sets, &lut_brdf, &glint_noise );
 
     // LOAD GLOBAL QUAD MESH

@@ -13,9 +13,7 @@ constexpr std::string_view BRDF_LUT_PATH = "../assets/LUT/brdf.png";
 }
 
 void create_lut_sets(
-    engine::DescriptorSet* lut_sets,
-    vk::mem::AllocatedImage* lut_brdf,
-    vk::mem::AllocatedImage* glint_noise
+    engine::DescriptorSet* lut_sets, vk::mem::AllocatedImage* lut_brdf, engine::RWImage* glint_noise
 )
 {
     // TODO: Add blue noise for future features
@@ -34,7 +32,12 @@ void create_lut_sets(
     *glint_noise = geometry::generate_glint_noise();
 
     engine::update_descriptor_set_image( *lut_sets, *lut_brdf, LUT_INDEX::BRDF );
-    engine::update_descriptor_set_image( *lut_sets, *glint_noise, LUT_INDEX::GLINT );
+    engine::update_descriptor_set_rwimage(
+        *lut_sets,
+        *glint_noise,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        LUT_INDEX::GLINT
+    );
 }
 
 }

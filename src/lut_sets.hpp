@@ -2,6 +2,7 @@
 
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
+#include "engine/rwimage.hpp"
 #include "engine/state.hpp"
 
 namespace racecar {
@@ -15,6 +16,6 @@ enum LUT_INDEX {
 };
 
 void create_lut_sets( engine::DescriptorSet* lut_sets,
-    vk::mem::AllocatedImage* lut_brdf, vk::mem::AllocatedImage* glint_noise );
+    vk::mem::AllocatedImage* lut_brdf, engine::RWImage* glint_noise );
 
 }

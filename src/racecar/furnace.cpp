@@ -109,7 +109,7 @@ void furnace( bool use_fullscreen )
     // Load material lookup tables
     engine::DescriptorSet lut_sets;
     vk::mem::AllocatedImage lut_brdf;
-    vk::mem::AllocatedImage glint_noise;
+    engine::RWImage glint_noise;
     create_lut_sets( &lut_sets, &lut_brdf, &glint_noise );
 
     // Uniform white sky in place of the baked atmosphere

@@ -61,7 +61,7 @@ struct TerrainPrepassInfo {
     // engine::RWImage* GBuffer_Packed_Data;
     // engine::RWImage* GBuffer_Velocity;
 
-    vk::mem::AllocatedImage* glint_noise;
+    engine::RWImage* glint_noise;
     
     engine::DescriptorSet* gamestate_desc_set;
 };

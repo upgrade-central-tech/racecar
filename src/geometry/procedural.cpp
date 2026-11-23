@@ -46,21 +46,18 @@ vk::mem::AllocatedImage generate_test_3D()
     );
 }
 
-vk::mem::AllocatedImage generate_glint_noise()
+engine::RWImage generate_glint_noise()
 {
     const engine::State& engine = engine::State::GetConst();
     uint32_t noise_texture_size = 512;
 
     // Allocate the coefficeints.
-    vk::mem::AllocatedImage glint_noise_texture = engine::allocate_image(
+    engine::RWImage glint_noise_texture = engine::create_rwimage(
         { noise_texture_size, noise_texture_size, 1 },
         VK_FORMAT_R32G32B32A32_SFLOAT,
         VK_IMAGE_TYPE_2D,
-        1,
-        1,
         VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        false
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
     );
 
     {
@@ -69,7 +66,12 @@ vk::mem::AllocatedImage generate_glint_noise()
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_write_image( glint_desc_set, glint_noise_texture, 0 );
+        engine::update_descriptor_set_rwimage(
+            glint_desc_set,
+            glint_noise_texture,
+            VK_IMAGE_LAYOUT_GENERAL,
+            0
+        );
 
         VkShaderModule glint_noise_init_module = vk::create::shader_module(
             "../shaders/glint/glint_noise_init.spv"
@@ -89,7 +91,7 @@ vk::mem::AllocatedImage generate_glint_noise()
             // RW cubemap transition first
             vk::utility::transition_image(
                 command_buffer,
-                glint_noise_texture.vk_image,
+                glint_noise_texture.image.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -125,7 +127,7 @@ vk::mem::AllocatedImage generate_glint_noise()
 
             vk::utility::transition_image(
                 command_buffer,
-                glint_noise_texture.vk_image,
+                glint_noise_texture.image.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,

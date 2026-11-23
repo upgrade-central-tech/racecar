@@ -245,9 +245,10 @@ void initialize_terrain(
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         terrain.prepass_lut_desc_set,
         *prepass_info.glint_noise,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
     engine::update_descriptor_set_image( terrain.prepass_lut_desc_set, terrain.terrain_noise, 1 );
