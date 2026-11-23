@@ -3,6 +3,7 @@
 #include "../engine/descriptor_set.hpp"
 #include "../engine/state.hpp"
 #include "../scene/scene.hpp"
+#include "../settings.h"
 #include "roadgen.hpp"
 
 #include <glm/common.hpp>
@@ -25,11 +26,17 @@ void update_game_state( const scene::Scene& scene )
     GameState& gamestate = state.gamestate;
 
     const bool* key_states = SDL_GetKeyboardState( nullptr );
+    const bool controls_locked = RuntimeSettings::GetEnabled( RacecarSettings::CONTROL_LOCK );
 
-    if ( key_states[SDL_SCANCODE_UP] ) {
+    const bool up_pressed = !controls_locked && key_states[SDL_SCANCODE_UP];
+    const bool down_pressed = !controls_locked && key_states[SDL_SCANCODE_DOWN];
+    const bool left_pressed = !controls_locked && key_states[SDL_SCANCODE_LEFT];
+    const bool right_pressed = !controls_locked && key_states[SDL_SCANCODE_RIGHT];
+
+    if ( up_pressed ) {
         gamestate.speed_lock = false;
         gamestate.acceleration = 10.0f;
-    } else if ( key_states[SDL_SCANCODE_DOWN] ) {
+    } else if ( down_pressed ) {
         gamestate.speed_lock = false;
         gamestate.acceleration = -50.0f;
     } else {
@@ -40,11 +47,10 @@ void update_game_state( const scene::Scene& scene )
     gamestate.speed = glm::clamp( gamestate.speed, 0.0f, MAX_SPEED );
 
     // front wheel turning
-    bool wheel_turn_input = key_states[SDL_SCANCODE_LEFT] || key_states[SDL_SCANCODE_RIGHT];
+    bool wheel_turn_input = left_pressed || right_pressed;
 
     if ( wheel_turn_input ) {
-        const float steer_input = ( key_states[SDL_SCANCODE_LEFT] ? 1.0f : 0.0f )
-            - ( key_states[SDL_SCANCODE_RIGHT] ? 1.0f : 0.0f );
+        const float steer_input = ( left_pressed ? 1.0f : 0.0f ) - ( right_pressed ? 1.0f : 0.0f );
 
         gamestate.wheel_angle = glm::clamp(
             gamestate.wheel_angle + steer_input * WHEEL_TURNING_RATE * float( state.delta ),
