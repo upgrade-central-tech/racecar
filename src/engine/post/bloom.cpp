@@ -163,7 +163,7 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
         );
 
         const RWImage& input_image = i == 0 ? write_only : pass.images[i - 1];
-        VkExtent3D output_extent = pass.images[i].images[0].image_extent;
+        VkExtent3D output_extent = pass.images[i].image.image_extent;
 
         engine::DescriptorSet downsample_desc_set = engine::generate_descriptor_set(
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
@@ -244,7 +244,7 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
         );
 
         const RWImage& output_image = i == 0 ? inout : pass.images[i - 1];
-        VkExtent3D output_extent = output_image.images[0].image_extent;
+        VkExtent3D output_extent = output_image.image.image_extent;
 
         engine::DescriptorSet upsample_desc_set = engine::generate_descriptor_set(
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },

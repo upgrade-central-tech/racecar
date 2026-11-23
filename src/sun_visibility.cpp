@@ -143,8 +143,8 @@ void compute_sun_visibility( SunVisibilityComputePass& sun_visibility, engine::T
             sun_visibility.gamestate_desc_set,
         },
         glm::ivec3(
-            sun_visibility.sun_visibility_shadow_map.images[0].image_extent.width / 8,
-            sun_visibility.sun_visibility_shadow_map.images[0].image_extent.height / 8,
+            sun_visibility.sun_visibility_shadow_map.image.image_extent.width / 8,
+            sun_visibility.sun_visibility_shadow_map.image.image_extent.height / 8,
             1
         ),
     };

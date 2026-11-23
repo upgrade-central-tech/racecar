@@ -95,8 +95,8 @@ void add_ao( AoPass& ao_pass, TaskList& task_list )
         "cs_ao"
     );
 
-    size_t dim_x = ( ao_pass.ao_output.images[0].image_extent.width + 7 ) / 8;
-    size_t dim_y = ( ao_pass.ao_output.images[0].image_extent.height + 7 ) / 8;
+    size_t dim_x = ( ao_pass.ao_output.image.image_extent.width + 7 ) / 8;
+    size_t dim_y = ( ao_pass.ao_output.image.image_extent.height + 7 ) / 8;
 
     // pre-compute task transition ao_output to general
     engine::add_pipeline_barrier(

@@ -19,22 +19,19 @@ RWImage allocate_rwimage(
     bool mipmapped
 )
 {
-    const engine::State& engine = engine::State::GetConst();
     RWImage rwimage;
 
     try {
-        for ( size_t i = 0; i < engine.swapchain_images.size(); ++i ) {
-            rwimage.images.push_back( allocate_image(
-                extent,
-                format,
-                image_type,
-                mip_levels,
-                1,
-                samples,
-                usage_flags,
-                mipmapped
-            ) );
-        }
+        rwimage.image = allocate_image(
+            extent,
+            format,
+            image_type,
+            mip_levels,
+            1,
+            samples,
+            usage_flags,
+            mipmapped
+        );
     } catch ( const Exception& ex ) {
         log::error( "[RWImage] Error occurred: {}", ex.what() );
         throw;
@@ -82,19 +79,17 @@ void initialize_rwimage_layout( RWImage& image, VkImageLayout layout )
 {
     const engine::State& engine = engine::State::GetConst();
     engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
-        for ( vk::mem::AllocatedImage& frame_image : image.images ) {
-            vk::utility::transition_image(
-                command_buffer,
-                frame_image.image,
-                VK_IMAGE_LAYOUT_UNDEFINED,
-                layout,
-                VK_ACCESS_2_NONE,
-                VK_ACCESS_2_SHADER_READ_BIT,
-                VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                VK_IMAGE_ASPECT_COLOR_BIT
-            );
-        }
+        vk::utility::transition_image(
+            command_buffer,
+            image.image.image,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            layout,
+            VK_ACCESS_2_NONE,
+            VK_ACCESS_2_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+            VK_IMAGE_ASPECT_COLOR_BIT
+        );
     } );
 }
 

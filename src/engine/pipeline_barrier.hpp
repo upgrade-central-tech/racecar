@@ -51,7 +51,7 @@ struct ImageBarrier {
     RWImage* image = nullptr;
     VkImageSubresourceRange range;
 
-    VkImageMemoryBarrier2 get_vk( size_t idx ) const;
+    VkImageMemoryBarrier2 get_vk() const;
 };
 
 struct PipelineBarrierDescriptor {

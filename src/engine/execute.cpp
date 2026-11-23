@@ -252,7 +252,7 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                 }
 
                 const VkImage& dst_image = ( blit_task.out_color != nullptr )
-                    ? blit_task.out_color->images[frame_number].image
+                    ? blit_task.out_color->image.image
                     : output_image;
 
                 execute_blit_task( frame.render_cmdbuf, blit_task, dst_image );

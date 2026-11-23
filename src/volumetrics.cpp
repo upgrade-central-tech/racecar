@@ -357,8 +357,8 @@ void draw_volumetric(
     const engine::State& engine = engine::State::GetConst();
     // Build the low-res render image
     VkExtent2D color_dim = {
-        color_attachment.images[0].image_extent.width,
-        color_attachment.images[0].image_extent.height,
+        color_attachment.image.image_extent.width,
+        color_attachment.image.image_extent.height,
     };
 
     VkExtent2D low_res_dim = {
@@ -372,7 +372,7 @@ void draw_volumetric(
             low_res_dim.height,
             1,
         },
-        color_attachment.images[0].image_format,
+        color_attachment.image.image_format,
         VK_IMAGE_TYPE_2D,
         VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
@@ -420,7 +420,7 @@ void draw_volumetric(
                 volumetric.lut_desc_set.layouts[0],
                 volumetric.sampler_desc_set.layouts[0],
             },
-            { volumetric.cloud_buffer.images[0].image_format },
+            { volumetric.cloud_buffer.image.image_format },
             VK_SAMPLE_COUNT_1_BIT,
             false,
             true,
@@ -484,7 +484,7 @@ void draw_volumetric(
                 volumetric.sampler_desc_set.layouts[0],
             },
             {
-                volumetric.cloud_buffer.images[0].image_format,
+                volumetric.cloud_buffer.image.image_format,
             },
             VK_SAMPLE_COUNT_1_BIT,
             true,

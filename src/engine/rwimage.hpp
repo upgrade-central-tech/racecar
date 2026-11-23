@@ -5,16 +5,14 @@
 
 #include <volk.h>
 
-#include <vector>
-
 namespace racecar::engine {
 
-/// Abstraction over Vulkan images and takes into consideration the multiple swapchain images.
+/// Abstraction over a single Vulkan image.
 ///
 /// Move-only
-/// An RWImage is the single owner of its per-frame images
+/// An RWImage is the single owner of its image
 struct RWImage {
-    std::vector<vk::mem::AllocatedImage> images;
+    vk::mem::AllocatedImage image;
 
     RWImage() = default;
 
@@ -36,7 +34,7 @@ RWImage create_rwimage_mips( VkExtent3D extent,
 RWImage create_gbuffer_image( VkFormat format,
     VkSampleCountFlagBits samples );
 
-/// Transitions every frame's image out of UNDEFINED once, immediately.
+/// Transitions the image out of UNDEFINED once, immediately.
 /// For images whose contents must survive across frames (AA)
 void initialize_rwimage_layout(
     RWImage& image, VkImageLayout layout );
