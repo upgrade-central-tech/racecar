@@ -30,15 +30,12 @@ void initialize_atmosphere_baker(
     const engine::State& engine = engine::State::GetConst();
     uint32_t octahedral_sky_size = 512;
 
-    atms_baker.octahedral_sky = engine::allocate_image(
+    atms_baker.octahedral_sky = engine::create_rwimage(
         { octahedral_sky_size, octahedral_sky_size, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
-        1,
-        1,
         VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        false
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
     );
 
     atms_baker.octahedral_write_desc_set = engine::generate_descriptor_set(
@@ -61,20 +58,23 @@ void initialize_atmosphere_baker(
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
-    engine::update_descriptor_set_write_image(
+    engine::update_descriptor_set_rwimage(
         atms_baker.octahedral_write_desc_set,
         atms_baker.octahedral_sky,
+        VK_IMAGE_LAYOUT_GENERAL,
         0
     );
 
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         atms_baker.volumetrics_desc_set,
         volumetric.cumulus_map,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         atms_baker.volumetrics_desc_set,
         volumetric.low_freq_noise,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
     engine::update_descriptor_set_sampler(
@@ -87,9 +87,10 @@ void initialize_atmosphere_baker(
         volumetric.uniform_buffer,
         3
     );
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         atms_baker.volumetrics_desc_set,
         volumetric.high_freq_noise,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         4
     );
 
@@ -143,7 +144,7 @@ void atmosphere_baker_precompute( AtmosphereBaker& atms_baker, VkCommandBuffer p
 {
     vk::utility::transition_image(
         precompute_cmdbuf,
-        atms_baker.octahedral_sky.vk_image,
+        atms_baker.octahedral_sky.image.vk_image,
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_GENERAL,
         VK_ACCESS_2_NONE,
@@ -157,7 +158,7 @@ void atmosphere_baker_precompute( AtmosphereBaker& atms_baker, VkCommandBuffer p
 void compute_octahedral_sky( AtmosphereBaker& atms_baker, engine::TaskList& task_list )
 {
     Atmosphere& atms = *atms_baker.atmosphere;
-    const vk::mem::AllocatedImage& octahedral_sky = atms_baker.octahedral_sky;
+    const vk::mem::AllocatedImage& octahedral_sky = atms_baker.octahedral_sky.image;
 
     uint32_t x_groups = ( static_cast<uint32_t>( octahedral_sky.image_extent.width ) + 7 ) / 8;
     uint32_t y_groups = ( static_cast<uint32_t>( octahedral_sky.image_extent.width ) + 7 ) / 8;
@@ -194,9 +195,10 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
             )
         );
 
-        engine::update_descriptor_set_write_image(
+        engine::update_descriptor_set_rwimage(
             atms_baker.octahedral_mip_writes[mip],
             atms_baker.octahedral_sky,
+            VK_IMAGE_LAYOUT_GENERAL,
             0
         );
         engine::update_descriptor_set_rwimage_mip(
@@ -300,9 +302,10 @@ void dispatch_atmosphere_baker(
 
     atmosphere::compute_octahedral_sky_mips( atms_baker, task_list );
 
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         lut_sets,
         atms_baker.octahedral_sky,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         LUT_INDEX::OCTAHEDRAL_SKY
     );
     engine::update_descriptor_set_rwimage(

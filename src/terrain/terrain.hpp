@@ -45,7 +45,7 @@ struct TerrainLightingInfo {
     // engine::RWImage* GBuffer_Albedo;
     // engine::RWImage* GBuffer_Packed_Data;
     engine::RWImage* color_attachment;
-    vk::mem::AllocatedImage* lut_brdf;
+    engine::RWImage* lut_brdf;
 };
 
 struct TerrainPrepassInfo {
@@ -100,13 +100,13 @@ struct Terrain {
 
     // Crap-ton of images. We need a bindless-texture solution or something.
     // Maybe one giant atlas will work, actually.
-    vk::mem::AllocatedImage test_layer_mask;
-    vk::mem::AllocatedImage grass_albedo_roughness;
-    vk::mem::AllocatedImage grass_normal_ao;
-    vk::mem::AllocatedImage asphalt_albedo_roughness;
-    vk::mem::AllocatedImage asphalt_normal_ao;
+    engine::RWImage test_layer_mask;
+    engine::RWImage grass_albedo_roughness;
+    engine::RWImage grass_normal_ao;
+    engine::RWImage asphalt_albedo_roughness;
+    engine::RWImage asphalt_normal_ao;
 
-    vk::mem::AllocatedImage terrain_noise;
+    engine::RWImage terrain_noise;
 
     VkVertexInputBindingDescription vertex_binding_description = {
         .binding = vk::binding::VERTEX_BUFFER,

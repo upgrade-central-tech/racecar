@@ -89,7 +89,12 @@ void create_descriptor_sets( TerrainRayTracingInfo* info )
     engine::update_descriptor_set_uniform( info->uniform_desc_set, *info->terrain_uniform, 0 );
     engine::update_descriptor_set_uniform( info->uniform_desc_set, info->grid_uniform, 1 );
 
-    engine::update_descriptor_set_image( info->texture_desc_set, *info->layer_mask, 0 );
+    engine::update_descriptor_set_rwimage(
+        info->texture_desc_set,
+        *info->layer_mask,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        0
+    );
 
     engine::update_descriptor_set_sampler(
         info->sampler_desc_set,
@@ -180,19 +185,36 @@ void create_shading_desc_set(
 
     engine::update_descriptor_set_uniform( info->shading_desc_set, *info->terrain_uniform, 1 );
 
-    engine::update_descriptor_set_image( info->shading_desc_set, terrain.test_layer_mask, 2 );
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
+        info->shading_desc_set,
+        terrain.test_layer_mask,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        2
+    );
+    engine::update_descriptor_set_rwimage(
         info->shading_desc_set,
         terrain.grass_albedo_roughness,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         3
     );
-    engine::update_descriptor_set_image( info->shading_desc_set, terrain.grass_normal_ao, 4 );
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
+        info->shading_desc_set,
+        terrain.grass_normal_ao,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        4
+    );
+    engine::update_descriptor_set_rwimage(
         info->shading_desc_set,
         terrain.asphalt_albedo_roughness,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         5
     );
-    engine::update_descriptor_set_image( info->shading_desc_set, terrain.asphalt_normal_ao, 6 );
+    engine::update_descriptor_set_rwimage(
+        info->shading_desc_set,
+        terrain.asphalt_normal_ao,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        6
+    );
 
     engine::update_descriptor_set_sampler(
         info->shading_desc_set,

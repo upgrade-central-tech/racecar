@@ -11,7 +11,7 @@
 
 namespace racecar::geometry {
 
-vk::mem::AllocatedImage generate_test_3D()
+engine::RWImage generate_test_3D()
 {
     const uint32_t block_size = 32;
     const uint32_t dim = 128;
@@ -36,7 +36,7 @@ vk::mem::AllocatedImage generate_test_3D()
     }
 
     // Create the 3D image
-    return engine::create_image(
+    return engine::create_rwimage_from_data(
         static_cast<void*>( texture_data.data() ),
         { dim, dim, dim },
         VK_FORMAT_R32G32B32A32_SFLOAT, // 4-channel float

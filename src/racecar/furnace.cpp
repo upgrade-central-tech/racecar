@@ -108,13 +108,13 @@ void furnace( bool use_fullscreen )
 
     // Load material lookup tables
     engine::DescriptorSet lut_sets;
-    vk::mem::AllocatedImage lut_brdf;
+    engine::RWImage lut_brdf;
     engine::RWImage glint_noise;
     create_lut_sets( &lut_sets, &lut_brdf, &glint_noise );
 
     // Uniform white sky in place of the baked atmosphere
     glm::vec4 sky_texel( FURNACE_RADIANCE, FURNACE_RADIANCE, FURNACE_RADIANCE, 1.f );
-    vk::mem::AllocatedImage white_sky = engine::create_image(
+    engine::RWImage white_sky = engine::create_rwimage_from_data(
         &sky_texel,
         VkExtent3D( 1, 1, 1 ),
         VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -122,12 +122,22 @@ void furnace( bool use_fullscreen )
         VK_IMAGE_USAGE_SAMPLED_BIT,
         false
     );
-    engine::update_descriptor_set_image( lut_sets, white_sky, LUT_INDEX::OCTAHEDRAL_SKY );
-    engine::update_descriptor_set_image( lut_sets, white_sky, LUT_INDEX::OCTAHEDRAL_MIPS );
+    engine::update_descriptor_set_rwimage(
+        lut_sets,
+        white_sky,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        LUT_INDEX::OCTAHEDRAL_SKY
+    );
+    engine::update_descriptor_set_rwimage(
+        lut_sets,
+        white_sky,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        LUT_INDEX::OCTAHEDRAL_MIPS
+    );
 
     // Sun fully occluded, so only the sky lights the sphere
     float sun_visibility = 0.f;
-    vk::mem::AllocatedImage sun_visibility_image = engine::create_image(
+    engine::RWImage sun_visibility_image = engine::create_rwimage_from_data(
         &sun_visibility,
         VkExtent3D( 1, 1, 1 ),
         VK_FORMAT_R32_SFLOAT,
@@ -154,7 +164,12 @@ void furnace( bool use_fullscreen )
         },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
-    engine::update_descriptor_set_image( sun_visibility_desc_set, sun_visibility_image, 0 );
+    engine::update_descriptor_set_rwimage(
+        sun_visibility_desc_set,
+        sun_visibility_image,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        0
+    );
     engine::update_descriptor_set_uniform(
         sun_visibility_desc_set,
         sun_visibility_terrain_size,
@@ -243,7 +258,7 @@ void furnace( bool use_fullscreen )
 
     // No reflection pass: empty reflections fall back to the sky
     glm::vec4 empty_texel( 0.f );
-    vk::mem::AllocatedImage empty_reflection = engine::create_image(
+    engine::RWImage empty_reflection = engine::create_rwimage_from_data(
         &empty_texel,
         VkExtent3D( 1, 1, 1 ),
         VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -255,8 +270,18 @@ void furnace( bool use_fullscreen )
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
-    engine::update_descriptor_set_image( reflection_buffer_desc_set, empty_reflection, 0 );
-    engine::update_descriptor_set_image( reflection_buffer_desc_set, empty_reflection, 1 );
+    engine::update_descriptor_set_rwimage(
+        reflection_buffer_desc_set,
+        empty_reflection,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        0
+    );
+    engine::update_descriptor_set_rwimage(
+        reflection_buffer_desc_set,
+        empty_reflection,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        1
+    );
 #endif // RACECAR_RAY_TRACING
 
     engine::post::AoPass ao_pass { .camera_buffer = &camera_buffer,

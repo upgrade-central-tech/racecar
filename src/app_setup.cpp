@@ -232,8 +232,13 @@ void create_raymarch_tex_sets( engine::DescriptorSet* raymarch_tex_sets )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
-    vk::mem::AllocatedImage test_data_3D = geometry::generate_test_3D();
-    engine::update_descriptor_set_image( *raymarch_tex_sets, test_data_3D, 0 );
+    engine::RWImage test_data_3D = geometry::generate_test_3D();
+    engine::update_descriptor_set_rwimage(
+        *raymarch_tex_sets,
+        test_data_3D,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        0
+    );
 }
 
 void create_screen_buffers(

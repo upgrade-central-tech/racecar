@@ -1,4 +1,5 @@
 #pragma once
+#include "engine/rwimage.hpp"
 #include "engine/task_list.hpp"
 #include "engine/ub_data.hpp"
 #include "geometry/quad.hpp"
@@ -20,9 +21,9 @@ struct Volumetric {
     scene::Scene scene;
     geometry::quad::Mesh scene_mesh;
 
-    vk::mem::AllocatedImage cumulus_map;
-    vk::mem::AllocatedImage low_freq_noise;
-    vk::mem::AllocatedImage high_freq_noise;
+    engine::RWImage cumulus_map;
+    engine::RWImage low_freq_noise;
+    engine::RWImage high_freq_noise;
 
     engine::RWImage cloud_buffer;
 
@@ -42,8 +43,8 @@ bool generate_noise(
 void draw_volumetric( [[maybe_unused]] Volumetric& volumetric,
     [[maybe_unused]] engine::TaskList& task_list,
     engine::RWImage& color_attachment,
-    const vk::mem::AllocatedImage& irradiance_lut,
-    const vk::mem::AllocatedImage& transmittance_lut );
+    const engine::RWImage& irradiance_lut,
+    const engine::RWImage& transmittance_lut );
 
 void update_volumetric_uniform_buffer( 
     atmosphere::Atmosphere& atms, volumetric::Volumetric& volumetric,

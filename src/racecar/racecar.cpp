@@ -108,7 +108,7 @@ void run( bool use_fullscreen )
 
     // LOAD MATERIAL LOOKUP TABLES
     engine::DescriptorSet lut_sets;
-    vk::mem::AllocatedImage lut_brdf;
+    engine::RWImage lut_brdf;
     engine::RWImage glint_noise;
     create_lut_sets( &lut_sets, &lut_brdf, &glint_noise );
 

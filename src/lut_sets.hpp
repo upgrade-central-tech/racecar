@@ -16,6 +16,6 @@ enum LUT_INDEX {
 };
 
 void create_lut_sets( engine::DescriptorSet* lut_sets,
-    vk::mem::AllocatedImage* lut_brdf, engine::RWImage* glint_noise );
+    engine::RWImage* lut_brdf, engine::RWImage* glint_noise );
 
 }

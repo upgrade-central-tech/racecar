@@ -115,43 +115,47 @@ void initialize_terrain(
         engine.frame_overlap
     );
 
-    terrain.test_layer_mask = engine::load_image(
+    terrain.test_layer_mask = engine::create_rwimage_from_load(
         TEST_LAYER_MASK_PATH,
         2,
         VK_FORMAT_R8G8_UNORM,
         false
     );
 
-    terrain.grass_albedo_roughness = engine::load_image(
+    terrain.grass_albedo_roughness = engine::create_rwimage_from_load(
         TEST_GRASS_ALBEDO_ROUGHNESS_PATH,
         4,
         VK_FORMAT_R8G8B8A8_SRGB,
         true
     );
 
-    terrain.grass_normal_ao = engine::load_image(
+    terrain.grass_normal_ao = engine::create_rwimage_from_load(
         TEST_GRASS_NORMAL_AO_PATH,
         4,
         VK_FORMAT_R16G16B16A16_SFLOAT,
         true
     );
 
-    terrain.asphalt_albedo_roughness = engine::load_image(
+    terrain.asphalt_albedo_roughness = engine::create_rwimage_from_load(
         TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH,
         4,
         VK_FORMAT_R8G8B8A8_SRGB,
         true
     );
 
-    terrain.asphalt_normal_ao = engine::load_image(
+    terrain.asphalt_normal_ao = engine::create_rwimage_from_load(
         TEST_ASPHALT_NORMAL_AO_PATH,
         4,
         VK_FORMAT_R16G16B16A16_SFLOAT,
         true
     );
 
-    terrain
-        .terrain_noise = engine::load_image( TERRAIN_NOISE_PAPTH, 2, VK_FORMAT_R8G8_UNORM, true );
+    terrain.terrain_noise = engine::create_rwimage_from_load(
+        TERRAIN_NOISE_PAPTH,
+        2,
+        VK_FORMAT_R8G8_UNORM,
+        true
+    );
 
     // ============================================================================================
     // Prepass resources
@@ -205,29 +209,34 @@ void initialize_terrain(
             | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     );
 
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         terrain.prepass_texture_desc_set,
         terrain.test_layer_mask,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         terrain.prepass_texture_desc_set,
         terrain.grass_albedo_roughness,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         terrain.prepass_texture_desc_set,
         terrain.grass_normal_ao,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         2
     );
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         terrain.prepass_texture_desc_set,
         terrain.asphalt_albedo_roughness,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         3
     );
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         terrain.prepass_texture_desc_set,
         terrain.asphalt_normal_ao,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         4
     );
 
@@ -251,7 +260,12 @@ void initialize_terrain(
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_image( terrain.prepass_lut_desc_set, terrain.terrain_noise, 1 );
+    engine::update_descriptor_set_rwimage(
+        terrain.prepass_lut_desc_set,
+        terrain.terrain_noise,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        1
+    );
 
     terrain.gamestate_desc_set = prepass_info.gamestate_desc_set;
 
@@ -397,9 +411,10 @@ void initialize_terrain(
     );
 
     // LUT desc assignments
-    engine::update_descriptor_set_image(
+    engine::update_descriptor_set_rwimage(
         terrain.lut_desc_set,
         lighting_info.atmosphere_baker->octahedral_sky,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
     engine::update_descriptor_set_rwimage(
@@ -408,7 +423,12 @@ void initialize_terrain(
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
-    engine::update_descriptor_set_image( terrain.lut_desc_set, *lighting_info.lut_brdf, 2 );
+    engine::update_descriptor_set_rwimage(
+        terrain.lut_desc_set,
+        *lighting_info.lut_brdf,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        2
+    );
 
     // Sampler assignments
     engine::update_descriptor_set_sampler(

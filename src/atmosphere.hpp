@@ -2,6 +2,7 @@
 
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
+#include "engine/rwimage.hpp"
 #include "engine/task_list.hpp"
 #include "engine/ub_data.hpp"
 #include "engine/uniform_buffer.hpp"
@@ -24,9 +25,9 @@ namespace racecar::atmosphere {
 constexpr std::string_view SHADER_PATH = "../shaders/atmosphere/sky/atmosphere.spv";
 
 struct Atmosphere {
-    vk::mem::AllocatedImage irradiance;
-    vk::mem::AllocatedImage scattering;
-    vk::mem::AllocatedImage transmittance;
+    engine::RWImage irradiance;
+    engine::RWImage scattering;
+    engine::RWImage transmittance;
 
     UniformBuffer<ub_data::Atmosphere> uniform_buffer;
 

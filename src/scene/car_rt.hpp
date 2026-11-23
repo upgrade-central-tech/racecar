@@ -42,7 +42,7 @@ vk::mem::AllocatedBuffer create_padded_vertex_data_buffer(
 
 engine::DescriptorSet create_car_desc_set(
     geometry::scene::Mesh& scene_mesh, vk::mem::AllocatedBuffer& padded_vertex_data_buffer,
-    UniformBuffer<ub_data::BLASOffsets>& offset_data, vk::mem::AllocatedImage& lut_brdf,
+    UniformBuffer<ub_data::BLASOffsets>& offset_data, engine::RWImage& lut_brdf,
     atmosphere::AtmosphereBaker& atms_baker,
     UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data,
     UniformBuffer<ub_data::MaterialTable>& material_table );
