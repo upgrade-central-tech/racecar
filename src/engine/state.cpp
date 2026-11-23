@@ -222,7 +222,7 @@ void create_depth_images()
                 vulkan.allocator,
                 &depth_image_info,
                 &image_allocate_info,
-                &depth_image.image,
+                &depth_image.vk_image,
                 &depth_image.allocation,
                 nullptr
             ),
@@ -231,7 +231,7 @@ void create_depth_images()
 
         VkImageViewCreateInfo depth_view_create_info = vk::create::image_view_info(
             depth_image.image_format,
-            depth_image.image,
+            depth_image.vk_image,
             VK_IMAGE_VIEW_TYPE_2D,
             VK_IMAGE_ASPECT_DEPTH_BIT
         );

@@ -81,7 +81,7 @@ void initialize_rwimage_layout( RWImage& image, VkImageLayout layout )
     engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
         vk::utility::transition_image(
             command_buffer,
-            image.image.image,
+            image.image.vk_image,
             VK_IMAGE_LAYOUT_UNDEFINED,
             layout,
             VK_ACCESS_2_NONE,

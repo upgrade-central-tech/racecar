@@ -89,7 +89,7 @@ vk::mem::AllocatedImage generate_glint_noise()
             // RW cubemap transition first
             vk::utility::transition_image(
                 command_buffer,
-                glint_noise_texture.image,
+                glint_noise_texture.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -125,7 +125,7 @@ vk::mem::AllocatedImage generate_glint_noise()
 
             vk::utility::transition_image(
                 command_buffer,
-                glint_noise_texture.image,
+                glint_noise_texture.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,

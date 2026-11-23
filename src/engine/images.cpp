@@ -174,7 +174,7 @@ vk::mem::AllocatedImage create_image(
 
             vk::utility::transition_image_mips(
                 command_buffer,
-                new_image.image,
+                new_image.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 0,
@@ -200,7 +200,7 @@ vk::mem::AllocatedImage create_image(
             vkCmdCopyBufferToImage(
                 command_buffer,
                 upload_buffer.handle,
-                new_image.image,
+                new_image.vk_image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 1,
                 &copy_region
@@ -209,7 +209,7 @@ vk::mem::AllocatedImage create_image(
             if ( mipmapped ) {
                 // this function handles the image transitions for each image for us
                 generate_mipmaps(
-                    new_image.image,
+                    new_image.vk_image,
                     new_image.image_extent,
                     mip_levels,
                     command_buffer
@@ -217,7 +217,7 @@ vk::mem::AllocatedImage create_image(
             } else {
                 vk::utility::transition_image(
                     command_buffer,
-                    new_image.image,
+                    new_image.vk_image,
                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                     VK_ACCESS_2_TRANSFER_WRITE_BIT,
@@ -272,7 +272,7 @@ vk::mem::AllocatedImage allocate_vma_image(
                 vulkan.allocator,
                 &image_info,
                 &allocation_create_info,
-                &allocated_image.image,
+                &allocated_image.vk_image,
                 &allocated_image.allocation,
                 nullptr
             ),
@@ -289,7 +289,7 @@ vk::mem::AllocatedImage allocate_vma_image(
 
         VkImageViewCreateInfo image_view_info = vk::create::image_view_info(
             format,
-            allocated_image.image,
+            allocated_image.vk_image,
             image_view_type,
             format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT
         );
@@ -317,7 +317,7 @@ vk::mem::AllocatedImage allocate_vma_image(
 
                 VkImageViewCreateInfo image_view_info = vk::create::image_view_info(
                     format,
-                    allocated_image.image,
+                    allocated_image.vk_image,
                     image_view_type,
                     format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT
                                                    : VK_IMAGE_ASPECT_COLOR_BIT

@@ -88,7 +88,7 @@ VkImageMemoryBarrier2 ImageBarrier::get_vk() const
                                    .newLayout = dst_layout,
                                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                   .image = image->image.image,
+                                   .image = image->image.vk_image,
                                    .subresourceRange = range };
 }
 

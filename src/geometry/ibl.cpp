@@ -117,7 +117,7 @@ vk::mem::AllocatedImage generate_diffuse_irradiance( std::filesystem::path file_
             // RW cubemap transition first
             vk::utility::transition_image(
                 command_buffer,
-                irradiance_rw_image.image,
+                irradiance_rw_image.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -151,7 +151,7 @@ vk::mem::AllocatedImage generate_diffuse_irradiance( std::filesystem::path file_
 
             vk::utility::transition_image(
                 command_buffer,
-                irradiance_rw_image.image,
+                irradiance_rw_image.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,
@@ -235,7 +235,7 @@ cs_generate_diffuse_sh( vk::mem::AllocatedImage sample_cubemap, VkSampler sample
             // RW cubemap transition first
             vk::utility::transition_image(
                 command_buffer,
-                sh_coefficients_image.image,
+                sh_coefficients_image.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -275,7 +275,7 @@ cs_generate_diffuse_sh( vk::mem::AllocatedImage sample_cubemap, VkSampler sample
 
             vk::utility::transition_image(
                 command_buffer,
-                sh_coefficients_image.image,
+                sh_coefficients_image.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,
@@ -408,7 +408,7 @@ vk::mem::AllocatedImage allocate_cube_map( VkExtent3D extent, VkFormat format, u
                 vulkan.allocator,
                 &image_info,
                 &allocation_create_info,
-                &allocated_image.image,
+                &allocated_image.vk_image,
                 &allocated_image.allocation,
                 nullptr
             ),
@@ -419,7 +419,7 @@ vk::mem::AllocatedImage allocate_cube_map( VkExtent3D extent, VkFormat format, u
     {
         VkImageViewCreateInfo image_view_info = { 
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = allocated_image.image,
+            .image = allocated_image.vk_image,
 
             .viewType = VK_IMAGE_VIEW_TYPE_CUBE,
             .format = format,
@@ -451,7 +451,7 @@ vk::mem::AllocatedImage allocate_cube_map( VkExtent3D extent, VkFormat format, u
     {
         VkImageViewCreateInfo storage_image_view_info = { 
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = allocated_image.image,
+            .image = allocated_image.vk_image,
 
             .viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
             .format = format,
@@ -563,7 +563,7 @@ void load_cubemap(
         engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
             vk::utility::transition_image(
                 command_buffer,
-                cm_image.image,
+                cm_image.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 0,
@@ -576,7 +576,7 @@ void load_cubemap(
             vkCmdCopyBufferToImage(
                 command_buffer,
                 upload_buffer.handle,
-                cm_image.image,
+                cm_image.vk_image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 layer_count,
                 copy_regions.data()
@@ -584,7 +584,7 @@ void load_cubemap(
 
             vk::utility::transition_image(
                 command_buffer,
-                cm_image.image,
+                cm_image.vk_image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_TRANSFER_WRITE_BIT,

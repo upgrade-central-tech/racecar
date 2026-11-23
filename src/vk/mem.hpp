@@ -12,7 +12,7 @@ struct AllocatedBuffer {
 };
 
 struct AllocatedImage {
-    VkImage image = VK_NULL_HANDLE;
+    VkImage vk_image = VK_NULL_HANDLE;
     VkImageView image_view = VK_NULL_HANDLE;
     VkImageView storage_image_view = VK_NULL_HANDLE;
     VmaAllocation allocation = VK_NULL_HANDLE;

@@ -127,7 +127,7 @@ void execute( TaskList& task_list, const gui::Gui& gui )
         // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
         vk::utility::transition_image(
             frame.start_cmdbuf,
-            out_depth_image.image,
+            out_depth_image.vk_image,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
             0,
@@ -252,7 +252,7 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                 }
 
                 const VkImage& dst_image = ( blit_task.out_color != nullptr )
-                    ? blit_task.out_color->image.image
+                    ? blit_task.out_color->image.vk_image
                     : output_image;
 
                 execute_blit_task( frame.render_cmdbuf, blit_task, dst_image );

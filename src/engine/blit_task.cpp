@@ -7,7 +7,7 @@ namespace racecar::engine {
 void execute_blit_task( const VkCommandBuffer& cmd_buf, BlitTask& blit_task, VkImage dst_image )
 {
     const engine::State& engine = engine::State::GetConst();
-    VkImage src_image = blit_task.in_color->image.image;
+    VkImage src_image = blit_task.in_color->image.vk_image;
     VkExtent3D src_extent = blit_task.in_color->image.image_extent;
     VkExtent3D dst_extent = { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 };
 

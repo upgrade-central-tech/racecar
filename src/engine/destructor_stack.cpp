@@ -43,6 +43,6 @@ void DestructorStack::push_free_vmaimage(
 )
 {
     destructors.push( [=]() -> void {
-        vmaDestroyImage( allocator, allocated_image.image, allocated_image.allocation );
+        vmaDestroyImage( allocator, allocated_image.vk_image, allocated_image.allocation );
     } );
 }

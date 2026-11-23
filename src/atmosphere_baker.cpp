@@ -143,7 +143,7 @@ void atmosphere_baker_precompute( AtmosphereBaker& atms_baker, VkCommandBuffer p
 {
     vk::utility::transition_image(
         precompute_cmdbuf,
-        atms_baker.octahedral_sky.image,
+        atms_baker.octahedral_sky.vk_image,
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_GENERAL,
         VK_ACCESS_2_NONE,

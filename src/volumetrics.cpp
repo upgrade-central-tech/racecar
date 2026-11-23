@@ -125,7 +125,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
         engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.cumulus_map.image,
+                volumetric.cumulus_map.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -159,7 +159,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.cumulus_map.image,
+                volumetric.cumulus_map.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,
@@ -210,7 +210,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
         engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.low_freq_noise.image,
+                volumetric.low_freq_noise.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -245,7 +245,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.low_freq_noise.image,
+                volumetric.low_freq_noise.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,
@@ -296,7 +296,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
         engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.high_freq_noise.image,
+                volumetric.high_freq_noise.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -331,7 +331,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.high_freq_noise.image,
+                volumetric.high_freq_noise.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,
