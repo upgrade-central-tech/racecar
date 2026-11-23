@@ -58,7 +58,7 @@ struct Material {
 };
 
 struct Texture {
-    std::optional<engine::RWImage> data;
+    std::unique_ptr<engine::RWImage> data;
 
     int width = 0;
     int height = 0;
@@ -67,6 +67,14 @@ struct Texture {
     int num_channels = 0;
 
     ColorSpace color_space = ColorSpace::UNORM;
+
+    Texture() = default;
+
+    Texture( const Texture& ) = delete;
+    Texture& operator=( const Texture& ) = delete;
+
+    Texture( Texture&& ) = default;
+    Texture& operator=( Texture&& ) = default;
 };
 
 /// A primitive is a basic association of geometry data along with a single material.

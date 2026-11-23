@@ -338,8 +338,7 @@ void load_model_primitive_material_data(
 
                     if ( albedo_index ) {
                         albedo_textures.push_back(
-                            &scene.textures[static_cast<size_t>( albedo_index.value() )]
-                                 .data.value()
+                            scene.textures[static_cast<size_t>( albedo_index.value() )].data.get()
                         );
                         rt_texture_uniform.albedo_texture_index[tex_count] = int(
                             albedo_textures.size() - 1
@@ -350,8 +349,8 @@ void load_model_primitive_material_data(
 
                     if ( metallic_roughness_index ) {
                         metallic_roughness_textures.push_back(
-                            &scene.textures[static_cast<size_t>( metallic_roughness_index.value() )]
-                                 .data.value()
+                            scene.textures[static_cast<size_t>( metallic_roughness_index.value() )]
+                                .data.get()
                         );
                         rt_texture_uniform.metallic_roughness_texture_index[tex_count] = int(
                             metallic_roughness_textures.size() - 1
@@ -379,11 +378,11 @@ void load_model_primitive_material_data(
 
                 for ( size_t i = 0; i < NUM_MATERIAL_TEXTURE_BINDINGS; i++ ) {
                     const bool has_texture = i < textures_needed.size()
-                        && textures_needed[i] != nullptr;
+                        && textures_needed[i] != nullptr && textures_needed[i]->data != nullptr;
 
                     engine::update_descriptor_set_rwimage(
                         material_desc_sets[static_cast<size_t>( prim.material_id )],
-                        has_texture ? textures_needed[i]->data.value() : fallback_texture,
+                        has_texture ? *textures_needed[i]->data : fallback_texture,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                         static_cast<int>( i )
                     );

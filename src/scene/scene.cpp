@@ -256,14 +256,14 @@ void load_gltf(
             texture.color_space
         );
 
-        texture.data = engine::create_rwimage_from_data(
+        texture.data = std::make_unique<engine::RWImage>( engine::create_rwimage_from_data(
             const_cast<void*>( static_cast<const void*>( loaded_img.image.data() ) ),
             { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
             image_format,
             VK_IMAGE_TYPE_2D,
             VK_IMAGE_USAGE_SAMPLED_BIT,
             false
-        );
+        ) );
         if ( !texture.data ) {
             log::error( "[Scene] GLTF loading: Failed to load texture onto the GPU" );
         }
@@ -635,14 +635,14 @@ bool load_hdri( std::string file_path, Scene& scene )
         hdri.num_channels,
         ColorSpace::SFLOAT
     );
-    hdri.data = engine::create_rwimage_from_data(
+    hdri.data = std::make_unique<engine::RWImage>( engine::create_rwimage_from_data(
         static_cast<void*>( hdriData ),
         { static_cast<uint32_t>( hdri.width ), static_cast<uint32_t>( hdri.height ), 1 },
         image_format,
         VK_IMAGE_TYPE_2D,
         VK_IMAGE_USAGE_SAMPLED_BIT,
         false
-    );
+    ) );
 
     scene.textures.push_back( std::move( hdri ) );
     scene.hdri_index = scene.textures.size() - 1;
