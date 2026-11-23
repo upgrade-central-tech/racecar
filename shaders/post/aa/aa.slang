@@ -29,6 +29,18 @@ float3 YCoCg_to_RGB( float3 c )
     return float3( R, G, B );
 }
 
+static const float VARIANCE_CLIP_GAMMA = 1.0f;
+
+float3 clip_to_aabb( float3 color, float3 aabb_min, float3 aabb_max )
+{
+    float3 center = 0.5f * ( aabb_max + aabb_min );
+    float3 extents = 0.5f * ( aabb_max - aabb_min ) + 1e-5f;
+    float3 offset = color - center;
+    float3 unit = abs( offset / extents );
+    float max_unit = max( unit.x, max( unit.y, unit.z ) );
+    return max_unit > 1.0f ? center + offset / max_unit : color;
+}
+
 [shader( "compute" )]
 [numthreads( 8, 8, 1 )]
 func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
@@ -75,19 +87,29 @@ func cs_main( uint2 thread_id: SV_DispatchThreadID )->void
     // Neighborhood clamp process
     float3 nmin = RGB_to_YCoCg( curr_color );
     float3 nmax = nmin;
+    float3 moment1 = float3( 0.0f );
+    float3 moment2 = float3( 0.0f );
 
+    int2 max_pixel = int2( width, height ) - 1;
     for ( int y = -1; y <= 1; y++ ) {
         for ( int x = -1; x <= 1; x++ ) {
-            float3 n = RGB_to_YCoCg(
-                scene_color.Load( int3( int2( pixel ) + int2( x, y ), 0 ) ).rgb );
+            int2 neighbor = clamp( int2( pixel ) + int2( x, y ), int2( 0 ), max_pixel );
+            float3 n = RGB_to_YCoCg( scene_color.Load( int3( neighbor, 0 ) ).rgb );
             nmin = min( nmin, n );
             nmax = max( nmax, n );
+            moment1 += n;
+            moment2 += n * n;
         }
     }
 
+    float3 mean = moment1 / 9.0f;
+    float3 sigma = sqrt( max( moment2 / 9.0f - mean * mean, 0.0f ) );
+    float3 box_min = max( mean - VARIANCE_CLIP_GAMMA * sigma, nmin );
+    float3 box_max = min( mean + VARIANCE_CLIP_GAMMA * sigma, nmax );
+
     float3 prev_ycocg = RGB_to_YCoCg( prev_color );
 
-    prev_color = clamp( prev_ycocg, nmin, nmax );
+    prev_color = clip_to_aabb( prev_ycocg, box_min, box_max );
 
     // Motion blending
     float2 motion = ( uv - prev_uv ) * screen_size;
