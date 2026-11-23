@@ -83,6 +83,50 @@ bool traceRayFirstHit( RaytracingAccelerationStructure sceneBVH, float3 rayOrigi
     unused( t );
     return false;
 }
+
+// match src/passes/reflection_mip_chain.hpp
+static const float REFLECTION_MAX_MIP = 5.0f;
+static const float REFLECTION_MISS_DISTANCE = 1e4f;
+
+float4 sample_reflection( float2 uv, float lod )
+{
+    float lod0 = floor( lod );
+    float lod1 = min( lod0 + 1.0f, REFLECTION_MAX_MIP );
+    float lod_t = lod - lod0;
+
+    float4 refl0 = ReflectionData.SampleLevel( sampler, uv, lod0 );
+    float4 refl1 = ReflectionData.SampleLevel( sampler, uv, lod1 );
+
+    float coverage0 = ReflectionRayData.SampleLevel( sampler, uv, lod0 ).b;
+    float coverage1 = ReflectionRayData.SampleLevel( sampler, uv, lod1 ).b;
+
+    return lerp( refl0, refl1, lod_t ) * lerp( coverage0, coverage1, lod_t );
+}
+
+float reflection_hit_distance( float2 uv )
+{
+    uint width;
+    uint height;
+    ReflectionRayData.GetDimensions( width, height );
+    int2 texel = clamp( int2( uv * float2( width, height ) ), int2( 0 ), int2( width, height ) - 1 );
+
+    float hit_distance = ReflectionRayData.Load( int3( texel, 0 ) ).r;
+
+    return hit_distance < 0.0f ? REFLECTION_MISS_DISTANCE : hit_distance;
+}
+
+float reflection_lod( float roughness, float hit_distance, float view_distance, float screen_height )
+{
+    float alpha = roughness * roughness;
+    float cone_radius = hit_distance * alpha;
+
+    float fov_y = camera_data.camera_constants.w;
+    float proj_scale = 0.5f * screen_height / tan( 0.5f * fov_y );
+
+    float footprint = cone_radius * proj_scale / max( view_distance + hit_distance, 0.001f );
+
+    return clamp( log2( max( footprint, 1.0f ) ), 0.0f, REFLECTION_MAX_MIP );
+}
 #endif // RACECAR_RAY_TRACING
 
 // Main
@@ -110,12 +154,28 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 
     float4 packed_gbuffer_data = gbuffer_packed_data[pixel];
 
-#if RACECAR_RAY_TRACING
-    float4 refl = ReflectionData[pixel].rgba;
-#endif // RACECAR_RAY_TRACING
-
     // Misc. vectors
     float3 view = normalize( camera_data.camera_pos.rgb - world_position );
+
+#if RACECAR_RAY_TRACING
+    float4 refl;
+    {
+        uint screen_width;
+        uint screen_height;
+        out_color.GetDimensions( screen_width, screen_height );
+        float2 screen_uv = ( float2( pixel ) + 0.5f ) / float2( screen_width, screen_height );
+
+        uint refl_width;
+        uint refl_height;
+        ReflectionData.GetDimensions( refl_width, refl_height );
+
+        float hit_distance = reflection_hit_distance( screen_uv );
+        float view_distance = length( camera_data.camera_pos.rgb - world_position );
+
+        refl = sample_reflection( screen_uv,
+            reflection_lod( mixed_roughness, hit_distance, view_distance, float( refl_height ) ) );
+    }
+#endif // RACECAR_RAY_TRACING
 
     //=======================================================================================
     // Image-based lighting evaluations
@@ -140,7 +200,7 @@ void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
     float3 specular_irradiance = sample_glossy_ibl( mixed_roughness, oct_refl_uv ) * ssao;
 
 #if RACECAR_RAY_TRACING
-    specular_irradiance = lerp( specular_irradiance, 2.0f * refl.rgb, refl.a );
+    specular_irradiance = refl.rgb + specular_irradiance * ( 1.0f - refl.a );
 #endif // RACECAR_RAY_TRACING
 
     float metallic = 0.0f;
