@@ -32,10 +32,8 @@ struct FragmentOutput {
     float4 cloud_buffer : SV_Target0;
 }
 
-[shader( "fragment" )]
-FragmentOutput fs_main( VertexOutput in )
+FragmentOutput march_pixel( float3 world_pos )
 {
-    float3 world_pos = in.position;
     float3 camera_pos = clouds_buffer_data.camera_position.rgb;
 
     float3 view = normalize( world_pos - camera_pos );
@@ -48,6 +46,33 @@ FragmentOutput fs_main( VertexOutput in )
     output.cloud_buffer = output_color;
 
     return output;
+}
+
+// default full resolution raymarch
+[shader( "fragment" )]
+FragmentOutput clouds_fullres( VertexOutput in )
+{
+    return march_pixel( in.position );
+}
+
+static const int ROTATING_BLOCK_SIZE = 4;
+static const int2 ROTATING_PIXEL_ORDER[16] = {
+    int2( 0, 0 ), int2( 2, 2 ), int2( 2, 0 ), int2( 0, 2 ),
+    int2( 1, 1 ), int2( 3, 3 ), int2( 3, 1 ), int2( 1, 3 ),
+    int2( 1, 0 ), int2( 3, 2 ), int2( 3, 0 ), int2( 1, 2 ),
+    int2( 0, 1 ), int2( 2, 3 ), int2( 2, 1 ), int2( 0, 3 ),
+};
+
+// quarter res raymarch, rotating the target pixel
+[shader( "fragment" )]
+FragmentOutput clouds_rotating_quarterres( VertexOutput in )
+{
+    int2 block_offset = ROTATING_PIXEL_ORDER[clouds_buffer_data.rotating_pixel_index & 15];
+    float2 subpixel = ( float2( block_offset ) + 0.5f ) / float( ROTATING_BLOCK_SIZE ) - 0.5f;
+
+    float3 world_pos = in.position + ddx( in.position ) * subpixel.x + ddy( in.position ) * subpixel.y;
+
+    return march_pixel( world_pos );
 }
 
 

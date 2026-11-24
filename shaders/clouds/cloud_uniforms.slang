@@ -9,4 +9,5 @@ public struct CloudUniformData {
     public float cloud_offset_y;
     // extinction, erosion, radiance exposure, null
     public float4 cloud_params;
+    public int rotating_pixel_index;
 };

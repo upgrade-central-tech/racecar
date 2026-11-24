@@ -127,6 +127,8 @@ struct [[slang_check("CloudUniformData")]] Clouds {
     float cloud_offset_y = 0.f;
     // extinction, erosion, radiance exposure, null
     glm::vec4 cloud_params = {};
+    int rotating_pixel_index = 0;
+    int _pad[3];
 };
 
 struct [[slang_check("TerrainData")]] TerrainData {

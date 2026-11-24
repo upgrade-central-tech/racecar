@@ -194,7 +194,7 @@ if (RACECAR_SLANGC)
     racecar_add_shader(atmosphere/sky/bake_atmosphere.spv atmosphere/sky/bake_atmosphere.slang cs_bake_atmosphere)
     racecar_add_shader(atmosphere/sky/bake_atmosphere_mips.spv atmosphere/sky/bake_atmosphere.slang cs_bake_atmosphere_mips)
 
-    racecar_add_shader(clouds/clouds.spv clouds/clouds.slang vs_main fs_main)
+    racecar_add_shader(clouds/clouds.spv clouds/clouds.slang vs_main clouds_fullres clouds_rotating_quarterres)
     racecar_add_shader(clouds/cs_generate_low_frequency.spv clouds/cloud_noise.slang cs_generate_low_frequency)
     racecar_add_shader(clouds/cs_generate_high_frequency.spv clouds/cloud_noise.slang cs_generate_high_frequency)
     racecar_add_shader(clouds/cs_generate_cumulus.spv clouds/cloud_noise.slang cs_generate_cumulus)

@@ -448,7 +448,12 @@ void draw_volumetric(
             false,
             true,
             vk::create::shader_module( VOLUMETRIC_SHADER_MODULE_PATH ),
-            engine::ShaderEntryPointStrings::defaults(),
+            engine::ShaderEntryPointStrings {
+                .vertex_entry_name = engine::DEFAULT_VERTEX_ENTRY_NAME,
+                .tess_control_entry_name = engine::DEFAULT_TESS_CONTROL_ENTRY_NAME,
+                .tess_eval_entry_name = engine::DEFAULT_TESS_EVAL_ENTRY_NAME,
+                .fragment_entry_name = "clouds_fullres",
+            },
             false,
             false
         );
@@ -570,6 +575,7 @@ void update_volumetric_uniform_buffer(
         atms_ub.radiance_exposure,
         0.0f
     );
+    cloud_ub.rotating_pixel_index = static_cast<int>( engine.rendered_frames % 16 );
 
     volumetric.uniform_buffer.set_data( cloud_ub );
     volumetric.uniform_buffer.update( engine.get_frame_index() );
