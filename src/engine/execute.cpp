@@ -83,7 +83,6 @@ void execute( TaskList& task_list, const gui::Gui& gui )
 
     const VkImage& output_image = engine.swapchain_images[output_swapchain_index];
     const VkImageView& output_image_view = engine.swapchain_image_views[output_swapchain_index];
-    const vk::mem::AllocatedImage& out_depth_image = engine.depth_images[output_swapchain_index];
 
     SwapchainSemaphores& swapchain_semaphores = engine.swapchain_semaphores[output_swapchain_index];
 
@@ -122,19 +121,6 @@ void execute( TaskList& task_list, const gui::Gui& gui )
             VK_PIPELINE_STAGE_2_NONE,
             VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_IMAGE_ASPECT_COLOR_BIT
-        );
-
-        // Pair in the depth here. Use start cmd_buf to ensure such is done before the draw call.
-        vk::utility::transition_image(
-            frame.start_cmdbuf,
-            out_depth_image.vk_image,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-            0,
-            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-            VK_PIPELINE_STAGE_2_NONE,
-            VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-            VK_IMAGE_ASPECT_DEPTH_BIT
         );
 
         vkEndCommandBuffer( frame.start_cmdbuf );

@@ -24,7 +24,6 @@ Pipeline create_gfx_pipeline(
 )
 {
     vk::Common& vulkan = vk::Common::GetMut();
-    const engine::State& engine = engine::State::GetConst();
 
     VkPipelineVertexInputStateCreateInfo
         vertex_input_info = vertex_input_state_create_info.value_or(
@@ -182,8 +181,7 @@ Pipeline create_gfx_pipeline(
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = uint32_t( color_attachment_formats.size() ),
         .pColorAttachmentFormats = color_attachment_formats.data(),
-        .depthAttachmentFormat = depth_test ? engine.depth_images[0].image_format
-                                            : VK_FORMAT_UNDEFINED,
+        .depthAttachmentFormat = depth_test ? DEPTH_FORMAT : VK_FORMAT_UNDEFINED,
     };
 
     VkGraphicsPipelineCreateInfo gfx_pipeline_info = {

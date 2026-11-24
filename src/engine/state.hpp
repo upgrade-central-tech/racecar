@@ -11,6 +11,8 @@
 
 namespace racecar::engine {
 
+constexpr VkFormat DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
+
 struct FrameData {
     VkFence render_fence = VK_NULL_HANDLE;
 
@@ -32,7 +34,6 @@ struct State {
     vkb::Swapchain swapchain;
     std::vector<VkImage> swapchain_images;
     std::vector<VkImageView> swapchain_image_views;
-    std::vector<vk::mem::AllocatedImage> depth_images;
 
     float screen_width;
     float screen_height;

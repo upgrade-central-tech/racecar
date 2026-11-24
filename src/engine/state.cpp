@@ -182,77 +182,6 @@ void create_frame_data()
     log::info( "[engine] Created all frame data" );
 }
 
-/// Generalized depth buffer creation per frame; for more robust depth textures, we may need a more
-/// general purpose create_texture() function later on. Ideally, create_depth_images would therefore
-/// re-use that create_texture() for each depth image.
-void create_depth_images()
-{
-    vk::Common& vulkan = vk::Common::GetMut();
-    engine::State& engine = engine::State::GetMut();
-    engine.depth_images = std::vector<vk::mem::AllocatedImage>( engine.frame_overlap );
-
-    for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
-        vk::mem::AllocatedImage& depth_image = engine.depth_images[i];
-
-        depth_image.image_format = VK_FORMAT_D32_SFLOAT;
-        depth_image.image_extent = { engine.swapchain.extent.width,
-                                     engine.swapchain.extent.height,
-                                     1 };
-
-        VkImageUsageFlags depth_image_usages = { };
-        depth_image_usages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        depth_image_usages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
-        VkImageCreateInfo depth_image_info = vk::create::image_info(
-            depth_image.image_format,
-            VK_IMAGE_TYPE_2D,
-            1,
-            1,
-            VK_SAMPLE_COUNT_1_BIT,
-            depth_image_usages,
-            depth_image.image_extent
-        );
-        VmaAllocationCreateInfo image_allocate_info = {
-            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-            .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT )
-        };
-
-        vk::check(
-            vmaCreateImage(
-                vulkan.allocator,
-                &depth_image_info,
-                &image_allocate_info,
-                &depth_image.vk_image,
-                &depth_image.allocation,
-                nullptr
-            ),
-            "[VMA] Failed to create depth image"
-        );
-
-        VkImageViewCreateInfo depth_view_create_info = vk::create::image_view_info(
-            depth_image.image_format,
-            depth_image.vk_image,
-            VK_IMAGE_VIEW_TYPE_2D,
-            VK_IMAGE_ASPECT_DEPTH_BIT
-        );
-
-        vk::check(
-            vkCreateImageView(
-                vulkan.device,
-                &depth_view_create_info,
-                nullptr,
-                &depth_image.image_view
-            ),
-            "Failed to create depth image view"
-        );
-
-        vulkan.destructor_stack.push( vulkan.device, depth_image.image_view, vkDestroyImageView );
-        vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, depth_image );
-    }
-
-    log::info( "[engine] Created depth images and views" );
-}
-
 } // namespace
 
 size_t State::get_frame_index() const
@@ -323,7 +252,6 @@ void initialize( Context& ctx )
         }
 
         create_frame_data();
-        create_depth_images();
 
         float aspect = static_cast<float>( engine.swapchain.extent.width )
             / static_cast<float>( engine.swapchain.extent.height );
