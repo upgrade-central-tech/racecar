@@ -95,9 +95,7 @@ engine::ImageBarrier compute_write_to_compute_read( engine::Image* image, uint32
 }
 
 void create_reflection_mip_chain_resources(
-    ReflectionMipChain* chain_out,
-    engine::Image& reflection_color,
-    engine::Image& reflection_data
+    ReflectionMipChain* chain_out, engine::Image& reflection_color, engine::Image& reflection_data
 )
 {
     ReflectionMipChain& chain = *chain_out;

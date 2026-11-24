@@ -59,12 +59,7 @@ TAAPass add_taa(
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             3
         );
-        engine::update_descriptor_set_image(
-            uniform_desc_set,
-            output,
-            VK_IMAGE_LAYOUT_GENERAL,
-            4
-        );
+        engine::update_descriptor_set_image( uniform_desc_set, output, VK_IMAGE_LAYOUT_GENERAL, 4 );
         engine::update_descriptor_set_sampler(
             uniform_desc_set,
             vulkan.global_samplers.linear_sampler,

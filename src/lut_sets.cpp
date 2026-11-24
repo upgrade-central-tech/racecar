@@ -27,12 +27,7 @@ void create_lut_sets(
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
-    *lut_brdf = engine::create_image_from_load(
-        BRDF_LUT_PATH,
-        2,
-        VK_FORMAT_R16G16_SFLOAT,
-        false
-    );
+    *lut_brdf = engine::create_image_from_load( BRDF_LUT_PATH, 2, VK_FORMAT_R16G16_SFLOAT, false );
 
     *glint_noise = geometry::generate_glint_noise();
 

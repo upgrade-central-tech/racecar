@@ -1,9 +1,9 @@
 #include "sun_visibility.hpp"
 
 #include "engine/descriptor_set.hpp"
+#include "engine/image.h"
 #include "engine/pipeline.hpp"
 #include "engine/pipeline_barrier.hpp"
-#include "engine/image.h"
 #include "engine/ub_data.hpp"
 #include "engine/uniform_buffer.hpp"
 #include "terrain/terrain.hpp"

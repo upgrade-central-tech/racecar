@@ -33,19 +33,40 @@ struct Image {
     Image& operator=( Image&& ) = default;
 };
 
-Image create_image( VkExtent3D extent, VkFormat format, VkImageType image_type,
-    VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags );
+Image create_image(
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags
+);
 
-Image create_image_mips( VkExtent3D extent, VkFormat format, VkImageType image_type,
-    VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags, uint32_t mip_levels );
+Image create_image_mips(
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags,
+    uint32_t mip_levels
+);
 
 Image create_gbuffer_image( VkFormat format, VkSampleCountFlagBits samples );
 
-Image create_image_from_data( void* data, VkExtent3D extent, VkFormat format,
-    VkImageType image_type, VkImageUsageFlags usage_flags, bool mipmapped );
+Image create_image_from_data(
+    void* data,
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    VkImageUsageFlags usage_flags,
+    bool mipmapped
+);
 
-Image create_image_from_load( std::filesystem::path file_path, size_t desired_channels,
-    VkFormat image_format, bool is_mipmapped );
+Image create_image_from_load(
+    std::filesystem::path file_path,
+    size_t desired_channels,
+    VkFormat image_format,
+    bool is_mipmapped
+);
 
 /// Transitions the image out of UNDEFINED once, immediately.
 /// For images whose contents must survive across frames (AA)

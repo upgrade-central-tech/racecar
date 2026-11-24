@@ -31,12 +31,7 @@ TonemappingPass add_tonemapping( const Image& input, const Image& output, TaskLi
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
-        engine::update_descriptor_set_image(
-            uniform_desc_set,
-            output,
-            VK_IMAGE_LAYOUT_GENERAL,
-            1
-        );
+        engine::update_descriptor_set_image( uniform_desc_set, output, VK_IMAGE_LAYOUT_GENERAL, 1 );
         engine::update_descriptor_set_uniform( uniform_desc_set, pass.buffer, 2 );
 
         pass.uniform_desc_set = std::make_unique<engine::DescriptorSet>(
