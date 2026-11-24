@@ -40,12 +40,12 @@ struct TerrainLightingInfo {
     atmosphere::AtmosphereBaker* atmosphere_baker;
 
     deferred::GBuffers* gbuffers;
-    // engine::RWImage* GBuffer_Position;
-    // engine::RWImage* GBuffer_Normal;
-    // engine::RWImage* GBuffer_Albedo;
-    // engine::RWImage* GBuffer_Packed_Data;
-    engine::RWImage* color_attachment;
-    engine::RWImage* lut_brdf;
+    // engine::Image* GBuffer_Position;
+    // engine::Image* GBuffer_Normal;
+    // engine::Image* GBuffer_Albedo;
+    // engine::Image* GBuffer_Packed_Data;
+    engine::Image* color_attachment;
+    engine::Image* lut_brdf;
 };
 
 struct TerrainPrepassInfo {
@@ -54,14 +54,14 @@ struct TerrainPrepassInfo {
 
     deferred::GBuffers* gbuffers;
 
-    // engine::RWImage* GBuffer_Position;
-    // engine::RWImage* GBuffer_Normal;
-    // engine::RWImage* GBuffer_Albedo;
-    // engine::RWImage* GBuffer_Depth;
-    // engine::RWImage* GBuffer_Packed_Data;
-    // engine::RWImage* GBuffer_Velocity;
+    // engine::Image* GBuffer_Position;
+    // engine::Image* GBuffer_Normal;
+    // engine::Image* GBuffer_Albedo;
+    // engine::Image* GBuffer_Depth;
+    // engine::Image* GBuffer_Packed_Data;
+    // engine::Image* GBuffer_Velocity;
 
-    engine::RWImage* glint_noise;
+    engine::Image* glint_noise;
     
     engine::DescriptorSet* gamestate_desc_set;
 };
@@ -100,13 +100,13 @@ struct Terrain {
 
     // Crap-ton of images. We need a bindless-texture solution or something.
     // Maybe one giant atlas will work, actually.
-    engine::RWImage test_layer_mask;
-    engine::RWImage grass_albedo_roughness;
-    engine::RWImage grass_normal_ao;
-    engine::RWImage asphalt_albedo_roughness;
-    engine::RWImage asphalt_normal_ao;
+    engine::Image test_layer_mask;
+    engine::Image grass_albedo_roughness;
+    engine::Image grass_normal_ao;
+    engine::Image asphalt_albedo_roughness;
+    engine::Image asphalt_normal_ao;
 
-    engine::RWImage terrain_noise;
+    engine::Image terrain_noise;
 
     VkVertexInputBindingDescription vertex_binding_description = {
         .binding = vk::binding::VERTEX_BUFFER,
@@ -143,7 +143,7 @@ void draw_terrain_prepass( Terrain& terrain,
 void draw_terrain( Terrain& terrain, engine::TaskList& task_list );
 
 #if RACECAR_DEV
-void draw_terrain_wireframe( Terrain& terrain, engine::TaskList& task_list, engine::RWImage& screen_color );
+void draw_terrain_wireframe( Terrain& terrain, engine::TaskList& task_list, engine::Image& screen_color );
 #endif
 
 void update_terrain_uniform_buffer(

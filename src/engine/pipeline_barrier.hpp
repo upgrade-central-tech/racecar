@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rwimage.hpp"
+#include "image.h"
 
 #include <volk.h>
 
@@ -48,7 +48,7 @@ struct ImageBarrier {
     VkImageLayout dst_layout;
 
     /// Non-owning. Must outlive the task list.
-    RWImage* image = nullptr;
+    Image* image = nullptr;
     VkImageSubresourceRange range;
 
     VkImageMemoryBarrier2 get_vk() const;

@@ -3,7 +3,7 @@
 #include "car_rt.hpp"
 
 #include "../engine/descriptors.hpp"
-#include "../engine/images.hpp"
+#include "../engine/image.h"
 #include "../vk/create.hpp"
 
 #include <algorithm>
@@ -192,7 +192,7 @@ engine::DescriptorSet create_car_desc_set(
     geometry::scene::Mesh& scene_mesh,
     vk::mem::AllocatedBuffer& padded_vertex_data_buffer,
     UniformBuffer<ub_data::BLASOffsets>& offset_data,
-    engine::RWImage& lut_brdf,
+    engine::Image& lut_brdf,
     atmosphere::AtmosphereBaker& atms_baker,
     UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data,
     UniformBuffer<ub_data::MaterialTable>& material_table
@@ -225,13 +225,13 @@ engine::DescriptorSet create_car_desc_set(
 
     engine::update_descriptor_set_uniform( car_descriptor_set, offset_data, 2 );
 
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         car_descriptor_set,
         lut_brdf,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         4
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         car_descriptor_set,
         atms_baker.octahedral_sky_mips,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -244,8 +244,8 @@ engine::DescriptorSet create_car_desc_set(
 }
 
 engine::DescriptorSet create_combined_textures_desc_set(
-    const std::vector<const engine::RWImage*>& albedo_textures,
-    const std::vector<const engine::RWImage*>& metallic_roughness_textures
+    const std::vector<const engine::Image*>& albedo_textures,
+    const std::vector<const engine::Image*>& metallic_roughness_textures
 )
 {
     engine::DescriptorSet combined_textures_desc_set = engine::generate_array_descriptor_set(
@@ -259,14 +259,14 @@ engine::DescriptorSet create_combined_textures_desc_set(
 
     const uint32_t texture_array_count = uint32_t( albedo_textures.size() );
 
-    engine::update_descriptor_set_rwimage_array(
+    engine::update_descriptor_set_image_array(
         combined_textures_desc_set,
         albedo_textures,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0,
         texture_array_count
     );
-    engine::update_descriptor_set_rwimage_array(
+    engine::update_descriptor_set_image_array(
         combined_textures_desc_set,
         metallic_roughness_textures,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

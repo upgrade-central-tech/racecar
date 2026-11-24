@@ -11,17 +11,6 @@ struct AllocatedBuffer {
     VmaAllocationInfo info = {};
 };
 
-struct AllocatedImage {
-    VkImage vk_image = VK_NULL_HANDLE;
-    VkImageView image_view = VK_NULL_HANDLE;
-    VkImageView storage_image_view = VK_NULL_HANDLE;
-    VmaAllocation allocation = VK_NULL_HANDLE;
-    VkExtent3D image_extent = {};
-    VkFormat image_format = VK_FORMAT_UNDEFINED;
-
-    std::vector<VkImageView> mip_levels;
-};
-
 struct UniformBuffer {
     AllocatedBuffer buffer;
     size_t data_size = 0;

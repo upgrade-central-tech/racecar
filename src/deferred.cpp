@@ -38,7 +38,7 @@ GBuffers initialize_GBuffers()
         VK_SAMPLE_COUNT_1_BIT
     );
 
-    gbuffers.GBuffer_Depth = engine::create_rwimage(
+    gbuffers.GBuffer_Depth = engine::create_image(
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_D32_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
@@ -46,7 +46,7 @@ GBuffers initialize_GBuffers()
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
     );
 
-    gbuffers.GBuffer_DepthMS = engine::create_rwimage(
+    gbuffers.GBuffer_DepthMS = engine::create_image(
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_D32_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
@@ -54,7 +54,7 @@ GBuffers initialize_GBuffers()
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
     );
 
-    gbuffers.GBuffer_Velocity = engine::create_rwimage(
+    gbuffers.GBuffer_Velocity = engine::create_image(
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
@@ -81,7 +81,7 @@ GBuffers initialize_GBuffers()
     return gbuffers;
 }
 
-std::vector<engine::RWImage*> get_color_attachments( GBuffers& gbuffers )
+std::vector<engine::Image*> get_color_attachments( GBuffers& gbuffers )
 {
     return {
         &gbuffers.GBuffer_Position, &gbuffers.GBuffer_Normal, &gbuffers.GBuffer_Tangent,
@@ -90,7 +90,7 @@ std::vector<engine::RWImage*> get_color_attachments( GBuffers& gbuffers )
     };
 }
 
-engine::RWImage* get_depth_image( GBuffers& gbuffers ) { return &gbuffers.GBuffer_Depth; }
+engine::Image* get_depth_image( GBuffers& gbuffers ) { return &gbuffers.GBuffer_Depth; }
 
 std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( deferred::GBuffers& gbuffers )
 {
@@ -121,7 +121,7 @@ std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( deferred::GBuffer
              } };
 }
 
-engine::ImageBarrier init_to_color_write( engine::RWImage& image )
+engine::ImageBarrier init_to_color_write( engine::Image& image )
 {
     return {
         .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
@@ -135,7 +135,7 @@ engine::ImageBarrier init_to_color_write( engine::RWImage& image )
     };
 }
 
-engine::ImageBarrier color_write_to_frag_read( engine::RWImage& image )
+engine::ImageBarrier color_write_to_frag_read( engine::Image& image )
 {
     return {
         .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -151,31 +151,31 @@ engine::ImageBarrier color_write_to_frag_read( engine::RWImage& image )
 
 void update_desc_sets( GBuffers& gbuffers )
 {
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         gbuffers.desc_set,
         gbuffers.GBuffer_Position,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         gbuffers.desc_set,
         gbuffers.GBuffer_Normal,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         gbuffers.desc_set,
         gbuffers.GBuffer_Tangent,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         2
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         gbuffers.desc_set,
         gbuffers.GBuffer_UV,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         3
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         gbuffers.desc_set,
         gbuffers.GBuffer_Albedo,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -183,7 +183,7 @@ void update_desc_sets( GBuffers& gbuffers )
     );
     engine::update_descriptor_set_depth_image( gbuffers.desc_set, gbuffers.GBuffer_Depth, 5 );
     engine::update_descriptor_set_depth_image( gbuffers.desc_set, gbuffers.GBuffer_DepthMS, 6 );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         gbuffers.desc_set,
         gbuffers.GBuffer_Packed_Data,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -193,7 +193,7 @@ void update_desc_sets( GBuffers& gbuffers )
 
 void create_top_pipeline_barriers(
     deferred::GBuffers& gbuffers,
-    engine::RWImage& screen_color,
+    engine::Image& screen_color,
     engine::PipelineBarrierDescriptor* top_pipeline_barrier_desc
 )
 {

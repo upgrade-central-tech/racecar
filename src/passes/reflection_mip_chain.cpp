@@ -37,7 +37,7 @@ VkImageSubresourceRange mip_range( uint32_t base_mip, uint32_t level_count )
     };
 }
 
-engine::ImageBarrier color_write_to_compute_read( engine::RWImage* image )
+engine::ImageBarrier color_write_to_compute_read( engine::Image* image )
 {
     return engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                                   .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -49,7 +49,7 @@ engine::ImageBarrier color_write_to_compute_read( engine::RWImage* image )
                                   .range = mip_range( 0, 1 ) };
 }
 
-engine::ImageBarrier undefined_to_compute_write( engine::RWImage* image )
+engine::ImageBarrier undefined_to_compute_write( engine::Image* image )
 {
     return engine::ImageBarrier {
         .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
@@ -63,7 +63,7 @@ engine::ImageBarrier undefined_to_compute_write( engine::RWImage* image )
     };
 }
 
-engine::ImageBarrier compute_read_to_compute_write( engine::RWImage* image, uint32_t mip )
+engine::ImageBarrier compute_read_to_compute_write( engine::Image* image, uint32_t mip )
 {
     return engine::ImageBarrier {
         .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -77,7 +77,7 @@ engine::ImageBarrier compute_read_to_compute_write( engine::RWImage* image, uint
     };
 }
 
-engine::ImageBarrier compute_write_to_compute_read( engine::RWImage* image, uint32_t mip )
+engine::ImageBarrier compute_write_to_compute_read( engine::Image* image, uint32_t mip )
 {
     return engine::ImageBarrier {
         .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
@@ -96,8 +96,8 @@ engine::ImageBarrier compute_write_to_compute_read( engine::RWImage* image, uint
 
 void create_reflection_mip_chain_resources(
     ReflectionMipChain* chain_out,
-    engine::RWImage& reflection_color,
-    engine::RWImage& reflection_data
+    engine::Image& reflection_color,
+    engine::Image& reflection_data
 )
 {
     ReflectionMipChain& chain = *chain_out;
@@ -116,28 +116,28 @@ void create_reflection_mip_chain_resources(
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_rwimage_mip(
+        engine::update_descriptor_set_image_mip(
             desc_set,
             reflection_color,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0,
             i
         );
-        engine::update_descriptor_set_rwimage_mip(
+        engine::update_descriptor_set_image_mip(
             desc_set,
             reflection_data,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             1,
             i
         );
-        engine::update_descriptor_set_rwimage_mip(
+        engine::update_descriptor_set_image_mip(
             desc_set,
             reflection_color,
             VK_IMAGE_LAYOUT_GENERAL,
             2,
             i + 1
         );
-        engine::update_descriptor_set_rwimage_mip(
+        engine::update_descriptor_set_image_mip(
             desc_set,
             reflection_data,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -176,28 +176,28 @@ void create_reflection_mip_chain_resources(
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_rwimage_mip(
+        engine::update_descriptor_set_image_mip(
             desc_set,
             reflection_color,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0,
             dst_mip + 1
         );
-        engine::update_descriptor_set_rwimage_mip(
+        engine::update_descriptor_set_image_mip(
             desc_set,
             reflection_data,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             1,
             dst_mip + 1
         );
-        engine::update_descriptor_set_rwimage_mip(
+        engine::update_descriptor_set_image_mip(
             desc_set,
             reflection_data,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             2,
             dst_mip
         );
-        engine::update_descriptor_set_rwimage_mip(
+        engine::update_descriptor_set_image_mip(
             desc_set,
             reflection_color,
             VK_IMAGE_LAYOUT_GENERAL,

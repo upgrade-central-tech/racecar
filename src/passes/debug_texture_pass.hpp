@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine/descriptor_set.hpp"
-#include "engine/rwimage.hpp"
+#include "engine/image.h"
 #include "engine/task_list.hpp"
 #include "engine/ub_data.hpp"
 #include "engine/uniform_buffer.hpp"
@@ -20,8 +20,8 @@ struct DebugTexturePass {
     bool initialized = false;
 };
 
-void initialize_debug_texture_pass( DebugTexturePass& pass, engine::RWImage& screen_buffer,
-    const std::vector<const engine::RWImage*>& textures,
+void initialize_debug_texture_pass( DebugTexturePass& pass, engine::Image& screen_buffer,
+    const std::vector<const engine::Image*>& textures,
     const UniformBuffer<ub_data::Camera>& camera_buffer );
 
 void add_debug_texture_pass( DebugTexturePass& pass, engine::TaskList& task_list );

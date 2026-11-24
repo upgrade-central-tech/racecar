@@ -12,7 +12,7 @@ constexpr uint32_t REFLECTION_MIP_COUNT = 6;
 
 #include "../engine/descriptor_set.hpp"
 #include "../engine/pipeline.hpp"
-#include "../engine/rwimage.hpp"
+#include "../engine/image.h"
 #include "../engine/task_list.hpp"
 
 #include <array>
@@ -25,8 +25,8 @@ struct ReflectionMipChain {
     static constexpr uint32_t UPSAMPLE_COUNT = MIP_COUNT - 2;
 
     // Refs to reflection images
-    engine::RWImage* reflection_color = nullptr;
-    engine::RWImage* reflection_data = nullptr;
+    engine::Image* reflection_color = nullptr;
+    engine::Image* reflection_data = nullptr;
 
     std::array<engine::DescriptorSet, DOWNSAMPLE_COUNT> downsample_desc_sets = { };
     std::array<engine::DescriptorSet, UPSAMPLE_COUNT> upsample_desc_sets = { };
@@ -37,7 +37,7 @@ struct ReflectionMipChain {
 };
 
 void create_reflection_mip_chain_resources( ReflectionMipChain* chain,
-    engine::RWImage& reflection_color, engine::RWImage& reflection_data );
+    engine::Image& reflection_color, engine::Image& reflection_data );
 
 void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList& task_list );
 

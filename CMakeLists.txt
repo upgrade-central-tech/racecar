@@ -63,9 +63,8 @@ set(RACECAR_SOURCES
     ${ENGINE_DIR}/task_list.cpp
     ${ENGINE_DIR}/destructor_stack.cpp
     ${ENGINE_DIR}/descriptors.cpp
-    ${ENGINE_DIR}/images.cpp
+    ${ENGINE_DIR}/image.cpp
     ${ENGINE_DIR}/pipeline_barrier.cpp
-    ${ENGINE_DIR}/rwimage.cpp
     ${ENGINE_DIR}/gfx_task.cpp
     ${ENGINE_DIR}/descriptor_set.cpp
     ${ENGINE_DIR}/compute_task.cpp

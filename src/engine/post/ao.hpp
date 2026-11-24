@@ -3,7 +3,7 @@
 #include "../task_list.hpp"
 #include "../ub_data.hpp"
 #include "engine/descriptor_set.hpp"
-#include "engine/rwimage.hpp"
+#include "engine/image.h"
 
 namespace racecar::gui {
 struct Gui;
@@ -14,14 +14,14 @@ namespace racecar::engine::post {
 struct AoPass {
     UniformBuffer<ub_data::Camera>* camera_buffer;
 
-    engine::RWImage* GBuffer_Normal;
-    engine::RWImage* GBuffer_Depth;
+    engine::Image* GBuffer_Normal;
+    engine::Image* GBuffer_Depth;
 
     engine::DescriptorSet uniform_desc_set = {};
     engine::DescriptorSet texture_desc_set = {};
     UniformBuffer<ub_data::AOData> ao_buffer = {};
 
-    engine::RWImage ao_output;
+    engine::Image ao_output;
 
     engine::DescriptorSet ao_read_descriptor_set = {};
 };

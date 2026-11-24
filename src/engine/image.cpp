@@ -1,12 +1,18 @@
-#include "images.hpp"
+#include "image.h"
 
 #include "../log.hpp"
 #include "../vk/create.hpp"
 #include "../vk/utility.hpp"
+#include "imm_submit.hpp"
 
 #include <stb_image.h>
 
 namespace racecar::engine {
+
+namespace {
+
+enum class FormatType { UNORM8, FLOAT16 };
+enum class MIP_TYPE : uint32_t { AUTO_GENERATE = 0 };
 
 void generate_mipmaps(
     VkImage image, VkExtent3D extent, uint32_t mip_levels, VkCommandBuffer cmd_buffer
@@ -123,7 +129,189 @@ void generate_mipmaps(
     );
 }
 
-vk::mem::AllocatedImage create_image(
+Image allocate_vma_image(
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    uint32_t mip_levels,
+    uint32_t array_layers,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags
+)
+{
+    vk::Common& vulkan = vk::Common::GetMut();
+    Image allocated_image;
+    allocated_image.image_extent = extent;
+    allocated_image.image_format = format;
+
+    VkImageCreateInfo image_info = vk::create::image_info(
+        format,
+        image_type,
+        mip_levels,
+        array_layers,
+        samples,
+        usage_flags,
+        extent
+    );
+
+    {
+        VmaAllocationCreateInfo allocation_create_info = {
+            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+            .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ),
+        };
+        vk::check(
+            vmaCreateImage(
+                vulkan.allocator,
+                &image_info,
+                &allocation_create_info,
+                &allocated_image.vk_image,
+                &allocated_image.allocation,
+                nullptr
+            ),
+            "[VMA] Failed to create image"
+        );
+        vulkan.destructor_stack.push_free_vmaimage(
+            vulkan.allocator,
+            allocated_image.vk_image,
+            allocated_image.allocation
+        );
+    }
+
+    {
+        // Let's just assume there are binary results
+        VkImageViewType image_view_type = ( image_type == VK_IMAGE_TYPE_2D )
+            ? VK_IMAGE_VIEW_TYPE_2D
+            : VK_IMAGE_VIEW_TYPE_3D;
+
+        VkImageViewCreateInfo image_view_info = vk::create::image_view_info(
+            format,
+            allocated_image.vk_image,
+            image_view_type,
+            format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT
+        );
+        image_view_info.subresourceRange.levelCount = image_info.mipLevels;
+        vk::check(
+            vkCreateImageView(
+                vulkan.device,
+                &image_view_info,
+                nullptr,
+                &allocated_image.image_view
+            ),
+            "Failed to create image view"
+        );
+
+        if ( mip_levels > 1 ) {
+            // Need to build views per mip, useful for writing
+            for ( uint32_t mip = 0; mip < mip_levels; mip++ ) {
+                VkImageViewType image_view_type = ( image_type == VK_IMAGE_TYPE_2D )
+                    ? VK_IMAGE_VIEW_TYPE_2D
+                    : VK_IMAGE_VIEW_TYPE_3D;
+
+                VkImageViewCreateInfo image_view_info = vk::create::image_view_info(
+                    format,
+                    allocated_image.vk_image,
+                    image_view_type,
+                    format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                                   : VK_IMAGE_ASPECT_COLOR_BIT
+                );
+
+                image_view_info.subresourceRange.baseMipLevel = mip;
+                image_view_info.subresourceRange.levelCount = 1;
+
+                VkImageView mip_view;
+                vk::check(
+                    vkCreateImageView( vulkan.device, &image_view_info, nullptr, &mip_view ),
+                    "Failed to create image view"
+                );
+
+                allocated_image.mip_levels.push_back( mip_view );
+                vulkan.destructor_stack.push( vulkan.device, mip_view, vkDestroyImageView );
+            }
+        }
+
+        vulkan.destructor_stack
+            .push( vulkan.device, allocated_image.image_view, vkDestroyImageView );
+    }
+
+    return allocated_image;
+}
+
+Image allocate_image(
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    uint32_t mip_levels,
+    uint32_t array_layers,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags,
+    bool mipmapped
+)
+{
+    uint32_t sent_mips = mip_levels;
+
+    // Currently, the auto_generate == 0. I'm going under a wild assumption that
+    // if you ARE enabling mipmapping, and you pass in 0 mip_levels, then we'll just auto-generate.
+    if ( mipmapped && mip_levels == static_cast<uint32_t>( MIP_TYPE::AUTO_GENERATE ) ) {
+        sent_mips = static_cast<uint32_t>(
+                        std::floor( std::log2( std::max( extent.width, extent.height ) ) )
+                    )
+            + 1;
+    }
+
+    try {
+        return allocate_vma_image(
+            extent,
+            format,
+            image_type,
+            sent_mips,
+            array_layers,
+            samples,
+            usage_flags
+        );
+    } catch ( const Exception& ex ) {
+        log::error( "[Image] Error occurred: {}", ex.what() );
+        throw;
+    }
+}
+
+} // namespace
+
+Image create_image(
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags
+)
+{
+    return allocate_image( extent, format, image_type, 1, 1, samples, usage_flags, false );
+}
+
+Image create_image_mips(
+    VkExtent3D extent,
+    VkFormat format,
+    VkImageType image_type,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags,
+    uint32_t mip_levels
+)
+{
+    return allocate_image( extent, format, image_type, mip_levels, 1, samples, usage_flags, true );
+}
+
+Image create_gbuffer_image( VkFormat format, VkSampleCountFlagBits samples )
+{
+    const engine::State& engine = engine::State::GetConst();
+    return engine::create_image(
+        VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
+        format,
+        VkImageType::VK_IMAGE_TYPE_2D,
+        samples,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+    );
+}
+
+Image create_image_from_data(
     void* data,
     VkExtent3D extent,
     VkFormat format,
@@ -136,7 +324,7 @@ vk::mem::AllocatedImage create_image(
     const size_t data_size = extent.depth * extent.width * extent.height
         * vk::utility::bytes_from_format( format );
 
-    vk::mem::AllocatedImage new_image;
+    Image new_image;
 
     uint32_t mip_levels = 1;
     if ( mipmapped ) {
@@ -229,188 +417,14 @@ vk::mem::AllocatedImage create_image(
             }
         } );
     } catch ( const Exception& ex ) {
-        log::error( "[AllocatedImage] Error occurred: {}", ex.what() );
+        log::error( "[Image] Error occurred: {}", ex.what() );
         throw;
     }
 
     return new_image;
-};
-
-vk::mem::AllocatedImage allocate_vma_image(
-    VkExtent3D extent,
-    VkFormat format,
-    VkImageType image_type,
-    uint32_t mip_levels,
-    uint32_t array_layers,
-    VkSampleCountFlagBits samples,
-    VkImageUsageFlags usage_flags
-)
-{
-    vk::Common& vulkan = vk::Common::GetMut();
-    vk::mem::AllocatedImage allocated_image = {
-        .image_extent = extent,
-        .image_format = format,
-    };
-
-    VkImageCreateInfo image_info = vk::create::image_info(
-        format,
-        image_type,
-        mip_levels,
-        array_layers,
-        samples,
-        usage_flags,
-        extent
-    );
-
-    {
-        VmaAllocationCreateInfo allocation_create_info = {
-            .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-            .requiredFlags = VkMemoryPropertyFlags( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ),
-        };
-        vk::check(
-            vmaCreateImage(
-                vulkan.allocator,
-                &image_info,
-                &allocation_create_info,
-                &allocated_image.vk_image,
-                &allocated_image.allocation,
-                nullptr
-            ),
-            "[VMA] Failed to create image"
-        );
-        vulkan.destructor_stack.push_free_vmaimage( vulkan.allocator, allocated_image );
-    }
-
-    {
-        // Let's just assume there are binary results
-        VkImageViewType image_view_type = ( image_type == VK_IMAGE_TYPE_2D )
-            ? VK_IMAGE_VIEW_TYPE_2D
-            : VK_IMAGE_VIEW_TYPE_3D;
-
-        VkImageViewCreateInfo image_view_info = vk::create::image_view_info(
-            format,
-            allocated_image.vk_image,
-            image_view_type,
-            format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT
-        );
-        image_view_info.subresourceRange.levelCount = image_info.mipLevels;
-        vk::check(
-            vkCreateImageView(
-                vulkan.device,
-                &image_view_info,
-                nullptr,
-                &allocated_image.image_view
-            ),
-            "Failed to create image view"
-        );
-
-        // They can be the same, as long as VK_IMAGE_USAGE_STORAGE_BIT is used. The views are
-        // different, however, for writing to cubemaps.
-        allocated_image.storage_image_view = allocated_image.image_view;
-
-        if ( mip_levels > 1 ) {
-            // Need to build views per mip, useful for writing
-            for ( uint32_t mip = 0; mip < mip_levels; mip++ ) {
-                VkImageViewType image_view_type = ( image_type == VK_IMAGE_TYPE_2D )
-                    ? VK_IMAGE_VIEW_TYPE_2D
-                    : VK_IMAGE_VIEW_TYPE_3D;
-
-                VkImageViewCreateInfo image_view_info = vk::create::image_view_info(
-                    format,
-                    allocated_image.vk_image,
-                    image_view_type,
-                    format == VK_FORMAT_D32_SFLOAT ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                                   : VK_IMAGE_ASPECT_COLOR_BIT
-                );
-
-                image_view_info.subresourceRange.baseMipLevel = mip;
-                image_view_info.subresourceRange.levelCount = 1;
-
-                VkImageView mip_view;
-                vk::check(
-                    vkCreateImageView( vulkan.device, &image_view_info, nullptr, &mip_view ),
-                    "Failed to create image view"
-                );
-
-                allocated_image.mip_levels.push_back( mip_view );
-                vulkan.destructor_stack.push( vulkan.device, mip_view, vkDestroyImageView );
-            }
-        }
-
-        vulkan.destructor_stack
-            .push( vulkan.device, allocated_image.image_view, vkDestroyImageView );
-    }
-
-    return allocated_image;
 }
 
-vk::mem::AllocatedImage allocate_image(
-    VkExtent3D extent,
-    VkFormat format,
-    VkImageType image_type,
-    uint32_t mip_levels,
-    uint32_t array_layers,
-    VkSampleCountFlagBits samples,
-    VkImageUsageFlags usage_flags,
-    bool mipmapped
-)
-{
-    uint32_t sent_mips = mip_levels;
-
-    // Currently, the auto_generate == 0. I'm going under a wild assumption that
-    // if you ARE enabling mipmapping, and you pass in 0 mip_levels, then we'll just auto-generate.
-    if ( mipmapped && mip_levels == static_cast<uint32_t>( MIP_TYPE::AUTO_GENERATE ) ) {
-        sent_mips = static_cast<uint32_t>(
-                        std::floor( std::log2( std::max( extent.width, extent.height ) ) )
-                    )
-            + 1;
-    }
-
-    return allocate_vma_image(
-        extent,
-        format,
-        image_type,
-        sent_mips,
-        array_layers,
-        samples,
-        usage_flags
-    );
-}
-
-std::vector<float> load_image_to_float( const std::string& global_path )
-{
-    int width, height, channels;
-    float* pixels = stbi_loadf( global_path.c_str(), &width, &height, &channels, 4 );
-
-    std::vector<float> float_data(
-        static_cast<uint32_t>( width ) * static_cast<uint32_t>( height ) * 4U
-    );
-    for ( size_t i = 0; i < static_cast<size_t>( width * height * 4 ); i++ ) {
-        float_data[i] = pixels[i];
-    }
-
-    stbi_image_free( pixels );
-    return float_data;
-}
-
-std::vector<uint16_t> load_image_to_float16( const std::string& global_path )
-{
-    int width, height, channels;
-    float* pixels = stbi_loadf( global_path.c_str(), &width, &height, &channels, 4 );
-
-    /// TODO: error checking
-    std::vector<uint16_t> half_data(
-        static_cast<uint32_t>( width ) * static_cast<uint32_t>( height ) * 4U
-    );
-    for ( size_t i = 0; i < static_cast<size_t>( width * height * 4 ); i++ ) {
-        half_data[i] = vk::utility::float_to_half( pixels[i] );
-    }
-
-    stbi_image_free( pixels );
-    return half_data;
-}
-
-vk::mem::AllocatedImage load_image(
+Image create_image_from_load(
     std::filesystem::path file_path,
     size_t desired_channels,
     VkFormat image_format,
@@ -460,7 +474,7 @@ vk::mem::AllocatedImage load_image(
 
         stbi_image_free( pixels );
 
-        return engine::create_image(
+        return create_image_from_data(
             byte_data.data(),
             { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 },
             image_format,
@@ -482,7 +496,7 @@ vk::mem::AllocatedImage load_image(
 
         stbi_image_free( pixels );
 
-        return engine::create_image(
+        return create_image_from_data(
             half_data.data(),
             { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 },
             image_format,
@@ -494,6 +508,24 @@ vk::mem::AllocatedImage load_image(
 
     log::warn( "[IMAGE LOADER] Desired format currently not supported!" );
     return { };
+}
+
+void initialize_image_layout( Image& image, VkImageLayout layout )
+{
+    const engine::State& engine = engine::State::GetConst();
+    engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
+        vk::utility::transition_image(
+            command_buffer,
+            image.vk_image,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            layout,
+            VK_ACCESS_2_NONE,
+            VK_ACCESS_2_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+            VK_IMAGE_ASPECT_COLOR_BIT
+        );
+    } );
 }
 
 } // namespace racecar::engine

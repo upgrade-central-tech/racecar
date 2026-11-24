@@ -58,7 +58,7 @@ struct TerrainRayTracingInfo {
     // borrowed from the raster terrain
     geometry::Terrain* terrain = nullptr;
     UniformBuffer<ub_data::TerrainData>* terrain_uniform = nullptr;
-    engine::RWImage* layer_mask = nullptr;
+    engine::Image* layer_mask = nullptr;
 
     UniformBuffer<TerrainRTGrid> grid_uniform = { };
 

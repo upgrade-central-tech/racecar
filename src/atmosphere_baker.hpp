@@ -15,8 +15,8 @@ struct AtmosphereBaker {
     Atmosphere* atmosphere;
     engine::DescriptorSet* gamestate_desc_set = nullptr;
 
-    engine::RWImage octahedral_sky_mips;
-    engine::RWImage octahedral_sky;
+    engine::Image octahedral_sky_mips;
+    engine::Image octahedral_sky;
 
     engine::DescriptorSet octahedral_write_desc_set;
     engine::DescriptorSet volumetrics_desc_set;

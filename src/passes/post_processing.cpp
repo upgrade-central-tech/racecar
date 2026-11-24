@@ -17,7 +17,7 @@ namespace racecar {
 // Current limitation assumes that all post-processing calls are done via compute shader
 // hence the VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT stage.
 void create_screen_buffer_pipeline_barrier(
-    engine::RWImage& screen_color, engine::RWImage& screen_buffer, engine::TaskList& task_list
+    engine::Image& screen_color, engine::Image& screen_buffer, engine::TaskList& task_list
 )
 {
     engine::add_pipeline_barrier(
@@ -51,7 +51,7 @@ void create_screen_buffer_pipeline_barrier(
 }
 
 void create_screen_buffer_present_pipeline_barrier(
-    engine::RWImage& screen_buffer, engine::TaskList& task_list
+    engine::Image& screen_buffer, engine::TaskList& task_list
 )
 {
     engine::add_pipeline_barrier(
@@ -75,8 +75,8 @@ void create_screen_buffer_present_pipeline_barrier(
 }
 
 void pre_transparency_post_passes(
-    engine::RWImage& screen_color,
-    engine::RWImage& screen_buffer,
+    engine::Image& screen_color,
+    engine::Image& screen_buffer,
     engine::TaskList& task_list,
     engine::post::BloomPass& bloom_pass
 )
@@ -122,9 +122,9 @@ void pre_transparency_post_passes(
 void post_transparency_post_passes(
     UniformBuffer<ub_data::Camera>& camera_buffer,
     deferred::GBuffers& gbuffers,
-    engine::RWImage& screen_color,
-    engine::RWImage& screen_buffer,
-    engine::RWImage& screen_history,
+    engine::Image& screen_color,
+    engine::Image& screen_buffer,
+    engine::Image& screen_history,
     engine::TaskList& task_list,
     engine::post::TAAPass& taa_pass,
     engine::post::TonemappingPass& tm_pass

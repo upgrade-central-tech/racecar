@@ -4,7 +4,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL // Necessary for glm::lerp
 #include "camera_data.hpp"
-#include "engine/images.hpp"
+#include "engine/image.h"
 #include "engine/ub_data.hpp"
 #include "exception.hpp"
 #include "geometry/quad.hpp"
@@ -79,7 +79,7 @@ Atmosphere initialize()
 
         {
             std::vector<float> irradiance = read_data( IRRADIANCE_DAT_PATH );
-            atms.irradiance = engine::create_rwimage_from_data(
+            atms.irradiance = engine::create_image_from_data(
                 static_cast<void*>( irradiance.data() ),
                 { .width = 64, .height = 16, .depth = 1 },
                 format,
@@ -91,7 +91,7 @@ Atmosphere initialize()
 
         {
             std::vector<float> scattering = read_data( SCATTERING_DAT_PATH );
-            atms.scattering = engine::create_rwimage_from_data(
+            atms.scattering = engine::create_image_from_data(
                 static_cast<void*>( scattering.data() ),
                 { .width = 256, .height = 128, .depth = 32 },
                 format,
@@ -103,7 +103,7 @@ Atmosphere initialize()
 
         {
             std::vector<float> transmittance = read_data( TRANSMITTANCE_DAT_PATH );
-            atms.transmittance = engine::create_rwimage_from_data(
+            atms.transmittance = engine::create_image_from_data(
                 static_cast<void*>( transmittance.data() ),
                 { .width = 256, .height = 64, .depth = 1 },
                 format,
@@ -123,19 +123,19 @@ Atmosphere initialize()
           VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         atms.lut_desc_set,
         atms.irradiance,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         atms.lut_desc_set,
         atms.scattering,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         atms.lut_desc_set,
         atms.transmittance,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -239,7 +239,7 @@ glm::vec3 compute_sun_color( const glm::vec3& sun_direction, float radiance_expo
 }
 
 void draw_atmosphere(
-    engine::TaskList& task_list, atmosphere::Atmosphere& atms, engine::RWImage& out_color
+    engine::TaskList& task_list, atmosphere::Atmosphere& atms, engine::Image& out_color
 )
 {
     const engine::State& engine = engine::State::GetConst();

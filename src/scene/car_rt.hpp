@@ -42,7 +42,7 @@ vk::mem::AllocatedBuffer create_padded_vertex_data_buffer(
 
 engine::DescriptorSet create_car_desc_set(
     geometry::scene::Mesh& scene_mesh, vk::mem::AllocatedBuffer& padded_vertex_data_buffer,
-    UniformBuffer<ub_data::BLASOffsets>& offset_data, engine::RWImage& lut_brdf,
+    UniformBuffer<ub_data::BLASOffsets>& offset_data, engine::Image& lut_brdf,
     atmosphere::AtmosphereBaker& atms_baker,
     UniformBuffer<ub_data::RTTextureUniform>& rt_texture_uniform_data,
     UniformBuffer<ub_data::MaterialTable>& material_table );
@@ -54,8 +54,8 @@ bool sync_material_table( UniformBuffer<ub_data::MaterialTable>& material_table,
     const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers );
 
 engine::DescriptorSet create_combined_textures_desc_set( 
-    const std::vector<const engine::RWImage*>& albedo_textures,
-    const std::vector<const engine::RWImage*>& metallic_roughness_textures );
+    const std::vector<const engine::Image*>& albedo_textures,
+    const std::vector<const engine::Image*>& metallic_roughness_textures );
 
 void update_rt_uniform_buffers(
     UniformBuffer<ub_data::BLASOffsets>& offset_data,

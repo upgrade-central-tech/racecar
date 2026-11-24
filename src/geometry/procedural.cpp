@@ -1,7 +1,7 @@
 #include "procedural.hpp"
 
 #include "../engine/descriptor_set.hpp"
-#include "../engine/images.hpp"
+#include "../engine/image.h"
 #include "../engine/pipeline.hpp"
 #include "../vk/create.hpp"
 #include "../vk/mem.hpp"
@@ -11,7 +11,7 @@
 
 namespace racecar::geometry {
 
-engine::RWImage generate_test_3D()
+engine::Image generate_test_3D()
 {
     const uint32_t block_size = 32;
     const uint32_t dim = 128;
@@ -36,7 +36,7 @@ engine::RWImage generate_test_3D()
     }
 
     // Create the 3D image
-    return engine::create_rwimage_from_data(
+    return engine::create_image_from_data(
         static_cast<void*>( texture_data.data() ),
         { dim, dim, dim },
         VK_FORMAT_R32G32B32A32_SFLOAT, // 4-channel float
@@ -46,13 +46,13 @@ engine::RWImage generate_test_3D()
     );
 }
 
-engine::RWImage generate_glint_noise()
+engine::Image generate_glint_noise()
 {
     const engine::State& engine = engine::State::GetConst();
     uint32_t noise_texture_size = 512;
 
     // Allocate the coefficeints.
-    engine::RWImage glint_noise_texture = engine::create_rwimage(
+    engine::Image glint_noise_texture = engine::create_image(
         { noise_texture_size, noise_texture_size, 1 },
         VK_FORMAT_R32G32B32A32_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -66,7 +66,7 @@ engine::RWImage generate_glint_noise()
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             glint_desc_set,
             glint_noise_texture,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -91,7 +91,7 @@ engine::RWImage generate_glint_noise()
             // RW cubemap transition first
             vk::utility::transition_image(
                 command_buffer,
-                glint_noise_texture.image.vk_image,
+                glint_noise_texture.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -127,7 +127,7 @@ engine::RWImage generate_glint_noise()
 
             vk::utility::transition_image(
                 command_buffer,
-                glint_noise_texture.image.vk_image,
+                glint_noise_texture.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,

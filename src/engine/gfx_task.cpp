@@ -5,8 +5,8 @@ namespace racecar::engine {
 void execute_gfx_task( const VkCommandBuffer& cmd_buf, GfxTask& gfx_task )
 {
     std::vector<VkRenderingAttachmentInfo> color_attachment_infos;
-    for ( const RWImage* img : gfx_task.color_attachments ) {
-        const vk::mem::AllocatedImage& attachment = img->image;
+    for ( const Image* img : gfx_task.color_attachments ) {
+        const Image& attachment = *img;
         color_attachment_infos.push_back(
             {
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -26,7 +26,7 @@ void execute_gfx_task( const VkCommandBuffer& cmd_buf, GfxTask& gfx_task )
     if ( gfx_task.depth_image != nullptr ) {
         depth_attachment_info = {
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-            .imageView = gfx_task.depth_image->image.image_view,
+            .imageView = gfx_task.depth_image->image_view,
             .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
             .loadOp = gfx_task.clear_depth ? VK_ATTACHMENT_LOAD_OP_CLEAR
                                            : VK_ATTACHMENT_LOAD_OP_LOAD,

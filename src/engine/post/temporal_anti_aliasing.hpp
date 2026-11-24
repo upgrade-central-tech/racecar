@@ -3,7 +3,7 @@
 #include "../../engine/ub_data.hpp"
 #include "../../vk/common.hpp"
 #include "../descriptor_set.hpp"
-#include "../rwimage.hpp"
+#include "../image.h"
 #include "../state.hpp"
 #include "../task_list.hpp"
 
@@ -19,11 +19,11 @@ struct TAAPass {
 };
 
 TAAPass add_taa(
-    const RWImage& input,
-    const RWImage& GBuffer_Depth,
-    const RWImage& GBuffer_Velocity,
-    RWImage& output,
-    RWImage& history,
+    const Image& input,
+    const Image& GBuffer_Depth,
+    const Image& GBuffer_Velocity,
+    Image& output,
+    Image& history,
     TaskList& task_list,
     UniformBuffer<ub_data::Camera>& camera_buffer
 );

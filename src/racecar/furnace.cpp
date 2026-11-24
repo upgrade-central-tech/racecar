@@ -7,7 +7,7 @@
 #include "deferred.hpp"
 #include "engine/descriptor_set.hpp"
 #include "engine/execute.hpp"
-#include "engine/images.hpp"
+#include "engine/image.h"
 #include "engine/pipeline.hpp"
 #include "engine/post/ao.hpp"
 #include "engine/post/bloom.hpp"
@@ -108,13 +108,13 @@ void furnace( bool use_fullscreen )
 
     // Load material lookup tables
     engine::DescriptorSet lut_sets;
-    engine::RWImage lut_brdf;
-    engine::RWImage glint_noise;
+    engine::Image lut_brdf;
+    engine::Image glint_noise;
     create_lut_sets( &lut_sets, &lut_brdf, &glint_noise );
 
     // Uniform white sky in place of the baked atmosphere
     glm::vec4 sky_texel( FURNACE_RADIANCE, FURNACE_RADIANCE, FURNACE_RADIANCE, 1.f );
-    engine::RWImage white_sky = engine::create_rwimage_from_data(
+    engine::Image white_sky = engine::create_image_from_data(
         &sky_texel,
         VkExtent3D( 1, 1, 1 ),
         VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -122,13 +122,13 @@ void furnace( bool use_fullscreen )
         VK_IMAGE_USAGE_SAMPLED_BIT,
         false
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         lut_sets,
         white_sky,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         LUT_INDEX::OCTAHEDRAL_SKY
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         lut_sets,
         white_sky,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -137,7 +137,7 @@ void furnace( bool use_fullscreen )
 
     // Sun fully occluded, so only the sky lights the sphere
     float sun_visibility = 0.f;
-    engine::RWImage sun_visibility_image = engine::create_rwimage_from_data(
+    engine::Image sun_visibility_image = engine::create_image_from_data(
         &sun_visibility,
         VkExtent3D( 1, 1, 1 ),
         VK_FORMAT_R32_SFLOAT,
@@ -164,7 +164,7 @@ void furnace( bool use_fullscreen )
         },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         sun_visibility_desc_set,
         sun_visibility_image,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -211,9 +211,9 @@ void furnace( bool use_fullscreen )
         &sampler_desc_set
     );
 
-    engine::RWImage screen_color;
-    engine::RWImage screen_buffer;
-    engine::RWImage screen_history;
+    engine::Image screen_color;
+    engine::Image screen_buffer;
+    engine::Image screen_history;
     create_screen_buffers( &screen_color, &screen_buffer, &screen_history );
 
     // Only used to satisfy the GUI and to derive a valid sun direction
@@ -224,8 +224,8 @@ void furnace( bool use_fullscreen )
     std::vector<glm::mat4> transforms;
     std::vector<const scene::Primitive*> prims;
     ub_data::RTTextureUniform rt_texture_uniform = { };
-    std::vector<const engine::RWImage*> albedo_textures;
-    std::vector<const engine::RWImage*> metallic_roughness_textures;
+    std::vector<const engine::Image*> albedo_textures;
+    std::vector<const engine::Image*> metallic_roughness_textures;
     load_model_primitive_material_data(
         scene,
         model_mat_uniform_buffers,
@@ -258,7 +258,7 @@ void furnace( bool use_fullscreen )
 
     // No reflection pass: empty reflections fall back to the sky
     glm::vec4 empty_texel( 0.f );
-    engine::RWImage empty_reflection = engine::create_rwimage_from_data(
+    engine::Image empty_reflection = engine::create_image_from_data(
         &empty_texel,
         VkExtent3D( 1, 1, 1 ),
         VK_FORMAT_R32G32B32A32_SFLOAT,
@@ -270,13 +270,13 @@ void furnace( bool use_fullscreen )
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         reflection_buffer_desc_set,
         empty_reflection,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         reflection_buffer_desc_set,
         empty_reflection,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

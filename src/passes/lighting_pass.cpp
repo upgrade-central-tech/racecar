@@ -15,7 +15,7 @@ constexpr std::string_view LIGHTING_PASS_SHADER_MODULE_PATH = "../shaders/deferr
 }
 
 void create_deferred_lighting_pipeline_barrier(
-    engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::RWImage& screen_color
+    engine::TaskList& task_list, deferred::GBuffers& gbuffers, engine::Image& screen_color
 )
 {
     engine::add_pipeline_barrier(
@@ -62,7 +62,7 @@ void create_deferred_lighting_pipeline_barrier(
 }
 
 void create_terrain_car_screen_pipeline_barrier(
-    engine::TaskList& task_list, engine::RWImage& screen_color
+    engine::TaskList& task_list, engine::Image& screen_color
 )
 {
     engine::add_pipeline_barrier(
@@ -113,7 +113,7 @@ void create_lighting_pass_resources(
 void car_lighting_pass(
     LightingPassDescSets desc_sets,
     engine::Pipeline& lighting_pass_pipeline,
-    engine::RWImage& screen_color,
+    engine::Image& screen_color,
     engine::TaskList& task_list
 )
 {

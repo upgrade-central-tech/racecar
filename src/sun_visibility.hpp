@@ -2,7 +2,7 @@
 
 #include "engine/descriptor_set.hpp"
 #include "engine/pipeline.hpp"
-#include "engine/rwimage.hpp"
+#include "engine/image.h"
 #include "engine/task_list.hpp"
 #include "engine/ub_data.hpp"
 #include "engine/uniform_buffer.hpp"
@@ -14,7 +14,7 @@ struct SunVisibilityComputePass {
     volumetric::Volumetric* volumetric = nullptr;
     engine::DescriptorSet* gamestate_desc_set = nullptr;
 
-    engine::RWImage sun_visibility_shadow_map;
+    engine::Image sun_visibility_shadow_map;
     UniformBuffer<ub_data::TerrainSizeData> terrain_size_data_uniform;
 
     engine::DescriptorSet visibility_write_desc_set;

@@ -15,8 +15,8 @@ namespace racecar {
 
 /// Bloom and AO
 void pre_transparency_post_passes(
-    engine::RWImage& screen_color,
-    engine::RWImage& screen_buffer,
+    engine::Image& screen_color,
+    engine::Image& screen_buffer,
     engine::TaskList& task_list,
     engine::post::BloomPass& bloom_pass
 );
@@ -25,20 +25,20 @@ void pre_transparency_post_passes(
 void post_transparency_post_passes(
     UniformBuffer<ub_data::Camera>& camera_buffer,
     deferred::GBuffers& gbuffers,
-    engine::RWImage& screen_color,
-    engine::RWImage& screen_buffer,
-    engine::RWImage& screen_history,
+    engine::Image& screen_color,
+    engine::Image& screen_buffer,
+    engine::Image& screen_history,
     engine::TaskList& task_list,
     engine::post::TAAPass& taa_pass,
     engine::post::TonemappingPass& tm_pass
 );
 
 void create_screen_buffer_pipeline_barrier(
-    engine::RWImage& screen_color, engine::RWImage& screen_buffer, engine::TaskList& task_list
+    engine::Image& screen_color, engine::Image& screen_buffer, engine::TaskList& task_list
 );
 
 void create_screen_buffer_present_pipeline_barrier(
-    engine::RWImage& screen_buffer, engine::TaskList& task_list
+    engine::Image& screen_buffer, engine::TaskList& task_list
 );
 
 }

@@ -2,7 +2,7 @@
 
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
-#include "engine/rwimage.hpp"
+#include "engine/image.h"
 #include "engine/state.hpp"
 #include "engine/ub_data.hpp"
 #include "engine/uniform_buffer.hpp"
@@ -36,16 +36,16 @@ void load_model_mat_uniform_buffers( size_t num_nodes,
 void create_raymarch_tex_sets(
     engine::DescriptorSet* raymarch_tex_sets );
 
-void create_screen_buffers( engine::RWImage* screen_color,
-    engine::RWImage* screen_buffer, engine::RWImage* screen_history );
+void create_screen_buffers( engine::Image* screen_color,
+    engine::Image* screen_buffer, engine::Image* screen_history );
 
 void load_model_primitive_material_data( 
     const scene::Scene& scene,
     const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
     std::vector<glm::mat4>& transforms, std::vector<const scene::Primitive*>& prims,
     ub_data::RTTextureUniform& rt_texture_uniform,
-    std::vector<const engine::RWImage*>& albedo_textures,
-    std::vector<const engine::RWImage*>& metallic_roughness_textures,
+    std::vector<const engine::Image*>& albedo_textures,
+    std::vector<const engine::Image*>& metallic_roughness_textures,
     std::vector<engine::DescriptorSet>& material_desc_sets );
 
 void sort_transparent_opaque_prims(

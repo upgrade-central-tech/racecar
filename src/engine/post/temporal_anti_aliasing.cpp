@@ -11,11 +11,11 @@ static constexpr std::string_view ANTI_ALIASING_SHADER_PATH = "../shaders/post/a
 static constexpr std::string_view HISTORY_SHADER_PATH = "../shaders/post/aa/history_aa.spv";
 
 TAAPass add_taa(
-    const RWImage& input,
-    const RWImage& GBuffer_Depth,
-    const RWImage& GBuffer_Velocity,
-    RWImage& output,
-    RWImage& history,
+    const Image& input,
+    const Image& GBuffer_Depth,
+    const Image& GBuffer_Velocity,
+    Image& output,
+    Image& history,
     TaskList& task_list,
     UniformBuffer<ub_data::Camera>& camera_buffer
 )
@@ -40,26 +40,26 @@ TAAPass add_taa(
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             uniform_desc_set,
             input,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             uniform_desc_set,
             history,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             1
         );
         engine::update_descriptor_set_depth_image( uniform_desc_set, GBuffer_Depth, 2 );
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             uniform_desc_set,
             GBuffer_Velocity,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             3
         );
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             uniform_desc_set,
             output,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -91,13 +91,13 @@ TAAPass add_taa(
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             history_desc_set,
             output,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             history_desc_set,
             history,
             VK_IMAGE_LAYOUT_GENERAL,

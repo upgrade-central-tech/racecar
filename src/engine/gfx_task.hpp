@@ -1,7 +1,7 @@
 #pragma once
 
 #include "draw_task.hpp"
-#include "rwimage.hpp"
+#include "image.h"
 
 #include <glm/glm.hpp>
 #include <volk.h>
@@ -18,8 +18,8 @@ struct GfxTask {
     std::optional<float> clear_depth;
 
     /// Non-owning. The images must outlive the task list, which is recorded once and replayed.
-    std::vector<RWImage*> color_attachments;
-    RWImage* depth_image = nullptr;
+    std::vector<Image*> color_attachments;
+    Image* depth_image = nullptr;
 
     VkExtent2D extent = {};
 };

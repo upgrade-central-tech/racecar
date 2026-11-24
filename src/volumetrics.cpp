@@ -3,7 +3,7 @@
 #include "atmosphere.hpp"
 #include "camera_data.hpp"
 #include "engine/descriptor_set.hpp"
-#include "engine/images.hpp"
+#include "engine/image.h"
 #include "engine/state.hpp"
 #include "settings.h"
 #include "vk/common.hpp"
@@ -92,7 +92,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
     {
         uint32_t cumulus_map_size = 256;
 
-        volumetric.cumulus_map = engine::create_rwimage(
+        volumetric.cumulus_map = engine::create_image(
             { cumulus_map_size, cumulus_map_size, 1 },
             VK_FORMAT_R8_UNORM,
             VK_IMAGE_TYPE_2D,
@@ -107,7 +107,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             cumulus_desc_set,
             volumetric.cumulus_map,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -127,7 +127,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
         engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.cumulus_map.image.vk_image,
+                volumetric.cumulus_map.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -161,7 +161,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.cumulus_map.image.vk_image,
+                volumetric.cumulus_map.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,
@@ -177,7 +177,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
     {
         uint32_t low_freq_noise_size = 128;
 
-        volumetric.low_freq_noise = engine::create_rwimage(
+        volumetric.low_freq_noise = engine::create_image(
             { low_freq_noise_size, low_freq_noise_size, low_freq_noise_size },
             VK_FORMAT_R8_UNORM,
             VK_IMAGE_TYPE_3D,
@@ -190,7 +190,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             low_freq_desc_set,
             volumetric.low_freq_noise,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -210,7 +210,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
         engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.low_freq_noise.image.vk_image,
+                volumetric.low_freq_noise.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -245,7 +245,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.low_freq_noise.image.vk_image,
+                volumetric.low_freq_noise.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,
@@ -261,7 +261,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
     {
         uint32_t high_freq_noise_size = 32;
 
-        volumetric.high_freq_noise = engine::create_rwimage(
+        volumetric.high_freq_noise = engine::create_image(
             { high_freq_noise_size, high_freq_noise_size, high_freq_noise_size },
             VK_FORMAT_R8_UNORM,
             VK_IMAGE_TYPE_3D,
@@ -274,7 +274,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             high_freq_desc_set,
             volumetric.high_freq_noise,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -294,7 +294,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
         engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.high_freq_noise.image.vk_image,
+                volumetric.high_freq_noise.vk_image,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_ACCESS_NONE,
@@ -329,7 +329,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 
             vk::utility::transition_image(
                 command_buffer,
-                volumetric.high_freq_noise.image.vk_image,
+                volumetric.high_freq_noise.vk_image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_SHADER_WRITE_BIT,
@@ -347,16 +347,16 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 void draw_volumetric(
     [[maybe_unused]] Volumetric& volumetric,
     [[maybe_unused]] engine::TaskList& task_list,
-    engine::RWImage& color_attachment,
-    const engine::RWImage& irradiance_lut,
-    const engine::RWImage& transmittance_lut
+    engine::Image& color_attachment,
+    const engine::Image& irradiance_lut,
+    const engine::Image& transmittance_lut
 )
 {
     const engine::State& engine = engine::State::GetConst();
     // Build the low-res render image
     VkExtent2D color_dim = {
-        color_attachment.image.image_extent.width,
-        color_attachment.image.image_extent.height,
+        color_attachment.image_extent.width,
+        color_attachment.image_extent.height,
     };
 
     VkExtent2D low_res_dim = {
@@ -364,13 +364,13 @@ void draw_volumetric(
         color_dim.height >> 1, // Half resolution
     };
 
-    volumetric.cloud_buffer = engine::create_rwimage(
+    volumetric.cloud_buffer = engine::create_image(
         {
             low_res_dim.width,
             low_res_dim.height,
             1,
         },
-        color_attachment.image.image_format,
+        color_attachment.image_format,
         VK_IMAGE_TYPE_2D,
         VK_SAMPLE_COUNT_1_BIT,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
@@ -404,31 +404,31 @@ void draw_volumetric(
 
     engine::Pipeline volumetric_pipeline;
 
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         volumetric.lut_desc_set,
         volumetric.low_freq_noise,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         volumetric.lut_desc_set,
         volumetric.high_freq_noise,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         volumetric.lut_desc_set,
         volumetric.cumulus_map,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         2
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         volumetric.lut_desc_set,
         irradiance_lut,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         3
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         volumetric.lut_desc_set,
         transmittance_lut,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -443,7 +443,7 @@ void draw_volumetric(
                 volumetric.lut_desc_set.layouts[0],
                 volumetric.sampler_desc_set.layouts[0],
             },
-            { volumetric.cloud_buffer.image.image_format },
+            { volumetric.cloud_buffer.image_format },
             VK_SAMPLE_COUNT_1_BIT,
             false,
             true,
@@ -507,7 +507,7 @@ void draw_volumetric(
                 volumetric.sampler_desc_set.layouts[0],
             },
             {
-                volumetric.cloud_buffer.image.image_format,
+                volumetric.cloud_buffer.image_format,
             },
             VK_SAMPLE_COUNT_1_BIT,
             true,
@@ -522,7 +522,7 @@ void draw_volumetric(
         throw;
     }
 
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         volumetric.texture_composite_desc_set,
         volumetric.cloud_buffer,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

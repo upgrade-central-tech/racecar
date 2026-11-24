@@ -108,8 +108,8 @@ void run( bool use_fullscreen )
 
     // LOAD MATERIAL LOOKUP TABLES
     engine::DescriptorSet lut_sets;
-    engine::RWImage lut_brdf;
-    engine::RWImage glint_noise;
+    engine::Image lut_brdf;
+    engine::Image glint_noise;
     create_lut_sets( &lut_sets, &lut_brdf, &glint_noise );
 
     // LOAD GLOBAL QUAD MESH
@@ -151,9 +151,9 @@ void run( bool use_fullscreen )
     );
 
     // CREATE SCREEN BUFFERS
-    engine::RWImage screen_color;
-    engine::RWImage screen_buffer;
-    engine::RWImage screen_history;
+    engine::Image screen_color;
+    engine::Image screen_buffer;
+    engine::Image screen_history;
     create_screen_buffers( &screen_color, &screen_buffer, &screen_history );
 
     // SETUP ATMOSPHERIC/VOLUMETRIC RESOURCES
@@ -178,8 +178,8 @@ void run( bool use_fullscreen )
     std::vector<glm::mat4> transforms;
     std::vector<const scene::Primitive*> prims;
     ub_data::RTTextureUniform rt_texture_uniform = { };
-    std::vector<const engine::RWImage*> albedo_textures;
-    std::vector<const engine::RWImage*> metallic_roughness_textures;
+    std::vector<const engine::Image*> albedo_textures;
+    std::vector<const engine::Image*> metallic_roughness_textures;
     load_model_primitive_material_data(
         scene,
         model_mat_uniform_buffers,
@@ -286,8 +286,8 @@ void run( bool use_fullscreen )
     init_terrain_ray_tracing_info( &terrain_rt, &test_terrain );
 
     // Set up reflection data
-    engine::RWImage reflection_color;
-    engine::RWImage reflection_data;
+    engine::Image reflection_color;
+    engine::Image reflection_data;
     engine::Pipeline reflection_pipeline;
     engine::DescriptorSet reflection_buffer_desc_set;
     engine::GfxTask reflection_gfx_task;
@@ -372,7 +372,7 @@ void run( bool use_fullscreen )
     // ================================================================================================================
 
     DebugTexturePass debug_texture_pass;
-    std::vector<const engine::RWImage*> debug_textures;
+    std::vector<const engine::Image*> debug_textures;
 #if RACECAR_RAY_TRACING
     debug_textures.push_back( &reflection_color );
 #else

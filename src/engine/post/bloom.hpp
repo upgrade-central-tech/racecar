@@ -2,7 +2,7 @@
 
 #include "../../vk/common.hpp"
 #include "../descriptor_set.hpp"
-#include "../rwimage.hpp"
+#include "../image.h"
 #include "../state.hpp"
 #include "../task_list.hpp"
 #include "../ub_data.hpp"
@@ -20,7 +20,7 @@ namespace racecar::engine::post {
 struct BloomPass {
     static constexpr size_t NUM_PASSES = 5;
 
-    std::array<RWImage, NUM_PASSES> images;
+    std::array<Image, NUM_PASSES> images;
     UniformBuffer<ub_data::Bloom> bloom_ub;
 
     std::unique_ptr<engine::DescriptorSet> threshold_desc_set;
@@ -32,7 +32,7 @@ struct BloomPass {
 
 /// Assumes that `input` is already in `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`.
 void add_bloom( BloomPass* pass, TaskList& task_list,
-    RWImage& inout, RWImage& write_only );
+    Image& inout, Image& write_only );
 
 void update_bloom_uniform_buffer(
     const gui::Gui& gui, engine::post::BloomPass& bloom_pass );

@@ -81,9 +81,9 @@ DescriptorSet generate_array_descriptor_set(
     return desc_set;
 }
 
-void update_descriptor_set_rwimage_array(
+void update_descriptor_set_image_array(
     DescriptorSet& desc_set,
-    const std::vector<const RWImage*>& imgs,
+    const std::vector<const Image*>& imgs,
     VkImageLayout img_layout,
     int binding_idx,
     uint32_t array_count
@@ -106,7 +106,7 @@ void update_descriptor_set_rwimage_array(
             image_infos.push_back(
                 {
                     .sampler = VK_NULL_HANDLE,
-                    .imageView = imgs[img]->image.image_view,
+                    .imageView = imgs[img]->image_view,
                     .imageLayout = img_layout,
                 }
             );
@@ -125,14 +125,14 @@ void update_descriptor_set_rwimage_array(
     }
 }
 
-void update_descriptor_set_rwimage(
-    DescriptorSet& desc_set, const RWImage& rw_img, VkImageLayout img_layout, int binding_idx
+void update_descriptor_set_image(
+    DescriptorSet& desc_set, const Image& rw_img, VkImageLayout img_layout, int binding_idx
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        const vk::mem::AllocatedImage& alloc_image = rw_img.image;
+        const Image& alloc_image = rw_img;
 
         VkDescriptorImageInfo desc_image_info = {
             .sampler = VK_NULL_HANDLE,
@@ -155,9 +155,9 @@ void update_descriptor_set_rwimage(
     }
 }
 
-void update_descriptor_set_rwimage_mip(
+void update_descriptor_set_image_mip(
     DescriptorSet& desc_set,
-    const RWImage& rw_img,
+    const Image& rw_img,
     VkImageLayout img_layout,
     int binding_idx,
     size_t mip
@@ -166,7 +166,7 @@ void update_descriptor_set_rwimage_mip(
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        const vk::mem::AllocatedImage& alloc_image = rw_img.image;
+        const Image& alloc_image = rw_img;
 
         VkDescriptorImageInfo desc_image_info = {
             .sampler = VK_NULL_HANDLE,
@@ -190,13 +190,13 @@ void update_descriptor_set_rwimage_mip(
 }
 
 void update_descriptor_set_depth_image(
-    DescriptorSet& desc_set, const RWImage& depth_img, int binding_idx
+    DescriptorSet& desc_set, const Image& depth_img, int binding_idx
 )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        const vk::mem::AllocatedImage& img = depth_img.image;
+        const Image& img = depth_img;
         VkDescriptorImageInfo desc_image_info = {
             .sampler = VK_NULL_HANDLE,
             .imageView = img.image_view,

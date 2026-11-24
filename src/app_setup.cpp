@@ -3,7 +3,7 @@
 #include "constants.hpp"
 #include "demo/car_assets.hpp"
 #include "engine/descriptors.hpp"
-#include "engine/images.hpp"
+#include "engine/image.h"
 #include "geometry/procedural.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"
@@ -14,11 +14,11 @@ namespace {
 
 constexpr size_t NUM_MATERIAL_TEXTURE_BINDINGS = 3;
 
-engine::RWImage create_fallback_texture()
+engine::Image create_fallback_texture()
 {
     uint32_t white = 0xFFFFFFFF;
 
-    return engine::create_rwimage_from_data(
+    return engine::create_image_from_data(
         &white,
         VkExtent3D( 1, 1, 1 ),
         VK_FORMAT_R8G8B8A8_UNORM,
@@ -231,8 +231,8 @@ void create_raymarch_tex_sets( engine::DescriptorSet* raymarch_tex_sets )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
-    engine::RWImage test_data_3D = geometry::generate_test_3D();
-    engine::update_descriptor_set_rwimage(
+    engine::Image test_data_3D = geometry::generate_test_3D();
+    engine::update_descriptor_set_image(
         *raymarch_tex_sets,
         test_data_3D,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -241,11 +241,11 @@ void create_raymarch_tex_sets( engine::DescriptorSet* raymarch_tex_sets )
 }
 
 void create_screen_buffers(
-    engine::RWImage* screen_color, engine::RWImage* screen_buffer, engine::RWImage* screen_history
+    engine::Image* screen_color, engine::Image* screen_buffer, engine::Image* screen_history
 )
 {
     const engine::State& engine = engine::State::GetConst();
-    *screen_color = engine::create_rwimage(
+    *screen_color = engine::create_image(
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -256,7 +256,7 @@ void create_screen_buffers(
 
     // Buffer needed, this is what the final compute pass will write to.
     // We will later copy the results of this back to `screen_color`, and blit it to the swapchain.
-    *screen_buffer = engine::create_rwimage(
+    *screen_buffer = engine::create_image(
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -267,7 +267,7 @@ void create_screen_buffers(
     );
 
     // Stores the last-rendered image. Needed for TAA/motion-vectors
-    *screen_history = engine::create_rwimage(
+    *screen_history = engine::create_image(
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -275,7 +275,7 @@ void create_screen_buffers(
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
     );
 
-    engine::initialize_rwimage_layout( *screen_history, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+    engine::initialize_image_layout( *screen_history, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 }
 
 void load_model_primitive_material_data(
@@ -284,12 +284,12 @@ void load_model_primitive_material_data(
     std::vector<glm::mat4>& transforms,
     std::vector<const scene::Primitive*>& prims,
     ub_data::RTTextureUniform& rt_texture_uniform,
-    std::vector<const engine::RWImage*>& albedo_textures,
-    std::vector<const engine::RWImage*>& metallic_roughness_textures,
+    std::vector<const engine::Image*>& albedo_textures,
+    std::vector<const engine::Image*>& metallic_roughness_textures,
     std::vector<engine::DescriptorSet>& material_desc_sets
 )
 {
-    const engine::RWImage fallback_texture = create_fallback_texture();
+    const engine::Image fallback_texture = create_fallback_texture();
 
     int tex_count = 0;
     for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
@@ -379,7 +379,7 @@ void load_model_primitive_material_data(
                     const bool has_texture = i < textures_needed.size()
                         && textures_needed[i] != nullptr && textures_needed[i]->data != nullptr;
 
-                    engine::update_descriptor_set_rwimage(
+                    engine::update_descriptor_set_image(
                         material_desc_sets[static_cast<size_t>( prim.material_id )],
                         has_texture ? *textures_needed[i]->data : fallback_texture,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

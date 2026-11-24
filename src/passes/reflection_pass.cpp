@@ -20,8 +20,8 @@ constexpr std::string_view
 void create_deferred_reflection_pipeline_barrier(
     engine::TaskList& task_list,
     deferred::GBuffers& gbuffers,
-    engine::RWImage& reflection_color,
-    engine::RWImage& reflection_data
+    engine::Image& reflection_color,
+    engine::Image& reflection_data
 )
 {
     engine::add_pipeline_barrier(
@@ -55,8 +55,8 @@ void create_deferred_reflection_pipeline_barrier(
 
 void create_reflection_pass_resources(
     ReflectionPassDescSets desc_sets,
-    engine::RWImage* reflection_color,
-    engine::RWImage* reflection_data,
+    engine::Image* reflection_color,
+    engine::Image* reflection_data,
     engine::Pipeline* reflection_pipeline,
     engine::DescriptorSet* reflection_buffer_desc_set,
     engine::GfxTask* reflection_gfx_task
@@ -65,7 +65,7 @@ void create_reflection_pass_resources(
     const engine::State& engine = engine::State::GetConst();
     geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
 
-    *reflection_color = engine::create_rwimage_mips(
+    *reflection_color = engine::create_image_mips(
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
@@ -75,7 +75,7 @@ void create_reflection_pass_resources(
         ReflectionMipChain::MIP_COUNT
     );
 
-    *reflection_data = engine::create_rwimage_mips(
+    *reflection_data = engine::create_image_mips(
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
@@ -132,14 +132,14 @@ void create_reflection_pass_resources(
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         *reflection_buffer_desc_set,
         *reflection_color,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
 
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         *reflection_buffer_desc_set,
         *reflection_data,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

@@ -2,7 +2,7 @@
 
 #include "../../vk/common.hpp"
 #include "../descriptor_set.hpp"
-#include "../rwimage.hpp"
+#include "../image.h"
 #include "../state.hpp"
 #include "../task_list.hpp"
 #include "../ub_data.hpp"
@@ -21,8 +21,8 @@ struct TonemappingPass {
     UniformBuffer<ub_data::Tonemapping> buffer;
 };
 
-TonemappingPass add_tonemapping( const RWImage& input,
-    const RWImage& output, TaskList& task_list );
+TonemappingPass add_tonemapping( const Image& input,
+    const Image& output, TaskList& task_list );
 
 void update_tonemapping_uniform_buffer(
     const gui::Gui& gui, engine::post::TonemappingPass& tm_pass );

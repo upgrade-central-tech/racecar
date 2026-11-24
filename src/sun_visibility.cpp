@@ -3,7 +3,7 @@
 #include "engine/descriptor_set.hpp"
 #include "engine/pipeline.hpp"
 #include "engine/pipeline_barrier.hpp"
-#include "engine/rwimage.hpp"
+#include "engine/image.h"
 #include "engine/ub_data.hpp"
 #include "engine/uniform_buffer.hpp"
 #include "terrain/terrain.hpp"
@@ -30,7 +30,7 @@ void initialize_sun_visibility(
     sun_visibility.volumetric = &volumetric;
     sun_visibility.gamestate_desc_set = &gamestate_desc_set;
 
-    sun_visibility.sun_visibility_shadow_map = engine::create_rwimage(
+    sun_visibility.sun_visibility_shadow_map = engine::create_image(
         VkExtent3D { .width = 512, .height = 512, .depth = 1 },
         VK_FORMAT_R16_SFLOAT,
         VK_IMAGE_TYPE_2D,
@@ -67,14 +67,14 @@ void initialize_sun_visibility(
         VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         sun_visibility.visibility_write_desc_set,
         sun_visibility.sun_visibility_shadow_map,
         VK_IMAGE_LAYOUT_GENERAL,
         0
     );
 
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         sun_visibility.visibility_read_desc_set,
         sun_visibility.sun_visibility_shadow_map,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -143,8 +143,8 @@ void compute_sun_visibility( SunVisibilityComputePass& sun_visibility, engine::T
             sun_visibility.gamestate_desc_set,
         },
         glm::ivec3(
-            sun_visibility.sun_visibility_shadow_map.image.image_extent.width / 8,
-            sun_visibility.sun_visibility_shadow_map.image.image_extent.height / 8,
+            sun_visibility.sun_visibility_shadow_map.image_extent.width / 8,
+            sun_visibility.sun_visibility_shadow_map.image_extent.height / 8,
             1
         ),
     };

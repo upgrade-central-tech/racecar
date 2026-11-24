@@ -96,8 +96,8 @@ void execute_transparency_pass(
     TransparencyPass* transparency_pass,
     geometry::scene::Mesh& scene_mesh,
     const std::vector<const scene::Primitive*>& transparent_prims,
-    engine::RWImage* target_color,
-    engine::RWImage* gbuffer_depth_image,
+    engine::Image* target_color,
+    engine::Image* gbuffer_depth_image,
     const UniformBuffer<ub_data::Camera>& camera_buffer,
     const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
     engine::TaskList& task_list
@@ -188,7 +188,7 @@ void execute_transparency_pass(
 }
 
 void create_transparency_pipeline_barrier(
-    engine::RWImage& target_color, engine::RWImage& gbuffer_depth, engine::TaskList& task_list
+    engine::Image& target_color, engine::Image& gbuffer_depth, engine::TaskList& task_list
 )
 {
     engine::add_pipeline_barrier(

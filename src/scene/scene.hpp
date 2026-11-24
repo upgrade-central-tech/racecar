@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../engine/rwimage.hpp"
+#include "../engine/image.h"
 #include "../engine/ub_data.hpp"
 #include "../engine/uniform_buffer.hpp"
 #include "../geometry/scene_mesh.hpp"
@@ -58,7 +58,7 @@ struct Material {
 };
 
 struct Texture {
-    std::unique_ptr<engine::RWImage> data;
+    std::unique_ptr<engine::Image> data;
 
     int width = 0;
     int height = 0;

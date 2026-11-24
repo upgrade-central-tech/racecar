@@ -22,8 +22,8 @@ bool debug_texture_is_on()
 
 void initialize_debug_texture_pass(
     DebugTexturePass& pass,
-    engine::RWImage& screen_buffer,
-    const std::vector<const engine::RWImage*>& textures,
+    engine::Image& screen_buffer,
+    const std::vector<const engine::Image*>& textures,
     const UniformBuffer<ub_data::Camera>& camera_buffer
 )
 {
@@ -52,7 +52,7 @@ void initialize_debug_texture_pass(
 
     pass.buffer = create_uniform_buffer<ub_data::DebugTexture>( { }, engine.frame_overlap );
 
-    engine::update_descriptor_set_rwimage_array(
+    engine::update_descriptor_set_image_array(
         pass.texture_desc_set,
         textures,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -60,7 +60,7 @@ void initialize_debug_texture_pass(
         MAX_DEBUG_TEXTURES
     );
 
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         pass.output_desc_set,
         screen_buffer,
         VK_IMAGE_LAYOUT_GENERAL,

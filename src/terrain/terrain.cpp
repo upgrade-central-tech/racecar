@@ -1,7 +1,7 @@
 #include "terrain.hpp"
 
 #include "../engine/gfx_task.hpp"
-#include "../engine/images.hpp"
+#include "../engine/image.h"
 #include "../engine/task_list.hpp"
 #include "../geometry/gpu_mesh_buffers.hpp"
 #include "../gui.hpp"
@@ -115,42 +115,42 @@ void initialize_terrain(
         engine.frame_overlap
     );
 
-    terrain.test_layer_mask = engine::create_rwimage_from_load(
+    terrain.test_layer_mask = engine::create_image_from_load(
         TEST_LAYER_MASK_PATH,
         2,
         VK_FORMAT_R8G8_UNORM,
         false
     );
 
-    terrain.grass_albedo_roughness = engine::create_rwimage_from_load(
+    terrain.grass_albedo_roughness = engine::create_image_from_load(
         TEST_GRASS_ALBEDO_ROUGHNESS_PATH,
         4,
         VK_FORMAT_R8G8B8A8_SRGB,
         true
     );
 
-    terrain.grass_normal_ao = engine::create_rwimage_from_load(
+    terrain.grass_normal_ao = engine::create_image_from_load(
         TEST_GRASS_NORMAL_AO_PATH,
         4,
         VK_FORMAT_R16G16B16A16_SFLOAT,
         true
     );
 
-    terrain.asphalt_albedo_roughness = engine::create_rwimage_from_load(
+    terrain.asphalt_albedo_roughness = engine::create_image_from_load(
         TEST_ASPHALT_ALBEDO_ROUGHNESS_PATH,
         4,
         VK_FORMAT_R8G8B8A8_SRGB,
         true
     );
 
-    terrain.asphalt_normal_ao = engine::create_rwimage_from_load(
+    terrain.asphalt_normal_ao = engine::create_image_from_load(
         TEST_ASPHALT_NORMAL_AO_PATH,
         4,
         VK_FORMAT_R16G16B16A16_SFLOAT,
         true
     );
 
-    terrain.terrain_noise = engine::create_rwimage_from_load(
+    terrain.terrain_noise = engine::create_image_from_load(
         TERRAIN_NOISE_PAPTH,
         2,
         VK_FORMAT_R8G8_UNORM,
@@ -209,31 +209,31 @@ void initialize_terrain(
             | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     );
 
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.prepass_texture_desc_set,
         terrain.test_layer_mask,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.prepass_texture_desc_set,
         terrain.grass_albedo_roughness,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.prepass_texture_desc_set,
         terrain.grass_normal_ao,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         2
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.prepass_texture_desc_set,
         terrain.asphalt_albedo_roughness,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         3
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.prepass_texture_desc_set,
         terrain.asphalt_normal_ao,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -254,13 +254,13 @@ void initialize_terrain(
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.prepass_lut_desc_set,
         *prepass_info.glint_noise,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.prepass_lut_desc_set,
         terrain.terrain_noise,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -379,31 +379,31 @@ void initialize_terrain(
     engine::update_descriptor_set_uniform( terrain.uniform_desc_set, terrain.terrain_uniform, 2 );
 
     // Material image assignments
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.texture_desc_set,
         lighting_info.gbuffers->GBuffer_Position,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.texture_desc_set,
         lighting_info.gbuffers->GBuffer_Normal,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.texture_desc_set,
         lighting_info.gbuffers->GBuffer_Albedo,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         2
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.texture_desc_set,
         lighting_info.gbuffers->GBuffer_Packed_Data,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         3
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.texture_desc_set,
         *lighting_info.color_attachment,
         VK_IMAGE_LAYOUT_GENERAL,
@@ -411,19 +411,19 @@ void initialize_terrain(
     );
 
     // LUT desc assignments
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.lut_desc_set,
         lighting_info.atmosphere_baker->octahedral_sky,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         0
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.lut_desc_set,
         lighting_info.atmosphere_baker->octahedral_sky_mips,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         1
     );
-    engine::update_descriptor_set_rwimage(
+    engine::update_descriptor_set_image(
         terrain.lut_desc_set,
         *lighting_info.lut_brdf,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -579,7 +579,7 @@ void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
 
 #if RACECAR_DEV
 void draw_terrain_wireframe(
-    Terrain& terrain, engine::TaskList& task_list, engine::RWImage& screen_color
+    Terrain& terrain, engine::TaskList& task_list, engine::Image& screen_color
 )
 {
     engine::GfxTask terrain_wireframe_gfx_task = {

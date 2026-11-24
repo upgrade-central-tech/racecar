@@ -2,7 +2,7 @@
 
 #include "context.hpp"
 #include "engine/descriptor_set.hpp"
-#include "engine/rwimage.hpp"
+#include "engine/image.h"
 #include "engine/task_list.hpp"
 #include "engine/ub_data.hpp"
 #include "engine/uniform_buffer.hpp"
@@ -25,9 +25,9 @@ namespace racecar::atmosphere {
 constexpr std::string_view SHADER_PATH = "../shaders/atmosphere/sky/atmosphere.spv";
 
 struct Atmosphere {
-    engine::RWImage irradiance;
-    engine::RWImage scattering;
-    engine::RWImage transmittance;
+    engine::Image irradiance;
+    engine::Image scattering;
+    engine::Image transmittance;
 
     UniformBuffer<ub_data::Atmosphere> uniform_buffer;
 
@@ -46,7 +46,7 @@ glm::vec3 compute_sun_direction( const Atmosphere& atms );
 glm::vec3 compute_sun_color( const glm::vec3& sun_direction, float radiance_exposure );
 
 void draw_atmosphere( engine::TaskList& task_list,
-    atmosphere::Atmosphere& atms, engine::RWImage& out_color );
+    atmosphere::Atmosphere& atms, engine::Image& out_color );
 
 void update_atmosphere_uniform_buffer( gui::Gui& gui,
     atmosphere::Atmosphere& atms, const CameraData& camera_data );

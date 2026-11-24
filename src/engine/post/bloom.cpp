@@ -15,7 +15,7 @@ constexpr std::string_view UPSAMPLE_SHADER_PATH = "../shaders/post/bloom/upsampl
 
 }
 
-void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImage& write_only )
+void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& write_only )
 {
     const vk::Common& vulkan = vk::Common::GetConst();
     const engine::State& engine = engine::State::GetConst();
@@ -30,7 +30,7 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                                       1 };
 
         for ( size_t i = 0; i < BloomPass::NUM_PASSES; ++i ) {
-            pass.images[i] = engine::create_rwimage(
+            pass.images[i] = engine::create_image(
                 current_extent,
                 VK_FORMAT_R16G16B16A16_SFLOAT,
                 VK_IMAGE_TYPE_2D,
@@ -94,13 +94,13 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             threshold_desc_set,
             inout,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             threshold_desc_set,
             write_only,
             VK_IMAGE_LAYOUT_GENERAL,
@@ -162,20 +162,20 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                 .label = "Bloom Downsample Pipeline Barrier" }
         );
 
-        const RWImage& input_image = i == 0 ? write_only : pass.images[i - 1];
-        VkExtent3D output_extent = pass.images[i].image.image_extent;
+        const Image& input_image = i == 0 ? write_only : pass.images[i - 1];
+        VkExtent3D output_extent = pass.images[i].image_extent;
 
         engine::DescriptorSet downsample_desc_set = engine::generate_descriptor_set(
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             downsample_desc_set,
             input_image,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             downsample_desc_set,
             pass.images[i],
             VK_IMAGE_LAYOUT_GENERAL,
@@ -243,20 +243,20 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, RWImage& inout, RWImag
                 .label = "Bloom Upsample Pipeline Barrier" }
         );
 
-        const RWImage& output_image = i == 0 ? inout : pass.images[i - 1];
-        VkExtent3D output_extent = output_image.image.image_extent;
+        const Image& output_image = i == 0 ? inout : pass.images[i - 1];
+        VkExtent3D output_extent = output_image.image_extent;
 
         engine::DescriptorSet upsample_desc_set = engine::generate_descriptor_set(
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             upsample_desc_set,
             pass.images[i],
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             0
         );
-        engine::update_descriptor_set_rwimage(
+        engine::update_descriptor_set_image(
             upsample_desc_set,
             output_image,
             VK_IMAGE_LAYOUT_GENERAL,
