@@ -81,32 +81,6 @@ DescriptorSet generate_array_descriptor_set(
     return desc_set;
 }
 
-void update_descriptor_set_image(
-    DescriptorSet& desc_set, const vk::mem::AllocatedImage& img, int binding_idx
-)
-{
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
-    for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        VkDescriptorImageInfo desc_image_info = {
-            .sampler = VK_NULL_HANDLE,
-            .imageView = img.image_view,
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        };
-
-        VkWriteDescriptorSet write_desc_set = {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = desc_set.descriptor_sets[i],
-            .dstBinding = static_cast<uint32_t>( binding_idx ),
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .pImageInfo = &desc_image_info,
-        };
-
-        vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
-    }
-}
-
 void update_descriptor_set_rwimage_array(
     DescriptorSet& desc_set,
     const std::vector<const RWImage*>& imgs,
@@ -235,32 +209,6 @@ void update_descriptor_set_depth_image(
             .dstBinding = static_cast<uint32_t>( binding_idx ),
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .pImageInfo = &desc_image_info,
-        };
-
-        vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
-    }
-}
-
-void update_descriptor_set_write_image(
-    DescriptorSet& desc_set, const vk::mem::AllocatedImage& img, int binding_idx
-)
-{
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
-    for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
-        VkDescriptorImageInfo desc_image_info = {
-            .sampler = VK_NULL_HANDLE,
-            .imageView = img.storage_image_view,
-            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-        };
-
-        VkWriteDescriptorSet write_desc_set = {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = desc_set.descriptor_sets[i],
-            .dstBinding = static_cast<uint32_t>( binding_idx ),
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
             .pImageInfo = &desc_image_info,
         };
 

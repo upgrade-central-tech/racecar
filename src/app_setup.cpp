@@ -4,7 +4,6 @@
 #include "demo/car_assets.hpp"
 #include "engine/descriptors.hpp"
 #include "engine/images.hpp"
-#include "geometry/ibl.hpp"
 #include "geometry/procedural.hpp"
 #include "sdl.hpp"
 #include "vk/create.hpp"

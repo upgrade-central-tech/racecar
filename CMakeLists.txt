@@ -81,7 +81,6 @@ set(RACECAR_SOURCES
     ${GEOMETRY_DIR}/scene_mesh.cpp
     ${GEOMETRY_DIR}/procedural.cpp
     ${GEOMETRY_DIR}/quad.cpp
-    ${GEOMETRY_DIR}/ibl.cpp
     ${GEOMETRY_DIR}/gpu_mesh_buffers.cpp
 
     ${TERRAIN_DIR}/terrain.cpp
@@ -219,9 +218,6 @@ if (RACECAR_SLANGC)
     racecar_add_shader(post/bloom/upsample.spv post/bloom/upsample.slang upsample)
     racecar_add_shader(post/debug_texture/debug_texture.spv post/debug_texture/debug_texture.slang cs_debug_texture)
     racecar_add_shader(post/tonemapping/tonemapping.spv post/tonemapping/tonemapping.slang cs_main)
-
-    racecar_add_shader(prefilter/irradiance.spv prefilter/irradiance.slang cs_compute_irradiance cs_compute_irradiance_sh)
-    racecar_add_shader(prefilter/irradiance_sh.spv prefilter/irradiance.slang cs_compute_irradiance_sh)
 
     racecar_add_shader(raymarch/raymarch.spv raymarch/raymarch.slang vs_main fs_main)
 

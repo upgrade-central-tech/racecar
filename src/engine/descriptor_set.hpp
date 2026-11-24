@@ -57,18 +57,12 @@ void update_descriptor_set_storage_buffer_per_frame(
     DescriptorSet& desc_set, const std::vector<vk::mem::AllocatedBuffer>& storage_buffers,
     int binding_idx );
 
-void update_descriptor_set_image( DescriptorSet& desc_set,
-    const vk::mem::AllocatedImage& img, int binding_idx );
-
 void update_descriptor_set_rwimage_array( DescriptorSet& desc_set,
     const std::vector<const RWImage*>& imgs, VkImageLayout img_layout, int binding_idx,
     uint32_t array_count );
 
 void update_descriptor_set_depth_image( DescriptorSet& desc_set,
     const RWImage& depth_img, int binding_idx );
-
-void update_descriptor_set_write_image( DescriptorSet& desc_set,
-    const vk::mem::AllocatedImage& img, int binding_idx );
 
 void update_descriptor_set_rwimage(
     DescriptorSet& desc_set, const RWImage& rw_img, VkImageLayout img_layout, int binding_idx );
