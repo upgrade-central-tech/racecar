@@ -210,3 +210,5 @@ To check that Vulkan is ready for use, go to your Vulkan SDK directory (by defau
 - [ ] Sun light coloring
 - [ ] Better terrain (noise)
 - [ ] Temporal resources
+- [ ] Migrate tasklist to either build-per-frame or unique_ptrs
+- [ ] Figure out better solution for ping pong buffers
