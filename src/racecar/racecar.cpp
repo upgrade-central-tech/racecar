@@ -444,7 +444,8 @@ void run( bool use_fullscreen )
         task_list,
         screen_color,
         atms.irradiance,
-        atms.transmittance
+        atms.transmittance,
+        camera_buffer
     );
 
     // Running the atmosphere baker

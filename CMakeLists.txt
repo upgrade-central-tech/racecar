@@ -199,6 +199,7 @@ if (RACECAR_SLANGC)
     racecar_add_shader(clouds/cs_generate_high_frequency.spv clouds/cloud_noise.slang cs_generate_high_frequency)
     racecar_add_shader(clouds/cs_generate_cumulus.spv clouds/cloud_noise.slang cs_generate_cumulus)
     racecar_add_shader(clouds/cloud_composite.spv clouds/cloud_composite.slang vs_main fs_main)
+    racecar_add_shader(clouds/cloud_resolve.spv clouds/clouds_resolve.slang vs_main fs_main)
 
     racecar_add_shader(deferred/prepass.spv deferred/prepass.slang vs_main fs_main)
     racecar_add_shader(deferred/lighting.spv deferred/lighting.slang vs_main fs_main)

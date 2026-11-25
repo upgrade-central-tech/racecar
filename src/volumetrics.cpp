@@ -21,12 +21,15 @@
 #include <cstdint>
 #include <optional>
 #include <string_view>
+#include <utility>
 
 namespace racecar::volumetric {
 
 constexpr std::string_view VOLUMETRIC_SHADER_MODULE_PATH = "../shaders/clouds/clouds.spv";
 constexpr std::string_view
     VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH = "../shaders/clouds/cloud_composite.spv";
+constexpr std::string_view
+    VOLUMETRIC_RESOLVE_SHADER_MODULE_PATH = "../shaders/clouds/cloud_resolve.spv";
 
 constexpr float CLOUD_NOISE_SCALE = 0.00005f;
 constexpr float CLOUD_WIND_SPEED = 0.002f;
@@ -37,6 +40,8 @@ Volumetric initialize( )
     const engine::State& engine = engine::State::GetConst( );
     Volumetric volumetric;
     geometry::quad::Mesh& scene_mesh = volumetric.scene_mesh;
+
+    volumetric.full_res_march = std::make_unique<bool>( true );
 
     scene_mesh = geometry::quad::create( );
 
@@ -71,10 +76,12 @@ Volumetric initialize( )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
-    volumetric.texture_composite_desc_set = engine::generate_descriptor_set(
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
-        VK_SHADER_STAGE_FRAGMENT_BIT
-    );
+    for ( engine::DescriptorSet& composite_desc_set : volumetric.texture_composite_desc_set ) {
+        composite_desc_set = engine::generate_descriptor_set(
+            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+            VK_SHADER_STAGE_FRAGMENT_BIT
+        );
+    }
 
     engine::update_descriptor_set_uniform(
         volumetric.uniform_desc_set,
@@ -93,6 +100,19 @@ Volumetric initialize( )
         vulkan.global_samplers.linear_repeat_sampler,
         1
     );
+
+    for ( engine::DescriptorSet& resolve_desc_set : volumetric.clouds_rotating_resolve_desc_set ) {
+        resolve_desc_set = engine::generate_descriptor_set(
+            {
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                VK_DESCRIPTOR_TYPE_SAMPLER,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            },
+            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
+        );
+    }
 
     return volumetric;
 }
@@ -363,7 +383,8 @@ void draw_volumetric(
     [[maybe_unused]] engine::TaskList& task_list,
     engine::Image& color_attachment,
     const engine::Image& irradiance_lut,
-    const engine::Image& transmittance_lut
+    const engine::Image& transmittance_lut,
+    UniformBuffer<ub_data::Camera>& camera_ubuffer
 )
 {
     const engine::State& engine = engine::State::GetConst( );
@@ -378,17 +399,21 @@ void draw_volumetric(
         color_dim.height >> 1, // Half resolution
     };
 
-    volumetric.cloud_buffer = engine::create_image(
-        {
-            low_res_dim.width,
-            low_res_dim.height,
-            1,
-        },
-        color_attachment.image_format,
-        VK_IMAGE_TYPE_2D,
-        VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-    );
+    for ( engine::Image& cloud_buffer : volumetric.cloud_buffer ) {
+        cloud_buffer = engine::create_image(
+            {
+                low_res_dim.width,
+                low_res_dim.height,
+                1,
+            },
+            color_attachment.image_format,
+            VK_IMAGE_TYPE_2D,
+            VK_SAMPLE_COUNT_1_BIT,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+        );
+
+        engine::initialize_image_layout( cloud_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+    }
 
     volumetric.cloud_rotating_buffer = engine::create_image(
         {
@@ -402,7 +427,23 @@ void draw_volumetric(
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
     );
 
-    // Transition newly created cloud buffer to a color attachment
+    engine::add_cpu_task(
+        task_list,
+        [&volumetric]( ) {
+            std::swap( volumetric.cloud_buffer[0], volumetric.cloud_buffer[1] );
+            std::swap(
+                volumetric.clouds_rotating_resolve_desc_set[0],
+                volumetric.clouds_rotating_resolve_desc_set[1]
+            );
+            std::swap(
+                volumetric.texture_composite_desc_set[0],
+                volumetric.texture_composite_desc_set[1]
+            );
+        },
+        "Cloud Ping Pong"
+    );
+
+    // Transition the cloud write buffer and rotating buffer to color attachments
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
@@ -410,17 +451,17 @@ void draw_volumetric(
             .image_barriers =
                 {
                     engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
                         .src_access = VK_ACCESS_2_NONE,
                         .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
                         .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                         .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                        .image = &volumetric.cloud_buffer,
+                        .image = &volumetric.cloud_buffer[0],
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                     engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
                         .src_access = VK_ACCESS_2_NONE,
                         .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
                         .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -438,7 +479,7 @@ void draw_volumetric(
 
     // We ideally don't want to render this at full resolution. That would take too much time!
     engine::GfxTask volumetric_gfx_task = {
-        .color_attachments = { &volumetric.cloud_buffer },
+        .color_attachments = { &volumetric.cloud_buffer[0] },
         .extent =
             {
                 low_res_dim.width,
@@ -479,6 +520,35 @@ void draw_volumetric(
         4
     );
 
+    // cloud rotating resolve desc set
+    for ( size_t i = 0; i < 2; i++ ) {
+        engine::DescriptorSet& resolve_desc_set = volumetric.clouds_rotating_resolve_desc_set[i];
+
+        engine::update_descriptor_set_uniform( resolve_desc_set, camera_ubuffer, 0 );
+
+        engine::update_descriptor_set_image(
+            resolve_desc_set,
+            volumetric.cloud_rotating_buffer,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            1
+        );
+
+        engine::update_descriptor_set_uniform( resolve_desc_set, volumetric.uniform_buffer, 2 );
+
+        engine::update_descriptor_set_sampler(
+            resolve_desc_set,
+            vk::Common::GetConst( ).global_samplers.linear_sampler,
+            3
+        );
+
+        engine::update_descriptor_set_image(
+            resolve_desc_set,
+            volumetric.cloud_buffer[1 - i],
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            4
+        );
+    }
+
     try {
         volumetric_pipeline = engine::create_gfx_pipeline(
             engine::get_vertex_input_state_create_info( volumetric_mesh ),
@@ -487,7 +557,7 @@ void draw_volumetric(
                 volumetric.lut_desc_set.layouts[0],
                 volumetric.sampler_desc_set.layouts[0],
             },
-            { volumetric.cloud_buffer.image_format },
+            { volumetric.cloud_buffer[0].image_format },
             VK_SAMPLE_COUNT_1_BIT,
             false,
             true,
@@ -523,7 +593,9 @@ void draw_volumetric(
         .pipeline = volumetric_pipeline,
     } );
 
-    engine::add_gfx_task( task_list, volumetric_gfx_task, "Volumetric Clouds" );
+    engine::add_gfx_task( task_list, volumetric_gfx_task, "Volumetric Clouds", [&]( ) {
+        return *volumetric.full_res_march;
+    } );
 
     volumetric.clouds_rotating_quarterres_pipeline = engine::create_gfx_pipeline(
         engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance( ) ),
@@ -580,7 +652,83 @@ void draw_volumetric(
         .pipeline = volumetric.clouds_rotating_quarterres_pipeline,
     } );
 
-    engine::add_gfx_task( task_list, rotating_clouds_gfx_task, "Rotating Clouds March" );
+    engine::add_gfx_task( task_list, rotating_clouds_gfx_task, "Rotating Clouds March", [&]( ) {
+        return !( *volumetric.full_res_march );
+    } );
+
+    engine::add_pipeline_barrier(
+        task_list,
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &volumetric.cloud_rotating_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                },
+            .label = "Rotating Cloud Buffer to Shader Read Pipeline Barrier",
+        }
+    );
+
+    volumetric.clouds_rotating_resolve_pipeline = engine::create_gfx_pipeline(
+        engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance( ) ),
+        {
+            volumetric.clouds_rotating_resolve_desc_set[0].layouts[0],
+        },
+        {
+            volumetric.cloud_buffer[0].image_format,
+        },
+        VK_SAMPLE_COUNT_1_BIT,
+        false,
+        true,
+        vk::create::shader_module( VOLUMETRIC_RESOLVE_SHADER_MODULE_PATH ),
+        engine::ShaderEntryPointStrings::defaults( ),
+        false,
+        false
+    );
+
+    // Rotating cloud resolve pass
+    // This resource is temporal
+    engine::GfxTask rotating_cloud_resolve_pass = {
+        .clear_color = std::nullopt,
+        .clear_depth = std::nullopt,
+        .color_attachments = { &volumetric.cloud_buffer[0] },
+        .extent =
+            {
+                low_res_dim.width,
+                low_res_dim.height,
+            },
+    };
+
+    rotating_cloud_resolve_pass.draw_tasks.push_back( {
+        .draw_resource_descriptor =
+            engine::DrawResourceDescriptor {
+                .vertex_buffers =
+                    { geometry::quad::Mesh::get_instance( ).mesh_buffers.vertex_buffer.handle },
+                .index_buffer = geometry::quad::Mesh::get_instance( )
+                                    .mesh_buffers.index_buffer.handle,
+                .vertex_buffer_offsets = { 0 },
+                .index_count = static_cast<uint32_t>(
+                    geometry::quad::Mesh::get_instance( ).indices.size( )
+                ),
+            },
+        .descriptor_sets = { &volumetric.clouds_rotating_resolve_desc_set[0] },
+        .pipeline = volumetric.clouds_rotating_resolve_pipeline,
+    } );
+
+    engine::add_gfx_task(
+        task_list,
+        rotating_cloud_resolve_pass,
+        "Rotating Clouds Resolve",
+        [&]( ) { return !( *volumetric.full_res_march ); }
+    );
 
     // Transition the cloud_buffer to a read-only
     engine::add_pipeline_barrier(
@@ -596,7 +744,7 @@ void draw_volumetric(
                         .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
                         .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                        .image = &volumetric.cloud_buffer,
+                        .image = &volumetric.cloud_buffer[0],
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                 },
@@ -616,11 +764,11 @@ void draw_volumetric(
             engine::get_vertex_input_state_create_info( volumetric_mesh ),
             {
                 volumetric.uniform_desc_set.layouts[0],
-                volumetric.texture_composite_desc_set.layouts[0],
+                volumetric.texture_composite_desc_set[0].layouts[0],
                 volumetric.sampler_desc_set.layouts[0],
             },
             {
-                volumetric.cloud_buffer.image_format,
+                volumetric.cloud_buffer[0].image_format,
             },
             VK_SAMPLE_COUNT_1_BIT,
             true,
@@ -635,12 +783,14 @@ void draw_volumetric(
         throw;
     }
 
-    engine::update_descriptor_set_image(
-        volumetric.texture_composite_desc_set,
-        volumetric.cloud_buffer,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        0
-    );
+    for ( size_t i = 0; i < 2; i++ ) {
+        engine::update_descriptor_set_image(
+            volumetric.texture_composite_desc_set[i],
+            volumetric.cloud_buffer[i],
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            0
+        );
+    }
 
     volumetric_composite_task.draw_tasks.push_back( {
         .draw_resource_descriptor =
@@ -653,7 +803,7 @@ void draw_volumetric(
         .descriptor_sets =
             {
                 &volumetric.uniform_desc_set,
-                &volumetric.texture_composite_desc_set,
+                &volumetric.texture_composite_desc_set[0],
                 &volumetric.sampler_desc_set,
             },
         .pipeline = volumetric_composite_pipeline,

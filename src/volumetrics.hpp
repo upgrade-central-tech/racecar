@@ -1,9 +1,13 @@
 #pragma once
+#include "engine/descriptor_set.hpp"
 #include "engine/image.h"
 #include "engine/pipeline.hpp"
 #include "engine/task_list.hpp"
 #include "engine/ub_data.hpp"
+#include "engine/uniform_buffer.hpp"
 #include "geometry/quad.hpp"
+
+#include <memory>
 
 namespace racecar {
 
@@ -30,7 +34,9 @@ struct Volumetric {
     engine::Image low_freq_noise;
     engine::Image high_freq_noise;
 
-    engine::Image cloud_buffer;
+    // ping pong
+    engine::Image cloud_buffer[2];
+    engine::Image cloud_depth[2];
     engine::Image cloud_rotating_buffer; // qres
 
     UniformBuffer<ub_data::Clouds> uniform_buffer;
@@ -38,9 +44,15 @@ struct Volumetric {
     engine::DescriptorSet uniform_desc_set;
     engine::DescriptorSet lut_desc_set;
     engine::DescriptorSet sampler_desc_set;
-    engine::DescriptorSet texture_composite_desc_set;
+    engine::DescriptorSet texture_composite_desc_set[2];
+
+    // ping pong desc sets
+    engine::DescriptorSet clouds_rotating_resolve_desc_set[2];
 
     engine::Pipeline clouds_rotating_quarterres_pipeline;
+    engine::Pipeline clouds_rotating_resolve_pipeline;
+
+    std::unique_ptr<bool> full_res_march;
 };
 
 Volumetric initialize( );
@@ -52,7 +64,8 @@ void draw_volumetric(
     [[maybe_unused]] engine::TaskList& task_list,
     engine::Image& color_attachment,
     const engine::Image& irradiance_lut,
-    const engine::Image& transmittance_lut
+    const engine::Image& transmittance_lut,
+    UniformBuffer<ub_data::Camera>& camera_ubuffer
 );
 
 void update_volumetric_uniform_buffer(
