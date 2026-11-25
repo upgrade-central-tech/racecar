@@ -22,6 +22,33 @@ bool is_task_enabled( [[maybe_unused]] const Task& task )
 #endif
 }
 
+void begin_task_label( [[maybe_unused]] VkCommandBuffer cmd_buf, [[maybe_unused]] const Task& task )
+{
+#if RACECAR_DEBUG && RACECAR_DEV
+    if ( vkCmdBeginDebugUtilsLabelEXT == nullptr ) {
+        return;
+    }
+
+    VkDebugUtilsLabelEXT label = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+        .pLabelName = task.name.c_str( ),
+        .color = { 0, 1, 0, 1 },
+    };
+    vkCmdBeginDebugUtilsLabelEXT( cmd_buf, &label );
+#endif
+}
+
+void end_task_label( [[maybe_unused]] VkCommandBuffer cmd_buf )
+{
+#if RACECAR_DEBUG && RACECAR_DEV
+    if ( vkCmdEndDebugUtilsLabelEXT == nullptr ) {
+        return;
+    }
+
+    vkCmdEndDebugUtilsLabelEXT( cmd_buf );
+#endif
+}
+
 } // namespace
 
 void begin_frame( )
@@ -195,7 +222,9 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                     break;
                 }
 
+                begin_task_label( frame.render_cmdbuf, task );
                 execute_gfx_task( frame.render_cmdbuf, gfx_task );
+                end_task_label( frame.render_cmdbuf );
                 break;
             }
 
@@ -215,7 +244,9 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                     break;
                 }
 
+                begin_task_label( frame.render_cmdbuf, task );
                 execute_cs_task( frame.render_cmdbuf, cs_task );
+                end_task_label( frame.render_cmdbuf );
                 break;
             }
 
@@ -239,7 +270,9 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                     ? blit_task.out_color->vk_image
                     : output_image;
 
+                begin_task_label( frame.render_cmdbuf, task );
                 execute_blit_task( frame.render_cmdbuf, blit_task, dst_image );
+                end_task_label( frame.render_cmdbuf );
                 break;
             }
 
@@ -262,7 +295,9 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                     break;
                 }
 
+                begin_task_label( frame.render_cmdbuf, task );
                 gpu_task.task( frame.render_cmdbuf );
+                end_task_label( frame.render_cmdbuf );
                 break;
             }
 
