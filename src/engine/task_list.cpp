@@ -22,7 +22,7 @@ void add_gfx_task(
     Task new_task;
     new_task.index = static_cast<int>( task_list.tasks.size( ) );
     new_task.type = Task::GFX;
-    new_task.predicate = predicate;
+    new_task.predicate = std::move( predicate );
     set_task_name( new_task, name );
 
     task_list.tasks.push_back( new_task );
@@ -37,7 +37,7 @@ void add_cs_task(
     new_task.index = static_cast<int>( task_list.tasks.size( ) );
     new_task.is_single_run = task.is_single_run;
     new_task.type = Task::Type::COMP;
-    new_task.predicate = predicate;
+    new_task.predicate = std::move( predicate );
     set_task_name( new_task, name );
 
     task_list.tasks.push_back( new_task );
@@ -51,7 +51,7 @@ void add_blit_task(
     Task new_task;
     new_task.index = static_cast<int>( task_list.tasks.size( ) );
     new_task.type = Task::BLIT;
-    new_task.predicate = predicate;
+    new_task.predicate = std::move( predicate );
     set_task_name( new_task, name );
 
     task_list.tasks.push_back( new_task );

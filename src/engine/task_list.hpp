@@ -5,13 +5,14 @@
 #include "gfx_task.hpp"
 #include "pipeline_barrier.hpp"
 
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace racecar::engine {
 
-using task_predicate_fn_t = bool ( * )( void );
+using task_predicate_fn_t = std::function<bool( )>;
 
 /// To be space-efficient, a `Task` only stores the type (graphics, compute, blit)
 /// and then an index into the corresponding list which is owned by `TaskList`.
