@@ -109,6 +109,8 @@ Volumetric initialize( )
                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 VK_DESCRIPTOR_TYPE_SAMPLER,
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             },
             VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT
         );
@@ -415,6 +417,22 @@ void draw_volumetric(
         engine::initialize_image_layout( cloud_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
     }
 
+    for ( engine::Image& cloud_depth : volumetric.cloud_depth ) {
+        cloud_depth = engine::create_image(
+            {
+                low_res_dim.width,
+                low_res_dim.height,
+                1,
+            },
+            VK_FORMAT_R16_SFLOAT,
+            VK_IMAGE_TYPE_2D,
+            VK_SAMPLE_COUNT_1_BIT,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+        );
+
+        engine::initialize_image_layout( cloud_depth, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+    }
+
     volumetric.cloud_rotating_buffer = engine::create_image(
         {
             low_res_dim.width / 4,
@@ -427,10 +445,23 @@ void draw_volumetric(
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
     );
 
+    volumetric.cloud_rotating_depth = engine::create_image(
+        {
+            low_res_dim.width / 4,
+            low_res_dim.height / 4,
+            1,
+        },
+        VK_FORMAT_R16_SFLOAT,
+        VK_IMAGE_TYPE_2D,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+    );
+
     engine::add_cpu_task(
         task_list,
         [&volumetric]( ) {
             std::swap( volumetric.cloud_buffer[0], volumetric.cloud_buffer[1] );
+            std::swap( volumetric.cloud_depth[0], volumetric.cloud_depth[1] );
             std::swap(
                 volumetric.clouds_rotating_resolve_desc_set[0],
                 volumetric.clouds_rotating_resolve_desc_set[1]
@@ -467,7 +498,27 @@ void draw_volumetric(
                         .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                         .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = &volumetric.cloud_depth[0],
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                         .image = &volumetric.cloud_rotating_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = &volumetric.cloud_rotating_depth,
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                 },
@@ -479,7 +530,7 @@ void draw_volumetric(
 
     // We ideally don't want to render this at full resolution. That would take too much time!
     engine::GfxTask volumetric_gfx_task = {
-        .color_attachments = { &volumetric.cloud_buffer[0] },
+        .color_attachments = { &volumetric.cloud_buffer[0], &volumetric.cloud_depth[0] },
         .extent =
             {
                 low_res_dim.width,
@@ -547,6 +598,20 @@ void draw_volumetric(
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             4
         );
+
+        engine::update_descriptor_set_image(
+            resolve_desc_set,
+            volumetric.cloud_depth[1 - i],
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            5
+        );
+
+        engine::update_descriptor_set_image(
+            resolve_desc_set,
+            volumetric.cloud_rotating_depth,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            6
+        );
     }
 
     try {
@@ -557,7 +622,10 @@ void draw_volumetric(
                 volumetric.lut_desc_set.layouts[0],
                 volumetric.sampler_desc_set.layouts[0],
             },
-            { volumetric.cloud_buffer[0].image_format },
+            {
+                volumetric.cloud_buffer[0].image_format,
+                volumetric.cloud_depth[0].image_format,
+            },
             VK_SAMPLE_COUNT_1_BIT,
             false,
             true,
@@ -604,7 +672,10 @@ void draw_volumetric(
             volumetric.lut_desc_set.layouts[0],
             volumetric.sampler_desc_set.layouts[0],
         },
-        { volumetric.cloud_rotating_buffer.image_format },
+        {
+            volumetric.cloud_rotating_buffer.image_format,
+            volumetric.cloud_rotating_depth.image_format,
+        },
         VK_SAMPLE_COUNT_1_BIT,
         false,
         true,
@@ -623,7 +694,11 @@ void draw_volumetric(
     engine::GfxTask rotating_clouds_gfx_task = {
         .clear_color = std::nullopt,
         .clear_depth = std::nullopt,
-        .color_attachments = { &volumetric.cloud_rotating_buffer },
+        .color_attachments =
+            {
+                &volumetric.cloud_rotating_buffer,
+                &volumetric.cloud_rotating_depth,
+            },
         .extent =
             {
                 volumetric.cloud_rotating_buffer.image_extent.width,
@@ -672,6 +747,16 @@ void draw_volumetric(
                         .image = &volumetric.cloud_rotating_buffer,
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &volumetric.cloud_rotating_depth,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
                 },
             .label = "Rotating Cloud Buffer to Shader Read Pipeline Barrier",
         }
@@ -684,6 +769,7 @@ void draw_volumetric(
         },
         {
             volumetric.cloud_buffer[0].image_format,
+            volumetric.cloud_depth[0].image_format,
         },
         VK_SAMPLE_COUNT_1_BIT,
         false,
@@ -699,7 +785,7 @@ void draw_volumetric(
     engine::GfxTask rotating_cloud_resolve_pass = {
         .clear_color = std::nullopt,
         .clear_depth = std::nullopt,
-        .color_attachments = { &volumetric.cloud_buffer[0] },
+        .color_attachments = { &volumetric.cloud_buffer[0], &volumetric.cloud_depth[0] },
         .extent =
             {
                 low_res_dim.width,
@@ -745,6 +831,16 @@ void draw_volumetric(
                         .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                         .image = &volumetric.cloud_buffer[0],
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &volumetric.cloud_depth[0],
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                 },

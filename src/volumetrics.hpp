@@ -38,6 +38,7 @@ struct Volumetric {
     engine::Image cloud_buffer[2];
     engine::Image cloud_depth[2];
     engine::Image cloud_rotating_buffer; // qres
+    engine::Image cloud_rotating_depth; // qres
 
     UniformBuffer<ub_data::Clouds> uniform_buffer;
 

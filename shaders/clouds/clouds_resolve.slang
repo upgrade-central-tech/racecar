@@ -6,6 +6,8 @@ layout( binding = 1, set = 0 ) Texture2D<float4> rotating_cloud_buffer;
 layout( binding = 2, set = 0 ) ConstantBuffer<CloudUniformData> clouds_buffer_data;
 layout( binding = 3, set = 0 ) SamplerState linear_sampler;
 layout( binding = 4, set = 0 ) Texture2D<float4> cloud_history;
+layout( binding = 5, set = 0 ) Texture2D<float> cloud_depth_history;
+layout( binding = 6, set = 0 ) Texture2D<float> rotating_cloud_depth;
 
 struct VertexInput {
     float3 position : POSITION;
@@ -34,8 +36,18 @@ VertexOutput vs_main( VertexInput input )
     return output;
 }
 
+struct FragmentOutput {
+    float4 cloud_buffer : SV_Target0;
+    float cloud_depth : SV_Target1;
+}
+
 [shader( "fragment" )]
-float4 fs_main( VertexOutput input ) : SV_Target0
+FragmentOutput fs_main( VertexOutput input )
 {
-    return float4( 1.0, 0.0, 0.0, 1.0 );
+    FragmentOutput output;
+
+    output.cloud_buffer = float4( 1.0, 0.0, 0.0, 1.0 );
+    output.cloud_depth = 0.0;
+
+    return output;
 }

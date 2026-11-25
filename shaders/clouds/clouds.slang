@@ -30,6 +30,7 @@ VertexOutput vs_main( VertexInput input )
 
 struct FragmentOutput {
     float4 cloud_buffer : SV_Target0;
+    float cloud_depth : SV_Target1;
 }
 
 FragmentOutput march_pixel( float3 world_pos )
@@ -38,12 +39,14 @@ FragmentOutput march_pixel( float3 world_pos )
 
     float3 view = normalize( world_pos - camera_pos );
 
+    float depth;
     float4 output_color = raymarch( cumulus_map_LUT, low_freq_noise_LUT,
-        linear_repeat_sampler, view, world_pos, clouds_buffer_data.sun_direction );
+        linear_repeat_sampler, view, world_pos, clouds_buffer_data.sun_direction, depth );
 
     FragmentOutput output;
 
     output.cloud_buffer = output_color;
+    output.cloud_depth = depth;
 
     return output;
 }

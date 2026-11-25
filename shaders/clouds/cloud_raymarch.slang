@@ -59,6 +59,7 @@ static const int VIEW_MARCH_STEPS = 128;
 static const int VIEW_MARCH_MAX_ITERATIONS = 256;
 static const float VIEW_MARCH_COARSE_SCALE = 3.f;
 static const int VIEW_MARCH_EMPTY_SAMPLES_LIMIT = 6;
+static const float MAX_CLOUD_DEPTH = 65000.f;
 
 public float estimate_transmittance( Texture2D<float> cumulus_map_LUT,
     Texture3D<float> low_freq_noise_LUT, SamplerState linear_repeat_sampler,
@@ -114,10 +115,13 @@ static const float HG_G = 0.75; // Henyey-Greenstein asymmetry (-1..1), + forwar
 public float hash11( float n ) { return frac( sin( n ) * 43758.5453 ); }
 
 public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_freq_noise_LUT,
-    SamplerState linear_repeat_sampler, float3 view, float3 origin, float3 sun_direction )
+    SamplerState linear_repeat_sampler, float3 view, float3 origin, float3 sun_direction,
+    out float depth )
 {
     float3 local_dir = cloud_dome_remap( view );
     float3 local_origin = origin;
+
+    depth = 0.f;
 
     if ( view.y < 0.0 ) {
         return float4( 0.f );
@@ -128,6 +132,10 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
 
     float t_min = ( lower_plane_altitude - origin.y ) / local_dir.y;
     float t_max = ( higher_plane_altitude - origin.y ) / local_dir.y;
+
+    depth = min( 0.5f * ( t_min + t_max ), MAX_CLOUD_DEPTH );
+    float depth_sum = 0.f;
+    float depth_weight_sum = 0.f;
 
     float step_size = ( t_max - t_min ) / (float)VIEW_MARCH_STEPS;
     float coarse_step_size = VIEW_MARCH_COARSE_SCALE * step_size;
@@ -200,6 +208,11 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
                 * sun_horizon_fade * ( 1.f - step_transmittance );
             float3 ambient_lighting = ALBEDO * ambient_radiance * ( 1.f - step_transmittance );
             accumulated += throughput * ( direct_lighting + ambient_lighting );
+
+            float depth_weight = throughput * ( 1.f - step_transmittance );
+            depth_sum += t * depth_weight;
+            depth_weight_sum += depth_weight;
+
             throughput *= step_transmittance;
         }
         else {
@@ -211,6 +224,11 @@ public float4 raymarch( Texture2D<float> cumulus_map_LUT, Texture3D<float> low_f
 
         t += step_size;
     }
+
+    if ( depth_weight_sum > 0.f ) {
+        depth = min( depth_sum / depth_weight_sum, MAX_CLOUD_DEPTH );
+    }
+
     if ( length( accumulated ) < 1e-6 ) {
         return float4( 0.f );
     }
