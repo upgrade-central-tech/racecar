@@ -38,8 +38,13 @@ struct Setting {
 // ---------------------------OPTION LABELS---------------------------
 // -------------------------------------------------------------------
 constexpr const char* DEBUG_VIEW_OPTIONS[] = {
-    "None",         "Albedo map only", "Normal map only",           "Roughness + metallic map only",
-    "Normals only", "Albedo only",     "Roughness + metallic only",
+    "None",
+    "Albedo map only",
+    "Normal map only",
+    "Roughness + metallic map only",
+    "Normals only",
+    "Albedo only",
+    "Roughness + metallic only",
 };
 
 constexpr const char* AA_OPTIONS[] = {
@@ -48,25 +53,33 @@ constexpr const char* AA_OPTIONS[] = {
 };
 
 constexpr const char* TONEMAPPING_OPTIONS[] = {
-    "None", "GT7 SDR", "GT7 HDR", "Reinhard", "ACES",
+    "None",
+    "GT7 SDR",
+    "GT7 HDR",
+    "Reinhard",
+    "ACES",
 };
 
 constexpr const char* DEBUG_TEXTURE_OPTIONS[] = {
-    "None", "Reflections", "AO", "Octahedral Sky", "Cloud Shadow Map",
+    "None",
+    "Reflections",
+    "AO",
+    "Octahedral Sky",
+    "Cloud Shadow Map",
 };
 
 // -------------------------------------------------------------------
 // -------------------RUNTIME VALIDATION FUNCTIONS--------------------
 // -------------------------------------------------------------------
-bool debug_view_is_off() { return Get<RacecarSettings::DEBUG_VIEW>() == DebugView::NONE; }
+bool debug_view_is_off( ) { return Get<RacecarSettings::DEBUG_VIEW>( ) == DebugView::NONE; }
 
-bool validate_aa() { return debug_view_is_off(); }
+bool validate_aa( ) { return debug_view_is_off( ); }
 
-bool validate_bloom() { return debug_view_is_off(); }
+bool validate_bloom( ) { return debug_view_is_off( ); }
 
-bool validate_tonemapping()
+bool validate_tonemapping( )
 {
-    return debug_view_is_off() && Get<RacecarSettings::DEBUG_TEXTURE>() == DebugTexture::NONE;
+    return debug_view_is_off( ) && Get<RacecarSettings::DEBUG_TEXTURE>( ) == DebugTexture::NONE;
 }
 
 bool validate_debug_texture_option( int option )
@@ -78,7 +91,7 @@ bool validate_debug_texture_option( int option )
     return true;
 }
 
-bool validate_terrain_wireframe_view() { return RACECAR_DEV; }
+bool validate_terrain_wireframe_view( ) { return RACECAR_DEV; }
 
 // -------------------------------------------------------------------
 // -------------------------------------------------------------------
@@ -92,43 +105,50 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
 
     Setting { .validate = &validate_bloom }, // ENABLE_BLOOM
 
-    Setting { .validate = &validate_aa,
-              .options = AA_OPTIONS,
-              .option_count = (int)std::size( AA_OPTIONS ),
-              .desired = (int)AAMode::NONE,
-              .fallback = (int)AAMode::NONE }, // AA_MODE
+    Setting {
+        .validate = &validate_aa,
+        .options = AA_OPTIONS,
+        .option_count = (int)std::size( AA_OPTIONS ),
+        .desired = (int)AAMode::NONE,
+        .fallback = (int)AAMode::NONE }, // AA_MODE
 
-    Setting { .validate = &validate_tonemapping,
-              .options = TONEMAPPING_OPTIONS,
-              .option_count = (int)std::size( TONEMAPPING_OPTIONS ),
-              .desired = (int)TonemappingMode::GT7_SDR,
-              .fallback = (int)TonemappingMode::NONE }, // TONEMAPPING_MODE
+    Setting {
+        .validate = &validate_tonemapping,
+        .options = TONEMAPPING_OPTIONS,
+        .option_count = (int)std::size( TONEMAPPING_OPTIONS ),
+        .desired = (int)TonemappingMode::GT7_SDR,
+        .fallback = (int)TonemappingMode::NONE }, // TONEMAPPING_MODE
 
-    Setting { .validate_option = &validate_debug_texture_option,
-              .options = DEBUG_TEXTURE_OPTIONS,
-              .option_count = (int)std::size( DEBUG_TEXTURE_OPTIONS ),
-              .desired = (int)DebugTexture::NONE,
-              .fallback = (int)DebugTexture::NONE }, // DEBUG_TEXTURE
+    Setting {
+        .validate_option = &validate_debug_texture_option,
+        .options = DEBUG_TEXTURE_OPTIONS,
+        .option_count = (int)std::size( DEBUG_TEXTURE_OPTIONS ),
+        .desired = (int)DebugTexture::NONE,
+        .fallback = (int)DebugTexture::NONE }, // DEBUG_TEXTURE
 
-    Setting { .min = 0.f,
-              .max = 2.f,
-              .desired_float = 1.f,
-              .fallback_float = 1.f }, // TERRAIN_IRRADIANCE_STRENGTH
+    Setting {
+        .min = 0.f,
+        .max = 2.f,
+        .desired_float = 1.f,
+        .fallback_float = 1.f }, // TERRAIN_IRRADIANCE_STRENGTH
 
-    Setting { .min = 0.f,
-              .max = 2.f,
-              .desired_float = 1.f,
-              .fallback_float = 1.f }, // CAR_IRRADIANCE_STRENGTH
+    Setting {
+        .min = 0.f,
+        .max = 2.f,
+        .desired_float = 1.f,
+        .fallback_float = 1.f }, // CAR_IRRADIANCE_STRENGTH
 
-    Setting { .min = 0.0f,
-              .max = 30.0f,
-              .desired_float = 10.0f,
-              .fallback_float = 10.0f }, // TERRAIN_ROAD_WIDTH
+    Setting {
+        .min = 0.0f,
+        .max = 30.0f,
+        .desired_float = 10.0f,
+        .fallback_float = 10.0f }, // TERRAIN_ROAD_WIDTH
 
-    Setting { .min = 0.0f,
-              .max = 30.0f,
-              .desired_float = 8.0f,
-              .fallback_float = 8.0f }, // TERRAIN_BLEND_WIDTH
+    Setting {
+        .min = 0.0f,
+        .max = 30.0f,
+        .desired_float = 8.0f,
+        .fallback_float = 8.0f }, // TERRAIN_BLEND_WIDTH
 
     Setting { .validate = &validate_terrain_wireframe_view }, // TERRAIN_WIREFRAME_VIEW
 
@@ -136,10 +156,11 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
 
     Setting { .desired = 1 }, // TERRAIN_FRUSTUM_CULLING
 
-    Setting { .min = 0.0f,
-              .max = 0.2f,
-              .desired_float = 0.03f,
-              .fallback_float = 0.03f }, // CLOUD_EXTINCTION
+    Setting {
+        .min = 0.0f,
+        .max = 0.2f,
+        .desired_float = 0.03f,
+        .fallback_float = 0.03f }, // CLOUD_EXTINCTION
 
     Setting {
         .min = 0.0f, .max = 0.9f, .desired_float = 0.3f, .fallback_float = 0.3f }, // CLOUD_EROSION
@@ -148,10 +169,11 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
 
     Setting { .desired = 0 }, // AUTODRIVE
 
-    Setting { .min = 0.0f,
-              .max = 80.0f,
-              .desired_float = 40.0f,
-              .fallback_float = 40.0f }, // AUTODRIVE_TARGET_SPEED
+    Setting {
+        .min = 0.0f,
+        .max = 80.0f,
+        .desired_float = 40.0f,
+        .fallback_float = 40.0f }, // AUTODRIVE_TARGET_SPEED
 };
 
 }
@@ -159,7 +181,7 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
 bool GetValid( RacecarSettings s )
 {
     const Setting& setting = settings[(size_t)s];
-    return setting.validate == nullptr || setting.validate();
+    return setting.validate == nullptr || setting.validate( );
 }
 
 bool GetOptionValid( RacecarSettings s, int value )

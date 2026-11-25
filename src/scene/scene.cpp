@@ -77,11 +77,11 @@ void load_gltf(
     if ( !std::filesystem::exists( file_path ) ) {
         throw Exception(
             "[Scene] File \"{}\" does not exist",
-            std::filesystem::absolute( file_path ).string()
+            std::filesystem::absolute( file_path ).string( )
         );
     }
 
-    std::string ext = file_path.extension().string();
+    std::string ext = file_path.extension( ).string( );
 
     if ( ext != ".gltf" && ext != ".glb" ) {
         throw Exception( "[Scene] Invalid file extension loaded: {}", ext );
@@ -99,20 +99,24 @@ void load_gltf(
             &model,
             &err,
             &warn,
-            file_path.string()
+            file_path.string( )
         );
     } else { // ASCII files
-        has_loaded_successfully = loader
-                                      .LoadASCIIFromFile( &model, &err, &warn, file_path.string() );
+        has_loaded_successfully = loader.LoadASCIIFromFile(
+            &model,
+            &err,
+            &warn,
+            file_path.string( )
+        );
     }
 
     // Check for errors and warnings
-    if ( !warn.empty() ) {
-        log::warn( "[Scene] GLTF load: {}", warn.c_str() );
+    if ( !warn.empty( ) ) {
+        log::warn( "[Scene] GLTF load: {}", warn.c_str( ) );
     }
 
-    if ( !err.empty() ) {
-        log::error( "[Scene] GLTF load: {}", err.c_str() );
+    if ( !err.empty( ) ) {
+        log::error( "[Scene] GLTF load: {}", err.c_str( ) );
     }
 
     if ( !has_loaded_successfully ) {
@@ -128,9 +132,9 @@ void load_gltf(
 
     // Reserve vector sizes - low hanging fruit optimization tests
     {
-        scene.materials.reserve( model.materials.size() );
-        scene.textures.reserve( model.textures.size() );
-        scene.nodes.reserve( model.nodes.size() );
+        scene.materials.reserve( model.materials.size( ) );
+        scene.textures.reserve( model.textures.size( ) );
+        scene.nodes.reserve( model.nodes.size( ) );
     }
 
     for ( const tinygltf::Material& loaded_mat : model.materials ) {
@@ -153,25 +157,25 @@ void load_gltf(
         if ( loaded_mat.extensions.count( "KHR_materials_specular" ) != 0 ) {
             auto specular = loaded_mat.extensions.find( "KHR_materials_specular" )->second;
             new_mat.specular = static_cast<float>(
-                specular.Get( "specularFactor" ).GetNumberAsDouble()
+                specular.Get( "specularFactor" ).GetNumberAsDouble( )
             );
             // newMat.specularTint = specular.Get("specularColorFactor")
         }
         if ( loaded_mat.extensions.count( "KHR_materials_ior" ) != 0 ) {
             new_mat.ior = static_cast<float>( loaded_mat.extensions.find( "KHR_materials_ior" )
                                                   ->second.Get( "ior" )
-                                                  .GetNumberAsDouble() );
+                                                  .GetNumberAsDouble( ) );
         }
 
         if ( loaded_mat.extensions.count( "KHR_materials_clearcoat" ) ) {
             new_mat.clearcoat = static_cast<float>( loaded_mat.extensions
                                                         .find( "KHR_materials_clearcoat" )
                                                         ->second.Get( "clearcoatFactor" )
-                                                        .GetNumberAsDouble() );
+                                                        .GetNumberAsDouble( ) );
             new_mat.clearcoat_roughness = static_cast<float>(
                 loaded_mat.extensions.find( "KHR_materials_clearcoat" )
                     ->second.Get( "clearcoatRoughnessFactor" )
-                    .GetNumberAsDouble()
+                    .GetNumberAsDouble( )
             );
         }
 
@@ -181,15 +185,15 @@ void load_gltf(
 
             const tinygltf::Value& color_factor = sheen.Get( "sheenColorFactor" );
 
-            if ( color_factor.IsArray() && color_factor.Size() == 3 ) {
+            if ( color_factor.IsArray( ) && color_factor.Size( ) == 3 ) {
                 new_mat.sheen_tint = glm::vec3(
-                    color_factor.Get( 0 ).GetNumberAsDouble(),
-                    color_factor.Get( 1 ).GetNumberAsDouble(),
-                    color_factor.Get( 2 ).GetNumberAsDouble()
+                    color_factor.Get( 0 ).GetNumberAsDouble( ),
+                    color_factor.Get( 1 ).GetNumberAsDouble( ),
+                    color_factor.Get( 2 ).GetNumberAsDouble( )
                 );
             }
             new_mat.sheen_roughness = static_cast<float>(
-                sheen.Get( "sheenRoughnessFactor" ).GetNumberAsDouble()
+                sheen.Get( "sheenRoughnessFactor" ).GetNumberAsDouble( )
             );
         }
 
@@ -197,14 +201,14 @@ void load_gltf(
             new_mat.transmission = static_cast<float>( loaded_mat.extensions
                                                            .find( "KHR_materials_transmission" )
                                                            ->second.Get( "transmissionFactor" )
-                                                           .GetNumberAsDouble() );
+                                                           .GetNumberAsDouble( ) );
         }
 
         new_mat.emissive = double_array_to_vec3( loaded_mat.emissiveFactor );
         if ( loaded_mat.extensions.count( "KHR_materials_emissive_strength" ) ) {
             new_mat.emissive *= loaded_mat.extensions.find( "KHR_materials_emissive_strength" )
                                     ->second.Get( "emissiveStrength" )
-                                    .GetNumberAsDouble();
+                                    .GetNumberAsDouble( );
         }
         new_mat.emmisive_texture_index = global_texture_index( loaded_mat.emissiveTexture.index );
 
@@ -234,18 +238,18 @@ void load_gltf(
 
     // Mark albedo and emission as SRGB.
     for ( const Material& mat : scene.materials ) {
-        if ( mat.base_color_texture_index.has_value() ) {
-            scene.textures[size_t( mat.base_color_texture_index.value() )]
+        if ( mat.base_color_texture_index.has_value( ) ) {
+            scene.textures[size_t( mat.base_color_texture_index.value( ) )]
                 .color_space = ColorSpace::SRGB;
         }
-        if ( mat.emmisive_texture_index.has_value() ) {
-            scene.textures[size_t( mat.emmisive_texture_index.value() )]
+        if ( mat.emmisive_texture_index.has_value( ) ) {
+            scene.textures[size_t( mat.emmisive_texture_index.value( ) )]
                 .color_space = ColorSpace::SRGB;
         }
     }
 
     // Upload textures to the GPU
-    for ( size_t i = 0; i < model.textures.size(); i++ ) {
+    for ( size_t i = 0; i < model.textures.size( ); i++ ) {
         Texture& texture = scene.textures[i];
         const tinygltf::Texture& loaded_tex = model.textures[i];
         const tinygltf::Image& loaded_img = model.images[size_t( loaded_tex.source )];
@@ -257,7 +261,7 @@ void load_gltf(
         );
 
         texture.data = std::make_unique<engine::Image>( engine::create_image_from_data(
-            const_cast<void*>( static_cast<const void*>( loaded_img.image.data() ) ),
+            const_cast<void*>( static_cast<const void*>( loaded_img.image.data( ) ) ),
             { static_cast<uint32_t>( texture.width ), static_cast<uint32_t>( texture.height ), 1 },
             image_format,
             VK_IMAGE_TYPE_2D,
@@ -272,12 +276,12 @@ void load_gltf(
     int default_material_id = -1;
     // Used for pairing children and parents in the scene graph
     std::vector<std::vector<int>> children_lists;
-    children_lists.reserve( model.nodes.size() );
+    children_lists.reserve( model.nodes.size( ) );
 
     // Load Nodes
-    for ( size_t node_idx = 0; node_idx < model.nodes.size(); node_idx++ ) {
+    for ( size_t node_idx = 0; node_idx < model.nodes.size( ); node_idx++ ) {
         const tinygltf::Node& loaded_node = model.nodes[node_idx];
-        std::unique_ptr<Node> new_node = std::make_unique<Node>();
+        std::unique_ptr<Node> new_node = std::make_unique<Node>( );
 
         // save relavant nodes for demo
         if ( loaded_node.name == "car_root" ) {
@@ -294,7 +298,7 @@ void load_gltf(
 
         new_node->id = node_idx;
         // Get node transform
-        if ( loaded_node.matrix.size() ) {
+        if ( loaded_node.matrix.size( ) ) {
             std::vector<double> mat = loaded_node.matrix;
             new_node->transform = glm::mat4(
                 mat[0],
@@ -318,17 +322,17 @@ void load_gltf(
             // Attempt to recover from individual transforms
 
             glm::vec3 translation = glm::vec3( 0.f );
-            glm::quat rotation = glm::quat();
+            glm::quat rotation = glm::quat( );
             glm::vec3 scale = glm::vec3( 1.f );
 
-            if ( loaded_node.translation.size() ) {
+            if ( loaded_node.translation.size( ) ) {
                 translation = glm::vec3(
                     loaded_node.translation[0],
                     loaded_node.translation[1],
                     loaded_node.translation[2]
                 );
             }
-            if ( loaded_node.rotation.size() ) {
+            if ( loaded_node.rotation.size( ) ) {
                 // GLM's quat expects WXYZ order, but GLTF uses XYZW order
                 rotation = glm::quat(
                     static_cast<float>( loaded_node.rotation[3] ),
@@ -337,7 +341,7 @@ void load_gltf(
                     static_cast<float>( loaded_node.rotation[2] )
                 );
             }
-            if ( loaded_node.scale.size() ) {
+            if ( loaded_node.scale.size( ) ) {
                 scale = glm::vec3(
                     loaded_node.scale[0],
                     loaded_node.scale[1],
@@ -361,7 +365,7 @@ void load_gltf(
         // created Mesh structs with the same data. We could use a lookup set to resolve this in
         // the future.
         if ( loaded_node.mesh != -1 ) {
-            new_node->mesh = std::make_unique<Mesh>();
+            new_node->mesh = std::make_unique<Mesh>( );
             const tinygltf::Mesh&
                 loaded_mesh = model.meshes[static_cast<size_t>( loaded_node.mesh )];
 
@@ -374,8 +378,8 @@ void load_gltf(
                     // Creates a default, white material if a prim is not assigned a material in
                     // the gltf file
                     if ( default_material_id == -1 ) {
-                        Material default_material = Material();
-                        default_material_id = static_cast<int>( scene.materials.size() );
+                        Material default_material = Material( );
+                        default_material_id = static_cast<int>( scene.materials.size( ) );
                         scene.materials.push_back( default_material );
                     }
                     new_prim.material_id = default_material_id;
@@ -423,7 +427,7 @@ void load_gltf(
                     const tinygltf::Buffer& buffer = model.buffers[buffer_id];
 
                     pos.resize( length );
-                    std::memcpy( pos.data(), buffer.data.data() + byte_offset, byte_length );
+                    std::memcpy( pos.data( ), buffer.data.data( ) + byte_offset, byte_length );
                 }
 
                 if ( loaded_prim.attributes.count( "NORMAL" ) > 0 ) {
@@ -457,7 +461,7 @@ void load_gltf(
                     const tinygltf::Buffer& buffer = model.buffers[buffer_id];
 
                     nor.resize( length );
-                    std::memcpy( nor.data(), buffer.data.data() + byte_offset, byte_length );
+                    std::memcpy( nor.data( ), buffer.data.data( ) + byte_offset, byte_length );
                 }
 
                 // Currently only accepting one uv coordinate per primative.
@@ -493,30 +497,30 @@ void load_gltf(
                     const tinygltf::Buffer& buffer = model.buffers[buffer_id];
 
                     uv.resize( length );
-                    std::memcpy( uv.data(), buffer.data.data() + byte_offset, byte_length );
+                    std::memcpy( uv.data( ), buffer.data.data( ) + byte_offset, byte_length );
                 }
 
                 // Assume position data always exists
-                if ( ( pos.size() != nor.size() && nor.size() != 0 )
-                     || ( pos.size() != uv.size() && uv.size() != 0 ) ) {
+                if ( ( pos.size( ) != nor.size( ) && nor.size( ) != 0 )
+                     || ( pos.size( ) != uv.size( ) && uv.size( ) != 0 ) ) {
                     log::warn(
                         "[Scene] GLTF Loading: nonzero nor or uv count does not match up "
                         "with pos count"
                     );
                 }
 
-                new_prim.vertex_offset = static_cast<int>( out_global_vertices.size() );
+                new_prim.vertex_offset = static_cast<int>( out_global_vertices.size( ) );
 
-                for ( size_t i = 0; i < pos.size(); ++i ) {
+                for ( size_t i = 0; i < pos.size( ); ++i ) {
                     geometry::scene::Vertex new_vertex;
                     new_vertex.position = pos[i];
-                    if ( i < nor.size() ) {
+                    if ( i < nor.size( ) ) {
                         new_vertex.normal = nor[i];
                     } else {
                         new_vertex.normal = glm::vec3( 0, 0, 1 );
                     }
 
-                    if ( i < uv.size() ) {
+                    if ( i < uv.size( ) ) {
                         new_vertex.uv = uv[i];
                     } else {
                         new_vertex.uv = glm::vec2( 0.5, 0.5 );
@@ -541,7 +545,7 @@ void load_gltf(
 
                     const tinygltf::BufferView&
                         buffer_view = model.bufferViews[static_cast<size_t>( buffer_view_id )];
-                    new_prim.ind_offset = static_cast<int>( out_global_indices.size() );
+                    new_prim.ind_offset = static_cast<int>( out_global_indices.size( ) );
                     new_prim.ind_count = accessor.count;
                     size_t byte_offset = buffer_view.byteOffset + accessor.byteOffset;
 
@@ -552,7 +556,7 @@ void load_gltf(
                         size_t byte_length = accessor.count * sizeof( uint16_t );
                         std::vector<uint16_t> ind( new_prim.ind_count );
 
-                        std::memcpy( ind.data(), buffer.data.data() + byte_offset, byte_length );
+                        std::memcpy( ind.data( ), buffer.data.data( ) + byte_offset, byte_length );
 
                         for ( uint16_t index : ind ) {
                             out_global_indices.push_back( static_cast<uint32_t>( index ) );
@@ -560,9 +564,9 @@ void load_gltf(
                     } else if ( accessor.componentType == TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT ) {
                         size_t byte_length = accessor.count * sizeof( uint32_t );
                         std::vector<uint32_t> ind( new_prim.ind_count );
-                        std::memcpy( ind.data(), buffer.data.data() + byte_offset, byte_length );
+                        std::memcpy( ind.data( ), buffer.data.data( ) + byte_offset, byte_length );
                         out_global_indices
-                            .insert( out_global_indices.end(), ind.begin(), ind.end() );
+                            .insert( out_global_indices.end( ), ind.begin( ), ind.end( ) );
                     } else {
                         log::warn(
                             "[Scene] GLTF Loading: Expected all indices to either be a "
@@ -574,12 +578,12 @@ void load_gltf(
                 } else { // If there are no indices, assume position vector will lay out all
                          // triangles
                     new_prim.is_indexed = false;
-                    for ( size_t i = 0; i < pos.size(); i++ ) {
+                    for ( size_t i = 0; i < pos.size( ); i++ ) {
                         out_global_indices.push_back( static_cast<unsigned int>( i ) );
                     }
                 }
 
-                new_node->mesh.value()->primitives.push_back( new_prim );
+                new_node->mesh.value( )->primitives.push_back( new_prim );
             }
         } else {
             new_node->mesh = std::nullopt;
@@ -590,26 +594,27 @@ void load_gltf(
 
     // Assumes scene.nodes order is the same as the indices in the GLTF. Will probably break if
     // this function is multithreaded.
-    for ( size_t i = 0; i < scene.nodes.size(); i++ ) {
+    for ( size_t i = 0; i < scene.nodes.size( ); i++ ) {
         std::unique_ptr<Node>& node = scene.nodes[i];
         const std::vector<int>& children = children_lists[i];
         for ( int child : children ) {
             std::unique_ptr<Node>& child_node = scene.nodes[static_cast<size_t>( child )];
-            child_node->parent = node.get();
-            node->children.push_back( child_node.get() );
+            child_node->parent = node.get( );
+            node->children.push_back( child_node.get( ) );
         }
     }
 
     // setting some constants. this should probably be cleaned up later
-    scene.demo_scene_nodes.back_axle_local_z = get_position_in_scene(
-                                                   scene,
-                                                   scene.demo_scene_nodes.wheel_back_left_id.value()
+    scene.demo_scene_nodes
+        .back_axle_local_z = get_position_in_scene(
+                                 scene,
+                                 scene.demo_scene_nodes.wheel_back_left_id.value( )
     )
-                                                   .z;
+                                 .z;
     scene.demo_scene_nodes
         .front_axle_local_z = get_position_in_scene(
                                   scene,
-                                  scene.demo_scene_nodes.wheel_front_left_id.value()
+                                  scene.demo_scene_nodes.wheel_front_left_id.value( )
     )
                                   .z;
 }
@@ -617,10 +622,10 @@ void load_gltf(
 bool load_hdri( std::string file_path, Scene& scene )
 {
     int x = 0, y = 0, channels = 0;
-    float* hdriData = stbi_loadf( file_path.c_str(), &x, &y, &channels, 4 );
+    float* hdriData = stbi_loadf( file_path.c_str( ), &x, &y, &channels, 4 );
 
     if ( x == 0 || y == 0 ) {
-        log::error( "[Scene] Failed to load HDRI: {}", stbi_failure_reason() );
+        log::error( "[Scene] Failed to load HDRI: {}", stbi_failure_reason( ) );
         return false;
     }
 
@@ -645,7 +650,7 @@ bool load_hdri( std::string file_path, Scene& scene )
     ) );
 
     scene.textures.push_back( std::move( hdri ) );
-    scene.hdri_index = scene.textures.size() - 1;
+    scene.hdri_index = scene.textures.size( ) - 1;
     return true;
 }
 
@@ -671,14 +676,14 @@ void update_model_mat_buffer_node(
 )
 {
     UniformBuffer<ub_data::ModelMat>& model_mat_buffer = model_mat_uniform_buffers[node->id];
-    ub_data::ModelMat data = model_mat_buffer.get_data();
+    ub_data::ModelMat data = model_mat_buffer.get_data( );
 
     data.prev_model_mat = data.model_mat;
     data.model_mat = parent_transform * node->transform;
     data.inv_model_mat = glm::inverse( data.model_mat );
 
     model_mat_buffer.set_data( data );
-    model_mat_buffer.update( engine::State::GetConst().get_frame_index() );
+    model_mat_buffer.update( engine::State::GetConst( ).get_frame_index( ) );
 
     for ( Node* child : node->children ) {
         update_model_mat_buffer_node( scene, model_mat_uniform_buffers, data.model_mat, child );
@@ -689,22 +694,22 @@ void update_model_mat_buffers(
     const Scene& scene, std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers
 )
 {
-    glm::mat4 identity = glm::identity<glm::mat4>();
+    glm::mat4 identity = glm::identity<glm::mat4>( );
     for ( const auto& node : scene.nodes ) {
         if ( node->parent == nullptr ) {
-            update_model_mat_buffer_node( scene, model_mat_uniform_buffers, identity, node.get() );
+            update_model_mat_buffer_node( scene, model_mat_uniform_buffers, identity, node.get( ) );
         }
     }
 }
 
 glm::vec3 get_position_in_scene( const Scene& scene, size_t node_idx )
 {
-    glm::mat4 transform = glm::identity<glm::mat4>();
+    glm::mat4 transform = glm::identity<glm::mat4>( );
 
     size_t idx = node_idx;
 
     // we need to fix the nodes to be necessary
-    while ( idx != scene.demo_scene_nodes.car_parent_id.value() ) {
+    while ( idx != scene.demo_scene_nodes.car_parent_id.value( ) ) {
         transform = scene.nodes[idx]->transform * transform;
         idx = scene.nodes[idx]->parent->id;
     }

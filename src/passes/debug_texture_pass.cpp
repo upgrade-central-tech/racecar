@@ -13,9 +13,9 @@ namespace {
 constexpr std::string_view
     DEBUG_TEXTURE_SHADER_PATH = "../shaders/post/debug_texture/debug_texture.spv";
 
-bool debug_texture_is_on()
+bool debug_texture_is_on( )
 {
-    return RuntimeSettings::Get<RacecarSettings::DEBUG_TEXTURE>() != DebugTexture::NONE;
+    return RuntimeSettings::Get<RacecarSettings::DEBUG_TEXTURE>( ) != DebugTexture::NONE;
 }
 
 }
@@ -27,10 +27,10 @@ void initialize_debug_texture_pass(
     const UniformBuffer<ub_data::Camera>& camera_buffer
 )
 {
-    const engine::State& engine = engine::State::GetConst();
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
+    const vk::Common& vulkan = vk::Common::GetConst( );
 
-    if ( textures.empty() ) {
+    if ( textures.empty( ) ) {
         return;
     }
 
@@ -88,7 +88,7 @@ void initialize_debug_texture_pass(
 
 void add_debug_texture_pass( DebugTexturePass& pass, engine::TaskList& task_list )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
     if ( !pass.initialized ) {
         return;
@@ -115,19 +115,19 @@ void add_debug_texture_pass( DebugTexturePass& pass, engine::TaskList& task_list
 
 void update_debug_texture_uniform_buffer( DebugTexturePass& pass, float exposure, float blur )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
-    ub_data::DebugTexture ub = pass.buffer.get_data();
+    ub_data::DebugTexture ub = pass.buffer.get_data( );
     ub.index = RuntimeSettings::GetValue( RacecarSettings::DEBUG_TEXTURE );
     ub.exposure = exposure;
     ub.blur = blur;
-    const DebugTexture debug_texture = RuntimeSettings::Get<RacecarSettings::DEBUG_TEXTURE>();
+    const DebugTexture debug_texture = RuntimeSettings::Get<RacecarSettings::DEBUG_TEXTURE>( );
     ub.camera_view = debug_texture == DebugTexture::OCTAHEDRAL_SKY;
     ub.scene_referred = debug_texture == DebugTexture::OCTAHEDRAL_SKY;
     ub.single_channel = debug_texture == DebugTexture::CLOUD_SHADOW_MAP;
 
     pass.buffer.set_data( ub );
-    pass.buffer.update( engine.get_frame_index() );
+    pass.buffer.update( engine.get_frame_index( ) );
 }
 
 }

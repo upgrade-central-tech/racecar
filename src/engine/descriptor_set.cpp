@@ -9,8 +9,8 @@ DescriptorSet generate_descriptor_set(
     const std::vector<VkDescriptorType>& types, VkShaderStageFlags shader_stage_flags
 )
 {
-    engine::State& engine = engine::State::GetMut();
-    const size_t num_frames = engine.swapchain_images.size();
+    engine::State& engine = engine::State::GetMut( );
+    const size_t num_frames = engine.swapchain_images.size( );
 
     DescriptorSet desc_set = {
         .descriptor_sets = std::vector<VkDescriptorSet>( num_frames ),
@@ -20,7 +20,7 @@ DescriptorSet generate_descriptor_set(
     try {
         engine::DescriptorLayoutBuilder builder;
 
-        for ( uint32_t i = 0; i < static_cast<uint32_t>( types.size() ); ++i ) {
+        for ( uint32_t i = 0; i < static_cast<uint32_t>( types.size( ) ); ++i ) {
             engine::descriptor_layout_builder::add_binding( builder, i, types[i] );
         }
 
@@ -48,8 +48,8 @@ DescriptorSet generate_array_descriptor_set(
     uint32_t count
 )
 {
-    engine::State& engine = engine::State::GetMut();
-    const size_t num_frames = engine.swapchain_images.size();
+    engine::State& engine = engine::State::GetMut( );
+    const size_t num_frames = engine.swapchain_images.size( );
 
     DescriptorSet desc_set = {
         .descriptor_sets = std::vector<VkDescriptorSet>( num_frames ),
@@ -59,7 +59,7 @@ DescriptorSet generate_array_descriptor_set(
     try {
         engine::DescriptorLayoutBuilder builder;
 
-        for ( uint32_t i = 0; i < static_cast<uint32_t>( types.size() ); ++i ) {
+        for ( uint32_t i = 0; i < static_cast<uint32_t>( types.size( ) ); ++i ) {
             engine::descriptor_layout_builder::add_array_binding( builder, i, types[i], count );
         }
 
@@ -89,9 +89,9 @@ void update_descriptor_set_image_array(
     uint32_t array_count
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
-    if ( imgs.empty() || array_count == 0 ) {
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
+    if ( imgs.empty( ) || array_count == 0 ) {
         return;
     }
 
@@ -101,15 +101,13 @@ void update_descriptor_set_image_array(
         for ( uint32_t slot = 0; slot < array_count; slot++ ) {
             // Repeat the last entry across the unused tail. The shader never reads those slots,
             // but leaving descriptors unwritten is invalid.
-            size_t img = std::min( size_t( slot ), imgs.size() - 1 );
+            size_t img = std::min( size_t( slot ), imgs.size( ) - 1 );
 
-            image_infos.push_back(
-                {
-                    .sampler = VK_NULL_HANDLE,
-                    .imageView = imgs[img]->image_view,
-                    .imageLayout = img_layout,
-                }
-            );
+            image_infos.push_back( {
+                .sampler = VK_NULL_HANDLE,
+                .imageView = imgs[img]->image_view,
+                .imageLayout = img_layout,
+            } );
         }
 
         VkWriteDescriptorSet write_desc_set = {
@@ -118,7 +116,7 @@ void update_descriptor_set_image_array(
             .dstBinding = static_cast<uint32_t>( binding_idx ),
             .descriptorCount = array_count,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .pImageInfo = image_infos.data(),
+            .pImageInfo = image_infos.data( ),
         };
 
         vkUpdateDescriptorSets( vulkan.device, 1, &write_desc_set, 0, nullptr );
@@ -129,8 +127,8 @@ void update_descriptor_set_image(
     DescriptorSet& desc_set, const Image& rw_img, VkImageLayout img_layout, int binding_idx
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         const Image& alloc_image = rw_img;
 
@@ -163,8 +161,8 @@ void update_descriptor_set_image_mip(
     size_t mip
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         const Image& alloc_image = rw_img;
 
@@ -193,8 +191,8 @@ void update_descriptor_set_depth_image(
     DescriptorSet& desc_set, const Image& depth_img, int binding_idx
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         const Image& img = depth_img;
         VkDescriptorImageInfo desc_image_info = {
@@ -218,8 +216,8 @@ void update_descriptor_set_depth_image(
 
 void update_descriptor_set_sampler( DescriptorSet& desc_set, VkSampler sampler, int binding_idx )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         VkDescriptorImageInfo desc_image_info = {
             .sampler = sampler,
@@ -245,15 +243,14 @@ void update_descriptor_set_acceleration_structure(
     DescriptorSet& desc_set, VkAccelerationStructureKHR tlas, int binding_idx
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
         VkWriteDescriptorSetAccelerationStructureKHR desc_as_info = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
             .pNext = VK_NULL_HANDLE,
             .accelerationStructureCount = 1,
-            .pAccelerationStructures = &tlas
-        };
+            .pAccelerationStructures = &tlas };
 
         VkWriteDescriptorSet write_desc_set = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -272,10 +269,10 @@ void update_descriptor_set_acceleration_structure_per_frame(
     DescriptorSet& desc_set, const std::vector<VkAccelerationStructureKHR>& tlases, int binding_idx
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
 
-    if ( tlases.size() != engine.frame_overlap ) {
+    if ( tlases.size( ) != engine.frame_overlap ) {
         throw Exception(
             "[Update Descriptor Set Acceleration Structure Per Frame] Expected one "
             "acceleration structure per frame in flight"
@@ -287,8 +284,7 @@ void update_descriptor_set_acceleration_structure_per_frame(
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
             .pNext = VK_NULL_HANDLE,
             .accelerationStructureCount = 1,
-            .pAccelerationStructures = &tlases[i]
-        };
+            .pAccelerationStructures = &tlases[i] };
 
         VkWriteDescriptorSet write_desc_set = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -308,8 +304,8 @@ void update_descriptor_set_const_storage_buffer(
     DescriptorSet& desc_set, vk::mem::AllocatedBuffer storage_buffer, int binding_idx
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
     VkBuffer buffer = storage_buffer.handle;
 
     for ( size_t i = 0; i < engine.frame_overlap; ++i ) {
@@ -339,10 +335,10 @@ void update_descriptor_set_storage_buffer_per_frame(
     int binding_idx
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
 
-    if ( storage_buffers.size() != engine.frame_overlap ) {
+    if ( storage_buffers.size( ) != engine.frame_overlap ) {
         throw Exception(
             "[Update Descriptor Set Storage Buffer Per Frame] Expected one storage "
             "buffer per frame in flight"

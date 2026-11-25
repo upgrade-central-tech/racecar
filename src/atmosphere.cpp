@@ -30,7 +30,7 @@ namespace {
 
 std::vector<float> read_data( std::string_view path )
 {
-    std::string absolute = std::filesystem::absolute( path ).string();
+    std::string absolute = std::filesystem::absolute( path ).string( );
 
     if ( !std::filesystem::exists( absolute ) ) {
         throw Exception( "[atmosphere] File \"{}\" does not exist", absolute );
@@ -38,29 +38,29 @@ std::vector<float> read_data( std::string_view path )
 
     std::ifstream file( absolute, std::ios::ate | std::ios::binary );
 
-    if ( !file.is_open() ) {
+    if ( !file.is_open( ) ) {
         throw Exception( "[atmosphere] Could not open file \"{}\"", absolute );
     }
 
     static_assert( sizeof( float ) == 4, "float data type is not 32 bits (somehow)" );
 
-    std::streampos file_size = file.tellg();
+    std::streampos file_size = file.tellg( );
     size_t num_floats = static_cast<size_t>( file_size ) / sizeof( float );
     std::vector<float> dat_buffer( num_floats );
 
     file.seekg( 0, std::ios::beg );
-    file.read( reinterpret_cast<char*>( dat_buffer.data() ), file_size );
-    file.close();
+    file.read( reinterpret_cast<char*>( dat_buffer.data( ) ), file_size );
+    file.close( );
 
     return dat_buffer;
 }
 
 }
 
-Atmosphere initialize()
+Atmosphere initialize( )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
-    const engine::State& engine = engine::State::GetConst();
+    vk::Common& vulkan = vk::Common::GetMut( );
+    const engine::State& engine = engine::State::GetConst( );
     Atmosphere atms;
 
     atms.uniform_buffer = create_uniform_buffer<ub_data::Atmosphere>(
@@ -80,7 +80,7 @@ Atmosphere initialize()
         {
             std::vector<float> irradiance = read_data( IRRADIANCE_DAT_PATH );
             atms.irradiance = engine::create_image_from_data(
-                static_cast<void*>( irradiance.data() ),
+                static_cast<void*>( irradiance.data( ) ),
                 { .width = 64, .height = 16, .depth = 1 },
                 format,
                 VK_IMAGE_TYPE_2D,
@@ -92,7 +92,7 @@ Atmosphere initialize()
         {
             std::vector<float> scattering = read_data( SCATTERING_DAT_PATH );
             atms.scattering = engine::create_image_from_data(
-                static_cast<void*>( scattering.data() ),
+                static_cast<void*>( scattering.data( ) ),
                 { .width = 256, .height = 128, .depth = 32 },
                 format,
                 VK_IMAGE_TYPE_3D,
@@ -104,7 +104,7 @@ Atmosphere initialize()
         {
             std::vector<float> transmittance = read_data( TRANSMITTANCE_DAT_PATH );
             atms.transmittance = engine::create_image_from_data(
-                static_cast<void*>( transmittance.data() ),
+                static_cast<void*>( transmittance.data( ) ),
                 { .width = 256, .height = 64, .depth = 1 },
                 format,
                 VK_IMAGE_TYPE_2D,
@@ -113,7 +113,7 @@ Atmosphere initialize()
             );
         }
     } catch ( const Exception& ex ) {
-        log::error( "[atmosphere] Failed to create LUTs: {}", ex.what() );
+        log::error( "[atmosphere] Failed to create LUTs: {}", ex.what( ) );
         throw;
     }
 
@@ -242,7 +242,7 @@ void draw_atmosphere(
     engine::TaskList& task_list, atmosphere::Atmosphere& atms, engine::Image& out_color
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     engine::GfxTask atmosphere_gfx_task = {
         .clear_color = { { { 0.f, 1.f, 0.f, 1.f } } },
         .clear_depth = 1.f,
@@ -251,11 +251,11 @@ void draw_atmosphere(
     };
 
     engine::Pipeline atmosphere_pipeline;
-    geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
+    geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance( );
 
     try {
         atmosphere_pipeline = engine::create_gfx_pipeline(
-            engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance() ),
+            engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance( ) ),
             {
                 atms.uniform_desc_set.layouts[0],
                 atms.lut_desc_set.layouts[0],
@@ -268,29 +268,31 @@ void draw_atmosphere(
             false,
             true,
             vk::create::shader_module( atmosphere::SHADER_PATH ),
-            engine::ShaderEntryPointStrings::defaults(),
+            engine::ShaderEntryPointStrings::defaults( ),
             false,
             false
         );
     } catch ( const Exception& ex ) {
-        log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what() );
+        log::error( "Failed to create atmosphere graphics pipeline: {}", ex.what( ) );
         throw;
     }
 
     atmosphere_gfx_task.draw_tasks.push_back( {
-                .draw_resource_descriptor = {
-                        .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
-                        .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
-                        .vertex_buffer_offsets = { 0 },
-                        .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
-                },
-                .descriptor_sets = {
-                    &atms.uniform_desc_set,
-                    &atms.lut_desc_set,
-                    &atms.sampler_desc_set,
-                },
-                .pipeline = atmosphere_pipeline,
-            } );
+        .draw_resource_descriptor =
+            {
+                .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
+                .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
+                .vertex_buffer_offsets = { 0 },
+                .index_count = static_cast<uint32_t>( quad_mesh.indices.size( ) ),
+            },
+        .descriptor_sets =
+            {
+                &atms.uniform_desc_set,
+                &atms.lut_desc_set,
+                &atms.sampler_desc_set,
+            },
+        .pipeline = atmosphere_pipeline,
+    } );
 
     engine::add_gfx_task( task_list, atmosphere_gfx_task, "Atmosphere" );
 }
@@ -299,11 +301,11 @@ void update_atmosphere_uniform_buffer(
     gui::Gui& gui, atmosphere::Atmosphere& atms, const CameraData& camera_data
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     if ( gui.atms.animate_zenith ) {
         float sin = std::sin( static_cast<float>( engine.time ) * gui.atms.animate_zenith_speed );
         float t = ( sin + 1.f ) * 0.5f;
-        atms.sun_zenith = glm::lerp( -glm::half_pi<float>(), glm::half_pi<float>(), t );
+        atms.sun_zenith = glm::lerp( -glm::half_pi<float>( ), glm::half_pi<float>( ), t );
     }
 
     glm::vec3 atmosphere_position = {
@@ -314,7 +316,7 @@ void update_atmosphere_uniform_buffer(
         camera_data.position.z,
     };
 
-    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data( );
     atms_ub.inverse_proj = glm::inverse( camera_data.projection );
     atms_ub.inverse_view = glm::inverse( camera_data.view );
     atms_ub.camera_position = atmosphere_position;
@@ -322,7 +324,7 @@ void update_atmosphere_uniform_buffer(
     atms_ub.radiance_exposure = gui.atms.radiance_exposure;
 
     atms.uniform_buffer.set_data( atms_ub );
-    atms.uniform_buffer.update( engine.get_frame_index() );
+    atms.uniform_buffer.update( engine.get_frame_index( ) );
 }
 
 }

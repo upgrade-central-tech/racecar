@@ -40,16 +40,16 @@ void initialize_terrain(
     const TerrainLightingInfo& lighting_info
 )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
-    const engine::State& engine = engine::State::GetConst();
+    vk::Common& vulkan = vk::Common::GetMut( );
+    const engine::State& engine = engine::State::GetConst( );
     // Generate enough information for just one planar quad. Expand it later on arbitrarily
     [[maybe_unused]] int32_t size = 1;
 
     // float scale = 10.0f;
     float offset_y = 0.0f;
 
-    terrain.vertices.clear();
-    terrain.indices.clear();
+    terrain.vertices.clear( );
+    terrain.indices.clear( );
 
     const float half_width = TERRAIN_HALF_WIDTH;
 
@@ -88,15 +88,15 @@ void initialize_terrain(
     // Create respective mesh buffers using CPU data
     geometry::create_mesh_buffers(
         terrain.mesh_buffers,
-        sizeof( TerrainVertex ) * terrain.vertices.size(),
-        sizeof( int32_t ) * terrain.indices.size()
+        sizeof( TerrainVertex ) * terrain.vertices.size( ),
+        sizeof( int32_t ) * terrain.indices.size( )
     );
 
     // Upload to GPU
     geometry::upload_mesh_buffers(
         terrain.mesh_buffers,
-        terrain.vertices.data(),
-        terrain.indices.data()
+        terrain.vertices.data( ),
+        terrain.indices.data( )
     );
 
     // Build descriptors
@@ -178,13 +178,14 @@ void initialize_terrain(
     );
 
     terrain.terrain_prepass_task = {
-        .color_attachments = {
-            &prepass_info.gbuffers->GBuffer_Position,
-            &prepass_info.gbuffers->GBuffer_Normal,
-            &prepass_info.gbuffers->GBuffer_Albedo,
-            &prepass_info.gbuffers->GBuffer_Packed_Data,
-            &prepass_info.gbuffers->GBuffer_Velocity,
-        },
+        .color_attachments =
+            {
+                &prepass_info.gbuffers->GBuffer_Position,
+                &prepass_info.gbuffers->GBuffer_Normal,
+                &prepass_info.gbuffers->GBuffer_Albedo,
+                &prepass_info.gbuffers->GBuffer_Packed_Data,
+                &prepass_info.gbuffers->GBuffer_Velocity,
+            },
         .depth_image = &prepass_info.gbuffers->GBuffer_Depth,
         .extent = engine.swapchain.extent,
     };
@@ -290,12 +291,12 @@ void initialize_terrain(
             false,
             true,
             vk::create::shader_module( TERRAIN_SHADER_PREPASS_MODULE_PATH ),
-            engine::ShaderEntryPointStrings::defaults(),
+            engine::ShaderEntryPointStrings::defaults( ),
             true,
             false
         );
     } catch ( const Exception& ex ) {
-        log::error( "Failed to create terrain prepass graphics pipeline: {}", ex.what() );
+        log::error( "Failed to create terrain prepass graphics pipeline: {}", ex.what( ) );
         throw;
     }
 
@@ -476,12 +477,12 @@ void initialize_terrain_draw_pipeline(
 // Predication functions
 namespace {
 
-bool terrain_wireframe_is_on()
+bool terrain_wireframe_is_on( )
 {
     return RuntimeSettings::GetEnabled( RacecarSettings::TERRAIN_WIREFRAME_VIEW );
 }
 
-bool terrain_wireframe_is_off() { return !terrain_wireframe_is_on(); }
+bool terrain_wireframe_is_off( ) { return !terrain_wireframe_is_on( ); }
 
 }
 
@@ -517,20 +518,19 @@ void draw_terrain_prepass(
         .vertex_buffers = { terrain.mesh_buffers.vertex_buffer.handle },
         .index_buffer = terrain.mesh_buffers.index_buffer.handle,
         .vertex_buffer_offsets = { 0 },
-        .index_count = static_cast<uint32_t>( terrain.indices.size() ),
+        .index_count = static_cast<uint32_t>( terrain.indices.size( ) ),
     };
 
-    terrain.terrain_prepass_task.draw_tasks.push_back(
-        {
-            .draw_resource_descriptor = draw_descriptor,
-            .descriptor_sets = { &terrain.prepass_uniform_desc_set,
-                                 &terrain.prepass_texture_desc_set,
-                                 &terrain.prepass_sampler_desc_set,
-                                 &terrain.prepass_lut_desc_set,
-                                 terrain.gamestate_desc_set },
-            .pipeline = terrain.terrain_prepass_pipeline,
-        }
-    );
+    terrain.terrain_prepass_task.draw_tasks.push_back( {
+        .draw_resource_descriptor = draw_descriptor,
+        .descriptor_sets =
+            { &terrain.prepass_uniform_desc_set,
+              &terrain.prepass_texture_desc_set,
+              &terrain.prepass_sampler_desc_set,
+              &terrain.prepass_lut_desc_set,
+              terrain.gamestate_desc_set },
+        .pipeline = terrain.terrain_prepass_pipeline,
+    } );
 
     engine::add_gfx_task(
         task_list,
@@ -545,7 +545,7 @@ void draw_terrain_prepass(
 
 void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     // Can we assume the color_attachment, by this point, is in a write-only state?
 
     uint32_t dispatch_x = ( engine.swapchain.extent.width + 7 ) / 8;
@@ -584,27 +584,25 @@ void draw_terrain_wireframe(
 {
     engine::GfxTask terrain_wireframe_gfx_task = {
         .color_attachments = { &screen_color },
-        .extent = engine::State::GetConst().swapchain.extent
-    };
+        .extent = engine::State::GetConst( ).swapchain.extent };
 
     engine::DrawResourceDescriptor draw_descriptor = {
         .vertex_buffers = { terrain.mesh_buffers.vertex_buffer.handle },
         .index_buffer = terrain.mesh_buffers.index_buffer.handle,
         .vertex_buffer_offsets = { 0 },
-        .index_count = static_cast<uint32_t>( terrain.indices.size() ),
+        .index_count = static_cast<uint32_t>( terrain.indices.size( ) ),
     };
 
-    terrain_wireframe_gfx_task.draw_tasks.push_back(
-        {
-            .draw_resource_descriptor = draw_descriptor,
-            .descriptor_sets = { &terrain.prepass_uniform_desc_set,
-                                 &terrain.prepass_texture_desc_set,
-                                 &terrain.prepass_sampler_desc_set,
-                                 &terrain.prepass_lut_desc_set,
-                                 terrain.gamestate_desc_set },
-            .pipeline = terrain.terrain_wireframe_pipeline,
-        }
-    );
+    terrain_wireframe_gfx_task.draw_tasks.push_back( {
+        .draw_resource_descriptor = draw_descriptor,
+        .descriptor_sets =
+            { &terrain.prepass_uniform_desc_set,
+              &terrain.prepass_texture_desc_set,
+              &terrain.prepass_sampler_desc_set,
+              &terrain.prepass_lut_desc_set,
+              terrain.gamestate_desc_set },
+        .pipeline = terrain.terrain_wireframe_pipeline,
+    } );
 
     engine::add_gfx_task(
         task_list,
@@ -617,8 +615,8 @@ void draw_terrain_wireframe(
 
 void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
 {
-    const engine::State& engine = engine::State::GetConst();
-    ub_data::TerrainData terrain_ub = terrain.terrain_uniform.get_data();
+    const engine::State& engine = engine::State::GetConst( );
+    ub_data::TerrainData terrain_ub = terrain.terrain_uniform.get_data( );
 
     // Final param packs the offset
 
@@ -660,7 +658,7 @@ void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain )
     );
 
     terrain.terrain_uniform.set_data( terrain_ub );
-    terrain.terrain_uniform.update( engine.get_frame_index() );
+    terrain.terrain_uniform.update( engine.get_frame_index( ) );
 }
 
 }

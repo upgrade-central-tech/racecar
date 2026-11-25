@@ -8,8 +8,8 @@ void update_debug_uniform_buffer(
     gui::Gui& gui, atmosphere::Atmosphere& atms, UniformBuffer<ub_data::Debug>& debug_buffer
 )
 {
-    const engine::State& engine = engine::State::GetConst();
-    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+    const engine::State& engine = engine::State::GetConst( );
+    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data( );
 
     ub_data::Debug debug_ub = {
         .color = gui.debug.color,
@@ -24,8 +24,9 @@ void update_debug_uniform_buffer(
         .debug_view = (uint32_t)RuntimeSettings::GetValue( RacecarSettings::DEBUG_VIEW ),
         .ray_traced_shadows = gui.debug.ray_traced_shadows,
         .terrain_irradiance_strength = RuntimeSettings::Get<
-            RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH>(),
-        .car_irradiance_strength = RuntimeSettings::Get<RacecarSettings::CAR_IRRADIANCE_STRENGTH>(),
+            RacecarSettings::TERRAIN_IRRADIANCE_STRENGTH>( ),
+        .car_irradiance_strength = RuntimeSettings::Get<
+            RacecarSettings::CAR_IRRADIANCE_STRENGTH>( ),
         .sun_color = glm::vec4(
             atmosphere::compute_sun_color( atms_ub.sun_direction, atms_ub.radiance_exposure ),
             1.0f
@@ -33,7 +34,7 @@ void update_debug_uniform_buffer(
     };
 
     debug_buffer.set_data( debug_ub );
-    debug_buffer.update( engine.get_frame_index() );
+    debug_buffer.update( engine.get_frame_index( ) );
 }
 
 void update_material_uniform_buffers(
@@ -42,14 +43,14 @@ void update_material_uniform_buffers(
     size_t num_materials
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     gui.debug.current_editing_material = glm::clamp(
         gui.debug.current_editing_material,
         0,
         int( num_materials )
     );
     int mat_idx = gui.debug.current_editing_material;
-    auto mat_data = material_uniform_buffers[size_t( mat_idx )].get_data();
+    auto mat_data = material_uniform_buffers[size_t( mat_idx )].get_data( );
     if ( gui.debug.load_material_into_gui ) {
         gui.debug.color = mat_data.base_color;
         gui.debug.roughness = mat_data.roughness;
@@ -72,7 +73,7 @@ void update_material_uniform_buffers(
     material_uniform_buffers[size_t( mat_idx )].set_data( mat_data );
 
     for ( UniformBuffer<ub_data::Material>& material_buffer : material_uniform_buffers ) {
-        material_buffer.update( engine.get_frame_index() );
+        material_buffer.update( engine.get_frame_index( ) );
     }
 }
 

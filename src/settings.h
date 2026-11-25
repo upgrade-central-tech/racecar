@@ -100,7 +100,7 @@ RACECAR_SETTINGS_TYPEDECL( RacecarSettings::CLOUD_EXTINCTION, float );
 RACECAR_SETTINGS_TYPEDECL( RacecarSettings::CLOUD_EROSION, float );
 RACECAR_SETTINGS_TYPEDECL( RacecarSettings::AUTODRIVE_TARGET_SPEED, float );
 
-template <RacecarSettings S> typename SettingValue<S>::type Get()
+template <RacecarSettings S> typename SettingValue<S>::type Get( )
 {
     if constexpr ( std::is_same_v<typename SettingValue<S>::type, float> ) {
         return GetFloat( S );

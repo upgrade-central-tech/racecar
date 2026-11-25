@@ -14,7 +14,7 @@ void handle_sdl_window_events(
     SDL_Event& event
 )
 {
-    engine::State& engine = engine::State::GetMut();
+    engine::State& engine = engine::State::GetMut( );
     while ( SDL_PollEvent( &event ) ) {
         gui::process_event( gui, &event, atms, engine.camera, material_uniform_buffers );
         if ( !racing_camera_active( gui ) ) {

@@ -6,7 +6,7 @@ namespace racecar::engine {
 
 void execute_blit_task( const VkCommandBuffer& cmd_buf, BlitTask& blit_task, VkImage dst_image )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     VkImage src_image = blit_task.in_color->vk_image;
     VkExtent3D src_extent = blit_task.in_color->image_extent;
     VkExtent3D dst_extent = { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 };
@@ -21,18 +21,20 @@ void execute_blit_task( const VkCommandBuffer& cmd_buf, BlitTask& blit_task, VkI
     blit_region.srcSubresource.baseArrayLayer = 0;
     blit_region.srcSubresource.layerCount = 1;
     blit_region.srcOffsets[0] = { 0, 0, 0 };
-    blit_region.srcOffsets[1] = { static_cast<int32_t>( src_extent.width ),
-                                  static_cast<int32_t>( src_extent.height ),
-                                  1 };
+    blit_region.srcOffsets[1] = {
+        static_cast<int32_t>( src_extent.width ),
+        static_cast<int32_t>( src_extent.height ),
+        1 };
 
     blit_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     blit_region.dstSubresource.mipLevel = 0;
     blit_region.dstSubresource.baseArrayLayer = 0;
     blit_region.dstSubresource.layerCount = 1;
     blit_region.dstOffsets[0] = { 0, 0, 0 };
-    blit_region.dstOffsets[1] = { static_cast<int32_t>( dst_extent.width ),
-                                  static_cast<int32_t>( dst_extent.height ),
-                                  1 };
+    blit_region.dstOffsets[1] = {
+        static_cast<int32_t>( dst_extent.width ),
+        static_cast<int32_t>( dst_extent.height ),
+        1 };
 
     // Nasty code used for the swapchain.
     if ( blit_task.out_color == nullptr ) {

@@ -13,7 +13,7 @@ void SettingsCheckbox( const char* label, RacecarSettings s )
     if ( ImGui::Checkbox( label, &enabled ) ) {
         RuntimeSettings::SetEnabled( s, enabled );
     }
-    ImGui::EndDisabled();
+    ImGui::EndDisabled( );
 }
 
 void SettingsCombo( const char* label, RacecarSettings s )
@@ -30,16 +30,16 @@ void SettingsCombo( const char* label, RacecarSettings s )
             if ( ImGui::Selectable( RuntimeSettings::GetOptionLabel( s, i ), is_selected ) ) {
                 RuntimeSettings::SetValue( s, i );
             }
-            ImGui::EndDisabled();
+            ImGui::EndDisabled( );
 
             if ( is_selected ) {
-                ImGui::SetItemDefaultFocus();
+                ImGui::SetItemDefaultFocus( );
             }
         }
 
-        ImGui::EndCombo();
+        ImGui::EndCombo( );
     }
-    ImGui::EndDisabled();
+    ImGui::EndDisabled( );
 }
 
 void SettingsSliderFloat( const char* label, RacecarSettings s )
@@ -56,7 +56,7 @@ void SettingsSliderFloat( const char* label, RacecarSettings s )
          ) ) {
         RuntimeSettings::SetFloat( s, value );
     }
-    ImGui::EndDisabled();
+    ImGui::EndDisabled( );
 }
 
 }

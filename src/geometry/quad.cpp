@@ -8,22 +8,23 @@ namespace racecar::geometry::quad {
 
 Mesh* Mesh::instance = nullptr;
 
-Mesh create()
+Mesh create( )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
     Mesh mesh = {
-        .vertices = {
+        .vertices =
+            {
                 glm::vec2( -1.f, -1.f ),
                 glm::vec2( 1.f, -1.f ),
                 glm::vec2( -1.f, 1.f ),
                 glm::vec2( 1.f, 1.f ),
             },
-            .indices = {2, 1, 0, 2, 3, 1},
+        .indices = { 2, 1, 0, 2, 3, 1 },
     };
 
-    const size_t vertex_buffer_size = mesh.vertices.size() * sizeof( Vertex );
-    const size_t index_buffer_size = mesh.indices.size() * sizeof( uint32_t );
+    const size_t vertex_buffer_size = mesh.vertices.size( ) * sizeof( Vertex );
+    const size_t index_buffer_size = mesh.indices.size( ) * sizeof( uint32_t );
 
     try {
         mesh.mesh_buffers = {
@@ -67,10 +68,10 @@ Mesh create()
         );
 
         void* data = staging.info.pMappedData;
-        std::memcpy( data, mesh.vertices.data(), vertex_buffer_size );
+        std::memcpy( data, mesh.vertices.data( ), vertex_buffer_size );
         std::memcpy(
             static_cast<char*>( data ) + vertex_buffer_size,
-            mesh.indices.data(),
+            mesh.indices.data( ),
             index_buffer_size
         );
 

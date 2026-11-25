@@ -29,7 +29,7 @@ void create_lut_sets(
 
     *lut_brdf = engine::create_image_from_load( BRDF_LUT_PATH, 2, VK_FORMAT_R16G16_SFLOAT, false );
 
-    *glint_noise = geometry::generate_glint_noise();
+    *glint_noise = geometry::generate_glint_noise( );
 
     engine::update_descriptor_set_image(
         *lut_sets,

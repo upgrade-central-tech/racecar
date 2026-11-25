@@ -38,7 +38,7 @@ struct GameState {
 
     std::array<glm::vec3, ub_data::ROAD_NUM_POINTS> spline_positions = [] {
         std::array<glm::vec3, ub_data::ROAD_NUM_POINTS> points;
-        for ( size_t i = 0; i < points.size(); i++ ) {
+        for ( size_t i = 0; i < points.size( ); i++ ) {
             float sign = i % 2 == 0 ? -1.0f : 1.0f;
 
             points[i] = glm::vec3(
@@ -48,7 +48,7 @@ struct GameState {
             );
         }
         return points;
-    }();
+    }( );
 
     float yaw = 0.0f;
     float integrated_distance_traveled = 0.0f;

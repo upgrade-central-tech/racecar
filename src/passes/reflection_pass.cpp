@@ -28,27 +28,32 @@ void create_deferred_reflection_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = {
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Position ),
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Velocity ),
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Normal ),
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                                       .src_access = VK_ACCESS_2_NONE,
-                                       .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                                       .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                       .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                       .image = &reflection_color,
-                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                                       .src_access = VK_ACCESS_2_NONE,
-                                       .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                                       .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                       .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                       .image = &reflection_data,
-                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-            },
+            .image_barriers =
+                {
+                    deferred::color_write_to_frag_read( gbuffers.GBuffer_Position ),
+                    deferred::color_write_to_frag_read( gbuffers.GBuffer_Velocity ),
+                    deferred::color_write_to_frag_read( gbuffers.GBuffer_Normal ),
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = &reflection_color,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = &reflection_data,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                },
             .label = "Deferred Reflection Pipeline Barrier" }
     );
 }
@@ -62,8 +67,8 @@ void create_reflection_pass_resources(
     engine::GfxTask* reflection_gfx_task
 )
 {
-    const engine::State& engine = engine::State::GetConst();
-    geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
+    const engine::State& engine = engine::State::GetConst( );
+    geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance( );
 
     *reflection_color = engine::create_image_mips(
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
@@ -101,7 +106,7 @@ void create_reflection_pass_resources(
         false,
         false,
         vk::create::shader_module( REFLECTION_PASS_SHADER_MODULE_PATH ),
-        engine::ShaderEntryPointStrings::defaults(),
+        engine::ShaderEntryPointStrings::defaults( ),
         false,
         false
     );
@@ -110,22 +115,22 @@ void create_reflection_pass_resources(
         .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
         .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
         .vertex_buffer_offsets = { 0 },
-        .index_count = uint32_t( quad_mesh.indices.size() ),
+        .index_count = uint32_t( quad_mesh.indices.size( ) ),
     };
 
     engine::DrawTask reflection_prepass_task {
         .draw_resource_descriptor = reflection_prepass_desc,
-        .descriptor_sets = { &desc_sets.uniform_desc_set,
-                             &desc_sets.sampler_desc_set,
-                             &desc_sets.gbuffer_desc_set,
-                             &desc_sets.car_tlas_desc_set,
-                             &desc_sets.car_desc_set,
-                             &desc_sets.combined_textures_desc_set,
-                             &desc_sets.terrain_shading_desc_set,
-                             &desc_sets.sun_visibility_desc_set,
-                             &desc_sets.gamestate_desc_set },
-        .pipeline = *reflection_pipeline
-    };
+        .descriptor_sets =
+            { &desc_sets.uniform_desc_set,
+              &desc_sets.sampler_desc_set,
+              &desc_sets.gbuffer_desc_set,
+              &desc_sets.car_tlas_desc_set,
+              &desc_sets.car_desc_set,
+              &desc_sets.combined_textures_desc_set,
+              &desc_sets.terrain_shading_desc_set,
+              &desc_sets.sun_visibility_desc_set,
+              &desc_sets.gamestate_desc_set },
+        .pipeline = *reflection_pipeline };
 
     *reflection_buffer_desc_set = engine::generate_descriptor_set(
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
@@ -146,9 +151,10 @@ void create_reflection_pass_resources(
         1
     );
 
-    *reflection_gfx_task = { .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
-                             .color_attachments = { reflection_color, reflection_data },
-                             .extent = engine.swapchain.extent };
+    *reflection_gfx_task = {
+        .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
+        .color_attachments = { reflection_color, reflection_data },
+        .extent = engine.swapchain.extent };
 
     reflection_gfx_task->draw_tasks.push_back( reflection_prepass_task );
 }

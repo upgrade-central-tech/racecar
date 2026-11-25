@@ -4,9 +4,9 @@
 
 namespace racecar::engine {
 
-VkFence create_fence()
+VkFence create_fence( )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
     VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
     VkFence fence;
     vk::check(
@@ -20,7 +20,7 @@ void begin_precompute_commandbuffer(
     VkCommandBuffer* precompute_cmdbuf, const VkFence& precompute_fence
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
     VkCommandBufferBeginInfo command_buffer_begin_info = vk::create::command_buffer_begin_info(
         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
     );
@@ -31,7 +31,7 @@ void begin_precompute_commandbuffer(
 
 void submit_precompute_cmdbuf( VkFence& precompute_fence, VkCommandBuffer& precompute_cmdbuf )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
     vkEndCommandBuffer( precompute_cmdbuf );
     VkSubmitInfo submit_info = { };
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

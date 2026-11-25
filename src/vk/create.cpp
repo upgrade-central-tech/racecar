@@ -37,7 +37,7 @@ VkFenceCreateInfo fence_info( VkFenceCreateFlags flags )
     };
 }
 
-VkSemaphoreCreateInfo semaphore_info()
+VkSemaphoreCreateInfo semaphore_info( )
 {
     return { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 }
@@ -92,19 +92,21 @@ VkImageViewCreateInfo image_view_info(
     VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags
 )
 {
-    VkImageViewCreateInfo info = { .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+    VkImageViewCreateInfo info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
 
         .viewType = image_view,
         .format = format,
 
-        .subresourceRange = {
-            .aspectMask = aspect_flags,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        }, 
+        .subresourceRange =
+            {
+                .aspectMask = aspect_flags,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
     };
 
     return info;
@@ -171,39 +173,39 @@ VkPipelineShaderStageCreateInfo pipeline_shader_stage_info(
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = flags,
         .module = shader_module,
-        .pName = name.data(),
+        .pName = name.data( ),
     };
 }
 
 VkShaderModule shader_module( std::filesystem::path shader_path )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
-    std::string absolute = std::filesystem::absolute( shader_path ).string();
+    vk::Common& vulkan = vk::Common::GetMut( );
+    std::string absolute = std::filesystem::absolute( shader_path ).string( );
 
     if ( !std::filesystem::exists( shader_path ) ) {
         throw Exception( "[Shader] File \"{}\" does not exist", absolute );
     }
 
-    std::ifstream file( shader_path.string(), std::ios::ate | std::ios::binary );
+    std::ifstream file( shader_path.string( ), std::ios::ate | std::ios::binary );
 
-    if ( !file.is_open() ) {
+    if ( !file.is_open( ) ) {
         throw Exception( "[Shader] Could not open file \"{}\"", absolute );
     }
 
     // Use read position to determine size of file and pre-allocate buffer
-    std::streampos file_size = file.tellg();
+    std::streampos file_size = file.tellg( );
     std::vector<char> shader_buffer( static_cast<size_t>( file_size ) );
 
     file.seekg( 0, std::ios::beg );
-    file.read( shader_buffer.data(), static_cast<std::streamsize>( file_size ) );
-    file.close();
+    file.read( shader_buffer.data( ), static_cast<std::streamsize>( file_size ) );
+    file.close( );
 
     // The pointer is of type `uint32_t`, so we have to cast it. std::vector's default allocator
     // ensures the data satisfies the alignment requirements
     VkShaderModuleCreateInfo create_info {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = shader_buffer.size(),
-        .pCode = reinterpret_cast<const uint32_t*>( shader_buffer.data() ),
+        .codeSize = shader_buffer.size( ),
+        .pCode = reinterpret_cast<const uint32_t*>( shader_buffer.data( ) ),
     };
 
     VkShaderModule shader_module;

@@ -21,26 +21,26 @@ namespace fs = std::filesystem;
 static constexpr unsigned int CURRENT_VERSION = 1;
 static constexpr std::string_view PRESETS_FOLDER_PATH = "../presets";
 
-std::vector<Preset> load_presets()
+std::vector<Preset> load_presets( )
 {
     std::vector<Preset> presets;
 
-    log::info( "[preset] Loading presets from: {}", fs::absolute( PRESETS_FOLDER_PATH ).string() );
+    log::info( "[preset] Loading presets from: {}", fs::absolute( PRESETS_FOLDER_PATH ).string( ) );
 
     for ( const auto& entry : fs::directory_iterator( PRESETS_FOLDER_PATH ) ) {
-        const fs::path entry_path = entry.path();
+        const fs::path entry_path = entry.path( );
 
-        if ( entry_path.has_extension() && entry_path.extension() == ".json" ) {
+        if ( entry_path.has_extension( ) && entry_path.extension( ) == ".json" ) {
             try {
                 presets.push_back( parse_preset_json( entry_path ) );
             } catch ( const std::exception& ex ) {
-                log::error( "[preset] Failed to parse preset: {}", ex.what() );
+                log::error( "[preset] Failed to parse preset: {}", ex.what( ) );
                 throw;
             }
         }
     }
 
-    log::info( "[preset] Loaded {} presets", presets.size() );
+    log::info( "[preset] Loaded {} presets", presets.size( ) );
 
     return presets;
 }
@@ -52,17 +52,17 @@ Preset parse_preset_json( fs::path json_path )
     fs::path absolute = fs::absolute( json_path );
     std::ifstream file( absolute );
 
-    if ( !file.is_open() ) {
+    if ( !file.is_open( ) ) {
         throw Exception(
             std::format(
                 "[preset] Could not open preset JSON file \"{}\"",
-                absolute.filename().string()
+                absolute.filename( ).string( )
             )
         );
     }
 
     json data = json::parse( file );
-    int version = data["version"].get<int>();
+    int version = data["version"].get<int>( );
 
     if ( version != CURRENT_VERSION ) {
         throw Exception(
@@ -75,23 +75,23 @@ Preset parse_preset_json( fs::path json_path )
 
     Preset preset = {
         .version = static_cast<unsigned int>( version ),
-        .name = absolute.stem().string(),
+        .name = absolute.stem( ).string( ),
 
-        .sun_zenith = data["sunZenith"].get<decltype( Preset::sun_zenith )>(),
-        .sun_azimuth = data["sunAzimuth"].get<decltype( Preset::sun_azimuth )>(),
+        .sun_zenith = data["sunZenith"].get<decltype( Preset::sun_zenith )>( ),
+        .sun_azimuth = data["sunAzimuth"].get<decltype( Preset::sun_azimuth )>( ),
 
-        .wetness = data["wetness"].get<decltype( Preset::wetness )>(),
-        .snow = data["snow"].get<decltype( Preset::snow )>(),
-        .scrolling_speed = data["scrollingSpeed"].get<decltype( Preset::scrolling_speed )>(),
-        .bumpiness = data["bumpiness"].get<decltype( Preset::bumpiness )>(),
+        .wetness = data["wetness"].get<decltype( Preset::wetness )>( ),
+        .snow = data["snow"].get<decltype( Preset::snow )>( ),
+        .scrolling_speed = data["scrollingSpeed"].get<decltype( Preset::scrolling_speed )>( ),
+        .bumpiness = data["bumpiness"].get<decltype( Preset::bumpiness )>( ),
 
         .camera_center = { camera_center[0], camera_center[1], camera_center[2] },
-        .camera_radius = camera["radius"].get<decltype( Preset::camera_radius )>(),
-        .camera_azimuth = camera["azimuth"].get<decltype( Preset::camera_azimuth )>(),
-        .camera_zenith = camera["zenith"].get<decltype( Preset::camera_zenith )>(),
+        .camera_radius = camera["radius"].get<decltype( Preset::camera_radius )>( ),
+        .camera_azimuth = camera["azimuth"].get<decltype( Preset::camera_azimuth )>( ),
+        .camera_zenith = camera["zenith"].get<decltype( Preset::camera_zenith )>( ),
 
         .duration_opt = data.contains( "duration" )
-            ? std::make_optional( data["duration"].get<float>() )
+            ? std::make_optional( data["duration"].get<float>( ) )
             : std::nullopt,
     };
 
@@ -99,7 +99,7 @@ Preset parse_preset_json( fs::path json_path )
         const json& material_color = material["color"];
 
         Preset::MaterialData material_data = {
-            .slot = material["slot"].get<int>(),
+            .slot = material["slot"].get<int>( ),
             .data =
                 gui::Material {
                     .color = glm::vec4(
@@ -108,14 +108,14 @@ Preset parse_preset_json( fs::path json_path )
                         material_color[2],
                         material_color[3]
                     ),
-                    .roughness = material["roughness"].get<float>(),
-                    .metallic = material["metallic"].get<float>(),
-                    .clearcoat_roughness = material["clearcoatRoughness"].get<float>(),
-                    .clearcoat_weight = material["clearcoatWeight"].get<float>(),
-                    .glintiness = material["glintiness"].get<float>(),
-                    .glint_log_density = material["glintLogDensity"].get<float>(),
-                    .glint_roughness = material["glintRoughness"].get<float>(),
-                    .glint_randomness = material["glintRandomness"].get<float>(),
+                    .roughness = material["roughness"].get<float>( ),
+                    .metallic = material["metallic"].get<float>( ),
+                    .clearcoat_roughness = material["clearcoatRoughness"].get<float>( ),
+                    .clearcoat_weight = material["clearcoatWeight"].get<float>( ),
+                    .glintiness = material["glintiness"].get<float>( ),
+                    .glint_log_density = material["glintLogDensity"].get<float>( ),
+                    .glint_roughness = material["glintRoughness"].get<float>( ),
+                    .glint_randomness = material["glintRandomness"].get<float>( ),
                 },
         };
 
@@ -131,10 +131,10 @@ void update_preset_transition(
     atmosphere::Atmosphere& atms
 )
 {
-    engine::State& engine = engine::State::GetMut();
-    PresetTransition& transition = gui.preset.transition.value();
+    engine::State& engine = engine::State::GetMut( );
+    PresetTransition& transition = gui.preset.transition.value( );
 
-    float t = std::invoke( [&]() -> float {
+    float t = std::invoke( [&]( ) -> float {
         if ( transition.duration == 0.f ) {
             // Instantly complete transition if duration is zero
             return 1.f;
@@ -190,7 +190,7 @@ void update_preset_transition(
     engine.gamestate.speed_lock = true;
     gui.demo.bumpiness = glm::mix( i.bumpiness, f.bumpiness, t );
 
-    for ( size_t idx = 0; idx < i.materials.size(); ++idx ) {
+    for ( size_t idx = 0; idx < i.materials.size( ); ++idx ) {
         const gui::Material& i_mat = i.materials[idx].data;
         const gui::Material& f_mat = f.materials[idx].data;
 
@@ -209,7 +209,7 @@ void update_preset_transition(
         float glint_randomness = glm::mix( i_mat.glint_randomness, f_mat.glint_randomness, t );
 
         size_t material_idx = static_cast<size_t>( i.materials[idx].slot );
-        auto mat_data = material_uniform_buffers[material_idx].get_data();
+        auto mat_data = material_uniform_buffers[material_idx].get_data( );
 
         mat_data.base_color = color;
         mat_data.roughness = roughness;
@@ -232,7 +232,7 @@ void update_preset_transition(
         gui.debug.glint_randomness = glint_randomness;
 
         material_uniform_buffers[material_idx].set_data( mat_data );
-        material_uniform_buffers[material_idx].update( engine.get_frame_index() );
+        material_uniform_buffers[material_idx].update( engine.get_frame_index( ) );
     }
 
     engine.camera.center = glm::mix( i.camera_center, f.camera_center, t );

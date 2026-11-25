@@ -57,7 +57,7 @@ namespace racecar {
 
 void run( bool use_fullscreen )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
     // ================================================================================================================
     // GLOBAL RESOURCE INITIALIZATION
     // ================================================================================================================
@@ -65,7 +65,7 @@ void run( bool use_fullscreen )
     // INITIALIZE VULKAN CONTEXT + ENGINE CONTEXT
     Context ctx = initialize_context( use_fullscreen );
     engine::initialize( ctx );
-    engine::State& engine = engine::State::GetMut();
+    engine::State& engine = engine::State::GetMut( );
     gui::Gui gui = gui::initialize( ctx );
 
     // SCENE LOADING/PROCESSING
@@ -86,13 +86,13 @@ void run( bool use_fullscreen )
     load_samplers( &linear_sampler, &point_sampler, &sampler_desc_set );
 
     // LOAD MATERIAL DATA AND BUFFERS
-    size_t num_materials = scene.materials.size();
+    size_t num_materials = scene.materials.size( );
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
     std::vector<UniformBuffer<ub_data::Material>> material_uniform_buffers( num_materials );
     load_materials( scene, num_materials, &material_desc_sets, &material_uniform_buffers );
 
     // LOAD MODEL MATRIX UNIFORM BUFFERS
-    size_t num_nodes = scene.nodes.size();
+    size_t num_nodes = scene.nodes.size( );
     std::vector<engine::DescriptorSet> model_mat_desc_sets( num_nodes );
     std::vector<UniformBuffer<ub_data::ModelMat>> model_mat_uniform_buffers( num_nodes );
     load_model_mat_uniform_buffers(
@@ -115,7 +115,7 @@ void run( bool use_fullscreen )
     // LOAD GLOBAL QUAD MESH
     // TODO: It might be beneficial if meshes like these are global; helps avoid rebuilding them for
     // whatever reason.
-    geometry::quad::Mesh quad_mesh = geometry::quad::create();
+    geometry::quad::Mesh quad_mesh = geometry::quad::create( );
     geometry::quad::Mesh::instance = &quad_mesh;
 
     // ================================================================================================================
@@ -123,7 +123,7 @@ void run( bool use_fullscreen )
     // ================================================================================================================
 
     // INITIALIZE GBUFFER
-    deferred::GBuffers gbuffers = deferred::initialize_GBuffers();
+    deferred::GBuffers gbuffers = deferred::initialize_GBuffers( );
 
     // CREATE DEPTH PREPASS PIPELINE
     engine::DescriptorSet depth_uniform_desc_set;
@@ -157,9 +157,9 @@ void run( bool use_fullscreen )
     create_screen_buffers( &screen_color, &screen_buffer, &screen_history );
 
     // SETUP ATMOSPHERIC/VOLUMETRIC RESOURCES
-    atmosphere::Atmosphere atms = atmosphere::initialize();
+    atmosphere::Atmosphere atms = atmosphere::initialize( );
     atmosphere::AtmosphereBaker atms_baker = { .atmosphere = &atms };
-    volumetric::Volumetric volumetric = volumetric::initialize();
+    volumetric::Volumetric volumetric = volumetric::initialize( );
 
     UniformBuffer<ub_data::GameStateBuffer> gamestate_buffer;
     engine::DescriptorSet gamestate_desc_set;
@@ -206,7 +206,7 @@ void run( bool use_fullscreen )
     alloc_car_tlas( objects );
 
     // Create car acceleration structure descriptor set
-    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set();
+    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set( );
     std::vector<VkAccelerationStructureKHR> car_tlas_handles;
     for ( const vk::rt::AccelerationStructure& tlas : engine.tlas ) {
         car_tlas_handles.push_back( tlas.handle );
@@ -223,7 +223,7 @@ void run( bool use_fullscreen )
         engine.frame_overlap
     );
     rt_texture_uniform_data.set_data( rt_texture_uniform );
-    rt_texture_uniform_data.update_all();
+    rt_texture_uniform_data.update_all( );
 
     // Create uniform buffer for BLAS offsets
     UniformBuffer<ub_data::BLASOffsets> offset_data = create_uniform_buffer(
@@ -231,7 +231,7 @@ void run( bool use_fullscreen )
         static_cast<size_t>( engine.frame_overlap )
     );
     offset_data.set_data( blas_offsets );
-    offset_data.update_all();
+    offset_data.update_all( );
 
     // Initialize RT vertex data buffer
     vk::mem::AllocatedBuffer padded_vertex_data_buffer = create_padded_vertex_data_buffer(
@@ -264,15 +264,11 @@ void run( bool use_fullscreen )
     // TERRAIN init
     // ================================================================================================================
 
-    geometry::TerrainPrepassInfo prepass_terrain_info = { &camera_buffer,
-                                                          &debug_buffer,
-                                                          &gbuffers,
-                                                          &glint_noise,
-                                                          &gamestate_desc_set };
+    geometry::TerrainPrepassInfo prepass_terrain_info =
+        { &camera_buffer, &debug_buffer, &gbuffers, &glint_noise, &gamestate_desc_set };
 
-    geometry::TerrainLightingInfo terrain_lighting_info = { &camera_buffer, &debug_buffer,
-                                                            &atms_baker,    &gbuffers,
-                                                            &screen_color,  &lut_brdf };
+    geometry::TerrainLightingInfo terrain_lighting_info =
+        { &camera_buffer, &debug_buffer, &atms_baker, &gbuffers, &screen_color, &lut_brdf };
 
     geometry::Terrain test_terrain;
     geometry::initialize_terrain( test_terrain, prepass_terrain_info, terrain_lighting_info );
@@ -292,15 +288,16 @@ void run( bool use_fullscreen )
     engine::DescriptorSet reflection_buffer_desc_set;
     engine::GfxTask reflection_gfx_task;
     create_reflection_pass_resources(
-        ReflectionPassDescSets { .uniform_desc_set = uniform_desc_set,
-                                 .sampler_desc_set = sampler_desc_set,
-                                 .gbuffer_desc_set = gbuffers.desc_set,
-                                 .car_tlas_desc_set = car_tlas_desc_set,
-                                 .car_desc_set = car_descriptor_set,
-                                 .combined_textures_desc_set = combined_textures_desc_set,
-                                 .terrain_shading_desc_set = terrain_rt.shading_desc_set,
-                                 .sun_visibility_desc_set = sun_visibility.visibility_read_desc_set,
-                                 .gamestate_desc_set = gamestate_desc_set },
+        ReflectionPassDescSets {
+            .uniform_desc_set = uniform_desc_set,
+            .sampler_desc_set = sampler_desc_set,
+            .gbuffer_desc_set = gbuffers.desc_set,
+            .car_tlas_desc_set = car_tlas_desc_set,
+            .car_desc_set = car_descriptor_set,
+            .combined_textures_desc_set = combined_textures_desc_set,
+            .terrain_shading_desc_set = terrain_rt.shading_desc_set,
+            .sun_visibility_desc_set = sun_visibility.visibility_read_desc_set,
+            .gamestate_desc_set = gamestate_desc_set },
         &reflection_color,
         &reflection_data,
         &reflection_pipeline,
@@ -317,9 +314,10 @@ void run( bool use_fullscreen )
 #endif // RACECAR_RAY_TRACING
 
     // AO Post Processing
-    engine::post::AoPass ao_pass { .camera_buffer = &camera_buffer,
-                                   .GBuffer_Normal = &gbuffers.GBuffer_Normal,
-                                   .GBuffer_Depth = &gbuffers.GBuffer_Depth };
+    engine::post::AoPass ao_pass {
+        .camera_buffer = &camera_buffer,
+        .GBuffer_Normal = &gbuffers.GBuffer_Normal,
+        .GBuffer_Depth = &gbuffers.GBuffer_Depth };
     initialize_ao_pass( ao_pass );
 
     // Set up car lighting pass
@@ -334,8 +332,7 @@ void run( bool use_fullscreen )
         .reflection_buffer_desc_set = reflection_buffer_desc_set,
 #endif // RACECAR_RAY_TRACING
         .sun_visibility_desc_set = sun_visibility.visibility_read_desc_set,
-        .ao_read_desc_set = ao_pass.ao_read_descriptor_set
-    };
+        .ao_read_desc_set = ao_pass.ao_read_descriptor_set };
 
     // Create car lighting pass pipeline
     engine::Pipeline lighting_pass_pipeline;
@@ -394,7 +391,7 @@ void run( bool use_fullscreen )
     // PRECOMPUTE
     // ================================================================================================================
 
-    VkFence precompute_fence = engine::create_fence();
+    VkFence precompute_fence = engine::create_fence( );
 
     VkCommandBuffer& precompute_cmdbuf = engine.frames[0].start_cmdbuf;
     engine::begin_precompute_commandbuffer( &precompute_cmdbuf, precompute_fence );
@@ -573,7 +570,7 @@ void run( bool use_fullscreen )
     std::chrono::steady_clock::time_point current_tick;
 
     while ( !will_quit ) {
-        current_tick = std::chrono::steady_clock::now();
+        current_tick = std::chrono::steady_clock::now( );
 
         // Handle QUIT, MINIMIZED, RESTORED events
         handle_sdl_window_events(
@@ -595,10 +592,10 @@ void run( bool use_fullscreen )
             continue;
         }
 
-        engine::begin_frame();
+        engine::begin_frame( );
 
         // Handle preset transitioning
-        if ( gui.preset.transition.has_value() ) {
+        if ( gui.preset.transition.has_value( ) ) {
             update_preset_transition( gui, material_uniform_buffers, atms );
         }
 
@@ -614,7 +611,7 @@ void run( bool use_fullscreen )
             volumetric
         );
 
-        CameraData camera_data = get_camera_data();
+        CameraData camera_data = get_camera_data( );
 
         camera::OrbitCamera& camera = engine.camera;
 
@@ -658,7 +655,7 @@ void run( bool use_fullscreen )
         geometry::update_terrain_uniform_buffer( gui, test_terrain );
 
         // Scene node transforms, sharing one `discovered` set so a node is only propagated once
-        std::vector<bool> discovered = std::vector<bool>( scene.nodes.size(), false );
+        std::vector<bool> discovered = std::vector<bool>( scene.nodes.size( ), false );
 
         update_car_transform( gui, scene, model_mat_uniform_buffers, volumetric, discovered );
 
@@ -689,13 +686,13 @@ void run( bool use_fullscreen )
         // Make new screen visible
         SDL_UpdateWindowSurface( ctx.window );
 
-        auto new_tick = std::chrono::steady_clock::now();
+        auto new_tick = std::chrono::steady_clock::now( );
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             new_tick - current_tick
         );
 
         // Convert milliseconds to seconds
-        engine.delta = static_cast<double>( duration.count() ) * 0.001;
+        engine.delta = static_cast<double>( duration.count( ) ) * 0.001;
         engine.time += engine.delta;
         current_tick = new_tick;
     }
@@ -705,10 +702,10 @@ void run( bool use_fullscreen )
     // ================================================================================================================
 
     vkDeviceWaitIdle( vulkan.device );
-    gui::free();
-    engine::free();
-    vulkan.destructor_stack.execute_cleanup();
-    vk::free();
+    gui::free( );
+    engine::free( );
+    vulkan.destructor_stack.execute_cleanup( );
+    vk::free( );
     sdl::free( ctx.window );
 }
 

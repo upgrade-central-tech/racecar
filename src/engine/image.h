@@ -24,7 +24,7 @@ struct Image {
 
     std::vector<VkImageView> mip_levels;
 
-    Image() = default;
+    Image( ) = default;
 
     Image( const Image& ) = delete;
     Image& operator=( const Image& ) = delete;

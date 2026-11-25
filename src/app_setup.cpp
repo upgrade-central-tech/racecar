@@ -14,7 +14,7 @@ namespace {
 
 constexpr size_t NUM_MATERIAL_TEXTURE_BINDINGS = 3;
 
-engine::Image create_fallback_texture()
+engine::Image create_fallback_texture( )
 {
     uint32_t white = 0xFFFFFFFF;
 
@@ -54,7 +54,7 @@ void load_camera_debug_uniform_buffers(
     engine::DescriptorSet* uniform_desc_set
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     *camera_buffer = create_uniform_buffer<ub_data::Camera>(
         { },
         static_cast<size_t>( engine.frame_overlap )
@@ -80,7 +80,7 @@ void load_samplers(
     VkSampler* linear_sampler, VkSampler* point_sampler, engine::DescriptorSet* sampler_desc_set
 )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
     // Simple set up for linear sampler
     VkSamplerCreateInfo sampler_linear_create_info = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -131,7 +131,7 @@ void load_materials(
     std::vector<UniformBuffer<ub_data::Material>>* material_uniform_buffers
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     for ( size_t i = 0; i < num_materials; i++ ) {
         // Generate a separate texture descriptor set for each of the materials
         ( *material_desc_sets )[i] = engine::generate_descriptor_set(
@@ -151,11 +151,11 @@ void load_materials(
             static_cast<size_t>( engine.frame_overlap )
         );
         ub_data::Material material_ub = {
-            .has_base_color_texture = mat.base_color_texture_index.has_value() ? 1 : 0,
-            .has_metallic_roughness_texture = mat.metallic_roughness_texture_index.has_value() ? 1
-                                                                                               : 0,
-            .has_normal_texture = mat.normal_texture_index.has_value() ? 1 : 0,
-            .has_emmisive_texture = mat.emmisive_texture_index.has_value() ? 1 : 0,
+            .has_base_color_texture = mat.base_color_texture_index.has_value( ) ? 1 : 0,
+            .has_metallic_roughness_texture = mat.metallic_roughness_texture_index.has_value( ) ? 1
+                                                                                                : 0,
+            .has_normal_texture = mat.normal_texture_index.has_value( ) ? 1 : 0,
+            .has_emmisive_texture = mat.emmisive_texture_index.has_value( ) ? 1 : 0,
 
             .base_color = glm::vec4( mat.base_color, mat.alpha ),
 
@@ -180,7 +180,7 @@ void load_materials(
         };
 
         material_buffer.set_data( material_ub );
-        material_buffer.update_all();
+        material_buffer.update_all( );
 
         engine::update_descriptor_set_uniform( ( *material_desc_sets )[i], material_buffer, 3 );
         ( *material_uniform_buffers )[i] = std::move( material_buffer );
@@ -194,14 +194,14 @@ void load_model_mat_uniform_buffers(
     std::vector<UniformBuffer<ub_data::ModelMat>>* model_mat_uniform_buffers
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     for ( size_t i = 0; i < num_nodes; i++ ) {
         ( *model_mat_desc_sets )[i] = engine::generate_descriptor_set(
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
             VK_SHADER_STAGE_VERTEX_BIT
         );
 
-        scene::Node* node = scene->nodes[i].get();
+        scene::Node* node = scene->nodes[i].get( );
         glm::mat4 transform = node->transform;
         while ( node->parent != nullptr ) {
             node = node->parent;
@@ -213,11 +213,12 @@ void load_model_mat_uniform_buffers(
             static_cast<size_t>( engine.frame_overlap )
         );
 
-        ub_data::ModelMat model_mat_ub = { .model_mat = transform,
-                                           .inv_model_mat = glm::inverse( transform ),
-                                           .prev_model_mat = transform };
+        ub_data::ModelMat model_mat_ub = {
+            .model_mat = transform,
+            .inv_model_mat = glm::inverse( transform ),
+            .prev_model_mat = transform };
         model_mat_buffer.set_data( model_mat_ub );
-        model_mat_buffer.update_all();
+        model_mat_buffer.update_all( );
 
         engine::update_descriptor_set_uniform( ( *model_mat_desc_sets )[i], model_mat_buffer, 0 );
         ( *model_mat_uniform_buffers )[i] = std::move( model_mat_buffer );
@@ -231,7 +232,7 @@ void create_raymarch_tex_sets( engine::DescriptorSet* raymarch_tex_sets )
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     );
 
-    engine::Image test_data_3D = geometry::generate_test_3D();
+    engine::Image test_data_3D = geometry::generate_test_3D( );
     engine::update_descriptor_set_image(
         *raymarch_tex_sets,
         test_data_3D,
@@ -244,7 +245,7 @@ void create_screen_buffers(
     engine::Image* screen_color, engine::Image* screen_buffer, engine::Image* screen_history
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     *screen_color = engine::create_image(
         { engine.swapchain.extent.width, engine.swapchain.extent.height, 1 },
         VK_FORMAT_R16G16B16A16_SFLOAT,
@@ -289,12 +290,12 @@ void load_model_primitive_material_data(
     std::vector<engine::DescriptorSet>& material_desc_sets
 )
 {
-    const engine::Image fallback_texture = create_fallback_texture();
+    const engine::Image fallback_texture = create_fallback_texture( );
 
     int tex_count = 0;
     for ( const std::unique_ptr<scene::Node>& node : scene.nodes ) {
-        if ( node->mesh.has_value() ) {
-            const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value();
+        if ( node->mesh.has_value( ) ) {
+            const std::unique_ptr<scene::Mesh>& mesh = node->mesh.value( );
 
             for ( const scene::Primitive& prim : mesh->primitives ) {
                 if ( static_cast<size_t>( tex_count ) >= ub_data::MAX_RT_PRIMITIVES ) {
@@ -321,26 +322,26 @@ void load_model_primitive_material_data(
                                                        .metallic_roughness_texture_index;
 
                     textures_needed.push_back(
-                        albedo_index ? &scene.textures[static_cast<size_t>( albedo_index.value() )]
+                        albedo_index ? &scene.textures[static_cast<size_t>( albedo_index.value( ) )]
                                      : nullptr
                     );
                     textures_needed.push_back(
-                        normal_index ? &scene.textures[static_cast<size_t>( normal_index.value() )]
+                        normal_index ? &scene.textures[static_cast<size_t>( normal_index.value( ) )]
                                      : nullptr
                     );
                     textures_needed.push_back(
                         metallic_roughness_index
                             ? &scene.textures[static_cast<size_t>( metallic_roughness_index
-                                                                       .value() )]
+                                                                       .value( ) )]
                             : nullptr
                     );
 
                     if ( albedo_index ) {
                         albedo_textures.push_back(
-                            scene.textures[static_cast<size_t>( albedo_index.value() )].data.get()
+                            scene.textures[static_cast<size_t>( albedo_index.value( ) )].data.get( )
                         );
                         rt_texture_uniform.albedo_texture_index[tex_count] = int(
-                            albedo_textures.size() - 1
+                            albedo_textures.size( ) - 1
                         );
                     } else {
                         rt_texture_uniform.albedo_texture_index[tex_count] = -1;
@@ -348,11 +349,11 @@ void load_model_primitive_material_data(
 
                     if ( metallic_roughness_index ) {
                         metallic_roughness_textures.push_back(
-                            scene.textures[static_cast<size_t>( metallic_roughness_index.value() )]
-                                .data.get()
+                            scene.textures[static_cast<size_t>( metallic_roughness_index.value( ) )]
+                                .data.get( )
                         );
                         rt_texture_uniform.metallic_roughness_texture_index[tex_count] = int(
-                            metallic_roughness_textures.size() - 1
+                            metallic_roughness_textures.size( ) - 1
                         );
                     } else {
                         rt_texture_uniform.metallic_roughness_texture_index[tex_count] = -1;
@@ -369,14 +370,14 @@ void load_model_primitive_material_data(
                 }
 
                 // TODO: Not yet connected with a layout
-                if ( scene.hdri_index.has_value() ) {
-                    textures_needed.push_back( &scene.textures[scene.hdri_index.value()] );
+                if ( scene.hdri_index.has_value( ) ) {
+                    textures_needed.push_back( &scene.textures[scene.hdri_index.value( )] );
                 } else {
                     textures_needed.push_back( nullptr );
                 }
 
                 for ( size_t i = 0; i < NUM_MATERIAL_TEXTURE_BINDINGS; i++ ) {
-                    const bool has_texture = i < textures_needed.size()
+                    const bool has_texture = i < textures_needed.size( )
                         && textures_needed[i] != nullptr && textures_needed[i]->data != nullptr;
 
                     engine::update_descriptor_set_image(
@@ -389,7 +390,7 @@ void load_model_primitive_material_data(
 
                 transforms.push_back(
                     model_mat_uniform_buffers[static_cast<size_t>( prim.node_id )]
-                        .get_data()
+                        .get_data( )
                         .model_mat
                 );
 

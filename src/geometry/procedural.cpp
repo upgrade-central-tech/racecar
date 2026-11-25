@@ -11,7 +11,7 @@
 
 namespace racecar::geometry {
 
-engine::Image generate_test_3D()
+engine::Image generate_test_3D( )
 {
     const uint32_t block_size = 32;
     const uint32_t dim = 128;
@@ -37,7 +37,7 @@ engine::Image generate_test_3D()
 
     // Create the 3D image
     return engine::create_image_from_data(
-        static_cast<void*>( texture_data.data() ),
+        static_cast<void*>( texture_data.data( ) ),
         { dim, dim, dim },
         VK_FORMAT_R32G32B32A32_SFLOAT, // 4-channel float
         VK_IMAGE_TYPE_3D,
@@ -46,9 +46,9 @@ engine::Image generate_test_3D()
     );
 }
 
-engine::Image generate_glint_noise()
+engine::Image generate_glint_noise( )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     uint32_t noise_texture_size = 512;
 
     // Allocate the coefficeints.

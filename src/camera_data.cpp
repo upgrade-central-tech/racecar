@@ -8,9 +8,9 @@
 
 namespace racecar {
 
-CameraData get_camera_data()
+CameraData get_camera_data( )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     const camera::OrbitCamera& camera = engine.camera;
 
     glm::mat4 view = camera::calculate_view_matrix( camera );
@@ -36,16 +36,16 @@ void update_camera_uniform_buffer(
     UniformBuffer<ub_data::Camera>& camera_buffer, const CameraData& camera_data
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     const camera::OrbitCamera& camera = engine.camera;
 
-    ub_data::Camera camera_ub = camera_buffer.get_data();
+    ub_data::Camera camera_ub = camera_buffer.get_data( );
 
-    glm::mat4 model = glm::identity<glm::mat4>();
+    glm::mat4 model = glm::identity<glm::mat4>( );
 
     glm::mat4 jittered_projection = camera_data.projection;
 
-    if ( RuntimeSettings::Get<RacecarSettings::AA_MODE>() == AAMode::TAA ) {
+    if ( RuntimeSettings::Get<RacecarSettings::AA_MODE>( ) == AAMode::TAA ) {
         glm::vec2 offset = vk::Jitter16[engine.rendered_frames % 16];
 
         jittered_projection[2][0] += 2.0f * offset.x
@@ -75,10 +75,10 @@ void update_camera_uniform_buffer(
     );
 
     // Store modded frame index, used for the jitter
-    camera_ub.camera_constants1 = glm::vec4( engine.get_frame_index() % 16, 0.0f, 0.0f, 0.0f );
+    camera_ub.camera_constants1 = glm::vec4( engine.get_frame_index( ) % 16, 0.0f, 0.0f, 0.0f );
 
     camera_buffer.set_data( camera_ub );
-    camera_buffer.update( engine.get_frame_index() );
+    camera_buffer.update( engine.get_frame_index( ) );
 }
 
 }

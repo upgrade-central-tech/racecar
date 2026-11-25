@@ -49,11 +49,11 @@ const float RACING_CAMERA_MAX_FOLLOW_RATE = 0.5f;
 
 void apply_racing_camera( camera::OrbitCamera& camera, glm::vec3 car_position )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     const float car_yaw = engine.gamestate.yaw;
     const float yaw_offset = std::remainder(
         car_yaw - racing_camera_yaw.value_or( car_yaw ),
-        glm::two_pi<float>()
+        glm::two_pi<float>( )
     );
     const float follow_rate = glm::min(
         engine.gamestate.speed / RACING_CAMERA_FOLLOW_DISTANCE,
@@ -68,7 +68,10 @@ void apply_racing_camera( camera::OrbitCamera& camera, glm::vec3 car_position )
     camera.azimuth = 0.f;
     camera::rotate_azimuth(
         camera,
-        std::atan2( -std::cos( racing_camera_yaw.value() ), -std::sin( racing_camera_yaw.value() ) )
+        std::atan2(
+            -std::cos( racing_camera_yaw.value( ) ),
+            -std::sin( racing_camera_yaw.value( ) )
+        )
     );
 }
 
@@ -88,15 +91,15 @@ void apply_demo_camera_motion(
 )
 {
     std::optional<glm::vec3> car_position;
-    if ( scene.demo_scene_nodes.car_parent_id.has_value() ) {
+    if ( scene.demo_scene_nodes.car_parent_id.has_value( ) ) {
         car_position = glm::vec3( model_mat_uniform_buffers
-                                      .at( scene.demo_scene_nodes.car_parent_id.value() )
-                                      .get_data()
+                                      .at( scene.demo_scene_nodes.car_parent_id.value( ) )
+                                      .get_data( )
                                       .model_mat[3] );
     }
 
     if ( gui.demo.enable_unlocked_camera ) {
-        const engine::State& engine = engine::State::GetConst();
+        const engine::State& engine = engine::State::GetConst( );
         const glm::vec2 world_position = engine.gamestate.world_position;
         const glm::vec2 travel = world_position
             - unlocked_camera_prev_world_position.value_or( world_position );
@@ -105,23 +108,25 @@ void apply_demo_camera_motion(
         const glm::vec3 eye = camera::calculate_eye_position( camera )
             - glm::vec3( travel.x, 0.f, travel.y );
 
-        if ( car_position.has_value() ) {
-            camera.center = car_position.value();
+        if ( car_position.has_value( ) ) {
+            camera.center = car_position.value( );
         }
         camera::set_eye_position( camera, eye );
         return;
     }
 
-    unlocked_camera_prev_world_position.reset();
+    unlocked_camera_prev_world_position.reset( );
 
-    if ( car_position.has_value() && racing_camera_active( gui ) ) {
-        apply_racing_camera( camera, car_position.value() );
+    if ( car_position.has_value( ) && racing_camera_active( gui ) ) {
+        apply_racing_camera( camera, car_position.value( ) );
     } else {
-        racing_camera_yaw.reset();
+        racing_camera_yaw.reset( );
     }
 
     camera.center.y += gui.demo.bumpiness
-        * static_cast<float>( sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 6000.0 ) );
+        * static_cast<float>(
+                           sin( volumetric.uniform_buffer.get_data( ).cloud_offset_x * 6000.0 )
+        );
 }
 
 void update_car_transform(
@@ -132,7 +137,7 @@ void update_car_transform(
     [[maybe_unused]] std::vector<bool>& discovered
 )
 {
-    if ( !scene.demo_scene_nodes.car_parent_id.has_value() ) {
+    if ( !scene.demo_scene_nodes.car_parent_id.has_value( ) ) {
         return;
     }
 
@@ -140,71 +145,71 @@ void update_car_transform(
 
     if ( gui.demo.enable_translation ) {
         velocity = glm::vec3(
-            0.1 * sin( volumetric.uniform_buffer.get_data().cloud_offset_x * 1000.0 ),
+            0.1 * sin( volumetric.uniform_buffer.get_data( ).cloud_offset_x * 1000.0 ),
             0,
             0.025
         );
     }
 
     [[maybe_unused]]
-    glm::mat4 transform = glm::translate( glm::identity<glm::mat4>(), velocity );
+    glm::mat4 transform = glm::translate( glm::identity<glm::mat4>( ), velocity );
 
     if ( gui.demo.enable_translation ) {
         // nothing here for now, this is scrapped
     }
 
-    const size_t car_id = scene.demo_scene_nodes.car_parent_id.value();
-    if ( !car_root_base_transform.has_value() ) {
+    const size_t car_id = scene.demo_scene_nodes.car_parent_id.value( );
+    if ( !car_root_base_transform.has_value( ) ) {
         car_root_base_transform = scene.nodes[car_id]->transform;
     }
 
-    const glm::mat4& base = car_root_base_transform.value();
+    const glm::mat4& base = car_root_base_transform.value( );
     const glm::vec3 pivot = glm::vec3( base[3] );
-    const glm::mat4 yaw_rotation = glm::translate( glm::identity<glm::mat4>(), pivot )
-        * glm::rotate( glm::identity<glm::mat4>(),
-                       engine::State::GetConst().gamestate.yaw,
+    const glm::mat4 yaw_rotation = glm::translate( glm::identity<glm::mat4>( ), pivot )
+        * glm::rotate( glm::identity<glm::mat4>( ),
+                       engine::State::GetConst( ).gamestate.yaw,
                        glm::vec3( 0.0f, 1.0f, 0.0f ) )
-        * glm::translate( glm::identity<glm::mat4>(), -pivot );
+        * glm::translate( glm::identity<glm::mat4>( ), -pivot );
 
     scene::set_transform( scene, car_id, yaw_rotation * base );
 }
 
 void update_wheel_transforms( scene::Scene& scene )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
     const float distance = engine.gamestate.integrated_distance_traveled;
     const float radius = 0.5f * wheel_radii.at( std::string( GLTF_FILE_PATH ) );
 
     const glm::mat4 model = glm::rotate(
-        glm::identity<glm::mat4>(),
+        glm::identity<glm::mat4>( ),
         distance / radius,
         glm::vec3( 1.0f, 0.0f, 0.0f )
     );
 
     const glm::mat4 turn = glm::rotate(
-        glm::identity<glm::mat4>(),
+        glm::identity<glm::mat4>( ),
         engine.gamestate.wheel_angle,
         glm::vec3( 0.0f, 1.0f, 0.0f )
     );
 
-    if ( scene.demo_scene_nodes.wheel_back_left_id.has_value() ) {
-        scene::set_transform( scene, scene.demo_scene_nodes.wheel_back_left_id.value(), model );
+    if ( scene.demo_scene_nodes.wheel_back_left_id.has_value( ) ) {
+        scene::set_transform( scene, scene.demo_scene_nodes.wheel_back_left_id.value( ), model );
     }
-    if ( scene.demo_scene_nodes.wheel_back_right_id.has_value() ) {
-        scene::set_transform( scene, scene.demo_scene_nodes.wheel_back_right_id.value(), model );
+    if ( scene.demo_scene_nodes.wheel_back_right_id.has_value( ) ) {
+        scene::set_transform( scene, scene.demo_scene_nodes.wheel_back_right_id.value( ), model );
     }
-    if ( scene.demo_scene_nodes.wheel_front_left_id.has_value() ) {
+    if ( scene.demo_scene_nodes.wheel_front_left_id.has_value( ) ) {
         scene::set_transform(
             scene,
-            scene.demo_scene_nodes.wheel_front_left_id.value(),
+            scene.demo_scene_nodes.wheel_front_left_id.value( ),
             turn * model
         );
     }
-    if ( scene.demo_scene_nodes.wheel_front_right_id.has_value() ) {
+    if ( scene.demo_scene_nodes.wheel_front_right_id.has_value( ) ) {
         scene::set_transform(
             scene,
-            scene.demo_scene_nodes.wheel_front_right_id.value(),
+            scene.demo_scene_nodes.wheel_front_right_id.value( ),
             turn * model
         );
     }

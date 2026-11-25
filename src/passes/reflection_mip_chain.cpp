@@ -39,14 +39,15 @@ VkImageSubresourceRange mip_range( uint32_t base_mip, uint32_t level_count )
 
 engine::ImageBarrier color_write_to_compute_read( engine::Image* image )
 {
-    return engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                  .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                                  .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                  .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                  .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                  .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                  .image = image,
-                                  .range = mip_range( 0, 1 ) };
+    return engine::ImageBarrier {
+        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        .image = image,
+        .range = mip_range( 0, 1 ) };
 }
 
 engine::ImageBarrier undefined_to_compute_write( engine::Image* image )
@@ -150,7 +151,7 @@ void create_reflection_mip_chain_resources(
         "cs_reflection_mips"
     );
 
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
 
     chain.sampler_desc_set = engine::generate_descriptor_set(
         { VK_DESCRIPTOR_TYPE_SAMPLER },
@@ -213,18 +214,19 @@ void create_reflection_mip_chain_resources(
 
 void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList& task_list )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = {
-                color_write_to_compute_read( chain.reflection_color ),
-                color_write_to_compute_read( chain.reflection_data ),
-                undefined_to_compute_write( chain.reflection_color ),
-                undefined_to_compute_write( chain.reflection_data ),
-            },
+            .image_barriers =
+                {
+                    color_write_to_compute_read( chain.reflection_color ),
+                    color_write_to_compute_read( chain.reflection_data ),
+                    undefined_to_compute_write( chain.reflection_color ),
+                    undefined_to_compute_write( chain.reflection_data ),
+                },
             .label = "Reflection Mip Chain Init Pipeline Barrier" }
     );
 
@@ -250,10 +252,11 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
             task_list,
             engine::PipelineBarrierDescriptor {
                 .buffer_barriers = { },
-                .image_barriers = {
-                    compute_write_to_compute_read( chain.reflection_color, dst_mip ),
-                    compute_write_to_compute_read( chain.reflection_data, dst_mip ),
-                },
+                .image_barriers =
+                    {
+                        compute_write_to_compute_read( chain.reflection_color, dst_mip ),
+                        compute_write_to_compute_read( chain.reflection_data, dst_mip ),
+                    },
                 .label = "Reflection Mip Downsample Pipeline Barrier" }
         );
     }
@@ -266,10 +269,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
             task_list,
             engine::PipelineBarrierDescriptor {
                 .buffer_barriers = { },
-                .image_barriers = { compute_read_to_compute_write(
-                    chain.reflection_color,
-                    dst_mip
-                ) },
+                .image_barriers =
+                    { compute_read_to_compute_write( chain.reflection_color, dst_mip ) },
                 .label = "Reflection Mip Pre-Upsample Pipeline Barrier" }
         );
 
@@ -291,10 +292,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
             task_list,
             engine::PipelineBarrierDescriptor {
                 .buffer_barriers = { },
-                .image_barriers = { compute_write_to_compute_read(
-                    chain.reflection_color,
-                    dst_mip
-                ) },
+                .image_barriers =
+                    { compute_write_to_compute_read( chain.reflection_color, dst_mip ) },
                 .label = "Reflection Mip Upsample Pipeline Barrier" }
         );
     }

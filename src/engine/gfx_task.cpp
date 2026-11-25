@@ -7,18 +7,16 @@ void execute_gfx_task( const VkCommandBuffer& cmd_buf, GfxTask& gfx_task )
     std::vector<VkRenderingAttachmentInfo> color_attachment_infos;
     for ( const Image* img : gfx_task.color_attachments ) {
         const Image& attachment = *img;
-        color_attachment_infos.push_back(
-            {
-                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-                .imageView = attachment.mip_levels.empty() ? attachment.image_view
-                                                           : attachment.mip_levels[0],
-                .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                .loadOp = gfx_task.clear_color ? VK_ATTACHMENT_LOAD_OP_CLEAR
-                                               : VK_ATTACHMENT_LOAD_OP_LOAD,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .clearValue = { .color = gfx_task.clear_color.value_or( VkClearColorValue { } ) },
-            }
-        );
+        color_attachment_infos.push_back( {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = attachment.mip_levels.empty( ) ? attachment.image_view
+                                                        : attachment.mip_levels[0],
+            .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            .loadOp = gfx_task.clear_color ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                           : VK_ATTACHMENT_LOAD_OP_LOAD,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .clearValue = { .color = gfx_task.clear_color.value_or( VkClearColorValue { } ) },
+        } );
     }
 
     std::optional<VkRenderingAttachmentInfo> depth_attachment_info;
@@ -39,8 +37,8 @@ void execute_gfx_task( const VkCommandBuffer& cmd_buf, GfxTask& gfx_task )
         .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
         .renderArea = { .offset = { .x = 0, .y = 0 }, .extent = gfx_task.extent },
         .layerCount = 1,
-        .colorAttachmentCount = static_cast<uint32_t>( color_attachment_infos.size() ),
-        .pColorAttachments = color_attachment_infos.data(),
+        .colorAttachmentCount = static_cast<uint32_t>( color_attachment_infos.size( ) ),
+        .pColorAttachments = color_attachment_infos.data( ),
         .pDepthAttachment = depth_attachment_info ? &( *depth_attachment_info ) : nullptr,
         .pStencilAttachment = nullptr,
     };

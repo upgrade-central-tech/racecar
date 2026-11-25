@@ -15,18 +15,16 @@ void PushDepthPrepassMS(
     DepthPrepassMS& depth_prepass_ms, engine::DrawResourceDescriptor draw_descriptor
 )
 {
-    depth_prepass_ms.depth_ms_gfx_task.draw_tasks.push_back(
-        {
-            .draw_resource_descriptor = draw_descriptor,
-            .descriptor_sets = depth_prepass_ms.descriptor_sets,
-            .pipeline = depth_prepass_ms.pipeline,
-        }
-    );
+    depth_prepass_ms.depth_ms_gfx_task.draw_tasks.push_back( {
+        .draw_resource_descriptor = draw_descriptor,
+        .descriptor_sets = depth_prepass_ms.descriptor_sets,
+        .pipeline = depth_prepass_ms.pipeline,
+    } );
 }
 
 engine::GfxTask create_depth_ms_gfx_task( deferred::GBuffers* gbuffers )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     return {
         .clear_color = { { { 0.0f, 0.0f, 0.0f, 0.0f } } },
         .clear_depth = 1.f,
@@ -45,7 +43,7 @@ void create_depth_ms_prepass(
     engine::DepthPrepassMS* depth_prepass_ms
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     *depth_uniform_desc_set = engine::generate_descriptor_set(
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         VK_SHADER_STAGE_VERTEX_BIT
@@ -56,14 +54,14 @@ void create_depth_ms_prepass(
     // DEPTH_MS PRE-PASS
     try {
         // Pipeline needs to support MSAA
-        size_t frame_index = engine.get_frame_index();
+        size_t frame_index = engine.get_frame_index( );
         *depth_ms_pipeline = create_gfx_pipeline(
             VkPipelineVertexInputStateCreateInfo {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
                 .vertexBindingDescriptionCount = 1,
                 .pVertexBindingDescriptions = &scene_mesh.vertex_binding_description,
                 .vertexAttributeDescriptionCount = 1,
-                .pVertexAttributeDescriptions = scene_mesh.attribute_descriptions.data(),
+                .pVertexAttributeDescriptions = scene_mesh.attribute_descriptions.data( ),
             },
             { depth_uniform_desc_set->layouts[frame_index] },
             { },
@@ -71,12 +69,12 @@ void create_depth_ms_prepass(
             false,
             true,
             vk::create::shader_module( DEPTH_PREPASS_SHADER_MODULE_PATH ),
-            engine::ShaderEntryPointStrings::defaults(),
+            engine::ShaderEntryPointStrings::defaults( ),
             false,
             false
         );
     } catch ( const Exception& ex ) {
-        log::error( "Failed to create depth-MS-prepass pipeline: {}", ex.what() );
+        log::error( "Failed to create depth-MS-prepass pipeline: {}", ex.what( ) );
         throw;
     }
 

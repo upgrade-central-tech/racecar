@@ -22,41 +22,45 @@ void create_deferred_lighting_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = {
+            .image_barriers =
+                {
 #if !RACECAR_RAY_TRACING
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Position ),
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Velocity ),
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Normal ),
+                    deferred::color_write_to_frag_read( gbuffers.GBuffer_Position ),
+                    deferred::color_write_to_frag_read( gbuffers.GBuffer_Velocity ),
+                    deferred::color_write_to_frag_read( gbuffers.GBuffer_Normal ),
 #endif // RACECAR_RAY_TRACING
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Tangent ),
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_UV ),
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Albedo ),
-                deferred::color_write_to_frag_read( gbuffers.GBuffer_Packed_Data ),
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                                       .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                                       .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                                       .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-                                       .image = &gbuffers.GBuffer_Depth,
-                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                                       .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                                       .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                                       .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-                                       .image = &gbuffers.GBuffer_DepthMS,
-                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
-                engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                       .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                                       .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                       .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                       .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                       .image = &screen_color,
-                                       .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
-            },
+                    deferred::color_write_to_frag_read( gbuffers.GBuffer_Tangent ),
+                    deferred::color_write_to_frag_read( gbuffers.GBuffer_UV ),
+                    deferred::color_write_to_frag_read( gbuffers.GBuffer_Albedo ),
+                    deferred::color_write_to_frag_read( gbuffers.GBuffer_Packed_Data ),
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                        .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                        .image = &gbuffers.GBuffer_Depth,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                        .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                        .image = &gbuffers.GBuffer_DepthMS,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .image = &screen_color,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                },
             .label = "GBuffer to Deferred Lighting Pipeline Barrier" }
     );
 }
@@ -87,7 +91,7 @@ void create_lighting_pass_resources(
 )
 {
     *lighting_pass_pipeline = engine::create_gfx_pipeline(
-        engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance() ),
+        engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance( ) ),
         { desc_sets.uniform_desc_set.layouts[0],
           desc_sets.material_desc_sets[0].layouts[0],
           desc_sets.lut_sets.layouts[0],
@@ -104,7 +108,7 @@ void create_lighting_pass_resources(
         true,
         false,
         vk::create::shader_module( LIGHTING_PASS_SHADER_MODULE_PATH ),
-        engine::ShaderEntryPointStrings::defaults(),
+        engine::ShaderEntryPointStrings::defaults( ),
         false,
         false
     );
@@ -117,21 +121,24 @@ void car_lighting_pass(
     engine::TaskList& task_list
 )
 {
-    const engine::State& engine = engine::State::GetConst();
-    geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance();
+    const engine::State& engine = engine::State::GetConst( );
+    geometry::quad::Mesh& quad_mesh = geometry::quad::Mesh::get_instance( );
 
-    engine::GfxTask lighting_pass_gfx_task = { .clear_depth = 1.0f,
-                                               .color_attachments = { &screen_color },
-                                               .extent = engine.swapchain.extent };
+    engine::GfxTask lighting_pass_gfx_task = {
+        .clear_depth = 1.0f,
+        .color_attachments = { &screen_color },
+        .extent = engine.swapchain.extent };
 
-    lighting_pass_gfx_task.draw_tasks.push_back({
-            .draw_resource_descriptor = {
+    lighting_pass_gfx_task.draw_tasks.push_back( {
+        .draw_resource_descriptor =
+            {
                 .vertex_buffers = { quad_mesh.mesh_buffers.vertex_buffer.handle },
                 .index_buffer = quad_mesh.mesh_buffers.index_buffer.handle,
                 .vertex_buffer_offsets = { 0 },
-                .index_count = static_cast<uint32_t>( quad_mesh.indices.size() ),
+                .index_count = static_cast<uint32_t>( quad_mesh.indices.size( ) ),
             },
-            .descriptor_sets = {
+        .descriptor_sets =
+            {
                 &desc_sets.uniform_desc_set,
                 &desc_sets.material_desc_sets[static_cast<size_t>( 0 )], // THIS IS WRONG; NEEDS FIX
                 &desc_sets.lut_sets,
@@ -144,8 +151,8 @@ void car_lighting_pass(
                 &desc_sets.sun_visibility_desc_set,
                 &desc_sets.ao_read_desc_set,
             },
-            .pipeline = lighting_pass_pipeline,
-        });
+        .pipeline = lighting_pass_pipeline,
+    } );
 
     engine::add_gfx_task( task_list, lighting_pass_gfx_task, "Lighting" );
 }

@@ -61,7 +61,7 @@ void add_array_binding(
     ds_layout_builder.bindings.push_back( std::move( new_binding ) );
 }
 
-void clear( DescriptorLayoutBuilder& ds_layout_builder ) { ds_layout_builder.bindings.clear(); }
+void clear( DescriptorLayoutBuilder& ds_layout_builder ) { ds_layout_builder.bindings.clear( ); }
 
 VkDescriptorSetLayout build(
     VkShaderStageFlags shader_stage_flags,
@@ -69,7 +69,7 @@ VkDescriptorSetLayout build(
     VkDescriptorSetLayoutCreateFlags ds_layout_flags
 )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
     for ( auto& binding : ds_layout_builder.bindings ) {
         binding.stageFlags |= shader_stage_flags;
     }
@@ -77,8 +77,8 @@ VkDescriptorSetLayout build(
     VkDescriptorSetLayoutCreateInfo ds_layout_create_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .flags = ds_layout_flags,
-        .bindingCount = static_cast<uint32_t>( ds_layout_builder.bindings.size() ),
-        .pBindings = ds_layout_builder.bindings.data(),
+        .bindingCount = static_cast<uint32_t>( ds_layout_builder.bindings.size( ) ),
+        .pBindings = ds_layout_builder.bindings.data( ),
     };
 
     VkDescriptorSetLayout ds_layout = VK_NULL_HANDLE;
@@ -101,7 +101,7 @@ void init_pool(
     std::span<DescriptorAllocator::PoolSizeRatio> pool_ratios
 )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
     std::vector<VkDescriptorPoolSize> pool_sizes;
     for ( DescriptorAllocator::PoolSizeRatio ratio : pool_ratios ) {
         pool_sizes.push_back(
@@ -116,8 +116,8 @@ void init_pool(
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .flags = 0,
         .maxSets = max_sets,
-        .poolSizeCount = static_cast<uint32_t>( pool_sizes.size() ),
-        .pPoolSizes = pool_sizes.data(),
+        .poolSizeCount = static_cast<uint32_t>( pool_sizes.size( ) ),
+        .pPoolSizes = pool_sizes.data( ),
     };
 
     vk::check(
@@ -129,13 +129,13 @@ void init_pool(
 
 void clear_descriptors( DescriptorAllocator& ds_allocator )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
     vkResetDescriptorPool( vulkan.device, ds_allocator.pool, 0 );
 }
 
 VkDescriptorSet allocate( const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
     VkDescriptorSetAllocateInfo allocate_info = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = ds_allocator.pool,
@@ -220,8 +220,8 @@ void update_set( DescriptorWriter& writer, VkDevice device, VkDescriptorSet set 
 
     vkUpdateDescriptorSets(
         device,
-        static_cast<uint32_t>( writer.writes.size() ),
-        writer.writes.data(),
+        static_cast<uint32_t>( writer.writes.size( ) ),
+        writer.writes.data( ),
         0,
         nullptr
     );

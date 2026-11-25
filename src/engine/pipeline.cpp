@@ -23,7 +23,7 @@ Pipeline create_gfx_pipeline(
     bool wireframe
 )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
 
     VkPipelineVertexInputStateCreateInfo
         vertex_input_info = vertex_input_state_create_info.value_or(
@@ -51,8 +51,8 @@ Pipeline create_gfx_pipeline(
 
     VkPipelineDynamicStateCreateInfo dynamic_state_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        .dynamicStateCount = static_cast<uint32_t>( dynamic_states.size() ),
-        .pDynamicStates = dynamic_states.data(),
+        .dynamicStateCount = static_cast<uint32_t>( dynamic_states.size( ) ),
+        .pDynamicStates = dynamic_states.data( ),
     };
 
     VkPipelineViewportStateCreateInfo viewport_state_info = {
@@ -101,15 +101,15 @@ Pipeline create_gfx_pipeline(
     };
 
     std::vector<VkPipelineColorBlendAttachmentState> color_attachment_infos(
-        color_attachment_formats.size(),
+        color_attachment_formats.size( ),
         color_blend_attachment_info
     );
 
     VkPipelineColorBlendStateCreateInfo color_blend_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .logicOpEnable = VK_FALSE,
-        .attachmentCount = uint32_t( color_attachment_formats.size() ),
-        .pAttachments = color_attachment_infos.data(),
+        .attachmentCount = uint32_t( color_attachment_formats.size( ) ),
+        .pAttachments = color_attachment_infos.data( ),
     };
 
     Pipeline gfx_pipeline;
@@ -119,9 +119,9 @@ Pipeline create_gfx_pipeline(
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         };
 
-        if ( layouts.size() > 0 ) {
-            pipeline_layout_info.setLayoutCount = static_cast<uint32_t>( layouts.size() );
-            pipeline_layout_info.pSetLayouts = layouts.data();
+        if ( layouts.size( ) > 0 ) {
+            pipeline_layout_info.setLayoutCount = static_cast<uint32_t>( layouts.size( ) );
+            pipeline_layout_info.pSetLayouts = layouts.data( );
         }
 
         vk::check(
@@ -179,8 +179,8 @@ Pipeline create_gfx_pipeline(
     // Use dynamic rendering instead of manually creating render passes
     VkPipelineRenderingCreateInfo pipeline_rendering_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-        .colorAttachmentCount = uint32_t( color_attachment_formats.size() ),
-        .pColorAttachmentFormats = color_attachment_formats.data(),
+        .colorAttachmentCount = uint32_t( color_attachment_formats.size( ) ),
+        .pColorAttachmentFormats = color_attachment_formats.data( ),
         .depthAttachmentFormat = depth_test ? DEPTH_FORMAT : VK_FORMAT_UNDEFINED,
     };
 
@@ -188,7 +188,7 @@ Pipeline create_gfx_pipeline(
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext = &pipeline_rendering_info,
         .stageCount = enable_tessellation_shaders ? uint32_t( 4 ) : 2,
-        .pStages = shader_stages.data(),
+        .pStages = shader_stages.data( ),
         .pVertexInputState = &vertex_input_info,
         .pInputAssemblyState = &input_assembly_info,
         .pTessellationState = enable_tessellation_shaders ? &tessellationInfo : VK_NULL_HANDLE,
@@ -224,15 +224,14 @@ Pipeline create_compute_pipeline(
     std::string_view entry_name
 )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
     Pipeline compute_pipeline;
 
     {
         VkPipelineLayoutCreateInfo pipeline_info = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            .setLayoutCount = static_cast<uint32_t>( layouts.size() ),
-            .pSetLayouts = layouts.data()
-        };
+            .setLayoutCount = static_cast<uint32_t>( layouts.size( ) ),
+            .pSetLayouts = layouts.data( ) };
 
         vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &compute_pipeline.layout );
         vulkan.destructor_stack
@@ -243,9 +242,9 @@ Pipeline create_compute_pipeline(
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     };
 
-    if ( layouts.size() > 0 ) {
-        pipeline_info.setLayoutCount = static_cast<uint32_t>( layouts.size() );
-        pipeline_info.pSetLayouts = layouts.data();
+    if ( layouts.size( ) > 0 ) {
+        pipeline_info.setLayoutCount = static_cast<uint32_t>( layouts.size( ) );
+        pipeline_info.pSetLayouts = layouts.data( );
     }
 
     VkPipelineLayout pipeline_layout;
@@ -256,13 +255,14 @@ Pipeline create_compute_pipeline(
         .layout = pipeline_layout,
     };
 
-    create_pipeline_info.stage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                                   nullptr,
-                                   0,
-                                   VK_SHADER_STAGE_COMPUTE_BIT,
-                                   shader_module,
-                                   entry_name.data(),
-                                   nullptr };
+    create_pipeline_info.stage = {
+        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        nullptr,
+        0,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        shader_module,
+        entry_name.data( ),
+        nullptr };
 
     VkPipeline compute_pipeline_handle;
     vk::check(

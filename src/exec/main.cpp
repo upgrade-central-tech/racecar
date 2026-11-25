@@ -14,10 +14,10 @@ int main( int, char*[] )
     try {
         racecar::run( USE_FULLSCREEN );
     } catch ( const racecar::Exception& ex ) {
-        racecar::log::error( "[RACECAR] {}", ex.what() );
+        racecar::log::error( "[RACECAR] {}", ex.what( ) );
         return EXIT_FAILURE;
     } catch ( const std::exception& ex ) {
-        racecar::log::error( "[RACECAR] Caught standard exception: {}", ex.what() );
+        racecar::log::error( "[RACECAR] Caught standard exception: {}", ex.what( ) );
         return EXIT_FAILURE;
     } catch ( ... ) {
         racecar::log::error( "[RACECAR] Caught an unknown exception" );

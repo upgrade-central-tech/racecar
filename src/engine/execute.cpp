@@ -24,12 +24,12 @@ bool is_task_enabled( [[maybe_unused]] const Task& task )
 
 } // namespace
 
-void begin_frame()
+void begin_frame( )
 {
-    const engine::State& engine = engine::State::GetConst();
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
+    const vk::Common& vulkan = vk::Common::GetConst( );
 
-    const FrameData& frame = engine.frames[engine.get_frame_index()];
+    const FrameData& frame = engine.frames[engine.get_frame_index( )];
 
     // Using the maximum 64-bit unsigned integer value effectively disables the timeout
     vk::check(
@@ -38,7 +38,7 @@ void begin_frame()
             1,
             &frame.render_fence,
             VK_TRUE,
-            std::numeric_limits<uint64_t>::max()
+            std::numeric_limits<uint64_t>::max( )
         ),
         "Failed to wait for frame render fence"
     );
@@ -56,10 +56,10 @@ void begin_frame()
 
 void execute( TaskList& task_list, const gui::Gui& gui )
 {
-    engine::State& engine = engine::State::GetMut();
-    const vk::Common& vulkan = vk::Common::GetConst();
+    engine::State& engine = engine::State::GetMut( );
+    const vk::Common& vulkan = vk::Common::GetConst( );
 
-    size_t frame_number = engine.get_frame_index();
+    size_t frame_number = engine.get_frame_index( );
     FrameData& frame = engine.frames[frame_number];
 
     VkCommandBufferBeginInfo command_buffer_begin_info = vk::create::command_buffer_begin_info(
@@ -73,7 +73,7 @@ void execute( TaskList& task_list, const gui::Gui& gui )
         vkAcquireNextImageKHR(
             vulkan.device,
             engine.swapchain,
-            std::numeric_limits<uint64_t>::max(),
+            std::numeric_limits<uint64_t>::max( ),
             frame.acquire_start_smp,
             nullptr,
             &output_swapchain_index
@@ -126,15 +126,13 @@ void execute( TaskList& task_list, const gui::Gui& gui )
         vkEndCommandBuffer( frame.start_cmdbuf );
     }
 
-    vk::create::AllSubmitInfo start_submit_info_all = vk::create::all_submit_info(
-        {
-            .command_buffer = frame.start_cmdbuf,
-            .wait_semaphore = frame.acquire_start_smp,
-            .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-            .signal_semaphore = frame.start_render_smp,
-            .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-        }
-    );
+    vk::create::AllSubmitInfo start_submit_info_all = vk::create::all_submit_info( {
+        .command_buffer = frame.start_cmdbuf,
+        .wait_semaphore = frame.acquire_start_smp,
+        .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+        .signal_semaphore = frame.start_render_smp,
+        .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+    } );
     VkSubmitInfo2 start_submit_info = vk::create::submit_info_from_all( start_submit_info_all );
 
     vk::check(
@@ -151,7 +149,7 @@ void execute( TaskList& task_list, const gui::Gui& gui )
         size_t blit_ptr = 0;
         size_t cpu_ptr = 0;
         size_t gpu_ptr = 0;
-        for ( task_ptr = 0; task_ptr < task_list.tasks.size(); task_ptr++ ) {
+        for ( task_ptr = 0; task_ptr < task_list.tasks.size( ); task_ptr++ ) {
             Task& task = task_list.tasks[task_ptr];
 
 #if 0
@@ -193,7 +191,7 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                     break;
                 }
 
-                if ( task.predicate != nullptr && !task.predicate() ) {
+                if ( task.predicate != nullptr && !task.predicate( ) ) {
                     break;
                 }
 
@@ -213,7 +211,7 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                     break;
                 }
 
-                if ( task.predicate != nullptr && !task.predicate() ) {
+                if ( task.predicate != nullptr && !task.predicate( ) ) {
                     break;
                 }
 
@@ -233,7 +231,7 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                     break;
                 }
 
-                if ( task.predicate != nullptr && !task.predicate() ) {
+                if ( task.predicate != nullptr && !task.predicate( ) ) {
                     break;
                 }
 
@@ -253,7 +251,7 @@ void execute( TaskList& task_list, const gui::Gui& gui )
                 }
 
                 // This is not ran on the GPU! This is a purely CPU-side call.
-                descriptor_task.task();
+                descriptor_task.task( );
                 break;
             }
 
@@ -296,22 +294,20 @@ void execute( TaskList& task_list, const gui::Gui& gui )
             };
 
             vkCmdBeginRendering( frame.render_cmdbuf, &gui_rendering_info );
-            ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), frame.render_cmdbuf );
+            ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData( ), frame.render_cmdbuf );
             vkCmdEndRendering( frame.render_cmdbuf );
         }
 
         vkEndCommandBuffer( frame.render_cmdbuf );
     }
 
-    vk::create::AllSubmitInfo render_submit_info_all = vk::create::all_submit_info(
-        {
-            .command_buffer = frame.render_cmdbuf,
-            .wait_semaphore = frame.start_render_smp,
-            .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-            .signal_semaphore = frame.render_end_smp,
-            .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-        }
-    );
+    vk::create::AllSubmitInfo render_submit_info_all = vk::create::all_submit_info( {
+        .command_buffer = frame.render_cmdbuf,
+        .wait_semaphore = frame.start_render_smp,
+        .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+        .signal_semaphore = frame.render_end_smp,
+        .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+    } );
     VkSubmitInfo2 render_submit_info = vk::create::submit_info_from_all( render_submit_info_all );
 
     vk::check(
@@ -335,15 +331,13 @@ void execute( TaskList& task_list, const gui::Gui& gui )
         vkEndCommandBuffer( frame.end_cmdbuf );
     }
 
-    vk::create::AllSubmitInfo end_submit_info_all = vk::create::all_submit_info(
-        {
-            .command_buffer = frame.end_cmdbuf,
-            .wait_semaphore = frame.render_end_smp,
-            .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-            .signal_semaphore = swapchain_semaphores.end_present_smp,
-            .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
-        }
-    );
+    vk::create::AllSubmitInfo end_submit_info_all = vk::create::all_submit_info( {
+        .command_buffer = frame.end_cmdbuf,
+        .wait_semaphore = frame.render_end_smp,
+        .wait_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+        .signal_semaphore = swapchain_semaphores.end_present_smp,
+        .signal_flag_bits = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+    } );
     VkSubmitInfo2 end_submit_info = vk::create::submit_info_from_all( end_submit_info_all );
 
     vk::check(

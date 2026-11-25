@@ -24,28 +24,29 @@ void create_screen_buffer_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = {
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    .image = &screen_color,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &screen_color,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .image = &screen_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
                 },
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .src_access = VK_ACCESS_2_NONE,
-                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                    .image = &screen_buffer,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                },
-            },
             .label = "Scene Color to Post Processing Pipeline Barrier" }
     );
 }
@@ -58,18 +59,19 @@ void create_screen_buffer_present_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = {
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                    .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .image = &screen_buffer,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                        .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        .image = &screen_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
                 },
-            },
             .label = "Screen Buffer to Present Pipeline Barrier" }
     );
 }
@@ -87,26 +89,27 @@ void pre_transparency_post_passes(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = { engine::ImageBarrier {
-                                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                    .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                                    .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
-                                    .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                    .image = &screen_color,
-                                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                                },
-                                engine::ImageBarrier {
-                                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                    .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                                    .dst_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                                    .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                    .image = &screen_buffer,
-                                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                                } },
+            .image_barriers =
+                { engine::ImageBarrier {
+                      .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                      .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                      .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                      .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                      .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
+                      .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                      .image = &screen_color,
+                      .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                  },
+                  engine::ImageBarrier {
+                      .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                      .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                      .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                      .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                      .dst_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                      .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                      .image = &screen_buffer,
+                      .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                  } },
             .label = "Post Processing to Transparency Pipeline Barrier" }
     );
 
@@ -134,38 +137,39 @@ void post_transparency_post_passes(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = {
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                    .src_access = VK_ACCESS_2_TRANSFER_READ_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                    .image = &screen_color,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                        .src_access = VK_ACCESS_2_TRANSFER_READ_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .image = &screen_color,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &screen_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                        .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                        .image = &gbuffers.GBuffer_Depth,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
+                    },
                 },
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    .image = &screen_buffer,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                },
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                    .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-                    .image = &gbuffers.GBuffer_Depth,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
-                },
-            },
             .label = "Transparency to Tonemapping Pipeline Barrier" }
     );
     tm_pass = engine::post::add_tonemapping( screen_buffer, screen_color, task_list );
@@ -174,28 +178,29 @@ void post_transparency_post_passes(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = {
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                    .image = &screen_buffer,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .image = &screen_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &screen_color,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
                 },
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    .image = &screen_color,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                },
-            },
             .label = "Tonemapping to TAA Pipeline Barrier" }
     );
     taa_pass = engine::post::add_taa(

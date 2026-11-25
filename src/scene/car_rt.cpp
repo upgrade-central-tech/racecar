@@ -17,9 +17,9 @@ void alloc_blases(
     ub_data::BLASOffsets* ret_blas_offsets
 )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
-    engine::State& engine = engine::State::GetMut();
-    if ( prims.size() > ub_data::MAX_RT_PRIMITIVES ) {
+    vk::Common& vulkan = vk::Common::GetMut( );
+    engine::State& engine = engine::State::GetMut( );
+    if ( prims.size( ) > ub_data::MAX_RT_PRIMITIVES ) {
         throw Exception(
             "[Alloc BLASes] Scene has more primitives than the ray tracing lookup tables can "
             "address"
@@ -68,14 +68,14 @@ void alloc_blases(
 
 void create_objects( std::vector<glm::mat4>& transforms, std::vector<vk::rt::Object>& objects )
 {
-    engine::State& engine = engine::State::GetMut();
-    for ( size_t i = 0; i < engine.blas.size(); i++ ) {
+    engine::State& engine = engine::State::GetMut( );
+    for ( size_t i = 0; i < engine.blas.size( ); i++ ) {
         auto& blas = engine.blas[i];
         objects.push_back( vk::rt::Object { .blas = &blas, .transform = transforms[i] } );
     }
 }
 
-engine::DescriptorSet create_accel_structure_desc_set()
+engine::DescriptorSet create_accel_structure_desc_set( )
 {
     return engine::generate_descriptor_set(
         { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR },
@@ -85,8 +85,8 @@ engine::DescriptorSet create_accel_structure_desc_set()
 
 void alloc_car_tlas( const std::vector<vk::rt::Object>& objects )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
-    engine::State& engine = engine::State::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
+    engine::State& engine = engine::State::GetMut( );
 
     engine.tlas = std::vector<vk::rt::AccelerationStructure>( engine.frame_overlap );
 
@@ -104,7 +104,7 @@ void alloc_car_tlas( const std::vector<vk::rt::Object>& objects )
 
 void build_car_blases( VkCommandBuffer& precompute_cmdbuf )
 {
-    engine::State& engine = engine::State::GetMut();
+    engine::State& engine = engine::State::GetMut( );
     for ( vk::rt::AccelerationStructure& blas : engine.blas ) {
         vk::rt::build_blas( precompute_cmdbuf, blas );
     }
@@ -112,7 +112,7 @@ void build_car_blases( VkCommandBuffer& precompute_cmdbuf )
 
 void build_car_tlas( VkCommandBuffer& precompute_cmdbuf )
 {
-    engine::State& engine = engine::State::GetMut();
+    engine::State& engine = engine::State::GetMut( );
     for ( vk::rt::AccelerationStructure& tlas : engine.tlas ) {
         vk::rt::build_tlas( precompute_cmdbuf, tlas );
     }
@@ -125,16 +125,16 @@ void update_car_tlas(
     const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    engine::State& engine = engine::State::GetMut();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    engine::State& engine = engine::State::GetMut( );
 
-    for ( size_t i = 0; i < objects.size(); ++i ) {
+    for ( size_t i = 0; i < objects.size( ); ++i ) {
         objects[i].transform = model_mat_uniform_buffers[static_cast<size_t>( prims[i]->node_id )]
-                                   .get_data()
+                                   .get_data( )
                                    .model_mat;
     }
 
-    vk::rt::AccelerationStructure& tlas = engine.tlas[engine.get_frame_index()];
+    vk::rt::AccelerationStructure& tlas = engine.tlas[engine.get_frame_index( )];
 
     vk::rt::update_tlas_instances( vulkan.allocator, tlas, objects );
     vk::rt::build_tlas( cmd_buf, tlas );
@@ -142,7 +142,7 @@ void update_car_tlas(
 
 vk::mem::AllocatedBuffer create_padded_vertex_data_buffer( geometry::scene::Mesh& scene_mesh )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     std::vector<ub_data::PaddedVertex> padded_vertex_data { };
     for ( geometry::scene::Vertex& v : scene_mesh.vertices ) {
         padded_vertex_data.push_back(
@@ -151,13 +151,13 @@ vk::mem::AllocatedBuffer create_padded_vertex_data_buffer( geometry::scene::Mesh
     }
 
     vk::mem::AllocatedBuffer padded_vertex_data_buffer = vk::mem::create_buffer(
-        padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ),
+        padded_vertex_data.size( ) * sizeof( ub_data::PaddedVertex ),
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VMA_MEMORY_USAGE_CPU_TO_GPU
     );
 
     vk::mem::AllocatedBuffer staging = vk::mem::create_buffer(
-        padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ),
+        padded_vertex_data.size( ) * sizeof( ub_data::PaddedVertex ),
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VMA_MEMORY_USAGE_CPU_ONLY
     );
@@ -165,15 +165,15 @@ vk::mem::AllocatedBuffer create_padded_vertex_data_buffer( geometry::scene::Mesh
     void* data = staging.info.pMappedData;
     std::memcpy(
         data,
-        padded_vertex_data.data(),
-        padded_vertex_data.size() * sizeof( ub_data::PaddedVertex )
+        padded_vertex_data.data( ),
+        padded_vertex_data.size( ) * sizeof( ub_data::PaddedVertex )
     );
 
     engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer cmd_buf ) {
         VkBufferCopy vertex_buf_copy = {
             .srcOffset = 0,
             .dstOffset = 0,
-            .size = padded_vertex_data.size() * sizeof( ub_data::PaddedVertex ),
+            .size = padded_vertex_data.size( ) * sizeof( ub_data::PaddedVertex ),
         };
 
         vkCmdCopyBuffer(
@@ -254,10 +254,10 @@ engine::DescriptorSet create_combined_textures_desc_set(
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, // metallic_roughness_textures array
         },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        uint32_t( albedo_textures.size() )
+        uint32_t( albedo_textures.size( ) )
     );
 
-    const uint32_t texture_array_count = uint32_t( albedo_textures.size() );
+    const uint32_t texture_array_count = uint32_t( albedo_textures.size( ) );
 
     engine::update_descriptor_set_image_array(
         combined_textures_desc_set,
@@ -281,9 +281,9 @@ UniformBuffer<ub_data::MaterialTable> create_material_table(
     const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
-    if ( material_uniform_buffers.size() > ub_data::MAX_MATERIALS ) {
+    if ( material_uniform_buffers.size( ) > ub_data::MAX_MATERIALS ) {
         throw Exception(
             "[Create Material Table] Scene has more materials than the table can "
             "hold; raise MAX_MATERIALS"
@@ -294,7 +294,7 @@ UniformBuffer<ub_data::MaterialTable> create_material_table(
         material_table = create_uniform_buffer<ub_data::MaterialTable>( { }, engine.frame_overlap );
 
     sync_material_table( material_table, material_uniform_buffers );
-    material_table.update_all();
+    material_table.update_all( );
 
     return material_table;
 }
@@ -304,13 +304,13 @@ bool sync_material_table(
     const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers
 )
 {
-    ub_data::MaterialTable table = material_table.get_data();
+    ub_data::MaterialTable table = material_table.get_data( );
 
-    const size_t count = std::min( material_uniform_buffers.size(), ub_data::MAX_MATERIALS );
+    const size_t count = std::min( material_uniform_buffers.size( ), ub_data::MAX_MATERIALS );
 
     bool changed = false;
     for ( size_t i = 0; i < count; ++i ) {
-        const ub_data::Material material = material_uniform_buffers[i].get_data();
+        const ub_data::Material material = material_uniform_buffers[i].get_data( );
 
         if ( std::memcmp( &table.materials[i], &material, sizeof( ub_data::Material ) ) != 0 ) {
             table.materials[i] = material;
@@ -332,13 +332,13 @@ void update_rt_uniform_buffers(
     const std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
     sync_material_table( material_table, material_uniform_buffers );
 
-    offset_data.update( engine.get_frame_index() );
-    rt_texture_uniform_data.update( engine.get_frame_index() );
-    material_table.update( engine.get_frame_index() );
+    offset_data.update( engine.get_frame_index( ) );
+    rt_texture_uniform_data.update( engine.get_frame_index( ) );
+    material_table.update( engine.get_frame_index( ) );
 }
 
 }

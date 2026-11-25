@@ -30,9 +30,9 @@ static std::vector<RoadSample> sample_road( const GameState& gamestate )
 {
     const auto& points = gamestate.spline_positions;
     std::vector<RoadSample> samples;
-    samples.reserve( ( points.size() - 2 ) * AUTODRIVE_SAMPLES_PER_SEGMENT + 1 );
+    samples.reserve( ( points.size( ) - 2 ) * AUTODRIVE_SAMPLES_PER_SEGMENT + 1 );
 
-    for ( size_t i = 0; i + 2 < points.size(); i++ ) {
+    for ( size_t i = 0; i + 2 < points.size( ); i++ ) {
         const glm::vec2 p0 = glm::vec2( points[i].x, points[i].z );
         const glm::vec2 p1 = glm::vec2( points[i + 1].x, points[i + 1].z );
         const glm::vec2 p2 = glm::vec2( points[i + 2].x, points[i + 2].z );
@@ -41,7 +41,7 @@ static std::vector<RoadSample> sample_road( const GameState& gamestate )
         const glm::vec2 b = p1;
         const glm::vec2 c = 0.5f * ( p1 + p2 );
 
-        const bool last_segment = i + 3 == points.size();
+        const bool last_segment = i + 3 == points.size( );
         const int sample_count = AUTODRIVE_SAMPLES_PER_SEGMENT + ( last_segment ? 1 : 0 );
 
         for ( int j = 0; j < sample_count; j++ ) {
@@ -72,8 +72,8 @@ AutodriveCommand compute_autodrive( const GameState& gamestate, float back_axle_
     const glm::vec2 back_axle_position = gamestate.world_position + back_axle_z * heading;
 
     size_t closest = 0;
-    float closest_dist_sq = std::numeric_limits<float>::max();
-    for ( size_t i = 0; i < samples.size(); i++ ) {
+    float closest_dist_sq = std::numeric_limits<float>::max( );
+    for ( size_t i = 0; i < samples.size( ); i++ ) {
         const glm::vec2 offset = samples[i].position - back_axle_position;
         const float dist_sq = glm::dot( offset, offset );
         if ( dist_sq < closest_dist_sq ) {
@@ -91,12 +91,12 @@ AutodriveCommand compute_autodrive( const GameState& gamestate, float back_axle_
             / ( 2.0f * AUTODRIVE_PLANNED_DECELERATION )
         + AUTODRIVE_PREVIEW_MARGIN;
 
-    float target_speed = RuntimeSettings::Get<RacecarSettings::AUTODRIVE_TARGET_SPEED>();
-    glm::vec2 lookahead_point = samples.back().position;
+    float target_speed = RuntimeSettings::Get<RacecarSettings::AUTODRIVE_TARGET_SPEED>( );
+    glm::vec2 lookahead_point = samples.back( ).position;
     bool found_lookahead = false;
     float distance_along = 0.0f;
 
-    for ( size_t i = closest; i < samples.size(); i++ ) {
+    for ( size_t i = closest; i < samples.size( ); i++ ) {
         if ( i > closest ) {
             distance_along += glm::length( samples[i].position - samples[i - 1].position );
         }

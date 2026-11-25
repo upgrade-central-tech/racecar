@@ -5,7 +5,7 @@ namespace racecar::vk::mem {
 AllocatedBuffer
 create_buffer( size_t alloc_size, VkBufferUsageFlags usage_flags, VmaMemoryUsage memory_usage )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
     // We may want to adjust the sharingMode to be adjustable depending on use-case.
     // As long as buffers are separated between graphics and compute queues,
     // VK_SHARING_MODE_EXCLUSIVE is fine.

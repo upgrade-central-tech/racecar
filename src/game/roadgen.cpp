@@ -71,10 +71,10 @@ size_t closest_road_segment(
     const std::array<glm::vec3, ub_data::ROAD_NUM_POINTS>& points, glm::vec2 position
 )
 {
-    float best_dist_sq = std::numeric_limits<float>::max();
+    float best_dist_sq = std::numeric_limits<float>::max( );
     size_t best_segment = ROAD_CENTER_SEGMENT;
 
-    for ( size_t i = 0; i + 2 < points.size(); i++ ) {
+    for ( size_t i = 0; i + 2 < points.size( ); i++ ) {
         const glm::vec2 p0 = glm::vec2( points[i].x, points[i].z ) - position;
         const glm::vec2 p1 = glm::vec2( points[i + 1].x, points[i + 1].z ) - position;
         const glm::vec2 p2 = glm::vec2( points[i + 2].x, points[i + 2].z ) - position;
@@ -100,7 +100,7 @@ generate_road_point( const glm::vec3 previous_heading, float road_integrated_dis
     float n = glm::perlin( glm::vec2( road_integrated_dist * 0.00343f, 0.5f ) );
     return glm::vec3(
         glm::rotate(
-            glm::identity<glm::mat4>(),
+            glm::identity<glm::mat4>( ),
             n * glm::radians( ROAD_MAX_TURNING_ANGLE ) * sign,
             glm::vec3( 0.0f, 1.0f, 0.0f )
         )
@@ -119,11 +119,11 @@ void recenter_road(
     if ( segment > ROAD_CENTER_SEGMENT ) {
         const size_t shift = segment - ROAD_CENTER_SEGMENT;
         std::copy(
-            points.begin() + static_cast<std::ptrdiff_t>( shift ),
-            points.end(),
-            points.begin()
+            points.begin( ) + static_cast<std::ptrdiff_t>( shift ),
+            points.end( ),
+            points.begin( )
         );
-        for ( size_t i = points.size() - shift; i < points.size(); i++ ) {
+        for ( size_t i = points.size( ) - shift; i < points.size( ); i++ ) {
             glm::vec3 last_heading = points[i - 1] - points[i - 2];
             points[i] = points[i - 1]
                 + ROAD_POINT_SPACING
@@ -137,9 +137,9 @@ void recenter_road(
     } else if ( segment < ROAD_CENTER_SEGMENT ) {
         const size_t shift = ROAD_CENTER_SEGMENT - segment;
         std::copy_backward(
-            points.begin(),
-            points.end() - static_cast<std::ptrdiff_t>( shift ),
-            points.end()
+            points.begin( ),
+            points.end( ) - static_cast<std::ptrdiff_t>( shift ),
+            points.end( )
         );
         for ( size_t i = shift; i-- > 0; ) {
             glm::vec3 last_heading = points[i + 1] - points[i + 2];

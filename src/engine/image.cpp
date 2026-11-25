@@ -18,17 +18,18 @@ void generate_mipmaps(
     VkImage image, VkExtent3D extent, uint32_t mip_levels, VkCommandBuffer cmd_buffer
 )
 {
-    VkImageMemoryBarrier barrier = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-                                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                     .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                     .image = image,
+    VkImageMemoryBarrier barrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image,
 
-                                     .subresourceRange = {
-                                         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                                         .levelCount = 1,
-                                         .baseArrayLayer = 0,
-                                         .layerCount = 1,
-                                     } };
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        } };
 
     int32_t width = static_cast<int32_t>( extent.width );
     int32_t height = static_cast<int32_t>( extent.height );
@@ -53,18 +54,22 @@ void generate_mipmaps(
             &barrier
         );
 
-        VkImageBlit blit = { .srcSubresource = {
-                                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                                 .mipLevel = mip - 1,
-                                 .baseArrayLayer = 0,
-                                 .layerCount = 1,
-                             },
-                            .dstSubresource = {
-                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                                .mipLevel = mip,
-                                .baseArrayLayer = 0,
-                                .layerCount = 1,
-                            } };
+        VkImageBlit blit = {
+            .srcSubresource =
+                {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .mipLevel = mip - 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+            .dstSubresource =
+                {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .mipLevel = mip,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+        };
 
         blit.srcOffsets[0] = { 0, 0, 0 };
         blit.srcOffsets[1] = { width, height, 1 };
@@ -139,7 +144,7 @@ Image allocate_vma_image(
     VkImageUsageFlags usage_flags
 )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
     Image allocated_image;
     allocated_image.image_extent = extent;
     allocated_image.image_format = format;
@@ -269,7 +274,7 @@ Image allocate_image(
             usage_flags
         );
     } catch ( const Exception& ex ) {
-        log::error( "[Image] Error occurred: {}", ex.what() );
+        log::error( "[Image] Error occurred: {}", ex.what( ) );
         throw;
     }
 }
@@ -301,7 +306,7 @@ Image create_image_mips(
 
 Image create_gbuffer_image( VkFormat format, VkSampleCountFlagBits samples )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     return engine::create_image(
         VkExtent3D( engine.swapchain.extent.width, engine.swapchain.extent.height, 1 ),
         format,
@@ -320,7 +325,7 @@ Image create_image_from_data(
     bool mipmapped
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     const size_t data_size = extent.depth * extent.width * extent.height
         * vk::utility::bytes_from_format( format );
 
@@ -417,7 +422,7 @@ Image create_image_from_data(
             }
         } );
     } catch ( const Exception& ex ) {
-        log::error( "[Image] Error occurred: {}", ex.what() );
+        log::error( "[Image] Error occurred: {}", ex.what( ) );
         throw;
     }
 
@@ -431,10 +436,10 @@ Image create_image_from_load(
     bool is_mipmapped
 )
 {
-    std::string abs_file_path = std::filesystem::absolute( file_path ).string();
+    std::string abs_file_path = std::filesystem::absolute( file_path ).string( );
 
     int width, height, channels;
-    unsigned char* pixels = stbi_load( abs_file_path.c_str(), &width, &height, &channels, 4 );
+    unsigned char* pixels = stbi_load( abs_file_path.c_str( ), &width, &height, &channels, 4 );
 
     // if ( static_cast<size_t>( channels ) < desired_channels ) {
     //     log::warn( "[IMAGE LOADER] Channels read doesn't match channels desired!" );
@@ -475,7 +480,7 @@ Image create_image_from_load(
         stbi_image_free( pixels );
 
         return create_image_from_data(
-            byte_data.data(),
+            byte_data.data( ),
             { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 },
             image_format,
             VK_IMAGE_TYPE_2D,
@@ -497,7 +502,7 @@ Image create_image_from_load(
         stbi_image_free( pixels );
 
         return create_image_from_data(
-            half_data.data(),
+            half_data.data( ),
             { static_cast<uint32_t>( width ), static_cast<uint32_t>( height ), 1 },
             image_format,
             VK_IMAGE_TYPE_2D,
@@ -512,7 +517,7 @@ Image create_image_from_load(
 
 void initialize_image_layout( Image& image, VkImageLayout layout )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer command_buffer ) {
         vk::utility::transition_image(
             command_buffer,

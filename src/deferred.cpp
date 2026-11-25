@@ -2,9 +2,9 @@
 
 namespace racecar::deferred {
 
-GBuffers initialize_GBuffers()
+GBuffers initialize_GBuffers( )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     GBuffers gbuffers;
 
     // deferred rendering
@@ -84,8 +84,12 @@ GBuffers initialize_GBuffers()
 std::vector<engine::Image*> get_color_attachments( GBuffers& gbuffers )
 {
     return {
-        &gbuffers.GBuffer_Position, &gbuffers.GBuffer_Normal, &gbuffers.GBuffer_Tangent,
-        &gbuffers.GBuffer_UV,       &gbuffers.GBuffer_Albedo, &gbuffers.GBuffer_Packed_Data,
+        &gbuffers.GBuffer_Position,
+        &gbuffers.GBuffer_Normal,
+        &gbuffers.GBuffer_Tangent,
+        &gbuffers.GBuffer_UV,
+        &gbuffers.GBuffer_Albedo,
+        &gbuffers.GBuffer_Packed_Data,
         &gbuffers.GBuffer_Velocity,
     };
 }
@@ -94,31 +98,33 @@ engine::Image* get_depth_image( GBuffers& gbuffers ) { return &gbuffers.GBuffer_
 
 std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( deferred::GBuffers& gbuffers )
 {
-    return { init_to_color_write( gbuffers.GBuffer_Normal ),
-             init_to_color_write( gbuffers.GBuffer_Position ),
-             init_to_color_write( gbuffers.GBuffer_Velocity ),
-             init_to_color_write( gbuffers.GBuffer_Tangent ),
-             init_to_color_write( gbuffers.GBuffer_UV ),
-             init_to_color_write( gbuffers.GBuffer_Albedo ),
-             init_to_color_write( gbuffers.GBuffer_Packed_Data ),
-             engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                                    .src_access = VK_ACCESS_2_NONE,
-                                    .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                                    .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                                    .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                                    .image = &gbuffers.GBuffer_Depth,
-                                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
-             engine::ImageBarrier {
-                 .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                 .src_access = VK_ACCESS_2_NONE,
-                 .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                 .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                 .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                 .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                 .image = &gbuffers.GBuffer_DepthMS,
-                 .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
-             } };
+    return {
+        init_to_color_write( gbuffers.GBuffer_Normal ),
+        init_to_color_write( gbuffers.GBuffer_Position ),
+        init_to_color_write( gbuffers.GBuffer_Velocity ),
+        init_to_color_write( gbuffers.GBuffer_Tangent ),
+        init_to_color_write( gbuffers.GBuffer_UV ),
+        init_to_color_write( gbuffers.GBuffer_Albedo ),
+        init_to_color_write( gbuffers.GBuffer_Packed_Data ),
+        engine::ImageBarrier {
+            .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+            .src_access = VK_ACCESS_2_NONE,
+            .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+            .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            .image = &gbuffers.GBuffer_Depth,
+            .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+        engine::ImageBarrier {
+            .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+            .src_access = VK_ACCESS_2_NONE,
+            .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+            .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            .image = &gbuffers.GBuffer_DepthMS,
+            .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
+        } };
 }
 
 engine::ImageBarrier init_to_color_write( engine::Image& image )
@@ -203,18 +209,16 @@ void create_top_pipeline_barriers(
     // All GBuffer barriers are for VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
     top_pipeline_barrier_desc->image_barriers = deferred::init_gbuffer_image_barriers( gbuffers );
 
-    top_pipeline_barrier_desc->image_barriers.push_back(
-        {
-            .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-            .src_access = VK_ACCESS_2_NONE,
-            .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-            .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-            .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            .image = &screen_color,
-            .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-        }
-    );
+    top_pipeline_barrier_desc->image_barriers.push_back( {
+        .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+        .src_access = VK_ACCESS_2_NONE,
+        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .image = &screen_color,
+        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+    } );
 }
 
 }

@@ -20,8 +20,8 @@ TAAPass add_taa(
     UniformBuffer<ub_data::Camera>& camera_buffer
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
     TAAPass pass;
     {
         pass.buffer = create_uniform_buffer<ub_data::AA>( { }, engine.frame_overlap );
@@ -112,7 +112,7 @@ TAAPass add_taa(
                 vk::create::shader_module( ANTI_ALIASING_SHADER_PATH ),
                 "cs_main"
             ),
-            .descriptor_sets = { pass.uniform_desc_set.get() },
+            .descriptor_sets = { pass.uniform_desc_set.get( ) },
             .group_size = glm::ivec3(
                 ( engine.swapchain.extent.width + 7 ) / 8,
                 ( engine.swapchain.extent.height + 7 ) / 8,
@@ -125,29 +125,31 @@ TAAPass add_taa(
     // cs_write_history samples output and stores to history.
     add_pipeline_barrier(
         task_list,
-        PipelineBarrierDescriptor { .buffer_barriers = { },
-                                    .image_barriers = {
-                                        ImageBarrier {
-                                            .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                            .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                                            .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                            .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                            .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                            .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                            .image = &output,
-                                            .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                                        },
-                                        ImageBarrier {
-                                            .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                            .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                            .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                            .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                            .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                                            .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                            .image = &history,
-                                            .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                                        },
-                                    },
+        PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers =
+                {
+                    ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &output,
+                        .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .image = &history,
+                        .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                },
             .label = "TAA History Write Pipeline Barrier" }
     );
 
@@ -159,7 +161,7 @@ TAAPass add_taa(
                 vk::create::shader_module( HISTORY_SHADER_PATH ),
                 "cs_write_history"
             ),
-            .descriptor_sets = { pass.history_desc_set.get() },
+            .descriptor_sets = { pass.history_desc_set.get( ) },
             .group_size = glm::ivec3(
                 ( engine.swapchain.extent.width + 7 ) / 8,
                 ( engine.swapchain.extent.height + 7 ) / 8,
@@ -172,29 +174,31 @@ TAAPass add_taa(
     // Ensure write for the proper transition before... uh... the blit. Leave history readable
     add_pipeline_barrier(
         task_list,
-        PipelineBarrierDescriptor { .buffer_barriers = { },
-                                    .image_barriers = {
-                                        ImageBarrier {
-                                            .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                            .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                            .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                            .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                            .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                                            .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                            .image = &output,
-                                            .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                                        },
-                                        ImageBarrier {
-                                            .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                            .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                                            .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                            .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                            .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                            .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                            .image = &history,
-                                            .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                                        },
-                                    },
+        PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers =
+                {
+                    ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .image = &output,
+                        .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &history,
+                        .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                },
             .label = "TAA Output Pipeline Barrier" }
     );
 
@@ -203,11 +207,11 @@ TAAPass add_taa(
 
 void update_aa_uniform_buffer( engine::post::TAAPass& taa_pass )
 {
-    const engine::State& engine = engine::State::GetConst();
-    ub_data::AA aa_ub = taa_pass.buffer.get_data();
+    const engine::State& engine = engine::State::GetConst( );
+    ub_data::AA aa_ub = taa_pass.buffer.get_data( );
     aa_ub.mode = RuntimeSettings::GetValue( RacecarSettings::AA_MODE );
     taa_pass.buffer.set_data( aa_ub );
-    taa_pass.buffer.update( engine.get_frame_index() );
+    taa_pass.buffer.update( engine.get_frame_index( ) );
 }
 
 }

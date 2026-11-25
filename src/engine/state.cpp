@@ -13,7 +13,7 @@ namespace {
 
 vkb::Swapchain create_swapchain( SDL_Window* window )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
     VkSurfaceCapabilitiesKHR capabilities = { };
 
     vk::check(
@@ -25,8 +25,8 @@ vkb::Swapchain create_swapchain( SDL_Window* window )
         "vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed"
     );
 
-    VkExtent2D swap_extent = std::invoke( [&]() -> VkExtent2D {
-        if ( capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max() ) {
+    VkExtent2D swap_extent = std::invoke( [&]( ) -> VkExtent2D {
+        if ( capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max( ) ) {
             log::info(
                 "[engine] Using current extent from vkGetPhysicalDeviceSurfaceCapabilitiesKHR"
             );
@@ -47,7 +47,7 @@ vkb::Swapchain create_swapchain( SDL_Window* window )
                 ),
             };
         } else {
-            throw Exception( "[SDL] SDL_GetWindowSizeInPixels: {}", SDL_GetError() );
+            throw Exception( "[SDL] SDL_GetWindowSizeInPixels: {}", SDL_GetError( ) );
         }
     } );
 
@@ -74,14 +74,14 @@ vkb::Swapchain create_swapchain( SDL_Window* window )
                                 | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
                                 | VK_IMAGE_USAGE_TRANSFER_DST_BIT
                             )
-                            .build();
+                            .build( );
 
     if ( !swapchain_ret ) {
-        auto swapchain_error = static_cast<vkb::SwapchainError>( swapchain_ret.error().value() );
+        auto swapchain_error = static_cast<vkb::SwapchainError>( swapchain_ret.error( ).value( ) );
         throw Exception( "[vkb] Swapchain creation failed: {}", vkb::to_string( swapchain_error ) );
     }
 
-    const vkb::Swapchain& swapchain = swapchain_ret.value();
+    const vkb::Swapchain& swapchain = swapchain_ret.value( );
 
     if ( swapchain.image_format == VK_FORMAT_B8G8R8A8_SRGB
          || swapchain.image_format == VK_FORMAT_R8G8B8A8_SRGB ) {
@@ -101,11 +101,11 @@ vkb::Swapchain create_swapchain( SDL_Window* window )
     return swapchain;
 }
 
-void create_frame_data()
+void create_frame_data( )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
-    engine::State& engine = engine::State::GetMut();
-    size_t num_images = engine.swapchain_images.size();
+    vk::Common& vulkan = vk::Common::GetMut( );
+    engine::State& engine = engine::State::GetMut( );
+    size_t num_images = engine.swapchain_images.size( );
 
     engine.frames = std::vector<FrameData>( num_images );
     engine.swapchain_semaphores = std::vector<SwapchainSemaphores>( num_images );
@@ -116,7 +116,7 @@ void create_frame_data()
         engine.cmd_pool,
         1
     );
-    const VkSemaphoreCreateInfo semaphore_info = vk::create::semaphore_info();
+    const VkSemaphoreCreateInfo semaphore_info = vk::create::semaphore_info( );
     const VkFenceCreateInfo fence_info = vk::create::fence_info( VK_FENCE_CREATE_SIGNALED_BIT );
 
     for ( uint32_t i = 0; i < engine.frame_overlap; i++ ) {
@@ -184,52 +184,52 @@ void create_frame_data()
 
 } // namespace
 
-size_t State::get_frame_index() const
+size_t State::get_frame_index( ) const
 {
     return static_cast<size_t>( frame_number % frame_overlap );
 }
 
-State& State::GetMut()
+State& State::GetMut( )
 {
     static State instance;
     return instance;
 }
 
-const State& State::GetConst() { return GetMut(); }
+const State& State::GetConst( ) { return GetMut( ); }
 
 void initialize( Context& ctx )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
-    State& engine = State::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
+    State& engine = State::GetMut( );
 
     try {
         engine.swapchain = create_swapchain( ctx.window );
 
         {
-            vkb::Result<std::vector<VkImage>> images_res = engine.swapchain.get_images();
+            vkb::Result<std::vector<VkImage>> images_res = engine.swapchain.get_images( );
 
             if ( !images_res ) {
                 throw Exception(
                     "[vkb] Failed to get swapchain images: {}",
-                    images_res.error().message()
+                    images_res.error( ).message( )
                 );
             }
 
-            engine.swapchain_images = std::move( images_res.value() );
+            engine.swapchain_images = std::move( images_res.value( ) );
         }
 
         {
             vkb::Result<std::vector<VkImageView>> image_views_res = engine.swapchain
-                                                                        .get_image_views();
+                                                                        .get_image_views( );
 
             if ( !image_views_res ) {
                 throw Exception(
                     "[vkb] Failed to get swapchain image views: {}",
-                    image_views_res.error().message()
+                    image_views_res.error( ).message( )
                 );
             }
 
-            engine.swapchain_image_views = std::move( image_views_res.value() );
+            engine.swapchain_image_views = std::move( image_views_res.value( ) );
         }
 
         {
@@ -251,7 +251,7 @@ void initialize( Context& ctx )
             vulkan.destructor_stack.push( vulkan.device, engine.cmd_pool, vkDestroyCommandPool );
         }
 
-        create_frame_data();
+        create_frame_data( );
 
         float aspect = static_cast<float>( engine.swapchain.extent.width )
             / static_cast<float>( engine.swapchain.extent.height );
@@ -272,16 +272,16 @@ void initialize( Context& ctx )
         create_immediate_sync_structures( engine.immediate_submit );
         create_descriptor_system( engine.frame_overlap, engine.descriptor_system );
     } catch ( const Exception& ex ) {
-        log::error( "[engine] {}", ex.what() );
+        log::error( "[engine] {}", ex.what( ) );
         throw Exception( "[engine] Failed to initialize" );
     }
 
     log::info( "[engine] Initialized!" );
 }
 
-void free()
+void free( )
 {
-    State& engine = State::GetMut();
+    State& engine = State::GetMut( );
 
     engine.swapchain.destroy_image_views( engine.swapchain_image_views );
     vkb::destroy_swapchain( engine.swapchain );

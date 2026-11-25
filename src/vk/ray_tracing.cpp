@@ -11,18 +11,15 @@ RayTracingProperties query_rt_properties( VkPhysicalDevice physical_device )
 {
     VkPhysicalDeviceAccelerationStructurePropertiesKHR as_properties = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,
-        .pNext = nullptr
-    };
+        .pNext = nullptr };
 
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR rt_pipeline_properties = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
-        .pNext = &as_properties
-    };
+        .pNext = &as_properties };
 
     VkPhysicalDeviceProperties2 device_properties_2 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-        .pNext = &rt_pipeline_properties
-    };
+        .pNext = &rt_pipeline_properties };
 
     vkGetPhysicalDeviceProperties2( physical_device, &device_properties_2 );
 
@@ -45,14 +42,15 @@ create_acceleration_structure_from_geometry( const MeshData& mesh )
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
         .pNext = nullptr,
         .vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-        .vertexData = { .deviceAddress = mesh.vertex_buffer_address
-                            + mesh.vertex_offset * mesh.vertex_stride },
+        .vertexData =
+            { .deviceAddress = mesh.vertex_buffer_address
+                  + mesh.vertex_offset * mesh.vertex_stride },
         .vertexStride = mesh.vertex_stride,
         .maxVertex = mesh.max_vertex,
 
         .indexType = VK_INDEX_TYPE_UINT32,
-        .indexData = { .deviceAddress = mesh.index_buffer_address
-                           + mesh.index_offset * sizeof( uint32_t ) },
+        .indexData =
+            { .deviceAddress = mesh.index_buffer_address + mesh.index_offset * sizeof( uint32_t ) },
     };
 
     VkAccelerationStructureGeometryKHR geometry = {
@@ -82,12 +80,14 @@ void alloc_blas(
         throw Exception( "[Alloc BLAS] MeshData index buffer is null" );
     }
 
-    VkBufferDeviceAddressInfo vertex_info { .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-                                            .buffer = mesh.vertex_buffer };
+    VkBufferDeviceAddressInfo vertex_info {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = mesh.vertex_buffer };
     mesh.vertex_buffer_address = vkGetBufferDeviceAddress( device, &vertex_info );
 
-    VkBufferDeviceAddressInfo index_info { .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-                                           .buffer = mesh.index_buffer };
+    VkBufferDeviceAddressInfo index_info {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = mesh.index_buffer };
     mesh.index_buffer_address = vkGetBufferDeviceAddress( device, &index_info );
 
     blas.geometry = create_acceleration_structure_from_geometry( mesh );
@@ -108,13 +108,13 @@ void alloc_blas(
     };
 
     VkAccelerationStructureBuildSizesInfoKHR sizeInfo = {
-        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR
-    };
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
 
-    blas.range_info = { .primitiveCount = max_primitive_count,
-                        .primitiveOffset = 0,
-                        .firstVertex = 0,
-                        .transformOffset = 0 };
+    blas.range_info = {
+        .primitiveCount = max_primitive_count,
+        .primitiveOffset = 0,
+        .firstVertex = 0,
+        .transformOffset = 0 };
 
     vkGetAccelerationStructureBuildSizesKHR(
         device,
@@ -149,8 +149,7 @@ void alloc_blas(
 
     VkBufferDeviceAddressInfo blas_address_info = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-        .buffer = blas.buffer
-    };
+        .buffer = blas.buffer };
     blas.device_address = vkGetBufferDeviceAddress( device, &blas_address_info );
 
     uint64_t aligned_scratch_size = sizeInfo.buildScratchSize
@@ -159,10 +158,10 @@ void alloc_blas(
     VkBuffer scratchBuffer = VK_NULL_HANDLE;
     VmaAllocation scratchAllocation = VK_NULL_HANDLE;
 
-    VkBufferCreateInfo scratchBufferCI = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                                           .size = aligned_scratch_size,
-                                           .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-                                               | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT };
+    VkBufferCreateInfo scratchBufferCI = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = aligned_scratch_size,
+        .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT };
     VmaAllocationCreateInfo scratchAllocCI = { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
     vmaCreateBuffer(
         allocator,
@@ -182,8 +181,7 @@ void alloc_blas(
 
     VkBufferDeviceAddressInfo scratchAddressInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-        .buffer = scratchBuffer
-    };
+        .buffer = scratchBuffer };
     VkDeviceAddress rawScratchAddress = vkGetBufferDeviceAddress( device, &scratchAddressInfo );
 
     VkDeviceAddress alignedScratchAddress = align_up(
@@ -281,9 +279,9 @@ void alloc_tlas(
 )
 {
     std::vector<VkAccelerationStructureInstanceKHR> instances;
-    instances.reserve( objects.size() );
+    instances.reserve( objects.size( ) );
 
-    for ( size_t i = 0; i < objects.size(); ++i ) {
+    for ( size_t i = 0; i < objects.size( ); ++i ) {
         const Object& obj = objects[i];
 
         bool nonzero = false;
@@ -307,7 +305,7 @@ void alloc_tlas(
         instances.push_back( make_instance( obj, i ) );
     }
 
-    uint32_t instance_count = static_cast<uint32_t>( instances.size() );
+    uint32_t instance_count = static_cast<uint32_t>( instances.size( ) );
 
     if ( instance_count == 0 ) {
         return;
@@ -319,13 +317,13 @@ void alloc_tlas(
 
     VkBufferCreateInfo instanceBufferCI = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = instances.size() * sizeof( VkAccelerationStructureInstanceKHR ),
+        .size = instances.size( ) * sizeof( VkAccelerationStructureInstanceKHR ),
         .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-            | VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
-    };
+            | VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR };
 
-    VmaAllocationCreateInfo instanceAllocCI = { .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT,
-                                                .usage = VMA_MEMORY_USAGE_CPU_TO_GPU };
+    VmaAllocationCreateInfo instanceAllocCI = {
+        .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = VMA_MEMORY_USAGE_CPU_TO_GPU };
 
     vmaCreateBuffer(
         allocator,
@@ -343,7 +341,7 @@ void alloc_tlas(
         }
     );
 
-    memcpy( instance_alloc_info.pMappedData, instances.data(), instanceBufferCI.size );
+    memcpy( instance_alloc_info.pMappedData, instances.data( ), instanceBufferCI.size );
     vmaFlushAllocation( allocator, instance_allocation, 0, instanceBufferCI.size );
 
     tlas.instance_buffer = instance_buffer;
@@ -353,8 +351,7 @@ void alloc_tlas(
 
     VkBufferDeviceAddressInfo instanceAddressInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-        .buffer = instance_buffer
-    };
+        .buffer = instance_buffer };
     VkDeviceAddress instance_buffer_address = vkGetBufferDeviceAddress(
         device,
         &instanceAddressInfo
@@ -364,11 +361,12 @@ void alloc_tlas(
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
         .pNext = nullptr,
         .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
-        .geometry = { .instances = { .sType =
-                                         VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
-                                     .pNext = nullptr,
-                                     .arrayOfPointers = VK_FALSE,
-                                     .data = { .deviceAddress = instance_buffer_address } } },
+        .geometry =
+            { .instances =
+                  { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+                    .pNext = nullptr,
+                    .arrayOfPointers = VK_FALSE,
+                    .data = { .deviceAddress = instance_buffer_address } } },
         .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
     };
 
@@ -386,13 +384,13 @@ void alloc_tlas(
     };
 
     VkAccelerationStructureBuildSizesInfoKHR sizeInfo = {
-        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR
-    };
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
 
-    tlas.range_info = { .primitiveCount = instance_count,
-                        .primitiveOffset = 0,
-                        .firstVertex = 0,
-                        .transformOffset = 0 };
+    tlas.range_info = {
+        .primitiveCount = instance_count,
+        .primitiveOffset = 0,
+        .firstVertex = 0,
+        .transformOffset = 0 };
 
     vkGetAccelerationStructureBuildSizesKHR(
         device,
@@ -407,8 +405,7 @@ void alloc_tlas(
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = sizeInfo.accelerationStructureSize,
         .usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR
-            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-    };
+            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT };
     VmaAllocationCreateInfo tlasAllocCI = { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
     vmaCreateBuffer(
         allocator,
@@ -428,8 +425,7 @@ void alloc_tlas(
 
     VkBufferDeviceAddressInfo tlasAddressInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-        .buffer = tlas.buffer
-    };
+        .buffer = tlas.buffer };
     tlas.device_address = vkGetBufferDeviceAddress( device, &tlasAddressInfo );
 
     uint64_t aligned_scratch_size = sizeInfo.buildScratchSize
@@ -444,8 +440,7 @@ void alloc_tlas(
         // Use the padded size
         .size = aligned_scratch_size,
         // Required usage flags for scratch memory: Storage buffer + Device Address
-        .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-    };
+        .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT };
     VmaAllocationCreateInfo scratchAllocCI = { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
 
     // 2. Allocate the Scratch Buffer using VMA
@@ -468,8 +463,7 @@ void alloc_tlas(
     // 3. Get the raw device address
     VkBufferDeviceAddressInfo scratchAddressInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-        .buffer = scratchBuffer
-    };
+        .buffer = scratchBuffer };
     VkDeviceAddress rawScratchAddress = vkGetBufferDeviceAddress( device, &scratchAddressInfo );
 
     // 4. Align the address upwards to meet hardware requirements (CRITICAL STEP)
@@ -484,8 +478,7 @@ void alloc_tlas(
         .buffer = tlas.buffer,
         .size = sizeInfo.accelerationStructureSize,
         .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
-        .deviceAddress = tlas.device_address
-    };
+        .deviceAddress = tlas.device_address };
     vk::check(
         vkCreateAccelerationStructureKHR( device, &asCI, nullptr, &tlas.handle ),
         "Failed to call vkCreateAccelerationStructureKHR for TLAS"
@@ -508,7 +501,7 @@ void update_tlas_instances(
         return;
     }
 
-    if ( objects.size() != tlas.instance_count ) {
+    if ( objects.size( ) != tlas.instance_count ) {
         throw Exception(
             "[Update TLAS Instances] Object count changed since the TLAS was "
             "allocated"
@@ -516,14 +509,14 @@ void update_tlas_instances(
     }
 
     std::vector<VkAccelerationStructureInstanceKHR> instances;
-    instances.reserve( objects.size() );
+    instances.reserve( objects.size( ) );
 
-    for ( size_t i = 0; i < objects.size(); ++i ) {
+    for ( size_t i = 0; i < objects.size( ); ++i ) {
         instances.push_back( make_instance( objects[i], i ) );
     }
 
-    const size_t byte_size = instances.size() * sizeof( VkAccelerationStructureInstanceKHR );
-    memcpy( tlas.instance_mapped, instances.data(), byte_size );
+    const size_t byte_size = instances.size( ) * sizeof( VkAccelerationStructureInstanceKHR );
+    memcpy( tlas.instance_mapped, instances.data( ), byte_size );
     vmaFlushAllocation( allocator, tlas.instance_allocation, 0, byte_size );
 }
 
@@ -540,10 +533,11 @@ void build_tlas( VkCommandBuffer cmd_buf, AccelerationStructure& tlas )
     vkCmdBuildAccelerationStructuresKHR( cmd_buf, 1, &tlas.build_info, &pRangeInfo );
 
     // Memory Barrier: Ensure TLAS build output is readable by Ray Tracing Shaders
-    VkMemoryBarrier barrier = { .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
-                                .srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
-                                .dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR
-                                    | VK_ACCESS_SHADER_READ_BIT };
+    VkMemoryBarrier barrier = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+        .srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+        .dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR
+            | VK_ACCESS_SHADER_READ_BIT };
     vkCmdPipelineBarrier(
         cmd_buf,
         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, // Source Stage (TLAS build)

@@ -20,7 +20,7 @@ void add_gfx_task(
 )
 {
     Task new_task;
-    new_task.index = static_cast<int>( task_list.tasks.size() );
+    new_task.index = static_cast<int>( task_list.tasks.size( ) );
     new_task.type = Task::GFX;
     new_task.predicate = predicate;
     set_task_name( new_task, name );
@@ -34,7 +34,7 @@ void add_cs_task(
 )
 {
     Task new_task;
-    new_task.index = static_cast<int>( task_list.tasks.size() );
+    new_task.index = static_cast<int>( task_list.tasks.size( ) );
     new_task.is_single_run = task.is_single_run;
     new_task.type = Task::Type::COMP;
     new_task.predicate = predicate;
@@ -49,7 +49,7 @@ void add_blit_task(
 )
 {
     Task new_task;
-    new_task.index = static_cast<int>( task_list.tasks.size() );
+    new_task.index = static_cast<int>( task_list.tasks.size( ) );
     new_task.type = Task::BLIT;
     new_task.predicate = predicate;
     set_task_name( new_task, name );
@@ -61,14 +61,14 @@ void add_blit_task(
 void add_pipeline_barrier( TaskList& task_list, PipelineBarrierDescriptor barrier )
 {
     task_list.pipeline_barriers.push_back(
-        std::pair( static_cast<int>( task_list.tasks.size() ), barrier )
+        std::pair( static_cast<int>( task_list.tasks.size( ) ), barrier )
     );
 }
 
-void add_cpu_task( TaskList& task_list, std::function<void()> task, std::string_view name )
+void add_cpu_task( TaskList& task_list, std::function<void( )> task, std::string_view name )
 {
     Task new_task;
-    new_task.index = static_cast<int>( task_list.tasks.size() );
+    new_task.index = static_cast<int>( task_list.tasks.size( ) );
     new_task.type = Task::CPU_CALL;
     set_task_name( new_task, name );
 
@@ -81,7 +81,7 @@ void add_gpu_task(
 )
 {
     Task new_task;
-    new_task.index = static_cast<int>( task_list.tasks.size() );
+    new_task.index = static_cast<int>( task_list.tasks.size( ) );
     new_task.type = Task::GPU_CALL;
     set_task_name( new_task, name );
 

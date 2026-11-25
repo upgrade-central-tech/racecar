@@ -21,14 +21,14 @@ constexpr std::string_view
 constexpr float CLOUD_NOISE_SCALE = 0.00005f;
 constexpr float CLOUD_WIND_SPEED = 0.002f;
 
-Volumetric initialize()
+Volumetric initialize( )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
     Volumetric volumetric;
     geometry::quad::Mesh& scene_mesh = volumetric.scene_mesh;
 
-    scene_mesh = geometry::quad::create();
+    scene_mesh = geometry::quad::create( );
 
     if ( !generate_noise( volumetric ) ) {
         return { };
@@ -87,7 +87,7 @@ Volumetric initialize()
 
 bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     // Cumulus map generation
     {
         uint32_t cumulus_map_size = 256;
@@ -149,7 +149,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
                 compute_pipeline.layout,
                 0,
                 1,
-                cumulus_desc_set.descriptor_sets.data(),
+                cumulus_desc_set.descriptor_sets.data( ),
                 0,
                 nullptr
             );
@@ -232,7 +232,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
                 compute_pipeline.layout,
                 0,
                 1,
-                low_freq_desc_set.descriptor_sets.data(),
+                low_freq_desc_set.descriptor_sets.data( ),
                 0,
                 nullptr
             );
@@ -316,7 +316,7 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
                 compute_pipeline.layout,
                 0,
                 1,
-                high_freq_desc_set.descriptor_sets.data(),
+                high_freq_desc_set.descriptor_sets.data( ),
                 0,
                 nullptr
             );
@@ -352,7 +352,7 @@ void draw_volumetric(
     const engine::Image& transmittance_lut
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     // Build the low-res render image
     VkExtent2D color_dim = {
         color_attachment.image_extent.width,
@@ -396,11 +396,12 @@ void draw_volumetric(
     const geometry::quad::Mesh& volumetric_mesh = volumetric.scene_mesh;
 
     // We ideally don't want to render this at full resolution. That would take too much time!
-    engine::GfxTask volumetric_gfx_task = { .color_attachments = { &volumetric.cloud_buffer },
-                                            .extent = {
-                                                low_res_dim.width,
-                                                low_res_dim.height,
-                                            } };
+    engine::GfxTask volumetric_gfx_task = {
+        .color_attachments = { &volumetric.cloud_buffer },
+        .extent = {
+            low_res_dim.width,
+            low_res_dim.height,
+        } };
 
     engine::Pipeline volumetric_pipeline;
 
@@ -458,24 +459,26 @@ void draw_volumetric(
             false
         );
     } catch ( const Exception& ex ) {
-        log::error( "Failed to create volumetrics graphics pipeline: {}", ex.what() );
+        log::error( "Failed to create volumetrics graphics pipeline: {}", ex.what( ) );
         throw;
     }
 
     volumetric_gfx_task.draw_tasks.push_back( {
-            .draw_resource_descriptor = {
-                    .vertex_buffers = { volumetric_mesh.mesh_buffers.vertex_buffer.handle },
-                    .index_buffer = volumetric_mesh.mesh_buffers.index_buffer.handle,
-                    .vertex_buffer_offsets = { 0 },
-                    .index_count = static_cast<uint32_t>( volumetric_mesh.indices.size() ),
+        .draw_resource_descriptor =
+            {
+                .vertex_buffers = { volumetric_mesh.mesh_buffers.vertex_buffer.handle },
+                .index_buffer = volumetric_mesh.mesh_buffers.index_buffer.handle,
+                .vertex_buffer_offsets = { 0 },
+                .index_count = static_cast<uint32_t>( volumetric_mesh.indices.size( ) ),
             },
-            .descriptor_sets = {
+        .descriptor_sets =
+            {
                 &volumetric.uniform_desc_set,
                 &volumetric.lut_desc_set,
                 &volumetric.sampler_desc_set,
             },
-            .pipeline = volumetric_pipeline,
-        } );
+        .pipeline = volumetric_pipeline,
+    } );
 
     engine::add_gfx_task( task_list, volumetric_gfx_task, "Volumetric Clouds" );
 
@@ -518,12 +521,12 @@ void draw_volumetric(
             true,
             true,
             vk::create::shader_module( VOLUMETRIC_COMPOSITE_SHADER_MODULE_PATH ),
-            engine::ShaderEntryPointStrings::defaults(),
+            engine::ShaderEntryPointStrings::defaults( ),
             false,
             false
         );
     } catch ( const Exception& ex ) {
-        log::error( "Failed to create volumetrics graphics pipeline: {}", ex.what() );
+        log::error( "Failed to create volumetrics graphics pipeline: {}", ex.what( ) );
         throw;
     }
 
@@ -535,19 +538,21 @@ void draw_volumetric(
     );
 
     volumetric_composite_task.draw_tasks.push_back( {
-            .draw_resource_descriptor = {
-                    .vertex_buffers = { volumetric_mesh.mesh_buffers.vertex_buffer.handle },
-                    .index_buffer = volumetric_mesh.mesh_buffers.index_buffer.handle,
-                    .vertex_buffer_offsets = { 0 },
-                    .index_count = static_cast<uint32_t>( volumetric_mesh.indices.size() ),
+        .draw_resource_descriptor =
+            {
+                .vertex_buffers = { volumetric_mesh.mesh_buffers.vertex_buffer.handle },
+                .index_buffer = volumetric_mesh.mesh_buffers.index_buffer.handle,
+                .vertex_buffer_offsets = { 0 },
+                .index_count = static_cast<uint32_t>( volumetric_mesh.indices.size( ) ),
             },
-            .descriptor_sets = {
+        .descriptor_sets =
+            {
                 &volumetric.uniform_desc_set,
                 &volumetric.texture_composite_desc_set,
                 &volumetric.sampler_desc_set,
             },
-            .pipeline = volumetric_composite_pipeline,
-        } );
+        .pipeline = volumetric_composite_pipeline,
+    } );
 
     engine::add_gfx_task( task_list, volumetric_composite_task, "Cloud Composite" );
 }
@@ -556,10 +561,10 @@ void update_volumetric_uniform_buffer(
     atmosphere::Atmosphere& atms, volumetric::Volumetric& volumetric, const CameraData& camera_data
 )
 {
-    const engine::State& engine = engine::State::GetConst();
-    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data();
+    const engine::State& engine = engine::State::GetConst( );
+    ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data( );
 
-    ub_data::Clouds cloud_ub = volumetric.uniform_buffer.get_data();
+    ub_data::Clouds cloud_ub = volumetric.uniform_buffer.get_data( );
     cloud_ub.inverse_proj = glm::inverse( camera_data.projection );
     cloud_ub.inverse_view = glm::inverse( camera_data.view );
     cloud_ub.camera_position = camera::calculate_eye_position( engine.camera );
@@ -570,15 +575,15 @@ void update_volumetric_uniform_buffer(
     cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
     cloud_ub.cloud_offset_y = wind + travel.y;
     cloud_ub.cloud_params = glm::vec4(
-        RuntimeSettings::Get<RacecarSettings::CLOUD_EXTINCTION>(),
-        RuntimeSettings::Get<RacecarSettings::CLOUD_EROSION>(),
+        RuntimeSettings::Get<RacecarSettings::CLOUD_EXTINCTION>( ),
+        RuntimeSettings::Get<RacecarSettings::CLOUD_EROSION>( ),
         atms_ub.radiance_exposure,
         0.0f
     );
     cloud_ub.rotating_pixel_index = static_cast<int>( engine.rendered_frames % 16 );
 
     volumetric.uniform_buffer.set_data( cloud_ub );
-    volumetric.uniform_buffer.update( engine.get_frame_index() );
+    volumetric.uniform_buffer.update( engine.get_frame_index( ) );
 }
 
 }

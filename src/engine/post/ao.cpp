@@ -15,7 +15,7 @@ namespace racecar::engine::post {
 
 void initialize_ao_pass( AoPass& ao_pass )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     ao_pass.ao_buffer = create_uniform_buffer<ub_data::AOData>(
         { },
         static_cast<size_t>( engine.frame_overlap )
@@ -147,8 +147,8 @@ void add_ao( AoPass& ao_pass, TaskList& task_list )
 
 void update_ao_uniform_buffer( const gui::Gui& gui, engine::post::AoPass& ao_pass )
 {
-    const engine::State& engine = engine::State::GetConst();
-    ub_data::AOData ao_ub = ao_pass.ao_buffer.get_data();
+    const engine::State& engine = engine::State::GetConst( );
+    ub_data::AOData ao_ub = ao_pass.ao_buffer.get_data( );
 
     ao_ub.packed_floats0 = glm::vec4(
         gui.ao.thickness,
@@ -159,7 +159,7 @@ void update_ao_uniform_buffer( const gui::Gui& gui, engine::post::AoPass& ao_pas
     ao_ub.packed_floats1 = glm::vec4( gui.ao.enable_ao ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f );
 
     ao_pass.ao_buffer.set_data( ao_ub );
-    ao_pass.ao_buffer.update( engine.get_frame_index() );
+    ao_pass.ao_buffer.update( engine.get_frame_index( ) );
 }
 
 }

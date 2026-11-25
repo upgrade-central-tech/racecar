@@ -7,10 +7,10 @@ namespace racecar::geometry::scene {
 
 GPUMeshBuffers upload_mesh( std::span<uint32_t> indices, std::span<Vertex> vertices )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
-    const size_t vertex_buffer_size = vertices.size() * sizeof( Vertex );
-    const size_t index_buffer_size = indices.size() * sizeof( uint32_t );
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
+    const size_t vertex_buffer_size = vertices.size( ) * sizeof( Vertex );
+    const size_t index_buffer_size = indices.size( ) * sizeof( uint32_t );
 
     GPUMeshBuffers new_mesh_buffers;
 
@@ -62,10 +62,10 @@ GPUMeshBuffers upload_mesh( std::span<uint32_t> indices, std::span<Vertex> verti
     );
 
     void* data = staging.info.pMappedData;
-    std::memcpy( data, vertices.data(), vertex_buffer_size );
+    std::memcpy( data, vertices.data( ), vertex_buffer_size );
     std::memcpy(
         static_cast<char*>( data ) + vertex_buffer_size,
-        indices.data(),
+        indices.data( ),
         index_buffer_size
     );
 
@@ -114,7 +114,7 @@ void generate_tangents( Mesh& mesh )
         vertex.tangent = glm::vec4( 0.0f );
     }
 
-    for ( uint32_t index = 0; index < static_cast<uint32_t>( indices.size() ); index += 3 ) {
+    for ( uint32_t index = 0; index < static_cast<uint32_t>( indices.size( ) ); index += 3 ) {
         uint32_t i0 = indices[index];
         uint32_t i1 = indices[index + 1];
         uint32_t i2 = indices[index + 2];

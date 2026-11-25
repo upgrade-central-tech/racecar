@@ -31,8 +31,8 @@ constexpr std::array EASING_OPTIONS = std::to_array<std::string_view>( {
 
 Gui initialize( Context& ctx )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
-    engine::State& engine = engine::State::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
+    engine::State& engine = engine::State::GetMut( );
     Gui gui;
 
     {
@@ -61,18 +61,18 @@ Gui initialize( Context& ctx )
         vulkan.destructor_stack.push( vulkan.device, gui.descriptor_pool, vkDestroyDescriptorPool );
     }
 
-    IMGUI_CHECKVERSION();
-    gui.ctx = ImGui::CreateContext();
+    IMGUI_CHECKVERSION( );
+    gui.ctx = ImGui::CreateContext( );
 
     if ( !gui.ctx ) {
         throw Exception( "[ImGui] Failed to create context" );
     }
 
     // Enable keyboard controls
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO( );
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-    ImGui::StyleColorsDark();
+    ImGui::StyleColorsDark( );
 
     if ( !ImGui_ImplSDL3_InitForVulkan( ctx.window ) ) {
         throw Exception( "[ImGui] Failed to init SDL3 impl for Vulkan" );
@@ -125,7 +125,7 @@ void process_event(
     // includes in non-GUI related files.
     ImGui_ImplSDL3_ProcessEvent( event );
 
-    if ( gui.show_window && ImGui::GetIO().WantCaptureMouse ) {
+    if ( gui.show_window && ImGui::GetIO( ).WantCaptureMouse ) {
         return;
     }
 
@@ -181,7 +181,7 @@ void process_event(
             }
 
             case SDLK_RIGHT: {
-                int num_presets = static_cast<int>( gui.preset.presets.size() );
+                int num_presets = static_cast<int>( gui.preset.presets.size( ) );
                 int new_number = std::min( num_presets, gui.preset.number + 1 );
 
                 if ( new_number != gui.preset.number ) {
@@ -200,10 +200,10 @@ void process_event(
             }
             }
 
-            if ( preset_number_opt.has_value() ) {
+            if ( preset_number_opt.has_value( ) ) {
                 // Switch to preset number, if it exists
-                if ( size_t preset_number = preset_number_opt.value();
-                     preset_number <= gui.preset.presets.size() ) {
+                if ( size_t preset_number = preset_number_opt.value( );
+                     preset_number <= gui.preset.presets.size( ) ) {
                     const Preset& preset = gui.preset.presets[preset_number - 1];
                     use_preset( preset, gui, atms, camera, material_buffers );
                     gui.preset.number = static_cast<int>( preset_number );
@@ -228,12 +228,12 @@ void update(
         return;
     }
 
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
+    ImGui_ImplVulkan_NewFrame( );
+    ImGui_ImplSDL3_NewFrame( );
+    ImGui::NewFrame( );
 
     if ( ImGui::Begin( "Configuration", &gui.show_window ) ) {
-        const ImGuiIO& io = ImGui::GetIO();
+        const ImGuiIO& io = ImGui::GetIO( );
         float average_fps = io.Framerate;
         ImGui::Text( "FPS: %.2f (%.1f ms)", average_fps, 1.f / average_fps * 1000.f );
 
@@ -246,13 +246,13 @@ void update(
                 camera.center.y,
                 camera.center.z
             );
-            ImGui::SameLine();
+            ImGui::SameLine( );
             ImGui::Text( "Position: [%.1f, %.1f, %1.f]", cam_pos.x, cam_pos.y, cam_pos.z );
 
             ImGui::Text( "Radius: %.1f", camera.radius );
-            ImGui::SameLine();
+            ImGui::SameLine( );
             ImGui::Text( "Azimuth: %.1f", camera.azimuth );
-            ImGui::SameLine();
+            ImGui::SameLine( );
             ImGui::Text( "Zenith: %.1f", camera.zenith );
         }
 
@@ -279,7 +279,7 @@ void update(
                 ImGui::SliderFloat( "Glint roughness", &gui.debug.glint_roughness, 0, 1.0f );
                 ImGui::SliderFloat( "Glint randomness", &gui.debug.glint_randomness, 0, 10.0f );
 
-                ImGui::EndTabItem();
+                ImGui::EndTabItem( );
             }
 
             if ( ImGui::BeginTabItem( "Presets" ) ) {
@@ -291,36 +291,36 @@ void update(
                 ImGui::SliderFloat( "Duration", &gui.preset.transition_duration, 0.f, 5.f );
                 size_t selected_index = static_cast<size_t>( gui.preset.easing );
                 std::string_view preview_value = EASING_OPTIONS[selected_index];
-                if ( ImGui::BeginCombo( "Easing", preview_value.data() ) ) {
-                    for ( size_t i = 0; i < EASING_OPTIONS.size(); ++i ) {
+                if ( ImGui::BeginCombo( "Easing", preview_value.data( ) ) ) {
+                    for ( size_t i = 0; i < EASING_OPTIONS.size( ); ++i ) {
                         bool is_selected = ( selected_index == i );
 
-                        if ( ImGui::Selectable( EASING_OPTIONS[i].data(), is_selected ) ) {
+                        if ( ImGui::Selectable( EASING_OPTIONS[i].data( ), is_selected ) ) {
                             selected_index = i;
                         }
 
                         if ( is_selected ) {
-                            ImGui::SetItemDefaultFocus();
+                            ImGui::SetItemDefaultFocus( );
                         }
                     }
 
                     gui.preset.easing = static_cast<Gui::PresetData::Easing>( selected_index );
-                    ImGui::EndCombo();
+                    ImGui::EndCombo( );
                 }
 
                 ImGui::SeparatorText( "Loaded presets" );
                 for ( const auto& preset : gui.preset.presets ) {
-                    ImGui::PushID( preset.name.c_str() );
+                    ImGui::PushID( preset.name.c_str( ) );
                     if ( ImGui::Button( "Use" ) ) {
                         use_preset( preset, gui, atms, camera, material_buffers );
                     }
-                    ImGui::PopID();
+                    ImGui::PopID( );
 
-                    ImGui::SameLine();
-                    ImGui::Text( "%s", preset.name.c_str() );
+                    ImGui::SameLine( );
+                    ImGui::Text( "%s", preset.name.c_str( ) );
                 }
 
-                ImGui::EndTabItem();
+                ImGui::EndTabItem( );
             }
 
             if ( ImGui::BeginTabItem( "General" ) ) {
@@ -331,7 +331,7 @@ void update(
                 RacecarGUI::SettingsCombo( "Debug texture", RacecarSettings::DEBUG_TEXTURE );
 
                 ImGui::BeginDisabled(
-                    RuntimeSettings::Get<RacecarSettings::DEBUG_TEXTURE>() == DebugTexture::NONE
+                    RuntimeSettings::Get<RacecarSettings::DEBUG_TEXTURE>( ) == DebugTexture::NONE
                 );
                 ImGui::SliderFloat(
                     "Texture exposure",
@@ -348,14 +348,14 @@ void update(
                     float( REFLECTION_MIP_COUNT - 1 ),
                     "%.2f"
                 );
-                ImGui::EndDisabled();
+                ImGui::EndDisabled( );
 
                 ImGui::SeparatorText( "Demo Settings" );
                 ImGui::Checkbox( "Enable car translation", &gui.demo.enable_translation );
                 ImGui::Checkbox( "Unlocked camera", &gui.demo.enable_unlocked_camera );
                 ImGui::BeginDisabled( gui.demo.enable_unlocked_camera );
                 ImGui::Checkbox( "Enable racing camera", &gui.demo.enable_racing_camera );
-                ImGui::EndDisabled();
+                ImGui::EndDisabled( );
                 ImGui::SliderFloat( "Bumpiness", &gui.demo.bumpiness, 0.0f, 0.01f );
                 RacecarGUI::SettingsCheckbox( "Autodrive", RacecarSettings::AUTODRIVE );
                 RacecarGUI::SettingsSliderFloat(
@@ -367,7 +367,7 @@ void update(
                 ImGui::Text( "Spin speed:" );
                 ImGui::SliderFloat( "Min", &gui.demo.rotate_speed, 0, 0.05f );
 
-                ImGui::EndTabItem();
+                ImGui::EndTabItem( );
             }
 
             if ( ImGui::BeginTabItem( "Terrain" ) ) {
@@ -409,7 +409,7 @@ void update(
                 );
                 ImGui::SliderFloat( "Debug wetness", &gui.terrain.wetness, 0.0f, 1.0f );
                 ImGui::SliderFloat( "Debug snow", &gui.terrain.snow, 0.0f, 1.0f );
-                ImGui::EndTabItem();
+                ImGui::EndTabItem( );
             }
 
             if ( ImGui::BeginTabItem( "Atmosphere" ) ) {
@@ -421,10 +421,10 @@ void update(
                 ImGui::SliderFloat(
                     "Sun zenith",
                     &atms.sun_zenith,
-                    -( glm::half_pi<float>() + 0.1f ),
-                    glm::half_pi<float>() + 0.1f
+                    -( glm::half_pi<float>( ) + 0.1f ),
+                    glm::half_pi<float>( ) + 0.1f
                 );
-                ImGui::SliderFloat( "Sun azimuth", &atms.sun_azimuth, 0.f, glm::two_pi<float>() );
+                ImGui::SliderFloat( "Sun azimuth", &atms.sun_azimuth, 0.f, glm::two_pi<float>( ) );
                 ImGui::SliderFloat( "Radiance exposure", &gui.atms.radiance_exposure, 0.f, 20.f );
 
                 ImGui::SeparatorText( "Sky irradiance" );
@@ -441,7 +441,7 @@ void update(
                 RacecarGUI::SettingsSliderFloat( "Extinction", RacecarSettings::CLOUD_EXTINCTION );
                 RacecarGUI::SettingsSliderFloat( "Erosion", RacecarSettings::CLOUD_EROSION );
 
-                ImGui::EndTabItem();
+                ImGui::EndTabItem( );
             }
 
             if ( ImGui::BeginTabItem( "AO" ) ) {
@@ -451,7 +451,7 @@ void update(
                 ImGui::SliderFloat( "Radius", &gui.ao.radius, 0.0f, 1.0f );
                 ImGui::SliderFloat( "Offset", &gui.ao.offset, 0.0f, 1.0f );
 
-                ImGui::EndTabItem();
+                ImGui::EndTabItem( );
             }
 
             if ( ImGui::BeginTabItem( "Post" ) ) {
@@ -469,7 +469,7 @@ void update(
                 bool is_not_gt7_hdr = RuntimeSettings::GetValue( RacecarSettings::TONEMAPPING_MODE )
                     != (int)TonemappingMode::GT7_HDR;
                 if ( is_not_gt7_hdr ) {
-                    ImGui::BeginDisabled();
+                    ImGui::BeginDisabled( );
                 }
                 ImGui::SliderFloat(
                     "HDR luminance target",
@@ -478,50 +478,50 @@ void update(
                     10'000.f
                 );
                 if ( is_not_gt7_hdr ) {
-                    ImGui::EndDisabled();
+                    ImGui::EndDisabled( );
                 }
 
-                ImGui::EndTabItem();
+                ImGui::EndTabItem( );
             }
 
 #if RACECAR_DEV
             if ( ImGui::BeginTabItem( "Task List" ) ) {
-                for ( size_t i = 0; i < task_list.tasks.size(); ++i ) {
+                for ( size_t i = 0; i < task_list.tasks.size( ); ++i ) {
                     engine::Task& task = task_list.tasks[i];
                     const bool is_disabled = !task.is_enabled
-                        || ( ( task.predicate != nullptr ) && !task.predicate() );
+                        || ( ( task.predicate != nullptr ) && !task.predicate( ) );
 
                     ImGui::PushID( static_cast<int>( i ) );
                     ImGui::Checkbox( "##enabled", &task.is_enabled );
-                    ImGui::PopID();
-                    ImGui::SameLine();
+                    ImGui::PopID( );
+                    ImGui::SameLine( );
 
                     if ( is_disabled ) {
-                        ImGui::BeginDisabled();
+                        ImGui::BeginDisabled( );
                     }
-                    ImGui::TextUnformatted( task.name.c_str() );
+                    ImGui::TextUnformatted( task.name.c_str( ) );
                     if ( is_disabled ) {
-                        ImGui::EndDisabled();
+                        ImGui::EndDisabled( );
                     }
                 }
 
-                ImGui::EndTabItem();
+                ImGui::EndTabItem( );
             }
 #endif
 
-            ImGui::EndTabBar();
+            ImGui::EndTabBar( );
         }
     }
 
-    ImGui::End();
-    ImGui::Render();
+    ImGui::End( );
+    ImGui::Render( );
 }
 
-void free()
+void free( )
 {
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
-    ImGui::DestroyContext();
+    ImGui_ImplVulkan_Shutdown( );
+    ImGui_ImplSDL3_Shutdown( );
+    ImGui::DestroyContext( );
 }
 
 void use_preset(
@@ -532,7 +532,7 @@ void use_preset(
     const std::vector<UniformBuffer<ub_data::Material>>& material_buffers
 )
 {
-    if ( gui.preset.transition.has_value() ) {
+    if ( gui.preset.transition.has_value( ) ) {
         // Can't start another transition when one is currently happening
         log::warn( "[preset] Currently transitioning!" );
         return;
@@ -540,7 +540,7 @@ void use_preset(
 
     log::info( "[preset] Transitioning to preset \"{}\"", preset.name );
 
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
     Preset before = {
         .version = 1,
@@ -567,21 +567,21 @@ void use_preset(
 
         for ( const auto& preset_material : preset.materials ) {
             size_t material_idx = static_cast<size_t>( preset_material.slot );
-            ub_data::Material material = material_buffers[material_idx].get_data();
+            ub_data::Material material = material_buffers[material_idx].get_data( );
 
-            Preset::MaterialData
-                before_material = { .slot = preset_material.slot,
-                                    .data = gui::Material {
-                                        .color = material.base_color,
-                                        .roughness = material.roughness,
-                                        .metallic = material.metallic,
-                                        .clearcoat_roughness = material.clearcoat_roughness,
-                                        .clearcoat_weight = material.clearcoat,
-                                        .glintiness = material.glintiness,
-                                        .glint_log_density = material.glint_log_density,
-                                        .glint_roughness = material.roughness,
-                                        .glint_randomness = material.glint_randomness,
-                                    } };
+            Preset::MaterialData before_material = {
+                .slot = preset_material.slot,
+                .data = gui::Material {
+                    .color = material.base_color,
+                    .roughness = material.roughness,
+                    .metallic = material.metallic,
+                    .clearcoat_roughness = material.clearcoat_roughness,
+                    .clearcoat_weight = material.clearcoat,
+                    .glintiness = material.glintiness,
+                    .glint_log_density = material.glint_log_density,
+                    .glint_roughness = material.roughness,
+                    .glint_randomness = material.glint_randomness,
+                } };
 
             before_materials.push_back( std::move( before_material ) );
             log::info( "[preset] Transitioning material with ID {}", preset_material.slot );
@@ -603,10 +603,10 @@ void use_preset(
 
 void reload_presets( gui::Gui& gui )
 {
-    gui.preset.presets.clear();
+    gui.preset.presets.clear( );
     gui.preset.transition = std::nullopt;
 
-    gui.preset.presets = load_presets();
+    gui.preset.presets = load_presets( );
 
     log::info( "[preset] Reloaded all presets" );
 }

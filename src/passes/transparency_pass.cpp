@@ -21,8 +21,8 @@ compute_primitive_centroid( const geometry::scene::Mesh& scene_mesh, const scene
         return glm::vec3( 0.f );
     }
 
-    glm::vec3 aabb_min( std::numeric_limits<float>::max() );
-    glm::vec3 aabb_max( std::numeric_limits<float>::lowest() );
+    glm::vec3 aabb_min( std::numeric_limits<float>::max( ) );
+    glm::vec3 aabb_max( std::numeric_limits<float>::lowest( ) );
 
     for ( size_t i = 0; i < prim.ind_count; ++i ) {
         const uint32_t idx = scene_mesh.indices[size_t( prim.ind_offset ) + i];
@@ -50,8 +50,8 @@ void create_transparency_pass_resources(
     engine::DescriptorSet* sun_visibility_desc_set
 )
 {
-    const engine::State& engine = engine::State::GetConst();
-    size_t frame_index = engine.get_frame_index();
+    const engine::State& engine = engine::State::GetConst( );
+    size_t frame_index = engine.get_frame_index( );
 
     transparency_pass->transparency_pipeline = engine::create_gfx_pipeline(
         engine::get_vertex_input_state_create_info( scene_mesh ),
@@ -66,7 +66,7 @@ void create_transparency_pass_resources(
         true,
         true,
         vk::create::shader_module( TRANSPARENCY_SHADER_MODULE_PATH ),
-        engine::ShaderEntryPointStrings::defaults(),
+        engine::ShaderEntryPointStrings::defaults( ),
         false,
         false
     );
@@ -78,8 +78,8 @@ void create_transparency_pass_resources(
     transparency_pass->sampler_desc_set = sampler_desc_set;
     transparency_pass->sun_visibility_desc_set = sun_visibility_desc_set;
 
-    transparency_pass->prim_info.clear();
-    transparency_pass->prim_info.reserve( transparent_prims.size() );
+    transparency_pass->prim_info.clear( );
+    transparency_pass->prim_info.reserve( transparent_prims.size( ) );
 
     for ( const scene::Primitive* prim : transparent_prims ) {
         transparency_pass->prim_info.push_back(
@@ -103,7 +103,7 @@ void execute_transparency_pass(
     engine::TaskList& task_list
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
     engine::GfxTask transparency_gfx_task = {
         .clear_color = std::nullopt,
@@ -117,57 +117,62 @@ void execute_transparency_pass(
         engine::DrawResourceDescriptor draw_descriptor = engine::DrawResourceDescriptor::from_mesh(
             scene_mesh.mesh_buffers.vertex_buffer.handle,
             scene_mesh.mesh_buffers.index_buffer.handle,
-            static_cast<uint32_t>( scene_mesh.indices.size() ),
+            static_cast<uint32_t>( scene_mesh.indices.size( ) ),
             *prim
         );
 
-        transparency_gfx_task.draw_tasks.push_back({
+        transparency_gfx_task.draw_tasks.push_back( {
             .draw_resource_descriptor = draw_descriptor,
-            .descriptor_sets = {
-                transparency_pass->uniform_desc_set,
-                &( *transparency_pass->material_desc_sets )[static_cast<size_t>( prim->material_id )],
-                &( *transparency_pass->model_mat_desc_sets )[static_cast<size_t>( prim->node_id )],
-                transparency_pass->lut_sets,
-                transparency_pass->sampler_desc_set,
-                transparency_pass->sun_visibility_desc_set,
-            },
+            .descriptor_sets =
+                {
+                    transparency_pass->uniform_desc_set,
+                    &(
+                        *transparency_pass->material_desc_sets
+                    )[static_cast<size_t>( prim->material_id )],
+                    &(
+                        *transparency_pass->model_mat_desc_sets
+                    )[static_cast<size_t>( prim->node_id )],
+                    transparency_pass->lut_sets,
+                    transparency_pass->sampler_desc_set,
+                    transparency_pass->sun_visibility_desc_set,
+                },
             .pipeline = transparency_pass->transparency_pipeline,
-        });
+        } );
     }
 
-    const size_t gfx_idx = task_list.gfx_tasks.size();
+    const size_t gfx_idx = task_list.gfx_tasks.size( );
 
     engine::add_cpu_task(
         task_list,
-        [transparency_pass, gfx_idx, &task_list, &camera_buffer, &model_mat_uniform_buffers]() {
+        [transparency_pass, gfx_idx, &task_list, &camera_buffer, &model_mat_uniform_buffers]( ) {
             std::vector<engine::DrawTask>& draws = task_list.gfx_tasks[gfx_idx].draw_tasks;
 
-            const glm::mat4 view = camera_buffer.get_data().view_mat;
+            const glm::mat4 view = camera_buffer.get_data( ).view_mat;
 
             const auto view_z = [&]( const engine::DrawTask& draw ) -> float {
                 const int32_t key = draw.draw_resource_descriptor.index_offset;
 
                 const auto info = std::find_if(
-                    transparency_pass->prim_info.begin(),
-                    transparency_pass->prim_info.end(),
+                    transparency_pass->prim_info.begin( ),
+                    transparency_pass->prim_info.end( ),
                     [key]( const TransparentPrimInfo& i ) { return i.index_offset == key; }
                 );
 
-                if ( info == transparency_pass->prim_info.end() ) {
+                if ( info == transparency_pass->prim_info.end( ) ) {
                     return 0.f;
                 }
 
                 const glm::mat4
                     model = model_mat_uniform_buffers[static_cast<size_t>( info->node_id )]
-                                .get_data()
+                                .get_data( )
                                 .model_mat;
 
                 return ( view * model * glm::vec4( info->centroid, 1.f ) ).z;
             };
 
             std::sort(
-                draws.begin(),
-                draws.end(),
+                draws.begin( ),
+                draws.end( ),
                 [&]( const engine::DrawTask& a, const engine::DrawTask& b ) {
                     const float za = view_z( a );
                     const float zb = view_z( b );
@@ -195,31 +200,32 @@ void create_transparency_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = {
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                    .src_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
-                        | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                    .image = &target_color,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                        .src_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
+                            | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = &target_color,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
+                            | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                        .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
+                            | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+                        .image = &gbuffer_depth,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
+                    },
                 },
-                engine::ImageBarrier {
-                    .src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
-                        | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                    .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                    .src_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-                    .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                    .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
-                        | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
-                    .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-                    .image = &gbuffer_depth,
-                    .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
-                },
-            },
             .label = "Transparency Pipeline Barrier" }
     );
 }

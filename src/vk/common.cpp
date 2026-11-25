@@ -39,27 +39,27 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
 
     message += std::format( "\n{}\n", callback_data->pMessage );
 
-    std::fputs( message.c_str(), stdout );
+    std::fputs( message.c_str( ), stdout );
 
     return VK_FALSE;
 }
 #endif
 
-vkb::Instance create_instance()
+vkb::Instance create_instance( )
 {
-    vkb::Result<vkb::SystemInfo> system_info_ret = vkb::SystemInfo::get_system_info();
+    vkb::Result<vkb::SystemInfo> system_info_ret = vkb::SystemInfo::get_system_info( );
 
     if ( !system_info_ret ) {
         throw Exception( "[vkb] Unable to get system info" );
     }
 
-    vkb::SystemInfo& system_info = system_info_ret.value();
+    vkb::SystemInfo& system_info = system_info_ret.value( );
     auto handler = reinterpret_cast<PFN_vkGetInstanceProcAddr>(
-        SDL_Vulkan_GetVkGetInstanceProcAddr()
+        SDL_Vulkan_GetVkGetInstanceProcAddr( )
     );
 
     if ( !handler ) {
-        throw Exception( "[SDL] Could not get vkGetInstanceProcAddr: {}", SDL_GetError() );
+        throw Exception( "[SDL] Could not get vkGetInstanceProcAddr: {}", SDL_GetError( ) );
     }
 
     volkInitializeCustom( handler );
@@ -72,7 +72,7 @@ vkb::Instance create_instance()
 #if RACECAR_DEBUG
     if ( system_info.validation_layers_available ) {
         log::info( "[Vulkan] Enabling validation layers" );
-        instance_builder.enable_validation_layers().set_debug_callback( debug_callback );
+        instance_builder.enable_validation_layers( ).set_debug_callback( debug_callback );
     }
 #endif
 
@@ -82,7 +82,7 @@ vkb::Instance create_instance()
     if ( !inst_extensions ) {
         throw Exception(
             "[SDL] Could not get necessary Vulkan instance extensions: {}",
-            SDL_GetError()
+            SDL_GetError( )
         );
     }
 
@@ -118,23 +118,23 @@ vkb::Instance create_instance()
         log::info( "{}", message );
     }
 
-    vkb::Result<vkb::Instance> instance_ret = instance_builder.build();
+    vkb::Result<vkb::Instance> instance_ret = instance_builder.build( );
 
     if ( !instance_ret ) {
         throw Exception(
             "[vkb] Failed to create Vulkan instance. Error: {}",
-            instance_ret.error().message()
+            instance_ret.error( ).message( )
         );
     }
 
-    return instance_ret.value();
+    return instance_ret.value( );
 }
 
 /// Picks a physical device with a preference for a discrete GPU, and then creates a logical
 /// device with one queue enabled from each available queue family.
-vkb::Device pick_and_create_device()
+vkb::Device pick_and_create_device( )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
     vkb::PhysicalDeviceSelector phys_selector( vulkan.instance, vulkan.surface );
 
 #if RACECAR_RAY_TRACING
@@ -142,8 +142,7 @@ vkb::Device pick_and_create_device()
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
         .pNext = nullptr,
         .accelerationStructure = VK_TRUE,
-        .accelerationStructureCaptureReplay = VK_TRUE
-    };
+        .accelerationStructureCaptureReplay = VK_TRUE };
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_pipeline_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
@@ -153,8 +152,7 @@ vkb::Device pick_and_create_device()
 
     VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
-        .rayQuery = VK_TRUE
-    };
+        .rayQuery = VK_TRUE };
 
     log::info( "[Vulkan] Enabling ray tracing" );
 #endif // RACECAR_RAY_TRACING
@@ -218,11 +216,11 @@ vkb::Device pick_and_create_device()
             .set_required_features_12( required_features_12 )
             .set_required_features_11( required_features_11 )
             .set_required_features( required_features )
-            .select();
+            .select( );
 
     if ( !phys_selector_ret ) {
         auto phys_device_error = static_cast<vkb::PhysicalDeviceError>(
-            phys_selector_ret.error().value()
+            phys_selector_ret.error( ).value( )
         );
 
         // Handle no physical devices separately
@@ -238,10 +236,10 @@ vkb::Device pick_and_create_device()
         }
     }
 
-    vkb::PhysicalDevice& phys_device = phys_selector_ret.value();
+    vkb::PhysicalDevice& phys_device = phys_selector_ret.value( );
     const std::string& phys_name = phys_device.name;
     vkb::DeviceBuilder device_builder( phys_device );
-    vkb::Result<vkb::Device> device_ret = device_builder.build();
+    vkb::Result<vkb::Device> device_ret = device_builder.build( );
 
     if ( !device_ret ) {
         throw Exception(
@@ -250,7 +248,7 @@ vkb::Device pick_and_create_device()
         );
     }
 
-    vkb::Device& device = device_ret.value();
+    vkb::Device& device = device_ret.value( );
 
     if ( !device.get_queue( vkb::QueueType::graphics ) ) {
         throw Exception(
@@ -271,9 +269,9 @@ vkb::Device pick_and_create_device()
     return device;
 }
 
-void initialize_vmaallocator()
+void initialize_vmaallocator( )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
     VmaAllocatorCreateInfo allocator_info = {
         .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
         .physicalDevice = vulkan.device.physical_device,
@@ -297,28 +295,28 @@ void initialize_vmaallocator()
 
 } // namespace
 
-Common& Common::GetMut()
+Common& Common::GetMut( )
 {
     static Common instance;
     return instance;
 }
 
-const Common& Common::GetConst() { return GetMut(); }
+const Common& Common::GetConst( ) { return GetMut( ); }
 
 void initialize( SDL_Window* window )
 {
-    Common& vulkan = Common::GetMut();
+    Common& vulkan = Common::GetMut( );
 
     try {
-        vulkan.instance = create_instance();
+        vulkan.instance = create_instance( );
         volkLoadInstance( vulkan.instance );
 
         if ( !SDL_Vulkan_CreateSurface( window, vulkan.instance, nullptr, &vulkan.surface ) ) {
-            throw Exception( "[SDL] Could not create Vulkan surface: {}", SDL_GetError() );
+            throw Exception( "[SDL] Could not create Vulkan surface: {}", SDL_GetError( ) );
         }
 
-        vulkan.device = pick_and_create_device();
-        initialize_vmaallocator();
+        vulkan.device = pick_and_create_device( );
+        initialize_vmaallocator( );
 
         {
             vkb::Result<VkQueue> gfx_queue_res = vulkan.device.get_queue(
@@ -328,11 +326,11 @@ void initialize( SDL_Window* window )
             if ( !gfx_queue_res ) {
                 throw Exception(
                     "[vkb] Failed to get graphics queue: {}",
-                    gfx_queue_res.error().message()
+                    gfx_queue_res.error( ).message( )
                 );
             }
 
-            vulkan.graphics_queue = std::move( gfx_queue_res.value() );
+            vulkan.graphics_queue = std::move( gfx_queue_res.value( ) );
         }
 
         {
@@ -343,11 +341,11 @@ void initialize( SDL_Window* window )
             if ( !gfx_queue_family_res ) {
                 throw Exception(
                     "[vkb] Failed to get graphics queue family: {}",
-                    gfx_queue_family_res.error().message()
+                    gfx_queue_family_res.error( ).message( )
                 );
             }
 
-            vulkan.graphics_queue_family = gfx_queue_family_res.value();
+            vulkan.graphics_queue_family = gfx_queue_family_res.value( );
         }
 
         // Used by a lot of stuff
@@ -407,16 +405,16 @@ void initialize( SDL_Window* window )
         vulkan.ray_tracing_properties = rt::query_rt_properties( vulkan.device.physical_device );
 #endif // RACECAR_RAY_TRACING
     } catch ( const Exception& ex ) {
-        log::error( "[vk] {}", ex.what() );
+        log::error( "[vk] {}", ex.what( ) );
         throw Exception( "[Vulkan] Failed to initialize" );
     }
 
     log::info( "[Vulkan] Initialized!" );
 }
 
-void free()
+void free( )
 {
-    Common& vulkan = Common::GetMut();
+    Common& vulkan = Common::GetMut( );
 
     vmaDestroyAllocator( vulkan.allocator );
     vkb::destroy_device( vulkan.device );

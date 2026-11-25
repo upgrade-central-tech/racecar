@@ -10,7 +10,7 @@
 namespace racecar::camera {
 
 /// Offset by a little epsilon.
-constexpr float MAX_POLAR_ANGLE = glm::half_pi<float>() - 0.001f;
+constexpr float MAX_POLAR_ANGLE = glm::half_pi<float>( ) - 0.001f;
 constexpr float MIN_RADIUS = 0.1f;
 
 /// The drag and translate speeds below are calculated relative to this framerate.
@@ -22,10 +22,10 @@ constexpr float SCROLL_SCALE = 1.05f;
 void rotate_azimuth( OrbitCamera& cam, float radians )
 {
     cam.azimuth += radians;
-    cam.azimuth = std::fmod( cam.azimuth, glm::two_pi<float>() );
+    cam.azimuth = std::fmod( cam.azimuth, glm::two_pi<float>( ) );
 
     if ( cam.azimuth < 0.f ) {
-        cam.azimuth = glm::two_pi<float>() + cam.azimuth;
+        cam.azimuth = glm::two_pi<float>( ) + cam.azimuth;
     }
 }
 
@@ -96,7 +96,7 @@ glm::mat4 calculate_view_proj_matrix( const OrbitCamera& cam )
 
 void process_event( const Context& ctx, const SDL_Event* event, OrbitCamera& cam, bool show_window )
 {
-    if ( show_window && ImGui::GetIO().WantCaptureMouse ) {
+    if ( show_window && ImGui::GetIO( ).WantCaptureMouse ) {
         return;
     }
 
@@ -166,7 +166,7 @@ void process_input( OrbitCamera& cam )
     }
 
     // Make movement speed FPS-agnostic
-    float framerate = ImGui::GetIO().Framerate;
+    float framerate = ImGui::GetIO( ).Framerate;
     float factor = RELATIVE_FPS / ( framerate <= 0.f ? RELATIVE_FPS : framerate );
     direction *= factor;
 

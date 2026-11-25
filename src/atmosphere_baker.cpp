@@ -26,8 +26,8 @@ void initialize_atmosphere_baker(
 {
     atms_baker.gamestate_desc_set = &gamestate_desc_set;
 
-    const vk::Common& vulkan = vk::Common::GetConst();
-    const engine::State& engine = engine::State::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
+    const engine::State& engine = engine::State::GetConst( );
     uint32_t octahedral_sky_size = 512;
 
     atms_baker.octahedral_sky = engine::create_image(
@@ -212,7 +212,7 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
         float roughness = (float)mip / (float)( mip_levels - 1 );
         atms_baker.mip_data[mip].set_data( { glm::vec4( mip, roughness, 0.0f, 0.0f ) } );
 
-        atms_baker.mip_data[mip].update_all();
+        atms_baker.mip_data[mip].update_all( );
 
         engine::update_descriptor_set_uniform(
             atms_baker.octahedral_mip_writes[mip],
@@ -223,22 +223,28 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
 
     engine::add_pipeline_barrier(
         task_list,
-        engine::PipelineBarrierDescriptor { .buffer_barriers = { },
-                                            .image_barriers = { engine::ImageBarrier {
-                                                .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-                                                .src_access = VK_ACCESS_2_NONE,
-                                                .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                                                .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                                .dst_access = VK_ACCESS_SHADER_WRITE_BIT,
-                                                .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                                .image = &atms_baker.octahedral_sky_mips,
-                                                .range = {
-                                                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                                                    .baseMipLevel = 0,
-                                                    .levelCount = mip_levels,
-                                                    .baseArrayLayer = 0,
-                                                    .layerCount = 1,
-                                                } } },
+        engine::PipelineBarrierDescriptor {
+            .buffer_barriers = { },
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_SHADER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .image = &atms_baker.octahedral_sky_mips,
+                        .range =
+                            {
+                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                .baseMipLevel = 0,
+                                .levelCount = mip_levels,
+                                .baseArrayLayer = 0,
+                                .layerCount = 1,
+                            },
+                    },
+                },
             .label = "Octahedral Sky Mips Init Pipeline Barrier" }
     );
 
@@ -252,15 +258,16 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
             ( mip_size + 7 ) / 8,
         };
 
-        engine::ComputeTask cs_mip_task = { atms_baker.cs_octahedral_mip_pipeline,
-                                            {
-                                                &atms.uniform_desc_set,
-                                                &atms.lut_desc_set,
-                                                &atms.sampler_desc_set,
-                                                &atms_baker.octahedral_mip_writes[mip],
-                                                &atms_baker.volumetrics_desc_set,
-                                            },
-                                            glm::ivec3( dims, 1 ) };
+        engine::ComputeTask cs_mip_task = {
+            atms_baker.cs_octahedral_mip_pipeline,
+            {
+                &atms.uniform_desc_set,
+                &atms.lut_desc_set,
+                &atms.sampler_desc_set,
+                &atms_baker.octahedral_mip_writes[mip],
+                &atms_baker.volumetrics_desc_set,
+            },
+            glm::ivec3( dims, 1 ) };
 
         engine::add_cs_task( task_list, cs_mip_task, "Octahedral Sky Mip" );
     }
@@ -269,21 +276,26 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers
-            = { engine::ImageBarrier { .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                                       .src_access = VK_ACCESS_SHADER_WRITE_BIT,
-                                       .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                                       .dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                                       .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                                       .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                       .image = &atms_baker.octahedral_sky_mips,
-                                       .range = {
-                                           .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                                           .baseMipLevel = 0,
-                                           .levelCount = mip_levels,
-                                           .baseArrayLayer = 0,
-                                           .layerCount = 1,
-                                       } } },
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_SHADER_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &atms_baker.octahedral_sky_mips,
+                        .range =
+                            {
+                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                .baseMipLevel = 0,
+                                .levelCount = mip_levels,
+                                .baseArrayLayer = 0,
+                                .layerCount = 1,
+                            },
+                    },
+                },
             .label = "Octahedral Sky Mips to Shader Read Pipeline Barrier" }
     );
 }

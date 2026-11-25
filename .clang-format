@@ -14,7 +14,7 @@ SpacesInParens: Custom
 SpacesInParensOptions:
   ExceptDoubleParentheses: false
   InConditionalStatements: true
-  InEmptyParentheses: false
+  InEmptyParentheses: true
   Other: true
 
 BinPackArguments: false
@@ -25,6 +25,8 @@ PenaltyBreakBeforeFirstCallParameter: 0
 PenaltyBreakAssignment: 500
 BreakBeforeBinaryOperators: NonAssignment
 AlignAfterOpenBracket: BlockIndent
+Cpp11BracedListStyle: FunctionCall
+BreakBeforeCloseBracketBracedList: false
 
 # Local includes, then 3rd party libraries, then standard library. volk has to be included
 # before vk-bootstrap because the latter includes Vulkan headers which volk does not like

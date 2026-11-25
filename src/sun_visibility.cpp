@@ -25,7 +25,7 @@ void initialize_sun_visibility(
     engine::DescriptorSet& gamestate_desc_set
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
     sun_visibility.volumetric = &volumetric;
     sun_visibility.gamestate_desc_set = &gamestate_desc_set;
@@ -48,7 +48,7 @@ void initialize_sun_visibility(
             .size = glm::vec2( 2 * geometry::TERRAIN_HALF_WIDTH, 2 * geometry::TERRAIN_HALF_WIDTH ),
         }
     );
-    sun_visibility.terrain_size_data_uniform.update_all();
+    sun_visibility.terrain_size_data_uniform.update_all( );
 
     sun_visibility.visibility_write_desc_set = engine::generate_descriptor_set(
         {
@@ -89,7 +89,7 @@ void initialize_sun_visibility(
 
     engine::update_descriptor_set_sampler(
         sun_visibility.visibility_read_desc_set,
-        vk::Common::GetConst().global_samplers.linear_sampler,
+        vk::Common::GetConst( ).global_samplers.linear_sampler,
         2
     );
 

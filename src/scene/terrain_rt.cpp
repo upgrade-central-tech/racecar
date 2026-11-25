@@ -16,9 +16,9 @@ constexpr uint32_t DISPLACE_GROUP_SIZE = 8;
 
 void create_mesh_buffers( TerrainRayTracingInfo* info )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
-    info->dynamic_terrain_mesh_buffer.clear();
+    info->dynamic_terrain_mesh_buffer.clear( );
     info->dynamic_terrain_mesh_buffer.reserve( engine.frame_overlap );
 
     for ( uint32_t i = 0; i < engine.frame_overlap; ++i ) {
@@ -35,7 +35,7 @@ void create_mesh_buffers( TerrainRayTracingInfo* info )
 
 void create_grid_uniform( TerrainRayTracingInfo* info )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
     info->grid_uniform = create_uniform_buffer<TerrainRTGrid>( { }, engine.frame_overlap );
 
@@ -50,12 +50,12 @@ void create_grid_uniform( TerrainRayTracingInfo* info )
             ._pad = glm::uvec2( 0 ),
         }
     );
-    info->grid_uniform.update_all();
+    info->grid_uniform.update_all( );
 }
 
 void create_descriptor_sets( TerrainRayTracingInfo* info )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
 
     info->uniform_desc_set = engine::generate_descriptor_set(
         {
@@ -111,7 +111,7 @@ void create_descriptor_sets( TerrainRayTracingInfo* info )
 
 void create_index_buffer( TerrainRayTracingInfo* info )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
     std::vector<uint32_t> indices;
     indices.reserve( TERRAIN_RT_INDEX_COUNT );
@@ -133,7 +133,7 @@ void create_index_buffer( TerrainRayTracingInfo* info )
         }
     }
 
-    const size_t byte_size = indices.size() * sizeof( uint32_t );
+    const size_t byte_size = indices.size( ) * sizeof( uint32_t );
 
     info->terrain_index_buffer = vk::mem::create_buffer(
         byte_size,
@@ -148,7 +148,7 @@ void create_index_buffer( TerrainRayTracingInfo* info )
         VMA_MEMORY_USAGE_CPU_ONLY
     );
 
-    std::memcpy( staging.info.pMappedData, indices.data(), byte_size );
+    std::memcpy( staging.info.pMappedData, indices.data( ), byte_size );
 
     engine::immediate_submit( engine.immediate_submit, [&]( VkCommandBuffer cmd_buf ) {
         VkBufferCopy copy = { .srcOffset = 0, .dstOffset = 0, .size = byte_size };
@@ -160,7 +160,7 @@ void create_shading_desc_set(
     TerrainRayTracingInfo* info, const std::vector<VkAccelerationStructureKHR>& tlas_handles
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
     geometry::Terrain& terrain = *info->terrain;
 
     info->shading_desc_set = engine::generate_descriptor_set(
@@ -225,13 +225,13 @@ void create_shading_desc_set(
 
 void create_acceleration_structures( TerrainRayTracingInfo* info )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
-    const engine::State& engine = engine::State::GetConst();
+    vk::Common& vulkan = vk::Common::GetMut( );
+    const engine::State& engine = engine::State::GetConst( );
 
-    info->dynamic_terrain_blas.clear();
+    info->dynamic_terrain_blas.clear( );
     info->dynamic_terrain_blas.resize( engine.frame_overlap );
 
-    info->tlas.clear();
+    info->tlas.clear( );
     info->tlas.resize( engine.frame_overlap );
 
     for ( uint32_t i = 0; i < engine.frame_overlap; ++i ) {
@@ -255,8 +255,9 @@ void create_acceleration_structures( TerrainRayTracingInfo* info )
             vulkan.allocator,
             info->tlas[i],
             vulkan.ray_tracing_properties,
-            { vk::rt::Object { .blas = &info->dynamic_terrain_blas[i],
-                               .transform = glm::identity<glm::mat4>() } },
+            { vk::rt::Object {
+                .blas = &info->dynamic_terrain_blas[i],
+                .transform = glm::identity<glm::mat4>( ) } },
             vulkan.destructor_stack
         );
     }
@@ -267,7 +268,7 @@ void create_acceleration_structures( TerrainRayTracingInfo* info )
     );
 
     std::vector<VkAccelerationStructureKHR> tlas_handles;
-    tlas_handles.reserve( info->tlas.size() );
+    tlas_handles.reserve( info->tlas.size( ) );
     for ( const vk::rt::AccelerationStructure& tlas : info->tlas ) {
         tlas_handles.push_back( tlas.handle );
     }
@@ -285,10 +286,11 @@ void create_acceleration_structures( TerrainRayTracingInfo* info )
 
 void init_terrain_ray_tracing_info( TerrainRayTracingInfo* out_info, geometry::Terrain* terrain )
 {
-    *out_info = TerrainRayTracingInfo { .terrain = terrain,
-                                        .terrain_uniform = &terrain->terrain_uniform,
-                                        .layer_mask = &terrain->test_layer_mask,
-                                        .gamestate_desc_set = terrain->gamestate_desc_set };
+    *out_info = TerrainRayTracingInfo {
+        .terrain = terrain,
+        .terrain_uniform = &terrain->terrain_uniform,
+        .layer_mask = &terrain->test_layer_mask,
+        .gamestate_desc_set = terrain->gamestate_desc_set };
 
     create_mesh_buffers( out_info );
     create_grid_uniform( out_info );
@@ -349,8 +351,8 @@ void add_terrain_rt_build_pass( TerrainRayTracingInfo& info, engine::TaskList& t
     engine::add_gpu_task(
         task_list,
         [&info]( VkCommandBuffer cmd_buf ) {
-            const engine::State& engine = engine::State::GetConst();
-            const size_t frame = engine.get_frame_index();
+            const engine::State& engine = engine::State::GetConst( );
+            const size_t frame = engine.get_frame_index( );
 
             vk::rt::build_blas( cmd_buf, info.dynamic_terrain_blas[frame] );
 

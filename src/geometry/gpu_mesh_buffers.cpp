@@ -8,7 +8,7 @@ bool create_mesh_buffers(
     GPUMeshBuffers& mesh_buffers, size_t vertex_buffer_size, size_t index_buffer_size
 )
 {
-    const vk::Common& vulkan = vk::Common::GetConst();
+    const vk::Common& vulkan = vk::Common::GetConst( );
     try {
         mesh_buffers = {
             .index_buffer = vk::mem::create_buffer(
@@ -58,7 +58,7 @@ bool create_mesh_buffers(
 
 bool upload_mesh_buffers( GPUMeshBuffers& mesh_buffers, void* vertices_data, void* indices_data )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     // Upload index + vertex data to GPU
     {
         vk::mem::AllocatedBuffer staging = vk::mem::create_buffer(

@@ -22,9 +22,9 @@ void create_scene_gfx_pipeline(
     engine::DescriptorSet* sampler_desc_set
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     try {
-        size_t frame_index = engine.get_frame_index();
+        size_t frame_index = engine.get_frame_index( );
         *scene_pipeline = engine::create_gfx_pipeline(
             engine::get_vertex_input_state_create_info( scene_mesh ),
             {
@@ -49,19 +49,19 @@ void create_scene_gfx_pipeline(
             false,
             true,
             vk::create::shader_module( SHADER_MODULE_PATH ),
-            engine::ShaderEntryPointStrings::defaults(),
+            engine::ShaderEntryPointStrings::defaults( ),
             false,
             false
         );
     } catch ( const Exception& ex ) {
-        log::error( "Failed to create graphics pipeline: {}", ex.what() );
+        log::error( "Failed to create graphics pipeline: {}", ex.what( ) );
         throw;
     }
 }
 
 engine::GfxTask create_prepass_gfx_task( deferred::GBuffers& gbuffers )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     return {
         .clear_color = { { { 0.f, 0.f, 0.f, 0.f } } },
         .clear_depth = 1.f,
@@ -87,29 +87,28 @@ void add_prim_draw_tasks(
         engine::DrawResourceDescriptor draw_descriptor = engine::DrawResourceDescriptor::from_mesh(
             scene_mesh.mesh_buffers.vertex_buffer.handle,
             scene_mesh.mesh_buffers.index_buffer.handle,
-            static_cast<uint32_t>( scene_mesh.indices.size() ),
+            static_cast<uint32_t>( scene_mesh.indices.size( ) ),
             *prim
         );
 
         // Give the material descriptor set to the draw task
         scene_pass.gfx_task.draw_tasks.push_back( {
-                .draw_resource_descriptor = draw_descriptor,
-                .descriptor_sets = {
+            .draw_resource_descriptor = draw_descriptor,
+            .descriptor_sets =
+                {
                     &scene_pass.uniform_desc_set,
                     &scene_pass.material_desc_sets[static_cast<size_t>( prim->material_id )],
                     &scene_pass.model_mat_desc_sets[static_cast<size_t>( prim->node_id )],
                     &scene_pass.lut_sets,
                     &scene_pass.sampler_desc_set,
                 },
-                .pipeline = scene_pass.pipeline,
-            } );
-        depth_pass.gfx_task.draw_tasks.push_back(
-            {
-                .draw_resource_descriptor = draw_descriptor,
-                .descriptor_sets = { &depth_pass.uniform_desc_set },
-                .pipeline = depth_pass.pipeline,
-            }
-        );
+            .pipeline = scene_pass.pipeline,
+        } );
+        depth_pass.gfx_task.draw_tasks.push_back( {
+            .draw_resource_descriptor = draw_descriptor,
+            .descriptor_sets = { &depth_pass.uniform_desc_set },
+            .pipeline = depth_pass.pipeline,
+        } );
     }
 }
 

@@ -7,24 +7,24 @@ namespace racecar::engine {
 
 void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBuffer cmd_buf )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
     std::vector<VkBufferMemoryBarrier2> vk_buffer_barriers;
     std::vector<VkImageMemoryBarrier2> vk_image_barriers;
 
-    size_t idx = engine.get_frame_index();
+    size_t idx = engine.get_frame_index( );
 
     std::transform(
-        barrier.buffer_barriers.begin(),
-        barrier.buffer_barriers.end(),
+        barrier.buffer_barriers.begin( ),
+        barrier.buffer_barriers.end( ),
         std::back_inserter( vk_buffer_barriers ),
         [=]( const BufferBarrier& b ) { return b.get_vk( idx ); }
     );
 
     std::transform(
-        barrier.image_barriers.begin(),
-        barrier.image_barriers.end(),
+        barrier.image_barriers.begin( ),
+        barrier.image_barriers.end( ),
         std::back_inserter( vk_image_barriers ),
-        [=]( const ImageBarrier& b ) { return b.get_vk(); }
+        [=]( const ImageBarrier& b ) { return b.get_vk( ); }
     );
 
     VkDependencyInfo info = {
@@ -33,17 +33,17 @@ void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBu
         .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
         .memoryBarrierCount = 0,
         .pMemoryBarriers = nullptr,
-        .bufferMemoryBarrierCount = uint32_t( vk_buffer_barriers.size() ),
-        .pBufferMemoryBarriers = vk_buffer_barriers.data(),
-        .imageMemoryBarrierCount = uint32_t( vk_image_barriers.size() ),
-        .pImageMemoryBarriers = vk_image_barriers.data(),
+        .bufferMemoryBarrierCount = uint32_t( vk_buffer_barriers.size( ) ),
+        .pBufferMemoryBarriers = vk_buffer_barriers.data( ),
+        .imageMemoryBarrierCount = uint32_t( vk_image_barriers.size( ) ),
+        .pImageMemoryBarriers = vk_image_barriers.data( ),
     };
 
 #if RACECAR_DEBUG
-    if ( !barrier.label.empty() ) {
+    if ( !barrier.label.empty( ) ) {
         VkDebugUtilsLabelEXT label = {
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-            .pLabelName = barrier.label.data(),
+            .pLabelName = barrier.label.data( ),
             .color = { 1, 0, 0, 1 },
         };
         vkCmdBeginDebugUtilsLabelEXT( cmd_buf, &label );
@@ -51,7 +51,7 @@ void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBu
 #endif
     vkCmdPipelineBarrier2( cmd_buf, &info );
 #if RACECAR_DEBUG
-    if ( !barrier.label.empty() ) {
+    if ( !barrier.label.empty( ) ) {
         vkCmdEndDebugUtilsLabelEXT( cmd_buf );
     }
 #endif
@@ -59,37 +59,39 @@ void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBu
 
 VkBufferMemoryBarrier2 BufferBarrier::get_vk( size_t idx ) const
 {
-    if ( idx >= buffer.size() ) {
+    if ( idx >= buffer.size( ) ) {
         throw Exception( "[BufferBarrier] Expected one buffer per frame" );
     }
 
-    return VkBufferMemoryBarrier2 { .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-                                    .pNext = VK_NULL_HANDLE,
-                                    .srcStageMask = src_stage,
-                                    .srcAccessMask = src_access,
-                                    .dstStageMask = dst_stage,
-                                    .dstAccessMask = dst_access,
-                                    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                    .buffer = buffer[idx].handle,
-                                    .offset = 0,
-                                    .size = VK_WHOLE_SIZE };
+    return VkBufferMemoryBarrier2 {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .pNext = VK_NULL_HANDLE,
+        .srcStageMask = src_stage,
+        .srcAccessMask = src_access,
+        .dstStageMask = dst_stage,
+        .dstAccessMask = dst_access,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .buffer = buffer[idx].handle,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE };
 }
 
-VkImageMemoryBarrier2 ImageBarrier::get_vk() const
+VkImageMemoryBarrier2 ImageBarrier::get_vk( ) const
 {
-    return VkImageMemoryBarrier2 { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-                                   .pNext = VK_NULL_HANDLE,
-                                   .srcStageMask = src_stage,
-                                   .srcAccessMask = src_access,
-                                   .dstStageMask = dst_stage,
-                                   .dstAccessMask = dst_access,
-                                   .oldLayout = src_layout,
-                                   .newLayout = dst_layout,
-                                   .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                   .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                   .image = image->vk_image,
-                                   .subresourceRange = range };
+    return VkImageMemoryBarrier2 {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .pNext = VK_NULL_HANDLE,
+        .srcStageMask = src_stage,
+        .srcAccessMask = src_access,
+        .dstStageMask = dst_stage,
+        .dstAccessMask = dst_access,
+        .oldLayout = src_layout,
+        .newLayout = dst_layout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image->vk_image,
+        .subresourceRange = range };
 }
 
 } // namespace racecar

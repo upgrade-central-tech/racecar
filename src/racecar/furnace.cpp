@@ -52,13 +52,13 @@ constexpr float FURNACE_RADIANCE = 1.25f;
 
 void furnace( bool use_fullscreen )
 {
-    vk::Common& vulkan = vk::Common::GetMut();
+    vk::Common& vulkan = vk::Common::GetMut( );
 
     // GLOBAL RESOURCE INITIALIZATION
 
     Context ctx = initialize_context( use_fullscreen );
     engine::initialize( ctx );
-    engine::State& engine = engine::State::GetMut();
+    engine::State& engine = engine::State::GetMut( );
     gui::Gui gui = gui::initialize( ctx );
 
     // Scene loading
@@ -83,20 +83,20 @@ void furnace( bool use_fullscreen )
     load_samplers( &linear_sampler, &point_sampler, &sampler_desc_set );
 
     // Load material data, forced to a white untextured albedo
-    size_t num_materials = scene.materials.size();
+    size_t num_materials = scene.materials.size( );
     std::vector<engine::DescriptorSet> material_desc_sets( num_materials );
     std::vector<UniformBuffer<ub_data::Material>> material_uniform_buffers( num_materials );
     load_materials( scene, num_materials, &material_desc_sets, &material_uniform_buffers );
 
     for ( UniformBuffer<ub_data::Material>& material_buffer : material_uniform_buffers ) {
-        ub_data::Material material = material_buffer.get_data();
+        ub_data::Material material = material_buffer.get_data( );
         material.base_color = glm::vec4( 1.f );
         material.has_base_color_texture = 0;
         material_buffer.set_data( material );
-        material_buffer.update_all();
+        material_buffer.update_all( );
     }
 
-    size_t num_nodes = scene.nodes.size();
+    size_t num_nodes = scene.nodes.size( );
     std::vector<engine::DescriptorSet> model_mat_desc_sets( num_nodes );
     std::vector<UniformBuffer<ub_data::ModelMat>> model_mat_uniform_buffers( num_nodes );
     load_model_mat_uniform_buffers(
@@ -154,7 +154,7 @@ void furnace( bool use_fullscreen )
             .size = glm::vec2( 1.0f, 1.0f ),
         }
     );
-    sun_visibility_terrain_size.update_all();
+    sun_visibility_terrain_size.update_all( );
 
     engine::DescriptorSet sun_visibility_desc_set = engine::generate_descriptor_set(
         {
@@ -181,12 +181,12 @@ void furnace( bool use_fullscreen )
         2
     );
 
-    geometry::quad::Mesh quad_mesh = geometry::quad::create();
+    geometry::quad::Mesh quad_mesh = geometry::quad::create( );
     geometry::quad::Mesh::instance = &quad_mesh;
 
     // TASK RESOURCE INITIALIZATION
 
-    deferred::GBuffers gbuffers = deferred::initialize_GBuffers();
+    deferred::GBuffers gbuffers = deferred::initialize_GBuffers( );
 
     engine::DescriptorSet depth_uniform_desc_set;
     engine::Pipeline depth_ms_pipeline;
@@ -217,7 +217,7 @@ void furnace( bool use_fullscreen )
     create_screen_buffers( &screen_color, &screen_buffer, &screen_history );
 
     // Only used to satisfy the GUI and to derive a valid sun direction
-    atmosphere::Atmosphere atms = atmosphere::initialize();
+    atmosphere::Atmosphere atms = atmosphere::initialize( );
 
     // MODEL LOADING
 
@@ -245,7 +245,7 @@ void furnace( bool use_fullscreen )
     create_objects( transforms, objects );
     alloc_car_tlas( objects );
 
-    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set();
+    engine::DescriptorSet car_tlas_desc_set = create_accel_structure_desc_set( );
     std::vector<VkAccelerationStructureKHR> car_tlas_handles;
     for ( const vk::rt::AccelerationStructure& tlas : engine.tlas ) {
         car_tlas_handles.push_back( tlas.handle );
@@ -284,9 +284,10 @@ void furnace( bool use_fullscreen )
     );
 #endif // RACECAR_RAY_TRACING
 
-    engine::post::AoPass ao_pass { .camera_buffer = &camera_buffer,
-                                   .GBuffer_Normal = &gbuffers.GBuffer_Normal,
-                                   .GBuffer_Depth = &gbuffers.GBuffer_Depth };
+    engine::post::AoPass ao_pass {
+        .camera_buffer = &camera_buffer,
+        .GBuffer_Normal = &gbuffers.GBuffer_Normal,
+        .GBuffer_Depth = &gbuffers.GBuffer_Depth };
     initialize_ao_pass( ao_pass );
 
     LightingPassDescSets lighting_pass_desc_sets = {
@@ -300,8 +301,7 @@ void furnace( bool use_fullscreen )
         .reflection_buffer_desc_set = reflection_buffer_desc_set,
 #endif // RACECAR_RAY_TRACING
         .sun_visibility_desc_set = sun_visibility_desc_set,
-        .ao_read_desc_set = ao_pass.ao_read_descriptor_set
-    };
+        .ao_read_desc_set = ao_pass.ao_read_descriptor_set };
 
     engine::Pipeline lighting_pass_pipeline;
     create_lighting_pass_resources( lighting_pass_desc_sets, &lighting_pass_pipeline );
@@ -309,7 +309,7 @@ void furnace( bool use_fullscreen )
     // PRECOMPUTE
 
 #if RACECAR_RAY_TRACING
-    VkFence precompute_fence = engine::create_fence();
+    VkFence precompute_fence = engine::create_fence( );
     VkCommandBuffer& precompute_cmdbuf = engine.frames[0].start_cmdbuf;
     engine::begin_precompute_commandbuffer( &precompute_cmdbuf, precompute_fence );
     build_car_blases( precompute_cmdbuf );
@@ -327,10 +327,8 @@ void furnace( bool use_fullscreen )
 
     // Background: the same radiance the sky texture holds
     engine::GfxTask background_gfx_task = {
-        .clear_color = VkClearColorValue { { FURNACE_RADIANCE,
-                                             FURNACE_RADIANCE,
-                                             FURNACE_RADIANCE,
-                                             1.f } },
+        .clear_color =
+            VkClearColorValue { { FURNACE_RADIANCE, FURNACE_RADIANCE, FURNACE_RADIANCE, 1.f } },
         .color_attachments = { &screen_color },
         .extent = engine.swapchain.extent,
     };
@@ -404,7 +402,7 @@ void furnace( bool use_fullscreen )
     std::chrono::steady_clock::time_point current_tick;
 
     while ( !will_quit ) {
-        current_tick = std::chrono::steady_clock::now();
+        current_tick = std::chrono::steady_clock::now( );
 
         handle_sdl_window_events(
             ctx,
@@ -421,10 +419,10 @@ void furnace( bool use_fullscreen )
             continue;
         }
 
-        engine::begin_frame();
+        engine::begin_frame( );
 
         camera::process_input( engine.camera );
-        CameraData camera_data = get_camera_data();
+        CameraData camera_data = get_camera_data( );
         update_camera_uniform_buffer( camera_buffer, camera_data );
 
         atmosphere::update_atmosphere_uniform_buffer( gui, atms, camera_data );
@@ -446,21 +444,21 @@ void furnace( bool use_fullscreen )
 
         SDL_UpdateWindowSurface( ctx.window );
 
-        auto new_tick = std::chrono::steady_clock::now();
+        auto new_tick = std::chrono::steady_clock::now( );
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             new_tick - current_tick
         );
-        engine.delta = static_cast<double>( duration.count() ) * 0.001;
+        engine.delta = static_cast<double>( duration.count( ) ) * 0.001;
         engine.time += engine.delta;
     }
 
     // RESOURCE CLEANUP
 
     vkDeviceWaitIdle( vulkan.device );
-    gui::free();
-    engine::free();
-    vulkan.destructor_stack.execute_cleanup();
-    vk::free();
+    gui::free( );
+    engine::free( );
+    vulkan.destructor_stack.execute_cleanup( );
+    vk::free( );
     sdl::free( ctx.window );
 }
 

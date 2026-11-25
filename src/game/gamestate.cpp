@@ -24,7 +24,7 @@ static const float TURNING_DRAG = 0.1f;
 
 void update_game_state( const scene::Scene& scene )
 {
-    engine::State& state = engine::State::GetMut();
+    engine::State& state = engine::State::GetMut( );
     GameState& gamestate = state.gamestate;
 
     const float back_axle_z = scene.demo_scene_nodes.back_axle_local_z;
@@ -48,7 +48,7 @@ void update_game_state( const scene::Scene& scene )
         autodrive_command = compute_autodrive( gamestate, back_axle_z, wheelbase );
     }
 
-    if ( autodrive_command.has_value() ) {
+    if ( autodrive_command.has_value( ) ) {
         gamestate.speed_lock = false;
         gamestate.acceleration = autodrive_command->acceleration;
     } else if ( up_pressed ) {
@@ -67,7 +67,7 @@ void update_game_state( const scene::Scene& scene )
     // front wheel turning
     bool wheel_turn_input = left_pressed || right_pressed;
 
-    if ( autodrive_command.has_value() ) {
+    if ( autodrive_command.has_value( ) ) {
         const float max_step = WHEEL_TURNING_RATE * float( state.delta );
         const float target_angle = glm::clamp(
             autodrive_command->wheel_angle,
@@ -85,7 +85,7 @@ void update_game_state( const scene::Scene& scene )
             MAX_WHEEL_ANGLE
         );
     } else {
-        if ( glm::abs( gamestate.wheel_angle ) > glm::epsilon<float>() ) {
+        if ( glm::abs( gamestate.wheel_angle ) > glm::epsilon<float>( ) ) {
             if ( gamestate.wheel_angle > 0.0f ) {
                 gamestate.wheel_angle = glm::clamp(
                     gamestate.wheel_angle - WHEEL_TURNING_RATE * float( state.delta ),
@@ -140,7 +140,7 @@ void initialize_gamestate_buffer(
     UniformBuffer<ub_data::GameStateBuffer>* out_buffer, engine::DescriptorSet* out_desc_set
 )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
     *out_buffer = create_uniform_buffer<ub_data::GameStateBuffer>( { }, engine.frame_overlap );
 
@@ -157,9 +157,9 @@ void initialize_gamestate_buffer(
 
 void update_gamestate_buffer( UniformBuffer<ub_data::GameStateBuffer>& buffer )
 {
-    const engine::State& engine = engine::State::GetConst();
+    const engine::State& engine = engine::State::GetConst( );
 
-    ub_data::GameStateBuffer gamestate_ub = buffer.get_data();
+    ub_data::GameStateBuffer gamestate_ub = buffer.get_data( );
 
     gamestate_ub.world_position = glm::vec4(
         engine.gamestate.world_position.x,
@@ -172,7 +172,7 @@ void update_gamestate_buffer( UniformBuffer<ub_data::GameStateBuffer>& buffer )
     }
 
     buffer.set_data( gamestate_ub );
-    buffer.update( engine.get_frame_index() );
+    buffer.update( engine.get_frame_index( ) );
 }
 
 }
