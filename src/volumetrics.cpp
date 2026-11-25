@@ -3,13 +3,23 @@
 #include "atmosphere.hpp"
 #include "camera_data.hpp"
 #include "engine/descriptor_set.hpp"
+#include "engine/draw_task.hpp"
+#include "engine/gfx_task.hpp"
 #include "engine/image.h"
+#include "engine/pipeline.hpp"
+#include "engine/pipeline_barrier.hpp"
 #include "engine/state.hpp"
+#include "engine/task_list.hpp"
+#include "geometry/quad.hpp"
 #include "settings.h"
 #include "vk/common.hpp"
 #include "vk/create.hpp"
 #include "vk/utility.hpp"
 
+#include <vulkan/vulkan_core.h>
+
+#include <cstdint>
+#include <optional>
 #include <string_view>
 
 namespace racecar::volumetric {
@@ -380,6 +390,18 @@ void draw_volumetric(
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
     );
 
+    volumetric.cloud_rotating_buffer = engine::create_image(
+        {
+            low_res_dim.width / 4,
+            low_res_dim.height / 4,
+            1,
+        },
+        color_attachment.image_format,
+        VK_IMAGE_TYPE_2D,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+    );
+
     // Transition newly created cloud buffer to a color attachment
     engine::add_pipeline_barrier(
         task_list,
@@ -395,6 +417,16 @@ void draw_volumetric(
                         .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                         .image = &volumetric.cloud_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = &volumetric.cloud_rotating_buffer,
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                 },
@@ -492,6 +524,63 @@ void draw_volumetric(
     } );
 
     engine::add_gfx_task( task_list, volumetric_gfx_task, "Volumetric Clouds" );
+
+    volumetric.clouds_rotating_quarterres_pipeline = engine::create_gfx_pipeline(
+        engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance( ) ),
+        {
+            volumetric.uniform_desc_set.layouts[0],
+            volumetric.lut_desc_set.layouts[0],
+            volumetric.sampler_desc_set.layouts[0],
+        },
+        { volumetric.cloud_rotating_buffer.image_format },
+        VK_SAMPLE_COUNT_1_BIT,
+        false,
+        true,
+        vk::create::shader_module( VOLUMETRIC_SHADER_MODULE_PATH ),
+        engine::ShaderEntryPointStrings {
+            .vertex_entry_name = engine::DEFAULT_VERTEX_ENTRY_NAME,
+            .tess_control_entry_name = engine::DEFAULT_TESS_CONTROL_ENTRY_NAME,
+            .tess_eval_entry_name = engine::DEFAULT_TESS_EVAL_ENTRY_NAME,
+            .fragment_entry_name = "clouds_rotating_quarterres",
+        },
+        false,
+        false
+    );
+
+    // Rotating quarterres pass
+    engine::GfxTask rotating_clouds_gfx_task = {
+        .clear_color = std::nullopt,
+        .clear_depth = std::nullopt,
+        .color_attachments = { &volumetric.cloud_rotating_buffer },
+        .extent =
+            {
+                volumetric.cloud_rotating_buffer.image_extent.width,
+                volumetric.cloud_rotating_buffer.image_extent.height,
+            },
+    };
+
+    rotating_clouds_gfx_task.draw_tasks.push_back( {
+        .draw_resource_descriptor =
+            engine::DrawResourceDescriptor {
+                .vertex_buffers =
+                    { geometry::quad::Mesh::get_instance( ).mesh_buffers.vertex_buffer.handle },
+                .index_buffer = geometry::quad::Mesh::get_instance( )
+                                    .mesh_buffers.index_buffer.handle,
+                .vertex_buffer_offsets = { 0 },
+                .index_count = static_cast<uint32_t>(
+                    geometry::quad::Mesh::get_instance( ).indices.size( )
+                ),
+            },
+        .descriptor_sets =
+            {
+                &volumetric.uniform_desc_set,
+                &volumetric.lut_desc_set,
+                &volumetric.sampler_desc_set,
+            },
+        .pipeline = volumetric.clouds_rotating_quarterres_pipeline,
+    } );
+
+    engine::add_gfx_task( task_list, rotating_clouds_gfx_task, "Rotating Clouds March" );
 
     // Transition the cloud_buffer to a read-only
     engine::add_pipeline_barrier(

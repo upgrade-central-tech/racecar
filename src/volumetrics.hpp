@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/image.h"
+#include "engine/pipeline.hpp"
 #include "engine/task_list.hpp"
 #include "engine/ub_data.hpp"
 #include "geometry/quad.hpp"
@@ -30,6 +31,7 @@ struct Volumetric {
     engine::Image high_freq_noise;
 
     engine::Image cloud_buffer;
+    engine::Image cloud_rotating_buffer; // qres
 
     UniformBuffer<ub_data::Clouds> uniform_buffer;
 
@@ -37,6 +39,8 @@ struct Volumetric {
     engine::DescriptorSet lut_desc_set;
     engine::DescriptorSet sampler_desc_set;
     engine::DescriptorSet texture_composite_desc_set;
+
+    engine::Pipeline clouds_rotating_quarterres_pipeline;
 };
 
 Volumetric initialize( );
