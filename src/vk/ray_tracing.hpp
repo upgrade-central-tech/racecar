@@ -34,9 +34,9 @@ struct AccelerationStructure {
     VkDeviceAddress device_address = 0;
 
     // Build descriptors filled in by alloc_blas/alloc_tlas and consumed by build_blas/build_tlas
-    VkAccelerationStructureGeometryKHR geometry {};
-    VkAccelerationStructureBuildGeometryInfoKHR build_info {};
-    VkAccelerationStructureBuildRangeInfoKHR range_info {};
+    VkAccelerationStructureGeometryKHR geometry { };
+    VkAccelerationStructureBuildGeometryInfoKHR build_info { };
+    VkAccelerationStructureBuildRangeInfoKHR range_info { };
 
     // TLAS only
     VkBuffer instance_buffer = VK_NULL_HANDLE;
@@ -86,7 +86,8 @@ void alloc_tlas(
 );
 
 void update_tlas_instances(
-    VmaAllocator allocator, AccelerationStructure& tlas, const std::vector<Object>& objects );
+    VmaAllocator allocator, AccelerationStructure& tlas, const std::vector<Object>& objects
+);
 
 void build_tlas( VkCommandBuffer cmd_buf, AccelerationStructure& tlas );
 

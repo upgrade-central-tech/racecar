@@ -35,7 +35,7 @@ struct Task {
 };
 
 struct CPUTask {
-    std::function<void()> task;
+    std::function<void( )> task;
 };
 
 struct GPUTask {
@@ -54,16 +54,32 @@ struct TaskList {
     std::vector<std::pair<int, PipelineBarrierDescriptor>> pipeline_barriers;
 };
 
-void add_gfx_task( TaskList& task_list, GfxTask task, std::string_view name = "[unnamed]",
-    task_predicate_fn_t predicate = nullptr );
-void add_cs_task( TaskList& task_list, ComputeTask task, std::string_view name = "[unnamed]",
-    task_predicate_fn_t predicate = nullptr );
-void add_blit_task( TaskList& task_list, BlitTask task, std::string_view name = "[unnamed]",
-    task_predicate_fn_t predicate = nullptr );
+void add_gfx_task(
+    TaskList& task_list,
+    GfxTask task,
+    std::string_view name = "[unnamed]",
+    task_predicate_fn_t predicate = nullptr
+);
+void add_cs_task(
+    TaskList& task_list,
+    ComputeTask task,
+    std::string_view name = "[unnamed]",
+    task_predicate_fn_t predicate = nullptr
+);
+void add_blit_task(
+    TaskList& task_list,
+    BlitTask task,
+    std::string_view name = "[unnamed]",
+    task_predicate_fn_t predicate = nullptr
+);
 void add_pipeline_barrier( TaskList& task_list, PipelineBarrierDescriptor barrier );
 void add_cpu_task(
-    TaskList& task_list, std::function<void()> task, std::string_view name = "[unnamed]" );
-void add_gpu_task( TaskList& task_list, std::function<void( VkCommandBuffer )> task,
-    std::string_view name = "[unnamed]" );
+    TaskList& task_list, std::function<void( )> task, std::string_view name = "[unnamed]"
+);
+void add_gpu_task(
+    TaskList& task_list,
+    std::function<void( VkCommandBuffer )> task,
+    std::string_view name = "[unnamed]"
+);
 
 } // namespace racecar::engine

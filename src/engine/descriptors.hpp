@@ -35,8 +35,7 @@ struct LayoutResource {
     void* image_data = nullptr;
 };
 
-void create_descriptor_system(
-    uint32_t frame_overlap, DescriptorSystem& descriptor_system );
+void create_descriptor_system( uint32_t frame_overlap, DescriptorSystem& descriptor_system );
 
 // Descriptors are essentially shader resources. This can be anything from a buffer, buffer view,
 // image view, sampler, etc. For that general purpose reason, it makes sense to me that descriptors
@@ -51,17 +50,23 @@ void create_descriptor_system(
 namespace descriptor_layout_builder {
 
 void add_binding(
-    DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding, VkDescriptorType type );
+    DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding, VkDescriptorType type
+);
 
 void add_array_binding(
-    DescriptorLayoutBuilder& ds_layout_builder, uint32_t binding, VkDescriptorType type, uint32_t count );
-
+    DescriptorLayoutBuilder& ds_layout_builder,
+    uint32_t binding,
+    VkDescriptorType type,
+    uint32_t count
+);
 
 void clear( DescriptorLayoutBuilder& ds_layout_builder );
 
-VkDescriptorSetLayout build( VkShaderStageFlags shader_stage_flags,
+VkDescriptorSetLayout build(
+    VkShaderStageFlags shader_stage_flags,
     DescriptorLayoutBuilder& ds_layout_builder,
-    VkDescriptorSetLayoutCreateFlags ds_layout_flags = 0 );
+    VkDescriptorSetLayoutCreateFlags ds_layout_flags = 0
+);
 
 } // namespace descriptor_layout_builder
 
@@ -69,13 +74,15 @@ VkDescriptorSetLayout build( VkShaderStageFlags shader_stage_flags,
 // To my understanding, a descriptor pool manages descriptor sets, and it's where they're allocated.
 namespace descriptor_allocator {
 
-void init_pool( DescriptorAllocator& ds_allocator, uint32_t max_sets,
-    std::span<DescriptorAllocator::PoolSizeRatio> pool_ratios );
+void init_pool(
+    DescriptorAllocator& ds_allocator,
+    uint32_t max_sets,
+    std::span<DescriptorAllocator::PoolSizeRatio> pool_ratios
+);
 
 void clear_descriptors( DescriptorAllocator& ds_allocator );
 
-VkDescriptorSet allocate(
-    const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout );
+VkDescriptorSet allocate( const DescriptorAllocator& ds_allocator, VkDescriptorSetLayout layout );
 
 } // namespace descriptor_allocator
 
@@ -85,13 +92,25 @@ struct DescriptorWriter {
     std::vector<VkWriteDescriptorSet> writes;
 };
 
-void write_image( DescriptorWriter& writer, int binding, VkImageView image, VkSampler sampler,
-    VkImageLayout layout, VkDescriptorType type );
+void write_image(
+    DescriptorWriter& writer,
+    int binding,
+    VkImageView image,
+    VkSampler sampler,
+    VkImageLayout layout,
+    VkDescriptorType type
+);
 
-void write_buffer( DescriptorWriter& descriptor_writer, int binding, VkBuffer buffer, size_t size,
-    size_t offset, VkDescriptorType type );
+void write_buffer(
+    DescriptorWriter& descriptor_writer,
+    int binding,
+    VkBuffer buffer,
+    size_t size,
+    size_t offset,
+    VkDescriptorType type
+);
 
-void clear();
+void clear( );
 void update_set( DescriptorWriter& writer, VkDevice device, VkDescriptorSet set );
 
 } // namespace racecar::engine

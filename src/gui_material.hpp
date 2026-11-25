@@ -5,7 +5,7 @@
 namespace racecar::gui {
 
 struct Material {
-    glm::vec4 color = {};
+    glm::vec4 color = { };
     float roughness = 0.f;
     float metallic = 0.f;
     float clearcoat_roughness = 0.f;

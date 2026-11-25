@@ -3,7 +3,6 @@
 #include <glm/glm.hpp>
 #include <volk.h>
 
-
 namespace racecar::vk::utility {
 
 /// Similar to a resource barrier transition in DX12, this is meant to adjust a given image's
@@ -13,15 +12,30 @@ namespace racecar::vk::utility {
 ///
 /// Helpful execution and memory barrier info can be found here:
 /// https://themaister.net/blog/2019/08/14/yet-another-blog-explaining-vulkan-synchronization
-void transition_image( VkCommandBuffer command_buffer, VkImage image, VkImageLayout old_layout,
-    VkImageLayout new_layout, VkAccessFlags2 src_access_mask, VkAccessFlags2 dst_access_mask,
-    VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask,
-    VkImageAspectFlags aspect_flags );
+void transition_image(
+    VkCommandBuffer command_buffer,
+    VkImage image,
+    VkImageLayout old_layout,
+    VkImageLayout new_layout,
+    VkAccessFlags2 src_access_mask,
+    VkAccessFlags2 dst_access_mask,
+    VkPipelineStageFlags2 src_stage_mask,
+    VkPipelineStageFlags2 dst_stage_mask,
+    VkImageAspectFlags aspect_flags
+);
 
-void transition_image_mips( VkCommandBuffer command_buffer, VkImage image, VkImageLayout old_layout,
-    VkImageLayout new_layout, VkAccessFlags2 src_access_mask, VkAccessFlags2 dst_access_mask,
-    VkPipelineStageFlags2 src_stage_mask, VkPipelineStageFlags2 dst_stage_mask,
-    VkImageAspectFlags aspect_flags, uint32_t mip_levels );
+void transition_image_mips(
+    VkCommandBuffer command_buffer,
+    VkImage image,
+    VkImageLayout old_layout,
+    VkImageLayout new_layout,
+    VkAccessFlags2 src_access_mask,
+    VkAccessFlags2 dst_access_mask,
+    VkPipelineStageFlags2 src_stage_mask,
+    VkPipelineStageFlags2 dst_stage_mask,
+    VkImageAspectFlags aspect_flags,
+    uint32_t mip_levels
+);
 
 uint32_t bytes_from_format( VkFormat format );
 

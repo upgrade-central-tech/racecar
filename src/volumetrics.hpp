@@ -5,12 +5,16 @@
 #include "geometry/quad.hpp"
 
 namespace racecar {
+
 struct CameraData;
 struct Context;
+
 }
 
 namespace racecar::atmosphere {
+
 struct Atmosphere;
+
 }
 
 namespace racecar::volumetric {
@@ -35,19 +39,20 @@ struct Volumetric {
     engine::DescriptorSet texture_composite_desc_set;
 };
 
-Volumetric initialize();
+Volumetric initialize( );
 
-bool generate_noise(
-    [[maybe_unused]] Volumetric& volumetric );
+bool generate_noise( [[maybe_unused]] Volumetric& volumetric );
 
-void draw_volumetric( [[maybe_unused]] Volumetric& volumetric,
+void draw_volumetric(
+    [[maybe_unused]] Volumetric& volumetric,
     [[maybe_unused]] engine::TaskList& task_list,
     engine::Image& color_attachment,
     const engine::Image& irradiance_lut,
-    const engine::Image& transmittance_lut );
+    const engine::Image& transmittance_lut
+);
 
-void update_volumetric_uniform_buffer( 
-    atmosphere::Atmosphere& atms, volumetric::Volumetric& volumetric,
-    const CameraData& camera_data );
+void update_volumetric_uniform_buffer(
+    atmosphere::Atmosphere& atms, volumetric::Volumetric& volumetric, const CameraData& camera_data
+);
 
 }

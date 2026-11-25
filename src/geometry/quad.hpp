@@ -33,9 +33,9 @@ struct Mesh {
 
     static Mesh* instance;
 
-    static Mesh& get_instance() { return *instance; };
+    static Mesh& get_instance( ) { return *instance; };
 };
 
-Mesh create();
+Mesh create( );
 
 }

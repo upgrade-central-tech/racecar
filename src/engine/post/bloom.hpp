@@ -12,7 +12,9 @@
 #include <memory>
 
 namespace racecar::gui {
+
 struct Gui;
+
 }
 
 namespace racecar::engine::post {
@@ -31,10 +33,8 @@ struct BloomPass {
 };
 
 /// Assumes that `input` is already in `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`.
-void add_bloom( BloomPass* pass, TaskList& task_list,
-    Image& inout, Image& write_only );
+void add_bloom( BloomPass* pass, TaskList& task_list, Image& inout, Image& write_only );
 
-void update_bloom_uniform_buffer(
-    const gui::Gui& gui, engine::post::BloomPass& bloom_pass );
+void update_bloom_uniform_buffer( const gui::Gui& gui, engine::post::BloomPass& bloom_pass );
 
 }

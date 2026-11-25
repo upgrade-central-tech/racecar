@@ -4,8 +4,8 @@
 #include "../orbit_camera.hpp"
 #include "../vk/mem.hpp"
 #include "descriptors.hpp"
-#include "imm_submit.hpp"
 #include "game/gamestate.h"
+#include "imm_submit.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -53,11 +53,11 @@ struct State {
 
     DescriptorSystem descriptor_system = { };
 
-    size_t get_frame_index() const;
+    size_t get_frame_index( ) const;
 
 #if RACECAR_RAY_TRACING
     std::vector<vk::rt::AccelerationStructure> blas;
-    
+
     // TLAS is a per-frame resource
     std::vector<vk::rt::AccelerationStructure> tlas;
 #endif // RACECAR_RAY_TRACING
@@ -67,11 +67,11 @@ struct State {
 
     GameState gamestate;
 
-    static State& GetMut();
-    static const State& GetConst();
+    static State& GetMut( );
+    static const State& GetConst( );
 };
 
 void initialize( Context& ctx );
-void free();
+void free( );
 
 } // namespace racecar::engine

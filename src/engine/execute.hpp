@@ -7,7 +7,7 @@
 
 namespace racecar::engine {
 
-void begin_frame();
+void begin_frame( );
 
 /// Performed every frame. Calls everything (compute and graphics).
 /// If you want to run any call, add it into execute (this will be loooong).

@@ -11,8 +11,8 @@ constexpr uint32_t REFLECTION_MIP_COUNT = 6;
 #if RACECAR_RAY_TRACING
 
 #include "../engine/descriptor_set.hpp"
-#include "../engine/pipeline.hpp"
 #include "../engine/image.h"
+#include "../engine/pipeline.hpp"
 #include "../engine/task_list.hpp"
 
 #include <array>
@@ -36,8 +36,9 @@ struct ReflectionMipChain {
     engine::Pipeline upsample_pipeline = { };
 };
 
-void create_reflection_mip_chain_resources( ReflectionMipChain* chain,
-    engine::Image& reflection_color, engine::Image& reflection_data );
+void create_reflection_mip_chain_resources(
+    ReflectionMipChain* chain, engine::Image& reflection_color, engine::Image& reflection_data
+);
 
 void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList& task_list );
 

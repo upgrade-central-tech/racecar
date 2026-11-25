@@ -4,11 +4,11 @@
 #include "../deferred.hpp"
 #include "../geometry/scene_mesh.hpp"
 #include "descriptor_set.hpp"
+#include "gfx_task.hpp"
+#include "pipeline.hpp"
 #include "state.hpp"
 #include "ub_data.hpp"
 #include "uniform_buffer.hpp"
-#include "gfx_task.hpp"
-#include "pipeline.hpp"
 
 namespace racecar::engine {
 
@@ -20,14 +20,18 @@ struct DepthPrepassMS {
 };
 
 void PushDepthPrepassMS(
-    DepthPrepassMS& depth_prepass_ms, engine::DrawResourceDescriptor draw_descriptor );
+    DepthPrepassMS& depth_prepass_ms, engine::DrawResourceDescriptor draw_descriptor
+);
 
 GfxTask create_depth_ms_gfx_task( deferred::GBuffers* gbuffers );
 
-void create_depth_ms_prepass( 
-    engine::DescriptorSet* depth_uniform_desc_set, engine::Pipeline* depth_ms_pipeline,
+void create_depth_ms_prepass(
+    engine::DescriptorSet* depth_uniform_desc_set,
+    engine::Pipeline* depth_ms_pipeline,
     const UniformBuffer<ub_data::Camera>& camera_buffer,
-    const geometry::scene::Mesh& scene_mesh, deferred::GBuffers* gbuffers,
-    engine::DepthPrepassMS* depth_prepass_ms );
+    const geometry::scene::Mesh& scene_mesh,
+    deferred::GBuffers* gbuffers,
+    engine::DepthPrepassMS* depth_prepass_ms
+);
 
 }

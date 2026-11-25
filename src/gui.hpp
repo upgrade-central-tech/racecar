@@ -17,7 +17,9 @@
 #include <vector>
 
 namespace racecar::engine {
+
 struct TaskList;
+
 }
 
 namespace racecar::gui {
@@ -37,7 +39,7 @@ struct Gui {
 
         float texture_exposure = 1.f;
         float texture_blur = 0.f;
-    } debug = {};
+    } debug = { };
 
     struct DemoData {
         bool enable_translation = false;
@@ -46,13 +48,13 @@ struct Gui {
         bool rotate_on = false;
         float rotate_speed = 0.005f;
         float bumpiness = 0.0f;
-    } demo = {};
+    } demo = { };
 
     struct AtmosphereData {
         bool animate_zenith = false;
         float animate_zenith_speed = 1.f;
         float radiance_exposure = 5.5f;
-    } atms = {};
+    } atms = { };
 
     struct AoData {
         float thickness = 1.0f;
@@ -60,7 +62,7 @@ struct Gui {
         float offset = 0.0f;
         bool enable_debug = false;
         bool enable_ao = true;
-    } ao = {};
+    } ao = { };
 
     struct TerrainData {
         float gt7_local_shadow_strength = 1.0f;
@@ -70,19 +72,19 @@ struct Gui {
         bool enable_gt7_ao = true;
         bool shadowing_only = false;
         bool roughness_only = false;
-    } terrain = {};
+    } terrain = { };
 
     struct TonemappingData {
         float hdr_target_luminance = 1'000.f;
-    } tonemapping = {};
+    } tonemapping = { };
 
     struct BloomData {
         float threshold = 3.0f;
         float filter_radius = 0.003f;
-    } bloom = {};
+    } bloom = { };
 
     struct PresetData {
-        std::vector<Preset> presets = load_presets();
+        std::vector<Preset> presets = load_presets( );
         std::optional<PresetTransition> transition;
         float transition_duration = 2.f;
 
@@ -96,7 +98,7 @@ struct Gui {
 
         ///< Which preset we're currently on. Note: starts at 1!
         int number = 1;
-    } preset = {};
+    } preset = { };
 };
 
 Gui initialize( Context& ctx );
@@ -114,7 +116,7 @@ void update(
     const std::vector<UniformBuffer<ub_data::Material>>& material_buffers,
     engine::TaskList& task_list
 );
-void free();
+void free( );
 
 void use_preset(
     const Preset& preset,

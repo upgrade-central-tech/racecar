@@ -51,7 +51,7 @@ struct ImageBarrier {
     Image* image = nullptr;
     VkImageSubresourceRange range;
 
-    VkImageMemoryBarrier2 get_vk() const;
+    VkImageMemoryBarrier2 get_vk( ) const;
 };
 
 struct PipelineBarrierDescriptor {
@@ -60,8 +60,7 @@ struct PipelineBarrierDescriptor {
     std::string_view label;
 };
 
-void run_pipeline_barrier(
-    const PipelineBarrierDescriptor& barrier, VkCommandBuffer cmd_buf );
+void run_pipeline_barrier( const PipelineBarrierDescriptor& barrier, VkCommandBuffer cmd_buf );
 
 /// Covers mip 0 only. For a mipped image use VK_IMAGE_SUBRESOURCE_RANGE_ALL_MIPS_COLOR instead.
 /// this leaves levels 1..n in whatever layout they were already in.

@@ -20,9 +20,10 @@ struct CameraData {
  * Derives the view/projection matrices and eye position from engine.camera. Any input handling or
  * demo-driven camera motion must already have been applied.
  */
-CameraData get_camera_data();
+CameraData get_camera_data( );
 
 void update_camera_uniform_buffer(
-    UniformBuffer<ub_data::Camera>& camera_buffer, const CameraData& camera_data );
+    UniformBuffer<ub_data::Camera>& camera_buffer, const CameraData& camera_data
+);
 
 }

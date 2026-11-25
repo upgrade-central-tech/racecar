@@ -68,7 +68,7 @@ struct Texture {
 
     ColorSpace color_space = ColorSpace::UNORM;
 
-    Texture() = default;
+    Texture( ) = default;
 
     Texture( const Texture& ) = delete;
     Texture& operator=( const Texture& ) = delete;
@@ -129,9 +129,12 @@ struct Scene {
     DemoSceneNodes demo_scene_nodes;
 };
 
-void load_gltf( std::filesystem::path file_path,
-    Scene& scene, std::vector<geometry::scene::Vertex>& out_vertices,
-    std::vector<uint32_t>& out_indices );
+void load_gltf(
+    std::filesystem::path file_path,
+    Scene& scene,
+    std::vector<geometry::scene::Vertex>& out_vertices,
+    std::vector<uint32_t>& out_indices
+);
 
 bool load_hdri( std::string file_path, Scene& scene );
 
@@ -140,6 +143,8 @@ void mul_transform( Scene& scene, size_t node_id, glm::mat4 transform );
 
 glm::vec3 get_position_in_scene( const Scene& scene, size_t node_idx );
 
-void update_model_mat_buffers( const Scene& scene, std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers );
+void update_model_mat_buffers(
+    const Scene& scene, std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers
+);
 
 } // namespace racecar::scene

@@ -13,11 +13,15 @@
 #include <string_view>
 
 namespace racecar {
+
 struct CameraData;
+
 }
 
 namespace racecar::gui {
+
 struct Gui;
+
 }
 
 namespace racecar::atmosphere {
@@ -39,16 +43,18 @@ struct Atmosphere {
     float sun_azimuth = 0.f; ///< Stored in radians. Roughly clamped between [0, 2π].
 };
 
-Atmosphere initialize();
+Atmosphere initialize( );
 
 glm::vec3 compute_sun_direction( const Atmosphere& atms );
 
 glm::vec3 compute_sun_color( const glm::vec3& sun_direction, float radiance_exposure );
 
-void draw_atmosphere( engine::TaskList& task_list,
-    atmosphere::Atmosphere& atms, engine::Image& out_color );
+void draw_atmosphere(
+    engine::TaskList& task_list, atmosphere::Atmosphere& atms, engine::Image& out_color
+);
 
-void update_atmosphere_uniform_buffer( gui::Gui& gui,
-    atmosphere::Atmosphere& atms, const CameraData& camera_data );
+void update_atmosphere_uniform_buffer(
+    gui::Gui& gui, atmosphere::Atmosphere& atms, const CameraData& camera_data
+);
 
 }

@@ -31,11 +31,15 @@ struct DepthPassTarget {
     engine::DescriptorSet& uniform_desc_set;
 };
 
-void create_scene_gfx_pipeline( 
-    engine::Pipeline* scene_pipeline, const geometry::scene::Mesh& scene_mesh,
-    engine::DescriptorSet* uniform_desc_set, engine::DescriptorSet* material_desc_sets,
-    engine::DescriptorSet* model_mat_desc_sets, engine::DescriptorSet* lut_sets,
-    engine::DescriptorSet* sampler_desc_set );
+void create_scene_gfx_pipeline(
+    engine::Pipeline* scene_pipeline,
+    const geometry::scene::Mesh& scene_mesh,
+    engine::DescriptorSet* uniform_desc_set,
+    engine::DescriptorSet* material_desc_sets,
+    engine::DescriptorSet* model_mat_desc_sets,
+    engine::DescriptorSet* lut_sets,
+    engine::DescriptorSet* sampler_desc_set
+);
 
 engine::GfxTask create_prepass_gfx_task( deferred::GBuffers& gbuffers );
 
@@ -43,8 +47,11 @@ engine::GfxTask create_prepass_gfx_task( deferred::GBuffers& gbuffers );
  * Create a draw task for each prim and add it to the scene pass gfx task and the depth
  * ms gfx task, including all the necessary descriptor sets.
  */
-void add_prim_draw_tasks( geometry::scene::Mesh& scene_mesh,
-    const std::vector<const scene::Primitive*>& prims, ScenePassTarget scene_pass,
-    DepthPassTarget depth_pass );
+void add_prim_draw_tasks(
+    geometry::scene::Mesh& scene_mesh,
+    const std::vector<const scene::Primitive*>& prims,
+    ScenePassTarget scene_pass,
+    DepthPassTarget depth_pass
+);
 
 }

@@ -21,10 +21,9 @@ struct GfxTask {
     std::vector<Image*> color_attachments;
     Image* depth_image = nullptr;
 
-    VkExtent2D extent = {};
+    VkExtent2D extent = { };
 };
 
-void execute_gfx_task(
-    const VkCommandBuffer& cmd_buf, GfxTask& gfx_task );
+void execute_gfx_task( const VkCommandBuffer& cmd_buf, GfxTask& gfx_task );
 
 } // namespace racecar::engine

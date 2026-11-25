@@ -2,7 +2,6 @@
 
 #include "image.h"
 
-
 namespace racecar::engine {
 
 struct BlitTask {
@@ -11,7 +10,6 @@ struct BlitTask {
     engine::Image* out_color = nullptr;
 };
 
-void execute_blit_task( const VkCommandBuffer& cmd_buf,
-    BlitTask& blit_task, VkImage dst_image );
+void execute_blit_task( const VkCommandBuffer& cmd_buf, BlitTask& blit_task, VkImage dst_image );
 
 }

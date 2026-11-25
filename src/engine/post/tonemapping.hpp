@@ -11,7 +11,9 @@
 #include <memory>
 
 namespace racecar::gui {
+
 struct Gui;
+
 }
 
 namespace racecar::engine::post {
@@ -21,10 +23,10 @@ struct TonemappingPass {
     UniformBuffer<ub_data::Tonemapping> buffer;
 };
 
-TonemappingPass add_tonemapping( const Image& input,
-    const Image& output, TaskList& task_list );
+TonemappingPass add_tonemapping( const Image& input, const Image& output, TaskList& task_list );
 
 void update_tonemapping_uniform_buffer(
-    const gui::Gui& gui, engine::post::TonemappingPass& tm_pass );
+    const gui::Gui& gui, engine::post::TonemappingPass& tm_pass
+);
 
 }

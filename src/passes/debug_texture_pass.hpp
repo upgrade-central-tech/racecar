@@ -20,9 +20,12 @@ struct DebugTexturePass {
     bool initialized = false;
 };
 
-void initialize_debug_texture_pass( DebugTexturePass& pass, engine::Image& screen_buffer,
+void initialize_debug_texture_pass(
+    DebugTexturePass& pass,
+    engine::Image& screen_buffer,
     const std::vector<const engine::Image*>& textures,
-    const UniformBuffer<ub_data::Camera>& camera_buffer );
+    const UniformBuffer<ub_data::Camera>& camera_buffer
+);
 
 void add_debug_texture_pass( DebugTexturePass& pass, engine::TaskList& task_list );
 

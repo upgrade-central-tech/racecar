@@ -12,11 +12,15 @@
 #include <vector>
 
 namespace racecar::gui {
+
 struct Gui;
+
 }
 
 namespace racecar::atmosphere {
+
 struct Atmosphere;
+
 }
 
 namespace racecar {
@@ -41,7 +45,7 @@ struct Preset {
 
     std::vector<MaterialData> materials;
 
-    glm::vec3 camera_center = {};
+    glm::vec3 camera_center = { };
     float camera_radius = 0.f;
     float camera_azimuth = 0.f;
     float camera_zenith = 0.f;
@@ -56,11 +60,13 @@ struct PresetTransition {
     float duration = 0.f;
 };
 
-std::vector<Preset> load_presets();
+std::vector<Preset> load_presets( );
 Preset parse_preset_json( std::filesystem::path json_path );
 
-void update_preset_transition( gui::Gui& gui,
+void update_preset_transition(
+    gui::Gui& gui,
     std::vector<UniformBuffer<ub_data::Material>>& material_uniform_buffers,
-    atmosphere::Atmosphere& atms );
+    atmosphere::Atmosphere& atms
+);
 
 }

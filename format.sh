@@ -10,6 +10,6 @@ while IFS= read -r -d '' file; do
     echo "$file"
     clang-format -i --style=file "$file"
     count=$((count + 1))
-done < <(find src -type f \( -name '*.cpp' -o -name '*.h' \) -print0)
+done < <(find src -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \) -print0)
 
 echo "Formatted $count file(s) under src/"

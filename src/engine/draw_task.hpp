@@ -20,8 +20,12 @@ struct DrawResourceDescriptor {
 
     uint32_t index_count = 0;
 
-    static DrawResourceDescriptor from_mesh( VkBuffer vertex_buffer, VkBuffer index_buffer,
-        uint32_t num_indices, const std::optional<scene::Primitive>& primitive );
+    static DrawResourceDescriptor from_mesh(
+        VkBuffer vertex_buffer,
+        VkBuffer index_buffer,
+        uint32_t num_indices,
+        const std::optional<scene::Primitive>& primitive
+    );
 };
 
 /// A draw task represents one Vulkan pipeline, and more specifically, the shader to be used
@@ -30,10 +34,9 @@ struct DrawResourceDescriptor {
 struct DrawTask {
     DrawResourceDescriptor draw_resource_descriptor;
     std::vector<DescriptorSet*> descriptor_sets;
-    Pipeline pipeline = {};
+    Pipeline pipeline = { };
 };
 
-void draw( const DrawTask& draw_task, const VkCommandBuffer& cmd_buf,
-    const VkExtent2D extent );
+void draw( const DrawTask& draw_task, const VkCommandBuffer& cmd_buf, const VkExtent2D extent );
 
 } // namespace racecar::engine

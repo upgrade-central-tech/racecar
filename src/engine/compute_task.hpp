@@ -18,7 +18,6 @@ struct ComputeTask {
     bool ran = false;
 };
 
-void execute_cs_task(
-    const VkCommandBuffer& cmd_buf, ComputeTask& compute_task );
+void execute_cs_task( const VkCommandBuffer& cmd_buf, ComputeTask& compute_task );
 
 } // namespace racecar::engine

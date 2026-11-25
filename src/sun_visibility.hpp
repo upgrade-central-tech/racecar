@@ -1,8 +1,8 @@
 #pragma once
 
 #include "engine/descriptor_set.hpp"
-#include "engine/pipeline.hpp"
 #include "engine/image.h"
+#include "engine/pipeline.hpp"
 #include "engine/task_list.hpp"
 #include "engine/ub_data.hpp"
 #include "engine/uniform_buffer.hpp"
@@ -23,10 +23,14 @@ struct SunVisibilityComputePass {
     engine::Pipeline cs_sun_visibility_pipeline;
 };
 
-void initialize_sun_visibility( SunVisibilityComputePass& sun_visibility,
-    volumetric::Volumetric& volumetric, engine::DescriptorSet& gamestate_desc_set );
+void initialize_sun_visibility(
+    SunVisibilityComputePass& sun_visibility,
+    volumetric::Volumetric& volumetric,
+    engine::DescriptorSet& gamestate_desc_set
+);
 
 void compute_sun_visibility(
-    SunVisibilityComputePass& sun_visibility, engine::TaskList& task_list );
+    SunVisibilityComputePass& sun_visibility, engine::TaskList& task_list
+);
 
 }

@@ -39,8 +39,7 @@ struct Mesh {
     } };
 };
 
-GPUMeshBuffers upload_mesh(
-    std::span<uint32_t> indices, std::span<Vertex> vertices );
+GPUMeshBuffers upload_mesh( std::span<uint32_t> indices, std::span<Vertex> vertices );
 
 /// Should ideally run afer `scene::load_gltf` since it's just too annoying
 /// to generate tangents while geo gets loaded and processed.

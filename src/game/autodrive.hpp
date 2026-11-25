@@ -9,6 +9,7 @@ struct AutodriveCommand {
     float wheel_angle;
 };
 
-AutodriveCommand compute_autodrive( const GameState& gamestate, float back_axle_z, float wheelbase );
+AutodriveCommand
+compute_autodrive( const GameState& gamestate, float back_axle_z, float wheelbase );
 
 }

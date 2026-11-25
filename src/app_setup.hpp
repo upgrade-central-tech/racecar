@@ -15,43 +15,53 @@ namespace racecar {
 
 Context initialize_context( bool use_fullscreen );
 
-void load_scene(
-    scene::Scene* scene, geometry::scene::Mesh* scene_mesh );
+void load_scene( scene::Scene* scene, geometry::scene::Mesh* scene_mesh );
 
-void load_camera_debug_uniform_buffers( 
-    UniformBuffer<ub_data::Camera>* camera_buffer, UniformBuffer<ub_data::Debug>* debug_buffer,
-    engine::DescriptorSet* uniform_desc_set );
+void load_camera_debug_uniform_buffers(
+    UniformBuffer<ub_data::Camera>* camera_buffer,
+    UniformBuffer<ub_data::Debug>* debug_buffer,
+    engine::DescriptorSet* uniform_desc_set
+);
 
-void load_samplers( VkSampler* linear_sampler,
-    VkSampler* point_sampler, engine::DescriptorSet* sampler_desc_set );
+void load_samplers(
+    VkSampler* linear_sampler, VkSampler* point_sampler, engine::DescriptorSet* sampler_desc_set
+);
 
-void load_materials( scene::Scene& scene, size_t num_materials,
+void load_materials(
+    scene::Scene& scene,
+    size_t num_materials,
     std::vector<engine::DescriptorSet>* material_desc_sets,
-    std::vector<UniformBuffer<ub_data::Material>>* material_uniform_buffers );
+    std::vector<UniformBuffer<ub_data::Material>>* material_uniform_buffers
+);
 
-void load_model_mat_uniform_buffers( size_t num_nodes,
-    scene::Scene* scene, std::vector<engine::DescriptorSet>* model_mat_desc_sets,
-    std::vector<UniformBuffer<ub_data::ModelMat>>* model_mat_uniform_buffers );
+void load_model_mat_uniform_buffers(
+    size_t num_nodes,
+    scene::Scene* scene,
+    std::vector<engine::DescriptorSet>* model_mat_desc_sets,
+    std::vector<UniformBuffer<ub_data::ModelMat>>* model_mat_uniform_buffers
+);
 
-void create_raymarch_tex_sets(
-    engine::DescriptorSet* raymarch_tex_sets );
+void create_raymarch_tex_sets( engine::DescriptorSet* raymarch_tex_sets );
 
-void create_screen_buffers( engine::Image* screen_color,
-    engine::Image* screen_buffer, engine::Image* screen_history );
+void create_screen_buffers(
+    engine::Image* screen_color, engine::Image* screen_buffer, engine::Image* screen_history
+);
 
-void load_model_primitive_material_data( 
+void load_model_primitive_material_data(
     const scene::Scene& scene,
     const std::vector<UniformBuffer<ub_data::ModelMat>>& model_mat_uniform_buffers,
-    std::vector<glm::mat4>& transforms, std::vector<const scene::Primitive*>& prims,
+    std::vector<glm::mat4>& transforms,
+    std::vector<const scene::Primitive*>& prims,
     ub_data::RTTextureUniform& rt_texture_uniform,
     std::vector<const engine::Image*>& albedo_textures,
     std::vector<const engine::Image*>& metallic_roughness_textures,
-    std::vector<engine::DescriptorSet>& material_desc_sets );
+    std::vector<engine::DescriptorSet>& material_desc_sets
+);
 
 void sort_transparent_opaque_prims(
-    const std::vector<const scene::Primitive*>& prims, 
+    const std::vector<const scene::Primitive*>& prims,
     const std::vector<scene::Material>& materials,
-    std::vector<const scene::Primitive*>* transparent_prims, 
+    std::vector<const scene::Primitive*>* transparent_prims,
     std::vector<const scene::Primitive*>* opaque_prims
 );
 

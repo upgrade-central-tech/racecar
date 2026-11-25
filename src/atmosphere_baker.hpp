@@ -6,7 +6,9 @@
 #include "volumetrics.hpp"
 
 namespace racecar {
+
 struct Context;
+
 }
 
 namespace racecar::atmosphere {
@@ -29,28 +31,27 @@ struct AtmosphereBaker {
     std::vector<UniformBuffer<ub_data::OctahedralData>> mip_data;
 };
 
-void initialize_atmosphere_baker( AtmosphereBaker& atms_baker,
-    const volumetric::Volumetric& volumetric, engine::DescriptorSet& gamestate_desc_set );
+void initialize_atmosphere_baker(
+    AtmosphereBaker& atms_baker,
+    const volumetric::Volumetric& volumetric,
+    engine::DescriptorSet& gamestate_desc_set
+);
 
 void atmosphere_baker_precompute( AtmosphereBaker& atms_baker, VkCommandBuffer precompute_cmdbuf );
 
 // TODO: refactor this later so that it abandons the junk-task system
-void prebake_octahedral_sky(
-    const AtmosphereBaker& atms_baker
-);
+void prebake_octahedral_sky( const AtmosphereBaker& atms_baker );
 
-void compute_octahedral_sky(
-    AtmosphereBaker& atms_baker, engine::TaskList& task_list
-);
+void compute_octahedral_sky( AtmosphereBaker& atms_baker, engine::TaskList& task_list );
 
 void bake_octahedral_sky_task( const AtmosphereBaker& atms_baker, VkCommandBuffer command_buffer );
 
-void compute_octahedral_sky_mips(
-    AtmosphereBaker& atms_baker,
-    engine::TaskList& task_list
-);
+void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList& task_list );
 
-void dispatch_atmosphere_baker( engine::TaskList& task_list,
-    engine::DescriptorSet& lut_sets, atmosphere::AtmosphereBaker& atms_baker );
+void dispatch_atmosphere_baker(
+    engine::TaskList& task_list,
+    engine::DescriptorSet& lut_sets,
+    atmosphere::AtmosphereBaker& atms_baker
+);
 
 }

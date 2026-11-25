@@ -10,13 +10,13 @@ namespace racecar::camera {
 /// Implements an orbit camera. Based on
 /// https://www.mbsoftworks.sk/tutorials/opengl4/026-camera-pt3-orbit-camera.
 struct OrbitCamera {
-    glm::vec3 center = {}; ///< Also known as the center of the sphere.
+    glm::vec3 center = { }; ///< Also known as the center of the sphere.
     float radius = 0.f;
 
     float azimuth = 0.f; ///< Stored in radians.
     float zenith = 0.f; ///< Stored in radians.
 
-    glm::vec3 up = {};
+    glm::vec3 up = { };
 
     float fov_y = 0.f;
     float aspect_ratio = 0.f;
@@ -44,7 +44,8 @@ glm::vec3 calculate_eye_position( const OrbitCamera& cam );
 void set_eye_position( OrbitCamera& cam, glm::vec3 eye );
 
 void process_event(
-    const Context& ctx, const SDL_Event* event, OrbitCamera& cam, bool show_window );
+    const Context& ctx, const SDL_Event* event, OrbitCamera& cam, bool show_window
+);
 void process_input( OrbitCamera& cam );
 
 } // namespace racecar::camera

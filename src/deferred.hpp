@@ -1,8 +1,8 @@
 #pragma once
 
 #include "engine/descriptor_set.hpp"
-#include "engine/pipeline_barrier.hpp"
 #include "engine/image.h"
+#include "engine/pipeline_barrier.hpp"
 #include "engine/state.hpp"
 #include "vk/common.hpp"
 
@@ -30,7 +30,7 @@ struct GBuffers {
     engine::DescriptorSet desc_set;
 };
 
-GBuffers initialize_GBuffers();
+GBuffers initialize_GBuffers( );
 
 std::vector<engine::Image*> get_color_attachments( GBuffers& gbuffers );
 engine::Image* get_depth_image( GBuffers& gbuffers );
@@ -42,8 +42,10 @@ engine::ImageBarrier color_write_to_frag_read( engine::Image& image );
 
 void update_desc_sets( GBuffers& gbuffers );
 
-void create_top_pipeline_barriers( deferred::GBuffers& gbuffers,
+void create_top_pipeline_barriers(
+    deferred::GBuffers& gbuffers,
     engine::Image& screen_color,
-    engine::PipelineBarrierDescriptor* top_pipeline_barrier_desc );
+    engine::PipelineBarrierDescriptor* top_pipeline_barrier_desc
+);
 
 }

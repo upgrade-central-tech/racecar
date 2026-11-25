@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+
 #include <slang_check.h>
 
 /// Stores all uniform buffer structs used for different layouts and shaders. Ensure that all
@@ -9,31 +10,31 @@ namespace racecar::ub_data {
 
 /// Camera data
 struct Camera {
-    glm::mat4 mvp = {};
-    glm::mat4 prev_mvp = {};
+    glm::mat4 mvp = { };
+    glm::mat4 prev_mvp = { };
     glm::mat4 model = glm::mat4( 1.f );
-    glm::mat4 inv_model = {};
-    glm::mat4 inv_vp = {};
-    glm::mat4 view_mat = {};
-    glm::mat4 proj_mat = {};
-    glm::mat4 inv_proj = {};
-    glm::vec4 camera_pos = {};
-    glm::vec4 camera_constants = {};
-    glm::vec4 camera_constants1 = {};
-    glm::mat4 unjittered_mvp = {};
+    glm::mat4 inv_model = { };
+    glm::mat4 inv_vp = { };
+    glm::mat4 view_mat = { };
+    glm::mat4 proj_mat = { };
+    glm::mat4 inv_proj = { };
+    glm::vec4 camera_pos = { };
+    glm::vec4 camera_constants = { };
+    glm::vec4 camera_constants1 = { };
+    glm::mat4 unjittered_mvp = { };
 };
 
 struct Debug {
-    glm::vec4 color = {};
-    glm::vec4 packed_data0 = {};
-    glm::vec4 sun_direction = {};
+    glm::vec4 color = { };
+    glm::vec4 packed_data0 = { };
+    glm::vec4 sun_direction = { };
 
     uint32_t debug_view = 0;
     uint32_t ray_traced_shadows = 0;
     float terrain_irradiance_strength = 0.f;
     float car_irradiance_strength = 0.f;
 
-    glm::vec4 sun_color = {};
+    glm::vec4 sun_color = { };
 };
 
 struct AOData {
@@ -51,13 +52,13 @@ struct OctahedralData {
 struct SHData {
 
     // Packs all 9 spherical harmonics
-    glm::vec4 coeff0 = {};
-    glm::vec4 coeff1 = {};
-    glm::vec4 coeff2 = {};
-    glm::vec4 coeff3 = {};
-    glm::vec4 coeff4 = {};
-    glm::vec4 coeff5 = {};
-    glm::vec4 coeff6 = {};
+    glm::vec4 coeff0 = { };
+    glm::vec4 coeff1 = { };
+    glm::vec4 coeff2 = { };
+    glm::vec4 coeff3 = { };
+    glm::vec4 coeff4 = { };
+    glm::vec4 coeff5 = { };
+    glm::vec4 coeff6 = { };
 };
 
 struct Material {
@@ -101,37 +102,37 @@ struct RaymarchBufferData {
 };
 
 struct Atmosphere {
-    glm::mat4 inverse_proj = {};
-    glm::mat4 inverse_view = {};
-    glm::vec3 camera_position = {};
+    glm::mat4 inverse_proj = { };
+    glm::mat4 inverse_view = { };
+    glm::vec3 camera_position = { };
     uint8_t p0 = 0;
-    glm::vec3 sun_direction = {};
+    glm::vec3 sun_direction = { };
     float radiance_exposure = 0.f;
 };
 
 constexpr size_t ROAD_NUM_POINTS = 14;
 
 struct GameStateBuffer {
-    glm::vec4 world_position = {};
+    glm::vec4 world_position = { };
 
     // these need to be vec4 because of layout fuckery
-    glm::vec4 spline_positions[ROAD_NUM_POINTS] = {};
+    glm::vec4 spline_positions[ROAD_NUM_POINTS] = { };
 };
 
-struct [[slang_check("CloudUniformData")]] Clouds {
-    glm::mat4 inverse_proj = {};
-    glm::mat4 inverse_view = {};
-    glm::vec3 camera_position = {};
+struct [[slang_check( "CloudUniformData" )]] Clouds {
+    glm::mat4 inverse_proj = { };
+    glm::mat4 inverse_view = { };
+    glm::vec3 camera_position = { };
     float cloud_offset_x = 0.f;
-    glm::vec3 sun_direction = {};
+    glm::vec3 sun_direction = { };
     float cloud_offset_y = 0.f;
     // extinction, erosion, radiance exposure, null
-    glm::vec4 cloud_params = {};
+    glm::vec4 cloud_params = { };
     int rotating_pixel_index = 0;
     int _pad[3];
 };
 
-struct [[slang_check("TerrainData")]] TerrainData {
+struct [[slang_check( "TerrainData" )]] TerrainData {
     // Store:
     // float gt7_local_shadow_strength;
     // float wetness = 0.0f;
@@ -182,9 +183,9 @@ struct DebugTexture {
 };
 
 struct ModelMat {
-    glm::mat4 model_mat = {};
-    glm::mat4 inv_model_mat = {};
-    glm::mat4 prev_model_mat = {};
+    glm::mat4 model_mat = { };
+    glm::mat4 inv_model_mat = { };
+    glm::mat4 prev_model_mat = { };
 };
 
 /// Must stay a multiple of 4 (reflections.slang)
@@ -217,10 +218,12 @@ struct MaterialTable {
     Material materials[MAX_MATERIALS];
 };
 
-static_assert( sizeof( MaterialTable ) <= 16384,
-    "MaterialTable exceeds the guaranteed maximum uniform buffer range" );
+static_assert(
+    sizeof( MaterialTable ) <= 16384,
+    "MaterialTable exceeds the guaranteed maximum uniform buffer range"
+);
 
-struct [[slang_check("TerrainSizeData")]] TerrainSizeData {
+struct [[slang_check( "TerrainSizeData" )]] TerrainSizeData {
     glm::vec4 center;
     glm::vec2 size;
     glm::vec2 _pad0;

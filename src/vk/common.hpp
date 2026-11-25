@@ -5,8 +5,8 @@
 #include "vma.hpp"
 
 #include <SDL3/SDL_video.h>
-#include <volk.h>
 #include <glm/glm.hpp>
+#include <volk.h>
 
 #if RACECAR_MACOS
 /// Terrible hack that's needed because of mismatched Vulkan headers. Honestly IDK what's happening,
@@ -22,12 +22,21 @@
 
 namespace racecar::vk {
 
-inline constexpr void check( VkResult result, std::string_view message,
-    const std::source_location& loc = std::source_location::current() )
+inline constexpr void check(
+    VkResult result,
+    std::string_view message,
+    const std::source_location& loc = std::source_location::current( )
+)
 {
     if ( result ) {
-        throw Exception( "[vk] [{}({}:{})] {} (code {})", loc.file_name(), loc.line(), loc.column(),
-            message, static_cast<int>( result ) );
+        throw Exception(
+            "[vk] [{}({}:{})] {} (code {})",
+            loc.file_name( ),
+            loc.line( ),
+            loc.column( ),
+            message,
+            static_cast<int>( result )
+        );
     }
 }
 
@@ -94,11 +103,11 @@ struct Common {
     rt::RayTracingProperties ray_tracing_properties;
 #endif // RACECAR_RAY_TRACING
 
-    static Common& GetMut();
-    static const Common& GetConst();
+    static Common& GetMut( );
+    static const Common& GetConst( );
 };
 
 void initialize( SDL_Window* window );
-void free();
+void free( );
 
 } // namespace racecar::vk

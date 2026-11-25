@@ -9,8 +9,8 @@
 
 namespace racecar::vk::create {
 
-VkCommandPoolCreateInfo command_pool_info(
-    uint32_t queue_family_index, VkCommandPoolCreateFlags flags );
+VkCommandPoolCreateInfo
+command_pool_info( uint32_t queue_family_index, VkCommandPoolCreateFlags flags );
 
 VkCommandBufferAllocateInfo command_buffer_allocate_info( VkCommandPool pool, uint32_t count );
 VkCommandBufferBeginInfo command_buffer_begin_info( VkCommandBufferUsageFlags flags );
@@ -18,26 +18,37 @@ VkCommandBufferBeginInfo command_buffer_begin_info( VkCommandBufferUsageFlags fl
 // Image related
 VkImageSubresourceRange image_subresource_range( VkImageAspectFlags aspect_mask );
 
-VkImageCreateInfo image_info( VkFormat format, VkImageType image_type, uint32_t mip_levels,
-    uint32_t array_layers, VkSampleCountFlagBits samples, VkImageUsageFlags usage_flags,
-    VkExtent3D extent );
-    
+VkImageCreateInfo image_info(
+    VkFormat format,
+    VkImageType image_type,
+    uint32_t mip_levels,
+    uint32_t array_layers,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags usage_flags,
+    VkExtent3D extent
+);
+
 VkImageViewCreateInfo image_view_info(
-    VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags );
+    VkFormat format, VkImage image, VkImageViewType image_view, VkImageAspectFlags aspect_flags
+);
 
 VkSamplerCreateInfo sampler_info( VkFilter filter_type, VkSamplerAddressMode address_mode );
 
 // Sync related
 VkFenceCreateInfo fence_info( VkFenceCreateFlags flags );
-VkSemaphoreCreateInfo semaphore_info();
-VkSemaphoreSubmitInfo semaphore_submit_info(
-    VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore );
+VkSemaphoreCreateInfo semaphore_info( );
+VkSemaphoreSubmitInfo
+semaphore_submit_info( VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore );
 VkCommandBufferSubmitInfo command_buffer_submit_info( VkCommandBuffer command_buffer );
-VkSubmitInfo2 submit_info( VkCommandBufferSubmitInfo* command_buffer_info,
-    VkSemaphoreSubmitInfo* signal_semaphore_info, VkSemaphoreSubmitInfo* wait_semaphore_info );
+VkSubmitInfo2 submit_info(
+    VkCommandBufferSubmitInfo* command_buffer_info,
+    VkSemaphoreSubmitInfo* signal_semaphore_info,
+    VkSemaphoreSubmitInfo* wait_semaphore_info
+);
 
 VkPipelineShaderStageCreateInfo pipeline_shader_stage_info(
-    VkShaderStageFlagBits flags, VkShaderModule shader_module, std::string_view name );
+    VkShaderStageFlagBits flags, VkShaderModule shader_module, std::string_view name
+);
 
 /// Creates shader module from the specified file path. Path is relative to the executable.
 ///
@@ -54,9 +65,9 @@ struct CreateSubmitInfoDescriptor {
 };
 
 struct AllSubmitInfo {
-    VkSemaphoreSubmitInfo wait_info = {};
-    VkSemaphoreSubmitInfo signal_info = {};
-    VkCommandBufferSubmitInfo command_info = {};
+    VkSemaphoreSubmitInfo wait_info = { };
+    VkSemaphoreSubmitInfo signal_info = { };
+    VkCommandBufferSubmitInfo command_info = { };
 };
 
 AllSubmitInfo all_submit_info( CreateSubmitInfoDescriptor submit_info_descriptor );

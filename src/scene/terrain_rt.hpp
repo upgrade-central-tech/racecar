@@ -19,12 +19,13 @@
 
 namespace racecar {
 
-constexpr uint32_t TERRAIN_RT_VERTS_PER_SIDE
-    = uint32_t( geometry::TERRAIN_NUM_TILES * geometry::TERRAIN_RT_QUADS_PER_TILE + 1 );
+constexpr uint32_t TERRAIN_RT_VERTS_PER_SIDE = uint32_t(
+    geometry::TERRAIN_NUM_TILES * geometry::TERRAIN_RT_QUADS_PER_TILE + 1
+);
 constexpr uint32_t TERRAIN_RT_QUADS_PER_SIDE = TERRAIN_RT_VERTS_PER_SIDE - 1;
 constexpr uint32_t TERRAIN_RT_VERTEX_COUNT = TERRAIN_RT_VERTS_PER_SIDE * TERRAIN_RT_VERTS_PER_SIDE;
-constexpr uint32_t TERRAIN_RT_TRIANGLE_COUNT
-    = TERRAIN_RT_QUADS_PER_SIDE * TERRAIN_RT_QUADS_PER_SIDE * 2;
+constexpr uint32_t TERRAIN_RT_TRIANGLE_COUNT = TERRAIN_RT_QUADS_PER_SIDE * TERRAIN_RT_QUADS_PER_SIDE
+    * 2;
 constexpr uint32_t TERRAIN_RT_INDEX_COUNT = TERRAIN_RT_TRIANGLE_COUNT * 3;
 constexpr float TERRAIN_RT_WORLD_HALF_WIDTH = geometry::TERRAIN_HALF_WIDTH;
 
@@ -72,8 +73,7 @@ struct TerrainRayTracingInfo {
     engine::Pipeline displace_pipeline = { };
 };
 
-void init_terrain_ray_tracing_info(
-    TerrainRayTracingInfo* out_info, geometry::Terrain* terrain );
+void init_terrain_ray_tracing_info( TerrainRayTracingInfo* out_info, geometry::Terrain* terrain );
 
 void add_terrain_rt_displace_pass( TerrainRayTracingInfo& info, engine::TaskList& task_list );
 

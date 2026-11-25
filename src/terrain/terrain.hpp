@@ -10,7 +10,9 @@
 #include "engine/pipeline.hpp"
 
 namespace racecar::gui {
+
 struct Gui;
+
 }
 
 namespace racecar::geometry {
@@ -25,7 +27,6 @@ constexpr float TERRAIN_HEIGHT_NORMAL_EPS = TERRAIN_TILE_WIDTH / float( TERRAIN_
 
 // TERRAIN_WORLD_SCALE in terrain_common.slang
 constexpr float TERRAIN_WORLD_SCALE = 0.05f;
-
 
 // Keep it simple for now
 struct TerrainVertex {
@@ -62,7 +63,7 @@ struct TerrainPrepassInfo {
     // engine::Image* GBuffer_Velocity;
 
     engine::Image* glint_noise;
-    
+
     engine::DescriptorSet* gamestate_desc_set;
 };
 
@@ -115,17 +116,25 @@ struct Terrain {
     };
 
     std::array<VkVertexInputAttributeDescription, 2> attribute_descriptions = { {
-        { 0, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT,
-            offsetof( TerrainVertex, position ) },
-        { 1, vk::binding::VERTEX_BUFFER, VK_FORMAT_R32G32B32_SFLOAT,
-            offsetof( TerrainVertex, normal ) },
+        { 0,
+          vk::binding::VERTEX_BUFFER,
+          VK_FORMAT_R32G32B32_SFLOAT,
+          offsetof( TerrainVertex, position ) },
+        { 1,
+          vk::binding::VERTEX_BUFFER,
+          VK_FORMAT_R32G32B32_SFLOAT,
+          offsetof( TerrainVertex, normal ) },
     } };
 };
 
-void initialize_terrain( Terrain& terrain,
-    const TerrainPrepassInfo& prepass_info, const TerrainLightingInfo& lighting_info );
+void initialize_terrain(
+    Terrain& terrain,
+    const TerrainPrepassInfo& prepass_info,
+    const TerrainLightingInfo& lighting_info
+);
 
-void initialize_terrain_draw_pipeline( Terrain& terrain,
+void initialize_terrain_draw_pipeline(
+    Terrain& terrain,
     engine::DescriptorSet& sun_visibility_desc_set,
     engine::DescriptorSet& ao_read_desc_set
 #if RACECAR_RAY_TRACING
@@ -137,16 +146,20 @@ void initialize_terrain_draw_pipeline( Terrain& terrain,
 
 void terrain_precompute( Terrain& terrain, VkCommandBuffer precompute_cmdbuf );
 
-void draw_terrain_prepass( Terrain& terrain,
-    [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task, engine::TaskList& task_list );
+void draw_terrain_prepass(
+    Terrain& terrain,
+    [[maybe_unused]] engine::DepthPrepassMS& depth_prepass_ms_task,
+    engine::TaskList& task_list
+);
 
 void draw_terrain( Terrain& terrain, engine::TaskList& task_list );
 
 #if RACECAR_DEV
-void draw_terrain_wireframe( Terrain& terrain, engine::TaskList& task_list, engine::Image& screen_color );
+void draw_terrain_wireframe(
+    Terrain& terrain, engine::TaskList& task_list, engine::Image& screen_color
+);
 #endif
 
-void update_terrain_uniform_buffer(
-    gui::Gui& gui, geometry::Terrain& terrain );
+void update_terrain_uniform_buffer( gui::Gui& gui, geometry::Terrain& terrain );
 
 }
