@@ -74,7 +74,8 @@ VkBufferMemoryBarrier2 BufferBarrier::get_vk( size_t idx ) const
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .buffer = buffer[idx].handle,
         .offset = 0,
-        .size = VK_WHOLE_SIZE };
+        .size = VK_WHOLE_SIZE,
+    };
 }
 
 VkImageMemoryBarrier2 ImageBarrier::get_vk( ) const
@@ -91,7 +92,8 @@ VkImageMemoryBarrier2 ImageBarrier::get_vk( ) const
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = image->vk_image,
-        .subresourceRange = range };
+        .subresourceRange = range,
+    };
 }
 
 } // namespace racecar

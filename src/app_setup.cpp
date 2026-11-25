@@ -216,7 +216,8 @@ void load_model_mat_uniform_buffers(
         ub_data::ModelMat model_mat_ub = {
             .model_mat = transform,
             .inv_model_mat = glm::inverse( transform ),
-            .prev_model_mat = transform };
+            .prev_model_mat = transform,
+        };
         model_mat_buffer.set_data( model_mat_ub );
         model_mat_buffer.update_all( );
 

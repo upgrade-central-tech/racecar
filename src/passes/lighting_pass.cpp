@@ -41,7 +41,8 @@ void create_deferred_lighting_pipeline_barrier(
                         .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
                         .image = &gbuffers.GBuffer_Depth,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
+                    },
                     engine::ImageBarrier {
                         .src_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
                         .src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
@@ -50,7 +51,8 @@ void create_deferred_lighting_pipeline_barrier(
                         .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
                         .image = &gbuffers.GBuffer_DepthMS,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
+                    },
                     engine::ImageBarrier {
                         .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
                         .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -59,9 +61,11 @@ void create_deferred_lighting_pipeline_barrier(
                         .dst_access = VK_ACCESS_2_SHADER_WRITE_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_GENERAL,
                         .image = &screen_color,
-                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR },
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
                 },
-            .label = "GBuffer to Deferred Lighting Pipeline Barrier" }
+            .label = "GBuffer to Deferred Lighting Pipeline Barrier",
+        }
     );
 }
 
@@ -73,16 +77,21 @@ void create_terrain_car_screen_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = { engine::ImageBarrier {
-                .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                .src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
-                .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                .image = &screen_color,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
-            .label = "Terrain to Car Lighting Pipeline Barrier" }
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = &screen_color,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                },
+            .label = "Terrain to Car Lighting Pipeline Barrier",
+        }
     );
 }
 
@@ -92,17 +101,19 @@ void create_lighting_pass_resources(
 {
     *lighting_pass_pipeline = engine::create_gfx_pipeline(
         engine::get_vertex_input_state_create_info( geometry::quad::Mesh::get_instance( ) ),
-        { desc_sets.uniform_desc_set.layouts[0],
-          desc_sets.material_desc_sets[0].layouts[0],
-          desc_sets.lut_sets.layouts[0],
-          desc_sets.sampler_desc_set.layouts[0],
-          desc_sets.gbuffer_desc_set.layouts[0],
+        {
+            desc_sets.uniform_desc_set.layouts[0],
+            desc_sets.material_desc_sets[0].layouts[0],
+            desc_sets.lut_sets.layouts[0],
+            desc_sets.sampler_desc_set.layouts[0],
+            desc_sets.gbuffer_desc_set.layouts[0],
 #if RACECAR_RAY_TRACING
-          desc_sets.car_tlas_desc_set.layouts[0],
-          desc_sets.reflection_buffer_desc_set.layouts[0],
+            desc_sets.car_tlas_desc_set.layouts[0],
+            desc_sets.reflection_buffer_desc_set.layouts[0],
 #endif // RACECAR_RAY_TRACING
-          desc_sets.sun_visibility_desc_set.layouts[0],
-          desc_sets.ao_read_desc_set.layouts[0] },
+            desc_sets.sun_visibility_desc_set.layouts[0],
+            desc_sets.ao_read_desc_set.layouts[0],
+        },
         { VK_FORMAT_R16G16B16A16_SFLOAT },
         VK_SAMPLE_COUNT_1_BIT,
         true,
@@ -127,7 +138,8 @@ void car_lighting_pass(
     engine::GfxTask lighting_pass_gfx_task = {
         .clear_depth = 1.0f,
         .color_attachments = { &screen_color },
-        .extent = engine.swapchain.extent };
+        .extent = engine.swapchain.extent,
+    };
 
     lighting_pass_gfx_task.draw_tasks.push_back( {
         .draw_resource_descriptor =

@@ -28,7 +28,8 @@ Pipeline create_gfx_pipeline(
     VkPipelineVertexInputStateCreateInfo
         vertex_input_info = vertex_input_state_create_info.value_or(
             VkPipelineVertexInputStateCreateInfo {
-                .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO }
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+            }
         );
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {
@@ -231,7 +232,8 @@ Pipeline create_compute_pipeline(
         VkPipelineLayoutCreateInfo pipeline_info = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .setLayoutCount = static_cast<uint32_t>( layouts.size( ) ),
-            .pSetLayouts = layouts.data( ) };
+            .pSetLayouts = layouts.data( ),
+        };
 
         vkCreatePipelineLayout( vulkan.device, &pipeline_info, nullptr, &compute_pipeline.layout );
         vulkan.destructor_stack
@@ -262,7 +264,8 @@ Pipeline create_compute_pipeline(
         VK_SHADER_STAGE_COMPUTE_BIT,
         shader_module,
         entry_name.data( ),
-        nullptr };
+        nullptr,
+    };
 
     VkPipeline compute_pipeline_handle;
     vk::check(

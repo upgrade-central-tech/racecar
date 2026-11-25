@@ -41,13 +41,15 @@ void alloc_blases(
             vulkan.allocator,
             as,
             vulkan.ray_tracing_properties,
-            { .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
-              .index_buffer = scene_mesh.mesh_buffers.index_buffer.handle,
-              .max_vertex = max_idx,
-              .index_count = uint32_t( prim == nullptr ? 0 : prim->ind_count ),
-              .vertex_offset = uint32_t( prim == nullptr ? 0 : prim->vertex_offset ),
-              .index_offset = uint32_t( prim == nullptr ? 0 : prim->ind_offset ),
-              .vertex_stride = sizeof( geometry::scene::Vertex ) },
+            {
+                .vertex_buffer = scene_mesh.mesh_buffers.vertex_buffer.handle,
+                .index_buffer = scene_mesh.mesh_buffers.index_buffer.handle,
+                .max_vertex = max_idx,
+                .index_count = uint32_t( prim == nullptr ? 0 : prim->ind_count ),
+                .vertex_offset = uint32_t( prim == nullptr ? 0 : prim->vertex_offset ),
+                .index_offset = uint32_t( prim == nullptr ? 0 : prim->ind_offset ),
+                .vertex_stride = sizeof( geometry::scene::Vertex ),
+            },
             vulkan.destructor_stack
         );
         engine.blas.push_back( as );

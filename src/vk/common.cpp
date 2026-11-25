@@ -142,7 +142,8 @@ vkb::Device pick_and_create_device( )
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
         .pNext = nullptr,
         .accelerationStructure = VK_TRUE,
-        .accelerationStructureCaptureReplay = VK_TRUE };
+        .accelerationStructureCaptureReplay = VK_TRUE,
+    };
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_pipeline_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
@@ -152,7 +153,8 @@ vkb::Device pick_and_create_device( )
 
     VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
-        .rayQuery = VK_TRUE };
+        .rayQuery = VK_TRUE,
+    };
 
     log::info( "[Vulkan] Enabling ray tracing" );
 #endif // RACECAR_RAY_TRACING

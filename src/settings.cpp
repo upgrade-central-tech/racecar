@@ -110,45 +110,52 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
         .options = AA_OPTIONS,
         .option_count = (int)std::size( AA_OPTIONS ),
         .desired = (int)AAMode::NONE,
-        .fallback = (int)AAMode::NONE }, // AA_MODE
+        .fallback = (int)AAMode::NONE,
+    }, // AA_MODE
 
     Setting {
         .validate = &validate_tonemapping,
         .options = TONEMAPPING_OPTIONS,
         .option_count = (int)std::size( TONEMAPPING_OPTIONS ),
         .desired = (int)TonemappingMode::GT7_SDR,
-        .fallback = (int)TonemappingMode::NONE }, // TONEMAPPING_MODE
+        .fallback = (int)TonemappingMode::NONE,
+    }, // TONEMAPPING_MODE
 
     Setting {
         .validate_option = &validate_debug_texture_option,
         .options = DEBUG_TEXTURE_OPTIONS,
         .option_count = (int)std::size( DEBUG_TEXTURE_OPTIONS ),
         .desired = (int)DebugTexture::NONE,
-        .fallback = (int)DebugTexture::NONE }, // DEBUG_TEXTURE
+        .fallback = (int)DebugTexture::NONE,
+    }, // DEBUG_TEXTURE
 
     Setting {
         .min = 0.f,
         .max = 2.f,
         .desired_float = 1.f,
-        .fallback_float = 1.f }, // TERRAIN_IRRADIANCE_STRENGTH
+        .fallback_float = 1.f,
+    }, // TERRAIN_IRRADIANCE_STRENGTH
 
     Setting {
         .min = 0.f,
         .max = 2.f,
         .desired_float = 1.f,
-        .fallback_float = 1.f }, // CAR_IRRADIANCE_STRENGTH
+        .fallback_float = 1.f,
+    }, // CAR_IRRADIANCE_STRENGTH
 
     Setting {
         .min = 0.0f,
         .max = 30.0f,
         .desired_float = 10.0f,
-        .fallback_float = 10.0f }, // TERRAIN_ROAD_WIDTH
+        .fallback_float = 10.0f,
+    }, // TERRAIN_ROAD_WIDTH
 
     Setting {
         .min = 0.0f,
         .max = 30.0f,
         .desired_float = 8.0f,
-        .fallback_float = 8.0f }, // TERRAIN_BLEND_WIDTH
+        .fallback_float = 8.0f,
+    }, // TERRAIN_BLEND_WIDTH
 
     Setting { .validate = &validate_terrain_wireframe_view }, // TERRAIN_WIREFRAME_VIEW
 
@@ -160,10 +167,15 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
         .min = 0.0f,
         .max = 0.2f,
         .desired_float = 0.03f,
-        .fallback_float = 0.03f }, // CLOUD_EXTINCTION
+        .fallback_float = 0.03f,
+    }, // CLOUD_EXTINCTION
 
     Setting {
-        .min = 0.0f, .max = 0.9f, .desired_float = 0.3f, .fallback_float = 0.3f }, // CLOUD_EROSION
+        .min = 0.0f,
+        .max = 0.9f,
+        .desired_float = 0.3f,
+        .fallback_float = 0.3f,
+    }, // CLOUD_EROSION
 
     Setting { .desired = 0 }, // CONTROL_LOCK
 
@@ -173,7 +185,8 @@ std::array<Setting, (size_t)RacecarSettings::RACECAR_SETTINGS_LENGTH> settings {
         .min = 0.0f,
         .max = 80.0f,
         .desired_float = 40.0f,
-        .fallback_float = 40.0f }, // AUTODRIVE_TARGET_SPEED
+        .fallback_float = 40.0f,
+    }, // AUTODRIVE_TARGET_SPEED
 };
 
 }

@@ -47,7 +47,8 @@ void create_screen_buffer_pipeline_barrier(
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                 },
-            .label = "Scene Color to Post Processing Pipeline Barrier" }
+            .label = "Scene Color to Post Processing Pipeline Barrier",
+        }
     );
 }
 
@@ -72,7 +73,8 @@ void create_screen_buffer_present_pipeline_barrier(
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                 },
-            .label = "Screen Buffer to Present Pipeline Barrier" }
+            .label = "Screen Buffer to Present Pipeline Barrier",
+        }
     );
 }
 
@@ -90,27 +92,30 @@ void pre_transparency_post_passes(
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
             .image_barriers =
-                { engine::ImageBarrier {
-                      .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                      .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                      .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                      .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
-                      .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                      .image = &screen_color,
-                      .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                  },
-                  engine::ImageBarrier {
-                      .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .src_access = VK_ACCESS_2_SHADER_READ_BIT,
-                      .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                      .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-                      .dst_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                      .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                      .image = &screen_buffer,
-                      .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                  } },
-            .label = "Post Processing to Transparency Pipeline Barrier" }
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                        .dst_access = VK_ACCESS_2_TRANSFER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        .image = &screen_color,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+                        .dst_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        .image = &screen_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                },
+            .label = "Post Processing to Transparency Pipeline Barrier",
+        }
     );
 
     // this is an unnecessary blit task that we should definitely remove when we clean
@@ -170,7 +175,8 @@ void post_transparency_post_passes(
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
                     },
                 },
-            .label = "Transparency to Tonemapping Pipeline Barrier" }
+            .label = "Transparency to Tonemapping Pipeline Barrier",
+        }
     );
     tm_pass = engine::post::add_tonemapping( screen_buffer, screen_color, task_list );
 
@@ -201,7 +207,8 @@ void post_transparency_post_passes(
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                 },
-            .label = "Tonemapping to TAA Pipeline Barrier" }
+            .label = "Tonemapping to TAA Pipeline Barrier",
+        }
     );
     taa_pass = engine::post::add_taa(
         screen_color,

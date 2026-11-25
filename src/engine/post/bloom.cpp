@@ -28,7 +28,8 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
         VkExtent3D current_extent = {
             engine.swapchain.extent.width / 2,
             engine.swapchain.extent.height / 2,
-            1 };
+            1,
+        };
 
         for ( size_t i = 0; i < BloomPass::NUM_PASSES; ++i ) {
             pass.images[i] = engine::create_image(
@@ -42,17 +43,22 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
 
             engine::add_pipeline_barrier(
                 task_list,
-                { .image_barriers = { {
-                      .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                      .src_access = VK_ACCESS_2_NONE,
-                      .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                      .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                      .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                      .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                      .image = &pass.images[i],
-                      .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-                  } },
-                  .label = "Bloom Mips Init Pipeline Barrier" }
+                {
+                    .image_barriers =
+                        {
+                            {
+                                .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                .src_access = VK_ACCESS_2_NONE,
+                                .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                                .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                                .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                                .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                .image = &pass.images[i],
+                                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                            },
+                        },
+                    .label = "Bloom Mips Init Pipeline Barrier",
+                }
             );
 
             // Each progressive image has half resolution
@@ -124,9 +130,11 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
                 .pipeline = threshold_pipeline,
                 .descriptor_sets = { pass.threshold_desc_set.get( ), pass.uniform_desc_set.get( ) },
                 .group_size =
-                    { ( engine.swapchain.extent.width + 7 ) / 8,
-                      ( engine.swapchain.extent.height + 7 ) / 8,
-                      1 },
+                    {
+                        ( engine.swapchain.extent.width + 7 ) / 8,
+                        ( engine.swapchain.extent.height + 7 ) / 8,
+                        1,
+                    },
             },
             "Bloom Threshold"
         );
@@ -162,7 +170,8 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
                             .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                         },
                     },
-                .label = "Bloom Downsample Pipeline Barrier" }
+                .label = "Bloom Downsample Pipeline Barrier",
+            }
         );
 
         const Image& input_image = i == 0 ? write_only : pass.images[i - 1];
@@ -186,9 +195,11 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
         );
 
         engine::Pipeline downsample_pipeline = engine::create_compute_pipeline(
-            { downsample_desc_set.layouts[0],
-              pass.uniform_desc_set->layouts[0],
-              pass.sampler_desc_set->layouts[0] },
+            {
+                downsample_desc_set.layouts[0],
+                pass.uniform_desc_set->layouts[0],
+                pass.sampler_desc_set->layouts[0],
+            },
             downsample_shader,
             "downsample"
         );
@@ -202,9 +213,11 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
             {
                 .pipeline = downsample_pipeline,
                 .descriptor_sets =
-                    { pass.downsample_desc_sets[i].get( ),
-                      pass.uniform_desc_set.get( ),
-                      pass.sampler_desc_set.get( ) },
+                    {
+                        pass.downsample_desc_sets[i].get( ),
+                        pass.uniform_desc_set.get( ),
+                        pass.sampler_desc_set.get( ),
+                    },
                 .group_size =
                     { ( output_extent.width + 7 ) / 8, ( output_extent.height + 7 ) / 8, 1 },
             },
@@ -244,7 +257,8 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
                             .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                         },
                     },
-                .label = "Bloom Upsample Pipeline Barrier" }
+                .label = "Bloom Upsample Pipeline Barrier",
+            }
         );
 
         const Image& output_image = i == 0 ? inout : pass.images[i - 1];
@@ -268,9 +282,11 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
         );
 
         engine::Pipeline upsample_pipeline = engine::create_compute_pipeline(
-            { upsample_desc_set.layouts[0],
-              pass.uniform_desc_set->layouts[0],
-              pass.sampler_desc_set->layouts[0] },
+            {
+                upsample_desc_set.layouts[0],
+                pass.uniform_desc_set->layouts[0],
+                pass.sampler_desc_set->layouts[0],
+            },
             upsample_shader,
             "upsample"
         );
@@ -285,9 +301,11 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
             {
                 .pipeline = upsample_pipeline,
                 .descriptor_sets =
-                    { pass.upsample_desc_sets[desc_set_idx].get( ),
-                      pass.uniform_desc_set.get( ),
-                      pass.sampler_desc_set.get( ) },
+                    {
+                        pass.upsample_desc_sets[desc_set_idx].get( ),
+                        pass.uniform_desc_set.get( ),
+                        pass.sampler_desc_set.get( ),
+                    },
                 .group_size =
                     { ( output_extent.width + 7 ) / 8, ( output_extent.height + 7 ) / 8, 1 },
             },
@@ -299,16 +317,19 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = { engine::ImageBarrier {
-                .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
-                .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                .image = &inout,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
-            } },
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_GENERAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &inout,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                },
             .label = "Bloom Output Pipeline Barrier",
         }
     );

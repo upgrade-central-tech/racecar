@@ -46,11 +46,13 @@ Volumetric initialize( )
     );
 
     volumetric.lut_desc_set = engine::generate_descriptor_set(
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-          VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-          VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-          VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-          VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        },
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
     );
 
@@ -101,9 +103,11 @@ bool generate_noise( [[maybe_unused]] Volumetric& volumetric )
         );
 
         engine::DescriptorSet cumulus_desc_set = engine::generate_descriptor_set(
-            { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-              VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-              VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            {
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
@@ -381,16 +385,21 @@ void draw_volumetric(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = { engine::ImageBarrier {
-                .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .src_access = VK_ACCESS_2_NONE,
-                .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                .image = &volumetric.cloud_buffer,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
-            .label = "Cloud Buffer to Attachment Pipeline Barrier" }
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_NONE,
+                        .src_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .image = &volumetric.cloud_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                },
+            .label = "Cloud Buffer to Attachment Pipeline Barrier",
+        }
     );
 
     const geometry::quad::Mesh& volumetric_mesh = volumetric.scene_mesh;
@@ -398,10 +407,12 @@ void draw_volumetric(
     // We ideally don't want to render this at full resolution. That would take too much time!
     engine::GfxTask volumetric_gfx_task = {
         .color_attachments = { &volumetric.cloud_buffer },
-        .extent = {
-            low_res_dim.width,
-            low_res_dim.height,
-        } };
+        .extent =
+            {
+                low_res_dim.width,
+                low_res_dim.height,
+            },
+    };
 
     engine::Pipeline volumetric_pipeline;
 
@@ -487,16 +498,21 @@ void draw_volumetric(
         task_list,
         engine::PipelineBarrierDescriptor {
             .buffer_barriers = { },
-            .image_barriers = { engine::ImageBarrier {
-                .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-                .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                .image = &volumetric.cloud_buffer,
-                .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR } },
-            .label = "Cloud Buffer to Shader Read Pipeline Barrier" }
+            .image_barriers =
+                {
+                    engine::ImageBarrier {
+                        .src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                        .src_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                        .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        .image = &volumetric.cloud_buffer,
+                        .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
+                    },
+                },
+            .label = "Cloud Buffer to Shader Read Pipeline Barrier",
+        }
     );
 
     // Prepare composite stage

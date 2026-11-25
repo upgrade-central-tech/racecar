@@ -24,12 +24,14 @@ void generate_mipmaps(
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = image,
 
-        .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        } };
+        .subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
 
     int32_t width = static_cast<int32_t>( extent.width );
     int32_t height = static_cast<int32_t>( extent.height );

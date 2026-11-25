@@ -20,9 +20,11 @@ TonemappingPass add_tonemapping( const Image& input, const Image& output, TaskLi
 
     {
         engine::DescriptorSet uniform_desc_set = engine::generate_descriptor_set(
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-              VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-              VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+            {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
         engine::update_descriptor_set_image(

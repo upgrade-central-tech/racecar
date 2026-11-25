@@ -55,12 +55,14 @@ void create_transparency_pass_resources(
 
     transparency_pass->transparency_pipeline = engine::create_gfx_pipeline(
         engine::get_vertex_input_state_create_info( scene_mesh ),
-        { uniform_desc_set->layouts[frame_index],
-          ( *material_desc_sets )[0].layouts[frame_index],
-          ( *model_mat_desc_sets )[0].layouts[frame_index],
-          lut_sets->layouts[frame_index],
-          sampler_desc_set->layouts[frame_index],
-          sun_visibility_desc_set->layouts[frame_index] },
+        {
+            uniform_desc_set->layouts[frame_index],
+            ( *material_desc_sets )[0].layouts[frame_index],
+            ( *model_mat_desc_sets )[0].layouts[frame_index],
+            lut_sets->layouts[frame_index],
+            sampler_desc_set->layouts[frame_index],
+            sun_visibility_desc_set->layouts[frame_index],
+        },
         { VK_FORMAT_R16G16B16A16_SFLOAT },
         VK_SAMPLE_COUNT_1_BIT,
         true,
@@ -226,7 +228,8 @@ void create_transparency_pipeline_barrier(
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
                     },
                 },
-            .label = "Transparency Pipeline Barrier" }
+            .label = "Transparency Pipeline Barrier",
+        }
     );
 }
 

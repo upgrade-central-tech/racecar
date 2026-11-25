@@ -24,7 +24,8 @@ void execute_blit_task( const VkCommandBuffer& cmd_buf, BlitTask& blit_task, VkI
     blit_region.srcOffsets[1] = {
         static_cast<int32_t>( src_extent.width ),
         static_cast<int32_t>( src_extent.height ),
-        1 };
+        1,
+    };
 
     blit_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     blit_region.dstSubresource.mipLevel = 0;
@@ -34,7 +35,8 @@ void execute_blit_task( const VkCommandBuffer& cmd_buf, BlitTask& blit_task, VkI
     blit_region.dstOffsets[1] = {
         static_cast<int32_t>( dst_extent.width ),
         static_cast<int32_t>( dst_extent.height ),
-        1 };
+        1,
+    };
 
     // Nasty code used for the swapchain.
     if ( blit_task.out_color == nullptr ) {

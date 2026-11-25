@@ -287,7 +287,8 @@ void furnace( bool use_fullscreen )
     engine::post::AoPass ao_pass {
         .camera_buffer = &camera_buffer,
         .GBuffer_Normal = &gbuffers.GBuffer_Normal,
-        .GBuffer_Depth = &gbuffers.GBuffer_Depth };
+        .GBuffer_Depth = &gbuffers.GBuffer_Depth,
+    };
     initialize_ao_pass( ao_pass );
 
     LightingPassDescSets lighting_pass_desc_sets = {
@@ -301,7 +302,8 @@ void furnace( bool use_fullscreen )
         .reflection_buffer_desc_set = reflection_buffer_desc_set,
 #endif // RACECAR_RAY_TRACING
         .sun_visibility_desc_set = sun_visibility_desc_set,
-        .ao_read_desc_set = ao_pass.ao_read_descriptor_set };
+        .ao_read_desc_set = ao_pass.ao_read_descriptor_set,
+    };
 
     engine::Pipeline lighting_pass_pipeline;
     create_lighting_pass_resources( lighting_pass_desc_sets, &lighting_pass_pipeline );

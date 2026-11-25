@@ -114,7 +114,8 @@ std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( deferred::GBuffer
             .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
             .image = &gbuffers.GBuffer_Depth,
-            .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH },
+            .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
+        },
         engine::ImageBarrier {
             .src_stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
             .src_access = VK_ACCESS_2_NONE,
@@ -124,7 +125,8 @@ std::vector<engine::ImageBarrier> init_gbuffer_image_barriers( deferred::GBuffer
             .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
             .image = &gbuffers.GBuffer_DepthMS,
             .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,
-        } };
+        },
+    };
 }
 
 engine::ImageBarrier init_to_color_write( engine::Image& image )

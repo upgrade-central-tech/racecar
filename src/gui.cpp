@@ -571,17 +571,19 @@ void use_preset(
 
             Preset::MaterialData before_material = {
                 .slot = preset_material.slot,
-                .data = gui::Material {
-                    .color = material.base_color,
-                    .roughness = material.roughness,
-                    .metallic = material.metallic,
-                    .clearcoat_roughness = material.clearcoat_roughness,
-                    .clearcoat_weight = material.clearcoat,
-                    .glintiness = material.glintiness,
-                    .glint_log_density = material.glint_log_density,
-                    .glint_roughness = material.roughness,
-                    .glint_randomness = material.glint_randomness,
-                } };
+                .data =
+                    gui::Material {
+                        .color = material.base_color,
+                        .roughness = material.roughness,
+                        .metallic = material.metallic,
+                        .clearcoat_roughness = material.clearcoat_roughness,
+                        .clearcoat_weight = material.clearcoat,
+                        .glintiness = material.glintiness,
+                        .glint_log_density = material.glint_log_density,
+                        .glint_roughness = material.roughness,
+                        .glint_randomness = material.glint_randomness,
+                    },
+            };
 
             before_materials.push_back( std::move( before_material ) );
             log::info( "[preset] Transitioning material with ID {}", preset_material.slot );

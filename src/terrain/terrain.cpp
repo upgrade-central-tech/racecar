@@ -58,15 +58,15 @@ void initialize_terrain(
         for ( size_t x = 0; x <= TERRAIN_NUM_TILES; ++x ) {
             float xpos = float( x ) * TERRAIN_TILE_WIDTH - half_width;
             float zpos = float( z ) * TERRAIN_TILE_WIDTH - half_width;
-            terrain.vertices.push_back(
-                { glm::vec3(
-                      xpos,
-                      ( x == TERRAIN_NUM_TILES && z == TERRAIN_NUM_TILES ) ? offset_y + 1.0
-                                                                           : offset_y,
-                      zpos
-                  ),
-                  glm::vec3( 0, 1, 0 ) }
-            );
+            terrain.vertices.push_back( {
+                glm::vec3(
+                    xpos,
+                    ( x == TERRAIN_NUM_TILES && z == TERRAIN_NUM_TILES ) ? offset_y + 1.0
+                                                                         : offset_y,
+                    zpos
+                ),
+                glm::vec3( 0, 1, 0 ),
+            } );
         }
     }
 
@@ -317,10 +317,12 @@ void initialize_terrain(
         false,
         false,
         vk::create::shader_module( TERRAIN_SHADER_PREPASS_MODULE_PATH ),
-        { .vertex_entry_name = engine::DEFAULT_VERTEX_ENTRY_NAME,
-          .tess_control_entry_name = engine::DEFAULT_TESS_CONTROL_ENTRY_NAME,
-          .tess_eval_entry_name = engine::DEFAULT_TESS_EVAL_ENTRY_NAME,
-          .fragment_entry_name = "line_white" },
+        {
+            .vertex_entry_name = engine::DEFAULT_VERTEX_ENTRY_NAME,
+            .tess_control_entry_name = engine::DEFAULT_TESS_CONTROL_ENTRY_NAME,
+            .tess_eval_entry_name = engine::DEFAULT_TESS_EVAL_ENTRY_NAME,
+            .fragment_entry_name = "line_white",
+        },
         true,
         true
     );
@@ -459,16 +461,18 @@ void initialize_terrain_draw_pipeline(
 #endif // RACECAR_RAY_TRACING
 
     terrain.terrain_lighting_pipeline = engine::create_compute_pipeline(
-        { terrain.uniform_desc_set.layouts[0],
-          terrain.texture_desc_set.layouts[0],
-          terrain.lut_desc_set.layouts[0],
-          terrain.sampler_desc_set.layouts[0],
+        {
+            terrain.uniform_desc_set.layouts[0],
+            terrain.texture_desc_set.layouts[0],
+            terrain.lut_desc_set.layouts[0],
+            terrain.sampler_desc_set.layouts[0],
 #if RACECAR_RAY_TRACING
-          terrain.car_tlas_desc_set->layouts[0],
-          terrain.reflection_texture_desc_set->layouts[0],
+            terrain.car_tlas_desc_set->layouts[0],
+            terrain.reflection_texture_desc_set->layouts[0],
 #endif // RACECAR_RAY_TRACING
-          terrain.sun_visibility_desc_set->layouts[0],
-          terrain.ao_read_desc_set->layouts[0] },
+            terrain.sun_visibility_desc_set->layouts[0],
+            terrain.ao_read_desc_set->layouts[0],
+        },
         vk::create::shader_module( TERRAIN_SHADER_LIGHTING_MODULE_PATH ),
         "cs_terrain_draw"
     );
@@ -524,11 +528,13 @@ void draw_terrain_prepass(
     terrain.terrain_prepass_task.draw_tasks.push_back( {
         .draw_resource_descriptor = draw_descriptor,
         .descriptor_sets =
-            { &terrain.prepass_uniform_desc_set,
-              &terrain.prepass_texture_desc_set,
-              &terrain.prepass_sampler_desc_set,
-              &terrain.prepass_lut_desc_set,
-              terrain.gamestate_desc_set },
+            {
+                &terrain.prepass_uniform_desc_set,
+                &terrain.prepass_texture_desc_set,
+                &terrain.prepass_sampler_desc_set,
+                &terrain.prepass_lut_desc_set,
+                terrain.gamestate_desc_set,
+            },
         .pipeline = terrain.terrain_prepass_pipeline,
     } );
 
@@ -556,16 +562,18 @@ void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
     // Full-screen quad draw.
     engine::ComputeTask cs_terrain_draw_task = {
         terrain.terrain_lighting_pipeline,
-        { &terrain.uniform_desc_set,
-          &terrain.texture_desc_set,
-          &terrain.lut_desc_set,
-          &terrain.sampler_desc_set,
+        {
+            &terrain.uniform_desc_set,
+            &terrain.texture_desc_set,
+            &terrain.lut_desc_set,
+            &terrain.sampler_desc_set,
 #if RACECAR_RAY_TRACING
-          terrain.car_tlas_desc_set,
-          terrain.reflection_texture_desc_set,
+            terrain.car_tlas_desc_set,
+            terrain.reflection_texture_desc_set,
 #endif // RACECAR_RAY_TRACING
-          terrain.sun_visibility_desc_set,
-          terrain.ao_read_desc_set },
+            terrain.sun_visibility_desc_set,
+            terrain.ao_read_desc_set,
+        },
         dispatch_dims,
     };
 
@@ -584,7 +592,8 @@ void draw_terrain_wireframe(
 {
     engine::GfxTask terrain_wireframe_gfx_task = {
         .color_attachments = { &screen_color },
-        .extent = engine::State::GetConst( ).swapchain.extent };
+        .extent = engine::State::GetConst( ).swapchain.extent,
+    };
 
     engine::DrawResourceDescriptor draw_descriptor = {
         .vertex_buffers = { terrain.mesh_buffers.vertex_buffer.handle },
@@ -596,11 +605,13 @@ void draw_terrain_wireframe(
     terrain_wireframe_gfx_task.draw_tasks.push_back( {
         .draw_resource_descriptor = draw_descriptor,
         .descriptor_sets =
-            { &terrain.prepass_uniform_desc_set,
-              &terrain.prepass_texture_desc_set,
-              &terrain.prepass_sampler_desc_set,
-              &terrain.prepass_lut_desc_set,
-              terrain.gamestate_desc_set },
+            {
+                &terrain.prepass_uniform_desc_set,
+                &terrain.prepass_texture_desc_set,
+                &terrain.prepass_sampler_desc_set,
+                &terrain.prepass_lut_desc_set,
+                terrain.gamestate_desc_set,
+            },
         .pipeline = terrain.terrain_wireframe_pipeline,
     } );
 

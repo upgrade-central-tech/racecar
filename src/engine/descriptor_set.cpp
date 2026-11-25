@@ -250,7 +250,8 @@ void update_descriptor_set_acceleration_structure(
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
             .pNext = VK_NULL_HANDLE,
             .accelerationStructureCount = 1,
-            .pAccelerationStructures = &tlas };
+            .pAccelerationStructures = &tlas,
+        };
 
         VkWriteDescriptorSet write_desc_set = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -284,7 +285,8 @@ void update_descriptor_set_acceleration_structure_per_frame(
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
             .pNext = VK_NULL_HANDLE,
             .accelerationStructureCount = 1,
-            .pAccelerationStructures = &tlases[i] };
+            .pAccelerationStructures = &tlases[i],
+        };
 
         VkWriteDescriptorSet write_desc_set = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,

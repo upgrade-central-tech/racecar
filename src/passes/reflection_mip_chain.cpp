@@ -47,7 +47,8 @@ engine::ImageBarrier color_write_to_compute_read( engine::Image* image )
         .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
         .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         .image = image,
-        .range = mip_range( 0, 1 ) };
+        .range = mip_range( 0, 1 ),
+    };
 }
 
 engine::ImageBarrier undefined_to_compute_write( engine::Image* image )
@@ -108,10 +109,12 @@ void create_reflection_mip_chain_resources(
         engine::DescriptorSet& desc_set = chain.downsample_desc_sets[i];
 
         desc_set = engine::generate_descriptor_set(
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-              VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-              VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-              VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
@@ -168,10 +171,12 @@ void create_reflection_mip_chain_resources(
         engine::DescriptorSet& desc_set = chain.upsample_desc_sets[i];
 
         desc_set = engine::generate_descriptor_set(
-            { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-              VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-              VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-              VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+            {
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            },
             VK_SHADER_STAGE_COMPUTE_BIT
         );
 
@@ -227,7 +232,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
                     undefined_to_compute_write( chain.reflection_color ),
                     undefined_to_compute_write( chain.reflection_data ),
                 },
-            .label = "Reflection Mip Chain Init Pipeline Barrier" }
+            .label = "Reflection Mip Chain Init Pipeline Barrier",
+        }
     );
 
     for ( uint32_t i = 0; i < ReflectionMipChain::DOWNSAMPLE_COUNT; ++i ) {
@@ -257,7 +263,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
                         compute_write_to_compute_read( chain.reflection_color, dst_mip ),
                         compute_write_to_compute_read( chain.reflection_data, dst_mip ),
                     },
-                .label = "Reflection Mip Downsample Pipeline Barrier" }
+                .label = "Reflection Mip Downsample Pipeline Barrier",
+            }
         );
     }
 
@@ -271,7 +278,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
                 .buffer_barriers = { },
                 .image_barriers =
                     { compute_read_to_compute_write( chain.reflection_color, dst_mip ) },
-                .label = "Reflection Mip Pre-Upsample Pipeline Barrier" }
+                .label = "Reflection Mip Pre-Upsample Pipeline Barrier",
+            }
         );
 
         engine::add_cs_task(
@@ -294,7 +302,8 @@ void add_reflection_mip_chain_pass( ReflectionMipChain& chain, engine::TaskList&
                 .buffer_barriers = { },
                 .image_barriers =
                     { compute_write_to_compute_read( chain.reflection_color, dst_mip ) },
-                .label = "Reflection Mip Upsample Pipeline Barrier" }
+                .label = "Reflection Mip Upsample Pipeline Barrier",
+            }
         );
     }
 }

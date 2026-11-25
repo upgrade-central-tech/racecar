@@ -245,7 +245,8 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
                             },
                     },
                 },
-            .label = "Octahedral Sky Mips Init Pipeline Barrier" }
+            .label = "Octahedral Sky Mips Init Pipeline Barrier",
+        }
     );
 
     for ( size_t mip = 0; mip < mip_levels; mip++ ) {
@@ -267,7 +268,8 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
                 &atms_baker.octahedral_mip_writes[mip],
                 &atms_baker.volumetrics_desc_set,
             },
-            glm::ivec3( dims, 1 ) };
+            glm::ivec3( dims, 1 ),
+        };
 
         engine::add_cs_task( task_list, cs_mip_task, "Octahedral Sky Mip" );
     }
@@ -296,7 +298,8 @@ void compute_octahedral_sky_mips( AtmosphereBaker& atms_baker, engine::TaskList&
                             },
                     },
                 },
-            .label = "Octahedral Sky Mips to Shader Read Pipeline Barrier" }
+            .label = "Octahedral Sky Mips to Shader Read Pipeline Barrier",
+        }
     );
 }
 

@@ -150,7 +150,8 @@ TAAPass add_taa(
                         .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                 },
-            .label = "TAA History Write Pipeline Barrier" }
+            .label = "TAA History Write Pipeline Barrier",
+        }
     );
 
     engine::add_cs_task(
@@ -199,7 +200,8 @@ TAAPass add_taa(
                         .range = VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                 },
-            .label = "TAA Output Pipeline Barrier" }
+            .label = "TAA Output Pipeline Barrier",
+        }
     );
 
     return pass;

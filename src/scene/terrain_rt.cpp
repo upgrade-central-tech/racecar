@@ -240,13 +240,15 @@ void create_acceleration_structures( TerrainRayTracingInfo* info )
             vulkan.allocator,
             info->dynamic_terrain_blas[i],
             vulkan.ray_tracing_properties,
-            { .vertex_buffer = info->dynamic_terrain_mesh_buffer[i].handle,
-              .index_buffer = info->terrain_index_buffer.handle,
-              .max_vertex = TERRAIN_RT_VERTEX_COUNT - 1,
-              .index_count = TERRAIN_RT_INDEX_COUNT,
-              .vertex_offset = 0,
-              .index_offset = 0,
-              .vertex_stride = sizeof( TerrainRTVertex ) },
+            {
+                .vertex_buffer = info->dynamic_terrain_mesh_buffer[i].handle,
+                .index_buffer = info->terrain_index_buffer.handle,
+                .max_vertex = TERRAIN_RT_VERTEX_COUNT - 1,
+                .index_count = TERRAIN_RT_INDEX_COUNT,
+                .vertex_offset = 0,
+                .index_offset = 0,
+                .vertex_stride = sizeof( TerrainRTVertex ),
+            },
             vulkan.destructor_stack
         );
 
@@ -255,9 +257,12 @@ void create_acceleration_structures( TerrainRayTracingInfo* info )
             vulkan.allocator,
             info->tlas[i],
             vulkan.ray_tracing_properties,
-            { vk::rt::Object {
-                .blas = &info->dynamic_terrain_blas[i],
-                .transform = glm::identity<glm::mat4>( ) } },
+            {
+                vk::rt::Object {
+                    .blas = &info->dynamic_terrain_blas[i],
+                    .transform = glm::identity<glm::mat4>( ),
+                },
+            },
             vulkan.destructor_stack
         );
     }
@@ -290,18 +295,21 @@ void init_terrain_ray_tracing_info( TerrainRayTracingInfo* out_info, geometry::T
         .terrain = terrain,
         .terrain_uniform = &terrain->terrain_uniform,
         .layer_mask = &terrain->test_layer_mask,
-        .gamestate_desc_set = terrain->gamestate_desc_set };
+        .gamestate_desc_set = terrain->gamestate_desc_set,
+    };
 
     create_mesh_buffers( out_info );
     create_grid_uniform( out_info );
     create_descriptor_sets( out_info );
 
     out_info->displace_pipeline = engine::create_compute_pipeline(
-        { out_info->uniform_desc_set.layouts[0],
-          out_info->texture_desc_set.layouts[0],
-          out_info->sampler_desc_set.layouts[0],
-          out_info->mesh_buffer_desc_set.layouts[0],
-          out_info->gamestate_desc_set->layouts[0] },
+        {
+            out_info->uniform_desc_set.layouts[0],
+            out_info->texture_desc_set.layouts[0],
+            out_info->sampler_desc_set.layouts[0],
+            out_info->mesh_buffer_desc_set.layouts[0],
+            out_info->gamestate_desc_set->layouts[0],
+        },
         vk::create::shader_module( TERRAIN_RT_DISPLACE_SHADER_MODULE_PATH ),
         "cs_terrain_rt_displace"
     );
@@ -336,13 +344,16 @@ void add_terrain_rt_build_pass( TerrainRayTracingInfo& info, engine::TaskList& t
     engine::add_pipeline_barrier(
         task_list,
         engine::PipelineBarrierDescriptor {
-            .buffer_barriers = { engine::BufferBarrier {
-                .buffer = info.dynamic_terrain_mesh_buffer,
-                .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-                .src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
-                .dst_stage = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
-            } },
+            .buffer_barriers =
+                {
+                    engine::BufferBarrier {
+                        .buffer = info.dynamic_terrain_mesh_buffer,
+                        .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+                        .dst_stage = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                        .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
+                    },
+                },
             .image_barriers = { },
             .label = "Terrain RT Build Pipeline Barrier",
         }
