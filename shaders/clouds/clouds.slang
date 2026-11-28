@@ -1,5 +1,6 @@
 import cloud_bindings;
 import cloud_raymarch;
+import cloud_utils;
 
 struct VertexInput {
     float3 position : POSITION;
@@ -57,14 +58,6 @@ FragmentOutput clouds_fullres( VertexOutput in )
 {
     return march_pixel( in.position );
 }
-
-static const int ROTATING_BLOCK_SIZE = 4;
-static const int2 ROTATING_PIXEL_ORDER[16] = {
-    int2( 0, 0 ), int2( 2, 2 ), int2( 2, 0 ), int2( 0, 2 ),
-    int2( 1, 1 ), int2( 3, 3 ), int2( 3, 1 ), int2( 1, 3 ),
-    int2( 1, 0 ), int2( 3, 2 ), int2( 3, 0 ), int2( 1, 2 ),
-    int2( 0, 1 ), int2( 2, 3 ), int2( 2, 1 ), int2( 0, 3 ),
-};
 
 // quarter res raymarch, rotating the target pixel
 [shader( "fragment" )]

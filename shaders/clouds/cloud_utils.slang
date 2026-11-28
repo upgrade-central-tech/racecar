@@ -31,6 +31,15 @@ public float3 cloud_dome_remap( float3 direction )
     return float3( sinTheta * cos( phi ), cos( thetaRemap ), sinTheta * sin( phi ) );
 }
 
+public float3 cloud_dome_unmap( float3 direction )
+{
+    float theta = acos( saturate( direction.y ) ) * ( 90.0f / 80.0f );
+    float phi = atan2( direction.z, direction.x );
+
+    float sinTheta = sin( theta );
+    return float3( sinTheta * cos( phi ), cos( theta ), sinTheta * sin( phi ) );
+}
+
 public float rand_float2( float2 p )
 {
     uint32_t seed = ( asuint( p.x ) ) * 73856093u ^ ( asuint( p.y ) ) * 19349663u;
@@ -165,4 +174,13 @@ public float noise_sum3D_Worley( float3 p, float3 period )
     return r / s;
 }
 
+public static const float CLOUD_NOISE_SCALE = 0.00005f;
+public static const float CLOUD_MID_ALTITUDE = 3250.f;
 
+public static const int ROTATING_BLOCK_SIZE = 4;
+public static const int2 ROTATING_PIXEL_ORDER[16] = {
+    int2( 0, 0 ), int2( 2, 2 ), int2( 2, 0 ), int2( 0, 2 ),
+    int2( 1, 1 ), int2( 3, 3 ), int2( 3, 1 ), int2( 1, 3 ),
+    int2( 1, 0 ), int2( 3, 2 ), int2( 3, 0 ), int2( 1, 2 ),
+    int2( 0, 1 ), int2( 2, 3 ), int2( 2, 1 ), int2( 0, 3 ),
+};

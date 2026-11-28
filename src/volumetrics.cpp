@@ -16,8 +16,10 @@
 #include "vk/create.hpp"
 #include "vk/utility.hpp"
 
+#include <glm/gtc/constants.hpp>
 #include <vulkan/vulkan_core.h>
 
+#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <string_view>
@@ -33,6 +35,9 @@ constexpr std::string_view
 
 constexpr float CLOUD_NOISE_SCALE = 0.00005f;
 constexpr float CLOUD_WIND_SPEED = 0.002f;
+constexpr float CLOUD_RESET_CAMERA_DISTANCE = 10.f;
+constexpr float CLOUD_RESET_FOV_FRACTION = 0.25f;
+constexpr float CLOUD_RESET_SUN_ANGLE = glm::pi<float>( ) / 180.f;
 
 Volumetric initialize( )
 {
@@ -916,11 +921,22 @@ void update_volumetric_uniform_buffer(
     ub_data::Atmosphere atms_ub = atms.uniform_buffer.get_data( );
 
     ub_data::Clouds cloud_ub = volumetric.uniform_buffer.get_data( );
+
+    // this is cheese. this will break if we ever start changing these values outside of this
+    // function
+    glm::vec3 prev_camera_position = cloud_ub.camera_position;
+    glm::vec3 prev_forward = -glm::vec3( cloud_ub.inverse_view[2] );
+    glm::vec3 prev_sun_direction = cloud_ub.sun_direction;
+
     cloud_ub.inverse_proj = glm::inverse( camera_data.projection );
     cloud_ub.inverse_view = glm::inverse( camera_data.view );
     cloud_ub.camera_position = camera::calculate_eye_position( engine.camera );
     float wind = static_cast<float>( engine.time ) * CLOUD_WIND_SPEED;
     glm::vec2 travel = engine.gamestate.world_position * CLOUD_NOISE_SCALE;
+
+    bool has_prev_offset = engine.rendered_frames != 0;
+    cloud_ub.prev_cloud_offset_x = has_prev_offset ? cloud_ub.cloud_offset_x : wind + travel.x;
+    cloud_ub.prev_cloud_offset_y = has_prev_offset ? cloud_ub.cloud_offset_y : wind + travel.y;
 
     cloud_ub.cloud_offset_x = wind + travel.x;
     cloud_ub.sun_direction = glm::vec4( atms_ub.sun_direction, 1.0f );
@@ -935,6 +951,22 @@ void update_volumetric_uniform_buffer(
 
     volumetric.uniform_buffer.set_data( cloud_ub );
     volumetric.uniform_buffer.update( engine.get_frame_index( ) );
+
+    // we need to expand this to flag a full res march when we teleport
+    // or big camera change or whatever
+    glm::vec3 forward = -glm::vec3( cloud_ub.inverse_view[2] );
+    bool camera_teleported = glm::length( cloud_ub.camera_position - prev_camera_position )
+        > CLOUD_RESET_CAMERA_DISTANCE;
+    bool camera_turned = glm::dot( prev_forward, forward )
+        < std::cos( CLOUD_RESET_FOV_FRACTION * engine.camera.fov_y );
+    bool sun_moved = glm::dot(
+                         glm::normalize( prev_sun_direction ),
+                         glm::normalize( cloud_ub.sun_direction )
+                     )
+        < std::cos( CLOUD_RESET_SUN_ANGLE );
+
+    *volumetric.full_res_march = engine.rendered_frames < 1 || camera_teleported || camera_turned
+        || sun_moved;
 }
 
 }
