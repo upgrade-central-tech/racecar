@@ -85,8 +85,8 @@ engine::ImageBarrier compute_write_to_compute_read( engine::Image* image, uint32
         .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
         .src_access = VK_ACCESS_2_SHADER_WRITE_BIT,
         .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT
-            | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dst_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT |
+            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
         .dst_access = VK_ACCESS_2_SHADER_READ_BIT,
         .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         .image = image,

@@ -25,8 +25,8 @@ void create_mesh_buffers( TerrainRayTracingInfo* info )
         info->dynamic_terrain_mesh_buffer.push_back(
             vk::mem::create_buffer(
                 sizeof( TerrainRTVertex ) * TERRAIN_RT_VERTEX_COUNT,
-                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-                    | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                    VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
                 VMA_MEMORY_USAGE_GPU_ONLY
             )
         );
@@ -137,8 +137,8 @@ void create_index_buffer( TerrainRayTracingInfo* info )
 
     info->terrain_index_buffer = vk::mem::create_buffer(
         byte_size,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-            | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+            VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
         VMA_MEMORY_USAGE_GPU_ONLY
     );
 

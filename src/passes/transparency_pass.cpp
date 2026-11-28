@@ -183,8 +183,8 @@ void execute_transparency_pass(
                         return za < zb;
                     }
 
-                    return a.draw_resource_descriptor.index_offset
-                        < b.draw_resource_descriptor.index_offset;
+                    return a.draw_resource_descriptor.index_offset <
+                        b.draw_resource_descriptor.index_offset;
                 }
             );
         },
@@ -209,20 +209,20 @@ void create_transparency_pipeline_barrier(
                         .src_access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
                         .src_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         .dst_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
-                            | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
+                        .dst_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT |
+                            VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                         .image = &target_color,
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_COLOR,
                     },
                     engine::ImageBarrier {
-                        .src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
-                            | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT |
+                            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                         .src_access = VK_ACCESS_2_SHADER_READ_BIT,
                         .src_layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
                         .dst_stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                        .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
-                            | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+                        .dst_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+                            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
                         .image = &gbuffer_depth,
                         .range = engine::VK_IMAGE_SUBRESOURCE_RANGE_DEFAULT_DEPTH,

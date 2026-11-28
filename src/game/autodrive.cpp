@@ -53,8 +53,8 @@ static std::vector<RoadSample> sample_road( const GameState& gamestate )
             const glm::vec2 d2 = 2.0f * ( a - 2.0f * b + c );
 
             const float d1_length = glm::length( d1 );
-            const float curvature = glm::abs( d1.x * d2.y - d1.y * d2.x )
-                / glm::max( d1_length * d1_length * d1_length, 1e-6f );
+            const float curvature = glm::abs( d1.x * d2.y - d1.y * d2.x ) /
+                glm::max( d1_length * d1_length * d1_length, 1e-6f );
 
             samples.push_back( { position, curvature } );
         }
@@ -87,9 +87,9 @@ AutodriveCommand compute_autodrive( const GameState& gamestate, float back_axle_
         AUTODRIVE_MIN_LOOKAHEAD,
         AUTODRIVE_MAX_LOOKAHEAD
     );
-    const float preview_distance = gamestate.speed * gamestate.speed
-            / ( 2.0f * AUTODRIVE_PLANNED_DECELERATION )
-        + AUTODRIVE_PREVIEW_MARGIN;
+    const float preview_distance = gamestate.speed * gamestate.speed /
+            ( 2.0f * AUTODRIVE_PLANNED_DECELERATION ) +
+        AUTODRIVE_PREVIEW_MARGIN;
 
     float target_speed = RuntimeSettings::Get<RacecarSettings::AUTODRIVE_TARGET_SPEED>( );
     glm::vec2 lookahead_point = samples.back( ).position;

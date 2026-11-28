@@ -23,7 +23,7 @@ BinPackParameters: false
 AllowAllArgumentsOnNextLine: false
 PenaltyBreakBeforeFirstCallParameter: 0
 PenaltyBreakAssignment: 500
-BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBinaryOperators: None
 AlignAfterOpenBracket: BlockIndent
 Cpp11BracedListStyle: FunctionCall
 BreakBeforeCloseBracketBracedList: false

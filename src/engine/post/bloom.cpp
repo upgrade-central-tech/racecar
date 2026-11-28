@@ -37,8 +37,8 @@ void add_bloom( BloomPass* pass_out, TaskList& task_list, Image& inout, Image& w
                 VK_FORMAT_R16G16B16A16_SFLOAT,
                 VK_IMAGE_TYPE_2D,
                 VK_SAMPLE_COUNT_1_BIT,
-                VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT
-                    | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+                VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT |
+                    VK_IMAGE_USAGE_TRANSFER_SRC_BIT
             );
 
             engine::add_pipeline_barrier(

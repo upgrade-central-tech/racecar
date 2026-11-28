@@ -165,8 +165,8 @@ void compute_sun_visibility( SunVisibilityComputePass& sun_visibility, engine::T
                         .src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                         .src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
                         .src_layout = VK_IMAGE_LAYOUT_GENERAL,
-                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
-                            | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+                        .dst_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT |
+                            VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
                         .dst_access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
                         .dst_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                         .image = &sun_visibility.sun_visibility_shadow_map,

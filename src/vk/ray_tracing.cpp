@@ -47,8 +47,8 @@ create_acceleration_structure_from_geometry( const MeshData& mesh )
         .vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
         .vertexData =
             {
-                .deviceAddress = mesh.vertex_buffer_address
-                    + mesh.vertex_offset * mesh.vertex_stride,
+                .deviceAddress = mesh.vertex_buffer_address +
+                    mesh.vertex_offset * mesh.vertex_stride,
             },
         .vertexStride = mesh.vertex_stride,
         .maxVertex = mesh.max_vertex,
@@ -136,8 +136,8 @@ void alloc_blas(
     VkBufferCreateInfo blas_buffer_create_info = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = sizeInfo.accelerationStructureSize,
-        .usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR
-            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT // Required for AS
+        .usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT // Required for AS
     };
     VmaAllocationCreateInfo blas_alloc_create_info = { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
     vmaCreateBuffer(
@@ -162,8 +162,8 @@ void alloc_blas(
     };
     blas.device_address = vkGetBufferDeviceAddress( device, &blas_address_info );
 
-    uint64_t aligned_scratch_size = sizeInfo.buildScratchSize
-        + static_cast<VkDeviceSize>( rt_props.min_acceleration_structure_scratch_offset_alignment );
+    uint64_t aligned_scratch_size = sizeInfo.buildScratchSize +
+        static_cast<VkDeviceSize>( rt_props.min_acceleration_structure_scratch_offset_alignment );
 
     VkBuffer scratchBuffer = VK_NULL_HANDLE;
     VmaAllocation scratchAllocation = VK_NULL_HANDLE;
@@ -243,9 +243,9 @@ void build_blas( VkCommandBuffer cmd_buf, AccelerationStructure& blas )
     vkCmdPipelineBarrier(
         cmd_buf,
         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, // Source stage
-        VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR
-            | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, // Destination stages (ready for TLAS
-                                                            // build or Ray Trace)
+        VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR |
+            VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR, // Destination stages (ready for TLAS
+                                                          // build or Ray Trace)
         0,
         1,
         &barrier,
@@ -330,8 +330,8 @@ void alloc_tlas(
     VkBufferCreateInfo instanceBufferCI = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = instances.size( ) * sizeof( VkAccelerationStructureInstanceKHR ),
-        .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-            | VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+        .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+            VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
     };
 
     VmaAllocationCreateInfo instanceAllocCI = {
@@ -426,8 +426,8 @@ void alloc_tlas(
     VkBufferCreateInfo tlasBufferCI = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = sizeInfo.accelerationStructureSize,
-        .usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR
-            | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+        .usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
     };
     VmaAllocationCreateInfo tlasAllocCI = { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
     vmaCreateBuffer(
@@ -452,8 +452,8 @@ void alloc_tlas(
     };
     tlas.device_address = vkGetBufferDeviceAddress( device, &tlasAddressInfo );
 
-    uint64_t aligned_scratch_size = sizeInfo.buildScratchSize
-        + static_cast<VkDeviceSize>( rt_props.min_acceleration_structure_scratch_offset_alignment );
+    uint64_t aligned_scratch_size = sizeInfo.buildScratchSize +
+        static_cast<VkDeviceSize>( rt_props.min_acceleration_structure_scratch_offset_alignment );
 
     VkBuffer scratchBuffer = VK_NULL_HANDLE;
     VmaAllocation scratchAllocation = VK_NULL_HANDLE;
@@ -568,8 +568,8 @@ void build_tlas( VkCommandBuffer cmd_buf, AccelerationStructure& tlas )
     vkCmdPipelineBarrier(
         cmd_buf,
         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, // Source Stage (TLAS build)
-        VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-            | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         0,
         1,
         &barrier,

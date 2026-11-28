@@ -466,8 +466,9 @@ void update(
                 ImGui::SeparatorText( "Tonemapping" );
                 RacecarGUI::SettingsCombo( "Tonemapping Mode", RacecarSettings::TONEMAPPING_MODE );
 
-                bool is_not_gt7_hdr = RuntimeSettings::GetValue( RacecarSettings::TONEMAPPING_MODE )
-                    != (int)TonemappingMode::GT7_HDR;
+                bool is_not_gt7_hdr = RuntimeSettings::GetValue(
+                                          RacecarSettings::TONEMAPPING_MODE
+                                      ) != (int)TonemappingMode::GT7_HDR;
                 if ( is_not_gt7_hdr ) {
                     ImGui::BeginDisabled( );
                 }
@@ -488,8 +489,8 @@ void update(
             if ( ImGui::BeginTabItem( "Task List" ) ) {
                 for ( size_t i = 0; i < task_list.tasks.size( ); ++i ) {
                     engine::Task& task = task_list.tasks[i];
-                    const bool is_disabled = !task.is_enabled
-                        || ( ( task.predicate != nullptr ) && !task.predicate( ) );
+                    const bool is_disabled = !task.is_enabled ||
+                        ( ( task.predicate != nullptr ) && !task.predicate( ) );
 
                     ImGui::PushID( static_cast<int>( i ) );
                     ImGui::Checkbox( "##enabled", &task.is_enabled );

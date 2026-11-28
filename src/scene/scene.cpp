@@ -351,8 +351,8 @@ void load_gltf(
 
             // Combine translate, rotation, and scale
             // Build transform: translate * rotate * scale
-            new_node->transform = glm::translate( glm::mat4( 1.0f ), translation )
-                * glm::mat4_cast( rotation ) * glm::scale( glm::mat4( 1.0f ), scale );
+            new_node->transform = glm::translate( glm::mat4( 1.0f ), translation ) *
+                glm::mat4_cast( rotation ) * glm::scale( glm::mat4( 1.0f ), scale );
         }
 
         new_node->inv_transform = glm::inverse( new_node->transform );
@@ -501,8 +501,8 @@ void load_gltf(
                 }
 
                 // Assume position data always exists
-                if ( ( pos.size( ) != nor.size( ) && nor.size( ) != 0 )
-                     || ( pos.size( ) != uv.size( ) && uv.size( ) != 0 ) ) {
+                if ( ( pos.size( ) != nor.size( ) && nor.size( ) != 0 ) ||
+                     ( pos.size( ) != uv.size( ) && uv.size( ) != 0 ) ) {
                     log::warn(
                         "[Scene] GLTF Loading: nonzero nor or uv count does not match up "
                         "with pos count"

@@ -261,8 +261,8 @@ Image allocate_image(
     if ( mipmapped && mip_levels == static_cast<uint32_t>( MIP_TYPE::AUTO_GENERATE ) ) {
         sent_mips = static_cast<uint32_t>(
                         std::floor( std::log2( std::max( extent.width, extent.height ) ) )
-                    )
-            + 1;
+                    ) +
+            1;
     }
 
     try {
@@ -328,8 +328,8 @@ Image create_image_from_data(
 )
 {
     const engine::State& engine = engine::State::GetConst( );
-    const size_t data_size = extent.depth * extent.width * extent.height
-        * vk::utility::bytes_from_format( format );
+    const size_t data_size = extent.depth * extent.width * extent.height *
+        vk::utility::bytes_from_format( format );
 
     Image new_image;
 
@@ -338,8 +338,8 @@ Image create_image_from_data(
         // Auto generate the miplevels
         mip_levels = static_cast<uint32_t>(
                          std::floor( std::log2( std::max( extent.width, extent.height ) ) )
-                     )
-            + 1;
+                     ) +
+            1;
     }
 
     try {

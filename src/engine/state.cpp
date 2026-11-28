@@ -70,9 +70,9 @@ vkb::Swapchain create_swapchain( SDL_Window* window )
                                 { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }
                             )
                             .set_image_usage_flags(
-                                VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-                                | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
-                                | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+                                VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                VK_IMAGE_USAGE_TRANSFER_DST_BIT
                             )
                             .build( );
 
@@ -83,8 +83,8 @@ vkb::Swapchain create_swapchain( SDL_Window* window )
 
     const vkb::Swapchain& swapchain = swapchain_ret.value( );
 
-    if ( swapchain.image_format == VK_FORMAT_B8G8R8A8_SRGB
-         || swapchain.image_format == VK_FORMAT_R8G8B8A8_SRGB ) {
+    if ( swapchain.image_format == VK_FORMAT_B8G8R8A8_SRGB ||
+         swapchain.image_format == VK_FORMAT_R8G8B8A8_SRGB ) {
         log::warn(
             "[engine] Swapchain format {} is sRGB; the blit will encode a second "
             "(tonemapping.slang)",
@@ -253,8 +253,8 @@ void initialize( Context& ctx )
 
         create_frame_data( );
 
-        float aspect = static_cast<float>( engine.swapchain.extent.width )
-            / static_cast<float>( engine.swapchain.extent.height );
+        float aspect = static_cast<float>( engine.swapchain.extent.width ) /
+            static_cast<float>( engine.swapchain.extent.height );
 
         engine.camera = {
             .center = glm::vec3( 2.5f, 2.5f, 1.f ),

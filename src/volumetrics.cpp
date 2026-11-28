@@ -955,18 +955,17 @@ void update_volumetric_uniform_buffer(
     // we need to expand this to flag a full res march when we teleport
     // or big camera change or whatever
     glm::vec3 forward = -glm::vec3( cloud_ub.inverse_view[2] );
-    bool camera_teleported = glm::length( cloud_ub.camera_position - prev_camera_position )
-        > CLOUD_RESET_CAMERA_DISTANCE;
-    bool camera_turned = glm::dot( prev_forward, forward )
-        < std::cos( CLOUD_RESET_FOV_FRACTION * engine.camera.fov_y );
+    bool camera_teleported = glm::length( cloud_ub.camera_position - prev_camera_position ) >
+        CLOUD_RESET_CAMERA_DISTANCE;
+    bool camera_turned = glm::dot( prev_forward, forward ) <
+        std::cos( CLOUD_RESET_FOV_FRACTION * engine.camera.fov_y );
     bool sun_moved = glm::dot(
                          glm::normalize( prev_sun_direction ),
                          glm::normalize( cloud_ub.sun_direction )
-                     )
-        < std::cos( CLOUD_RESET_SUN_ANGLE );
+                     ) < std::cos( CLOUD_RESET_SUN_ANGLE );
 
-    *volumetric.full_res_march = engine.rendered_frames < 1 || camera_teleported || camera_turned
-        || sun_moved;
+    *volumetric.full_res_march = engine.rendered_frames < 1 || camera_teleported || camera_turned ||
+        sun_moved;
 }
 
 }

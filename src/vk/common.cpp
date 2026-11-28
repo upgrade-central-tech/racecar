@@ -27,8 +27,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
         vkb::to_string_message_type( message_type )
     );
 
-    if ( message_type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
-         && callback_data->pMessageIdName != nullptr ) {
+    if ( message_type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT &&
+         callback_data->pMessageIdName != nullptr ) {
         message += std::format( " - {}", callback_data->pMessageIdName );
     }
 

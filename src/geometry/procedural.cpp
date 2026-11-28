@@ -23,8 +23,8 @@ engine::Image generate_test_3D( )
         for ( uint32_t y = 0; y < dim; ++y ) {
             for ( uint32_t x = 0; x < dim; ++x ) {
 
-                float checkered = ( ( x / block_size ) + ( y / block_size ) + ( z / block_size ) )
-                    % 2;
+                float checkered = ( ( x / block_size ) + ( y / block_size ) + ( z / block_size ) ) %
+                    2;
 
                 size_t idx = 4 * ( x + y * dim + z * dim * dim );
                 texture_data[idx + 0] = checkered; // R

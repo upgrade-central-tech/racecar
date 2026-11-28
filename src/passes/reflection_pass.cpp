@@ -76,8 +76,8 @@ void create_reflection_pass_resources(
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
         VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-            | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+            VK_IMAGE_USAGE_STORAGE_BIT,
         ReflectionMipChain::MIP_COUNT
     );
 
@@ -86,8 +86,8 @@ void create_reflection_pass_resources(
         VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT,
         VkImageType::VK_IMAGE_TYPE_2D,
         VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-            | VK_IMAGE_USAGE_STORAGE_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+            VK_IMAGE_USAGE_STORAGE_BIT,
         ReflectionMipChain::MIP_COUNT
     );
 

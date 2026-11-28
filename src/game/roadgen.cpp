@@ -103,8 +103,8 @@ generate_road_point( const glm::vec3 previous_heading, float road_integrated_dis
             glm::identity<glm::mat4>( ),
             n * glm::radians( ROAD_MAX_TURNING_ANGLE ) * sign,
             glm::vec3( 0.0f, 1.0f, 0.0f )
-        )
-        * glm::vec4( previous_heading, 0.0f )
+        ) *
+        glm::vec4( previous_heading, 0.0f )
     );
 }
 
@@ -125,9 +125,9 @@ void recenter_road(
         );
         for ( size_t i = points.size( ) - shift; i < points.size( ); i++ ) {
             glm::vec3 last_heading = points[i - 1] - points[i - 2];
-            points[i] = points[i - 1]
-                + ROAD_POINT_SPACING
-                    * generate_road_point(
+            points[i] = points[i - 1] +
+                ROAD_POINT_SPACING *
+                    generate_road_point(
                         glm::normalize( last_heading ),
                         *road_integrated_dist,
                         1.0f
@@ -143,9 +143,9 @@ void recenter_road(
         );
         for ( size_t i = shift; i-- > 0; ) {
             glm::vec3 last_heading = points[i + 1] - points[i + 2];
-            points[i] = points[i + 1]
-                + ROAD_POINT_SPACING
-                    * generate_road_point(
+            points[i] = points[i + 1] +
+                ROAD_POINT_SPACING *
+                    generate_road_point(
                         glm::normalize( last_heading ),
                         *road_integrated_dist - ROAD_POINT_SPACING * ub_data::ROAD_NUM_POINTS,
                         -1.0f

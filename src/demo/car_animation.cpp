@@ -101,12 +101,12 @@ void apply_demo_camera_motion(
     if ( gui.demo.enable_unlocked_camera ) {
         const engine::State& engine = engine::State::GetConst( );
         const glm::vec2 world_position = engine.gamestate.world_position;
-        const glm::vec2 travel = world_position
-            - unlocked_camera_prev_world_position.value_or( world_position );
+        const glm::vec2 travel = world_position -
+            unlocked_camera_prev_world_position.value_or( world_position );
         unlocked_camera_prev_world_position = world_position;
 
-        const glm::vec3 eye = camera::calculate_eye_position( camera )
-            - glm::vec3( travel.x, 0.f, travel.y );
+        const glm::vec3 eye = camera::calculate_eye_position( camera ) -
+            glm::vec3( travel.x, 0.f, travel.y );
 
         if ( car_position.has_value( ) ) {
             camera.center = car_position.value( );
@@ -123,10 +123,8 @@ void apply_demo_camera_motion(
         racing_camera_yaw.reset( );
     }
 
-    camera.center.y += gui.demo.bumpiness
-        * static_cast<float>(
-                           sin( volumetric.uniform_buffer.get_data( ).cloud_offset_x * 6000.0 )
-        );
+    camera.center.y += gui.demo.bumpiness *
+        static_cast<float>( sin( volumetric.uniform_buffer.get_data( ).cloud_offset_x * 6000.0 ) );
 }
 
 void update_car_transform(
@@ -165,11 +163,11 @@ void update_car_transform(
 
     const glm::mat4& base = car_root_base_transform.value( );
     const glm::vec3 pivot = glm::vec3( base[3] );
-    const glm::mat4 yaw_rotation = glm::translate( glm::identity<glm::mat4>( ), pivot )
-        * glm::rotate( glm::identity<glm::mat4>( ),
-                       engine::State::GetConst( ).gamestate.yaw,
-                       glm::vec3( 0.0f, 1.0f, 0.0f ) )
-        * glm::translate( glm::identity<glm::mat4>( ), -pivot );
+    const glm::mat4 yaw_rotation = glm::translate( glm::identity<glm::mat4>( ), pivot ) *
+        glm::rotate( glm::identity<glm::mat4>( ),
+                     engine::State::GetConst( ).gamestate.yaw,
+                     glm::vec3( 0.0f, 1.0f, 0.0f ) ) *
+        glm::translate( glm::identity<glm::mat4>( ), -pivot );
 
     scene::set_transform( scene, car_id, yaw_rotation * base );
 }

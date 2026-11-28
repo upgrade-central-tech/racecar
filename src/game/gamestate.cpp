@@ -35,8 +35,8 @@ void update_game_state( const scene::Scene& scene )
     const bool* key_states = SDL_GetKeyboardState( nullptr );
 
     // this should eventually be moved to the predicate fn of control_lock
-    const bool controls_locked = autodrive
-        || RuntimeSettings::GetEnabled( RacecarSettings::CONTROL_LOCK );
+    const bool controls_locked = autodrive ||
+        RuntimeSettings::GetEnabled( RacecarSettings::CONTROL_LOCK );
 
     const bool up_pressed = !controls_locked && key_states[SDL_SCANCODE_UP];
     const bool down_pressed = !controls_locked && key_states[SDL_SCANCODE_DOWN];
@@ -109,8 +109,8 @@ void update_game_state( const scene::Scene& scene )
             .wheel_angle = glm::clamp( gamestate.wheel_angle, -grip_wheel_angle, grip_wheel_angle );
     }
 
-    const float lateral_acceleration = speed_sq * glm::abs( glm::tan( gamestate.wheel_angle ) )
-        / wheelbase;
+    const float lateral_acceleration = speed_sq * glm::abs( glm::tan( gamestate.wheel_angle ) ) /
+        wheelbase;
     gamestate.speed = glm::max(
         gamestate.speed - TURNING_DRAG * lateral_acceleration * float( state.delta ),
         0.0f
@@ -127,8 +127,8 @@ void update_game_state( const scene::Scene& scene )
     gamestate.integrated_distance_traveled += distance;
 
     glm::vec2 heading = glm::vec2( glm::sin( gamestate.yaw ), glm::cos( gamestate.yaw ) );
-    glm::vec2 back_axle_position = gamestate.world_position + back_axle_z * heading
-        + heading * distance;
+    glm::vec2 back_axle_position = gamestate.world_position + back_axle_z * heading +
+        heading * distance;
 
     gamestate.yaw += distance * glm::tan( gamestate.wheel_angle ) / wheelbase;
 
@@ -148,8 +148,8 @@ void initialize_gamestate_buffer(
         {
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, // gamestate
         },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT
-            | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT |
+            VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     );
 
     engine::update_descriptor_set_uniform( *out_desc_set, *out_buffer, 0 );

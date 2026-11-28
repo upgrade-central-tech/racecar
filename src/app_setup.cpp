@@ -68,8 +68,8 @@ void load_camera_debug_uniform_buffers(
 
     *uniform_desc_set = engine::generate_descriptor_set(
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
-            | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT |
+            VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     );
 
     engine::update_descriptor_set_uniform( *uniform_desc_set, *camera_buffer, 0 );
@@ -252,8 +252,8 @@ void create_screen_buffers(
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
         VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-            | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
     );
 
     // Buffer needed, this is what the final compute pass will write to.
@@ -263,9 +263,9 @@ void create_screen_buffers(
         VK_FORMAT_R16G16B16A16_SFLOAT,
         VK_IMAGE_TYPE_2D,
         VK_SAMPLE_COUNT_1_BIT,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-            | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-            | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+            VK_IMAGE_USAGE_TRANSFER_DST_BIT
     );
 
     // Stores the last-rendered image. Needed for TAA/motion-vectors
@@ -378,8 +378,8 @@ void load_model_primitive_material_data(
                 }
 
                 for ( size_t i = 0; i < NUM_MATERIAL_TEXTURE_BINDINGS; i++ ) {
-                    const bool has_texture = i < textures_needed.size( )
-                        && textures_needed[i] != nullptr && textures_needed[i]->data != nullptr;
+                    const bool has_texture = i < textures_needed.size( ) &&
+                        textures_needed[i] != nullptr && textures_needed[i]->data != nullptr;
 
                     engine::update_descriptor_set_image(
                         material_desc_sets[static_cast<size_t>( prim.material_id )],

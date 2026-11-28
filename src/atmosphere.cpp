@@ -202,8 +202,8 @@ float ozone_density( float altitude )
 glm::vec3 sun_transmittance( float mu )
 {
     float r = BOTTOM_RADIUS;
-    float distance_to_top = -r * mu
-        + std::sqrt( r * r * ( mu * mu - 1.f ) + TOP_RADIUS * TOP_RADIUS );
+    float distance_to_top = -r * mu +
+        std::sqrt( r * r * ( mu * mu - 1.f ) + TOP_RADIUS * TOP_RADIUS );
     float dx = distance_to_top / float( SUN_TRANSMITTANCE_SAMPLES );
 
     float rayleigh_length = 0.f;
@@ -221,8 +221,8 @@ glm::vec3 sun_transmittance( float mu )
     }
 
     return glm::exp(
-        -( RAYLEIGH_SCATTERING * rayleigh_length + MIE_EXTINCTION * mie_length
-           + ABSORPTION_EXTINCTION * ozone_length )
+        -( RAYLEIGH_SCATTERING * rayleigh_length + MIE_EXTINCTION * mie_length +
+           ABSORPTION_EXTINCTION * ozone_length )
     );
 }
 
@@ -236,8 +236,8 @@ glm::vec3 compute_sun_color( const glm::vec3& sun_direction, float radiance_expo
         return glm::vec3( 0.f );
     }
 
-    return sun_transmittance( glm::max( mu, 0.f ) ) * SOLAR_IRRADIANCE * radiance_exposure
-        * horizon_fade;
+    return sun_transmittance( glm::max( mu, 0.f ) ) * SOLAR_IRRADIANCE * radiance_exposure *
+        horizon_fade;
 }
 
 void draw_atmosphere(
