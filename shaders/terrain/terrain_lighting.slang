@@ -131,7 +131,7 @@ float reflection_lod( float roughness, float hit_distance, float view_distance, 
 
 // Main
 [shader( "compute" )]
-[numthreads( 8, 8, 8 )]
+[numthreads( 8, 8, 1 )]
 void cs_terrain_draw( uint3 thread_id: SV_DispatchThreadID )
 {
     uint2 pixel = thread_id.xy;

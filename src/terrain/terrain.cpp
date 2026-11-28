@@ -555,7 +555,7 @@ void draw_terrain( Terrain& terrain, engine::TaskList& task_list )
     // Can we assume the color_attachment, by this point, is in a write-only state?
 
     uint32_t dispatch_x = ( engine.swapchain.extent.width + 7 ) / 8;
-    uint32_t dispatch_y = ( engine.swapchain.extent.width + 7 ) / 8;
+    uint32_t dispatch_y = ( engine.swapchain.extent.height + 7 ) / 8;
 
     glm::ivec3 dispatch_dims = glm::ivec3( dispatch_x, dispatch_y, 1 );
 
